@@ -8,24 +8,7 @@ Most of the systems are working, the main issues right now are physics based. If
 - CyanLasers Player Object Pool - https://github.com/CyanLaser/CyanPlayerObjectPool
 
 # Installation
-### Import with [VRChat Creator Companion](https://vcc.docs.vrchat.com/vpm/packages#user-packages):
-
-> 1. Download the zip file from [here](https://github.com/Varneon/UdonExplorer/releases/latest)
-> 2. Unpack the .zip somewhere
-> 3. In VRChat Creator Companion, navigate to `Settings` > `User Packages` > `Add`
-> 4. Navigate to the unpacked folder, `com.mikeee324.open-putt` and click `Select Folder`
-> 5. `OpenPutt` should now be visible under `Local User Packages` in the project view in VRChat Creator Companion
-> 6. Click `Add`
-
-### Import with [Unity Package Manager (git)](https://docs.unity3d.com/2019.4/Documentation/Manual/upm-ui-giturl.html):
-
-> 1. In the Unity toolbar, select `Window` > `Package Manager` > `[+]` > `Add package from git URL...` 
-> 2. Paste the following link: `https://github.com/mikeee324/OpenPutt.git?path=/Packages/com.mikeee324.open-putt`
-
-
-### Import from [Unitypackage](https://docs.unity3d.com/2019.4/Documentation/Manual/AssetPackagesImport.html):
-
-> 1. Download latest `OpenPutt` Unity package from [here](https://github.com/mikeee324/OpenPutt/releases/latest)
+> 1. Download the latest `OpenPutt` Unity package from [here](https://github.com/mikeee324/OpenPutt/releases/latest)
 > 2. Import the downloaded .unitypackage into your Unity project
 
 # Scene Setup
