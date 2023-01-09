@@ -1,62 +1,57 @@
-# VPM Package Template
+# OpenPutt
 
-Starter for making Packages, including automation for building and publishing them.
+This is a very early test version of OpenPutt.  
+Most of the systems are working, the main issues right now are physics based. If anybody has ideas on how to solve these please let me know!
 
-Once you're all set up, you'll be able to push changes to this repository and have .zip and .unitypackage versions automatically generated, and a listing made which works in the VPM for delivering updates for this package. 
-Multi-package repo support is yet to come.
+# Dependencies (Install these first!!!)
+- UdonSharp 1.1.6 (Use VCC!)
+- CyanLasers Player Object Pool - https://github.com/CyanLaser/CyanPlayerObjectPool
 
-## ▶ Getting Started
+# Installation
+### Import with [VRChat Creator Companion](https://vcc.docs.vrchat.com/vpm/packages#user-packages):
 
-* Press [![Use This Template](https://user-images.githubusercontent.com/737888/185467681-e5fdb099-d99f-454b-8d9e-0760e5a6e588.png)](https://github.com/vrchat-community/template-package/generate)
-to start a new GitHub project based on this template, and follow the directions there. 
-* Clone this repository locally using git.
-* Open the folder as a Unity Project.
-* Wait while the VPM resolver is downloaded and added to your project. This gives you access to the VPM Package Maker and Package Resolver tools.
+> 1. Download the zip file from [here](https://github.com/Varneon/UdonExplorer/releases/latest)
+> 2. Unpack the .zip somewhere
+> 3. In VRChat Creator Companion, navigate to `Settings` > `User Packages` > `Add`
+> 4. Navigate to the unpacked folder, `com.mikeee324.open-putt` and click `Select Folder`
+> 5. `OpenPutt` should now be visible under `Local User Packages` in the project view in VRChat Creator Companion
+> 6. Click `Add`
 
-## 🚇 Migrating Assets Package
-* Full details at [Converting Assets to a VPM Package](https://vcc.docs.vrchat.com/guides/convert-unitypackage)
+### Import with [Unity Package Manager (git)](https://docs.unity3d.com/2019.4/Documentation/Manual/upm-ui-giturl.html):
 
-## Working on Your Package
+> 1. In the Unity toolbar, select `Window` > `Package Manager` > `[+]` > `Add package from git URL...` 
+> 2. Paste the following link: `https://github.com/mikeee324/OpenPutt.git?path=/Packages/com.mikeee324.open-putt`
 
-You can delete the "Packages/com.vrchat.demo-template" directory or reuse it for your own package.
-Update the `.gitignore` file in the "Packages" directory to include your package. It has an example of including the demo package which you can easily change out for your own package name.
 
-You can open the Unity project and work on your package's files in your favorite Code Editor. Then commit and push your changes. Once you've set up the automation as described below, you can easily publish new versions.
+### Import from [Unitypackage](https://docs.unity3d.com/2019.4/Documentation/Manual/AssetPackagesImport.html):
 
-## Setting up the Automation
+> 1. Download latest `OpenPutt` Unity package from [here](https://github.com/mikeee324/OpenPutt/releases/latest)
+> 2. Import the downloaded .unitypackage into your Unity project
 
-You'll need to make a few changes in [release.yml](.github/workflows/release.yml):
-* Changed the `paths` property on line 7 to point to the directory where your Package's source files are. Leave the `/**` at the end so GitHub knows to run this action whenever any file in that directory is changed. In the example, this property reads: `paths: Packages/com.vrchat.demo-template/**`
-* Change the `packageName` property on line 10 to include the name of your package, like `packageName: "com.vrchat.demo-template"`
-* We highly recommend you keep the existing folder structure where the root of the project is a Unity Repo, and your packages are in the "Packages" directory, If you change this, you'll need to update the paths that assume your package is in the "Packages" directory, on lines 24, 38, 41 and 57.
+# Scene Setup
+1. Drag in the OpenPutt prefab from Packages/OpenPutt/Prefabs
 
-That's it. If you want to store and generate your web files in a folder other than "Website" in the root, you can change the `listPublicDirectory` item [here in build-listing.yml](.github/workflows/build-listing.yml#L17).
+# Adding Courses
+1. Drag in a new OpenPuttCourse prefab into the Holes object of the OpenPutt prefab
+2. Move the start pad to where you want players to start the course
+3. Move the Hole box collider to the hole in your course
+4. Assign any floor meshes for that course to the CourseManager script at the root of the Course prefab (Allows OpenPutt to know if the ball is on the correct course or not)
+6. Add a par/max score to the same CourseManager script
+5. Add the Course prefab to the list of courses in the main OpenPutt script
 
-## 🎉 Publishing a Release
+```
+Note - Courses should have at least the floor as it's own mesh.
+When setting up colliders make sure to use the physics materials included with the prefab.
+Floor meshes for your courses need to use the FloorPhysics material so OpenPutt knows if the ball is on top of the course floor or not.
+Anything that the ball needs to bounce off (walls, obstacles etc) please use the WallPhysics material so OpenPutt can handle the bouncing properly (default unity physics doesn't do this so well)
+```
 
-A release will be automatically built whenever you push changes to your main branch which update files in the package folder you specified in `release.yml`. The version specified in your `package.json` file will be used to define the version of the release.
+# Adding scoreboards
+1. Drag in the ScoreboardDark prefab into your scene (Preferably inside the ScoreboardManager object in the OpenPutt prefab)
+2. Add the new scoreboard to the list of scoreboards attached to the ScoreboardManager script
 
-## 📃 Rebuilding the Listing
-
-Whenever you make a change to a release - automatically publishing it, or manually creating, editing or deleting one, the [Build Repo Listing](.github/workflows/build-listing.yml) action will make a new index of all the releases available, and publish them as a website hosted fore free on [GitHub Pages](https://pages.github.com/). This listing can be used by the VPM to keep your package up to date, and the generated index page can serve as a simple landing page with info for your package. The URL for your package will be in the format `https://username.github.io/repo-name`.
-
-## 🏠 Customizing the Landing Page
-
-The action which rebuilds the listing also publishes a landing page. The source for this page is in `Website/index.html`. The automation system uses [Scriban](https://github.com/scriban/scriban) to fill in the objects like `{{ this }}` with information from the latest release's manifest, so it will stay up-to-date with the name, id and description that you provide there. You are welcome to modify this page however you want - just use the existing `{{ template.objects }}` to fill in that info wherever you like. The entire contents of your "Website" folder are published to your GitHub Page each time.
-
-## Technical Stuff
-
-You are welcome to make your own changes to the automation process to make it fit your needs, and you can create Pull Requests if you have some changes you think we should adopt. Here's some more info on the included automation:
-
-### Build Release Action
-[release.yml](/.github/workflows/release.yml)
-
-This is a composite action combining a variety of existing GitHub Actions and some shell commands to create both a .zip of your Package and a .unitypackage. It creates a release which is named for the `version` in the `package.json` file found in your target Package, and publishes the zip, the unitypackage and the package.json file to this release.
-
-### Build Repo Listing
-[build-listing.yml](.github/workflows/build-listing.yml)
-
-This is a composite action which builds a vpm-compatible [Repo Listing](https://vcc.docs.vrchat.com/vpm/repos) based on the releases you've created. In order to find all your releases and combine them into a listing, it checks out [another repository](https://github.com/vrchat-community/package-list-action) which has a [Nuke](https://nuke.build/) project which includes the VPM core lib to have access to its types and methods. This project will be expanded to include more functionality in the future - for now, the action just calls its `BuildRepoListing` target, which calls `RebuildHomePage` when it completes. If you wanted to make an action that just rebuilds the home page, you could call that directly instead - just copy the existing call and replace the target names.
+# Notes
+There will be more docs on everything at some point (like how to set up the meshes for courses etc), this is just a first go at releasing something so people can have a play with it
 
 ## Status
 ![GitHub deployments](https://img.shields.io/github/deployments/momo-the-monster/template-package/github-pages?label=Generate%20Listing)
