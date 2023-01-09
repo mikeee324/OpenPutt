@@ -551,6 +551,7 @@ namespace mikeee324.OpenPutt
             // Just use the first audio source volume
             foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
             {
+                if (audioSource == null) continue;
                 bgmVolumeSlider.value = audioSource.volume;
                 bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
                 break;
@@ -560,6 +561,7 @@ namespace mikeee324.OpenPutt
             // Just use the first audio source volume
             foreach (AudioSource audioSource in manager.openPutt.WorldAudioSources)
             {
+                if (audioSource == null) continue;
                 worldVolumeSlider.value = audioSource.volume;
                 worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
                 break;
