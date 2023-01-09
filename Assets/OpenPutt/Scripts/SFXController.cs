@@ -35,6 +35,7 @@ namespace mikeee324.OpenPutt
         public AudioClip[] holeInOneSounds;
 
         private float maxVolume = 1f;
+
         public float Volume
         {
             get => maxVolume;
