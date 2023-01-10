@@ -35,3 +35,7 @@ Anything that the ball needs to bounce off (walls, obstacles etc) please use the
 
 # Notes
 There will be more docs on everything at some point (like how to set up the meshes for courses etc), this is just a first go at releasing something so people can have a play with it
+
+# Patreon Thing
+If you feel the need to support me you can do so here: https://patreon.com/mikeee324
+Thanks
