@@ -64,8 +64,6 @@ namespace mikeee324.OpenPutt
         {
             clubInsideBallCheck = true;
 
-            ResetPositionBuffers();
-
             myCollider = GetComponent<BoxCollider>();
             if (golfBall != null)
             {
@@ -79,6 +77,8 @@ namespace mikeee324.OpenPutt
                 myRigidbody.MovePosition(putterTarget.position);
                 myRigidbody.MoveRotation(putterTarget.rotation);
             }
+
+            ResetPositionBuffers();
         }
 
         private void FixedUpdate()
@@ -93,12 +93,16 @@ namespace mikeee324.OpenPutt
                         clubInsideBallCheck = false;
                     }
                 }
+                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
+                golfClubHeadCollider.size = golfClubHeadColliderSizeNow;
             }
-
-            // Scale the club collider based on speed
-            float speed = (transform.position - lastPositions[0]).magnitude / Time.deltaTime;
-            Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
-            golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed / 5);
+            else
+            {
+                // Scale the club collider based on speed
+                float speed = (transform.position - lastPositions[0]).magnitude / Time.deltaTime;
+                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
+                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed / 5);
+            }
 
             Vector3 currentPos = transform.position;
 
