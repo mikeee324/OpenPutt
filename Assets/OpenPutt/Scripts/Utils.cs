@@ -1,12 +1,10 @@
-﻿
-using System;
+﻿using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
+
 namespace mikeee324.OpenPutt
 {
-
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class Utils : UdonSharpBehaviour
     {

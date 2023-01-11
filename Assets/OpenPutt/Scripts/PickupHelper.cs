@@ -1,9 +1,6 @@
-﻿
-using UdonSharp;
-using UnityEngine;
+﻿using UdonSharp;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
-using VRC.Udon;
 using VRC.Udon.Common;
 
 namespace mikeee324.OpenPutt

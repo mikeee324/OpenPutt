@@ -1,11 +1,5 @@
-
-using System;
 using UdonSharp;
 using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
-using VRC.Udon.Common;
-using VRC.SDK3.Components;
 #if !COMPILER_UDONSHARP && UNITY_EDITOR
 using UdonSharpEditor;
 #endif
@@ -43,6 +37,7 @@ namespace mikeee324.OpenPutt
         /// Prevents collisions with the ball from ocurring as soon as the player arms the club
         /// </summary>
         private bool clubInsideBallCheck = false;
+        private float clubInsideBallCheckTimer = 0f;
         /// <summary>
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
@@ -63,6 +58,7 @@ namespace mikeee324.OpenPutt
         public void OnClubArmed()
         {
             clubInsideBallCheck = true;
+            clubInsideBallCheckTimer = 0f;
 
             myCollider = GetComponent<BoxCollider>();
             if (golfBall != null)
@@ -87,10 +83,22 @@ namespace mikeee324.OpenPutt
             {
                 if (ballCollider != null && myCollider != null)
                 {
-                    if (!myCollider.bounds.Intersects(ballCollider.bounds))
+                    if (myCollider.bounds.Intersects(ballCollider.bounds))
                     {
-                        Utils.Log(this, "Club head does not appear to be intersecting with the ball - collisions can happen now!");
-                        clubInsideBallCheck = false;
+                        // While the collider is intersecting with the ball, keep timer reset
+                        clubInsideBallCheckTimer = 0f;
+                    }
+                    else
+                    {
+                        // Start counting time away from the ball
+                        clubInsideBallCheckTimer += Time.fixedDeltaTime;
+
+                        // Wait half a second before enabling collisions with the ball
+                        if (clubInsideBallCheckTimer >= 0.5f)
+                        {
+                            Utils.Log(this, "Club head does not appear to be intersecting with the ball - collisions can happen now!");
+                            clubInsideBallCheck = false;
+                        }
                     }
                 }
                 Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;

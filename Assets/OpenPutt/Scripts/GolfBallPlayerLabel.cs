@@ -1,8 +1,8 @@
-﻿using TMPro;
+﻿
+using TMPro;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-
 
 namespace mikeee324.OpenPutt
 {

@@ -456,8 +456,10 @@ namespace mikeee324.OpenPutt
 
         public void OnBallHit(Vector3 withVelocity)
         {
-            // Discard any hits while the ball is already moving
-            if (!allowBallHitWhileMoving && BallIsMoving)
+            bool playerIsPlayingACourse = playerManager != null && playerManager.CurrentCourse != null;
+
+            // Discard any hits while the ball is already moving and the player is playing a course (allows them to hit the ball as much as they want otherwise)
+            if (playerIsPlayingACourse && !allowBallHitWhileMoving && BallIsMoving)
             {
                 // Tell the club to disarm for a second
                 if (playerManager != null && playerManager.golfClub != null)
