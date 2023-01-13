@@ -17,7 +17,7 @@ namespace mikeee324.OpenPutt
         public Transform putterTarget;
         public bool experimentalCollisionDetection = false;
 
-        [Range(1, 64), Tooltip("How many steps backwards in the colliders path can we go? (Used to average out hit velocity")]
+        [Range(1, 15), Tooltip("How many steps backwards in the colliders path can we go? (Used to average out hit velocity")]
         public int maxBacksteps = 3;
         /// <summary>
         /// Defines how much we need to scale down any hit forces (Matches the weight of the ball rigidbody)
@@ -107,27 +107,13 @@ namespace mikeee324.OpenPutt
             else
             {
                 // Scale the club collider based on speed
-                float speed = (transform.position - lastPositions[0]).magnitude / Time.deltaTime;
+                int averageSpeedStep = (int)(lastPositions.Length * 0.5f);
+                float speed = (transform.position - lastPositions[averageSpeedStep]).magnitude / lastPositionTimes[averageSpeedStep];
                 Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
                 golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed / 5);
             }
 
             Vector3 currentPos = transform.position;
-
-            // Push current position onto buffers
-            for (int i = lastPositions.Length; i-- > 0;)
-            {
-                if (i == 0)
-                {
-                    lastPositions[i] = currentPos;
-                    lastPositionTimes[i] = 0;
-                }
-                else
-                {
-                    lastPositions[i] = lastPositions[i - 1];
-                    lastPositionTimes[i] = lastPositionTimes[i - 1] + Time.fixedDeltaTime;
-                }
-            }
 
             // Make collider look in the direction of travel
             if (experimentalCollisionDetection)
@@ -144,7 +130,7 @@ namespace mikeee324.OpenPutt
             if (putterTarget != null && myRigidbody != null)
             {
                 myRigidbody.MovePosition(putterTarget.position);
-                if (!experimentalCollisionDetection)
+                if (!experimentalCollisionDetection || clubInsideBallCheck)
                     myRigidbody.MoveRotation(putterTarget.rotation);
             }
 
@@ -156,9 +142,9 @@ namespace mikeee324.OpenPutt
                     // Step backwards as far as we can and find the start of the swing and use that to calculate the average speed of the club head
                     int backBuffer = 0;
                     float maxDistance = 0f;
-                    for (int i = 1; i < maxBacksteps; i++)
+                    for (int i = 0; i < maxBacksteps; i++)
                     {
-                        float thisDistance = Vector3.Distance(lastPositions[i], golfClub.ball.transform.position);
+                        float thisDistance = Vector3.Distance(lastPositions[i], putterTarget.transform.position);
                         if (thisDistance > maxDistance)
                         {
                             maxDistance = thisDistance;
@@ -203,11 +189,30 @@ namespace mikeee324.OpenPutt
 
                     // Register the hit with the ball
                     golfBall.OnBallHit(velocity);
+
+                    // Disable club collision for a short while
+                    clubInsideBallCheck = true;
+                    clubInsideBallCheckTimer = 0f;
                 }
 
                 // Consume the hit event
                 ballHasBeenHit = false;
                 ballHasBeenHitOnVector = Vector3.zero;
+            }
+
+            // Push current position onto buffers
+            for (int i = lastPositions.Length; i-- > 0;)
+            {
+                if (i == 0)
+                {
+                    lastPositions[i] = currentPos;
+                    lastPositionTimes[i] = Time.fixedDeltaTime;
+                }
+                else
+                {
+                    lastPositions[i] = lastPositions[i - 1];
+                    lastPositionTimes[i] = lastPositionTimes[i - 1] + Time.fixedDeltaTime;
+                }
             }
         }
 

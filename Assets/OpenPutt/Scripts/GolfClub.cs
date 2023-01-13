@@ -151,8 +151,14 @@ namespace mikeee324.OpenPutt
                 }
 
                 if (playerManager != null && playerManager.golfBall != null)
-                    if (!playerManager.golfBall.allowBallHitWhileMoving && playerManager.golfBall.BallIsMoving)
+                {
+                    bool playerIsPlayingCourse = playerManager.CurrentCourse != null;
+                    bool allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
+                    bool ballIsMoving = playerManager.golfBall.BallIsMoving;
+
+                    if (playerIsPlayingCourse && !allowHitWhileMoving && ballIsMoving)
                         newArmedState = false;
+                }
 
                 ClubIsArmed = ballHitHelpTimer == -1f && (newArmedState || overrideIsArmed);
             }

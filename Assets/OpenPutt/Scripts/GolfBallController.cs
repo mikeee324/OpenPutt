@@ -35,8 +35,6 @@ namespace mikeee324.OpenPutt
         [Header("Ball Physics")]
         [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         public LayerMask allowNonClubCollisionsFrom = 0;
-        [Range(0f, 1f), Tooltip("How much friction the ball has against the floor")]
-        public float ballFriction = 0.2f;
         [Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         public float maxBallSpeed = 15f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
@@ -147,7 +145,6 @@ namespace mikeee324.OpenPutt
         #endregion
 
         #region Internal Vars
-        private float defaultBallFriction = 0.3f;
         /// Tracks how long a ball has been rolling for so we can stop it if it rolls for way too long
         private float timeMoving = 0f;
         /// Tracks how long the ball has been slowly rolling for so we can just bring it to a proper stop
@@ -197,8 +194,6 @@ namespace mikeee324.OpenPutt
                 ballRigidbody = GetComponent<Rigidbody>();
             if (ballCollider == null)
                 ballCollider = GetComponent<SphereCollider>();
-
-            defaultBallFriction = ballFriction;
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
         }
@@ -661,15 +656,6 @@ namespace mikeee324.OpenPutt
         void EvaluateCollision(Collision collision)
         {
             if (droppedByPlayer || ballRigidbody == null || !BallIsMoving) return;
-
-            if (collision.collider != null && collision.collider.material != null && collision.collider.material.name.StartsWith(floorMaterial.name))
-            {
-                ballFriction = collision.collider.material.dynamicFriction;
-            }
-            else
-            {
-                ballFriction = defaultBallFriction;
-            }
 
             float minDot = minGroundDotProduct;
             for (int i = 0; i < collision.contactCount; i++)
