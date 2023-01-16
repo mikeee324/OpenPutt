@@ -96,8 +96,8 @@ namespace mikeee324.OpenPutt
         {
             if (ballHitHelpTimer != -1f)
             {
-                ballHitHelpTimer += Time.deltaTime;
-                if (ballHitHelpTimer > 1f)
+                ballHitHelpTimer -= Time.deltaTime;
+                if (ballHitHelpTimer <= 0f)
                     ballHitHelpTimer = -1f;
             }
 
@@ -112,9 +112,13 @@ namespace mikeee324.OpenPutt
             }
         }
 
-        public void OnBallHitWhileMoving()
+        /// <summary>
+        /// Disarms the club for the player for an amount of time
+        /// </summary>
+        /// <param name="duration">Amount of time to disable the club for in seconds</param>
+        public void DisableClubColliderFor(float duration = 1f)
         {
-            ballHitHelpTimer = 0f;
+            ballHitHelpTimer = duration;
         }
 
         private void RefreshState()

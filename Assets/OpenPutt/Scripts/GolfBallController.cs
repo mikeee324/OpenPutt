@@ -1,5 +1,4 @@
-﻿using System;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -97,7 +96,8 @@ namespace mikeee324.OpenPutt
                 // Reset timers
                 timeNotMoving = 0f;
                 timeMoving = 0f;
-
+                if (value)
+                    ResetPositionBuffers();
                 ClearPhysicsState();
                 UpdateBallState();
 
@@ -168,6 +168,7 @@ namespace mikeee324.OpenPutt
 
         float minGroundDotProduct;
 
+        private Vector3 lastGroundContactNormal = Vector3.up;
         int stepsSinceLastGrounded;
         private bool showLineToHoleStart = false;
         private GameObject closestBallSpawn = null;
@@ -175,6 +176,8 @@ namespace mikeee324.OpenPutt
         private float lerpToSpawnTime = -1f;
         private CourseManager courseThatIsBeingStarted = null;
         private PuttSync puttSync;
+        private Vector3[] lastPositions = new Vector3[16];
+        private float[] lastPositionTimes = new float[16];
         #endregion
 
         void Start()
@@ -314,13 +317,6 @@ namespace mikeee324.OpenPutt
             if (!Utils.LocalPlayerIsValid() || !Networking.IsOwner(Networking.LocalPlayer, gameObject) || ballRigidbody == null)
                 return;
 
-            if (ballRigidbody.isKinematic)
-                lastFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
-            else
-                lastFrameVelocity = ballRigidbody.velocity;
-
-            lastFramePosition = ballRigidbody.position;
-
             if (!BallIsMoving && requestedBallVelocity != Vector3.zero)
                 BallIsMoving = true;
 
@@ -345,8 +341,6 @@ namespace mikeee324.OpenPutt
                 {
                     UpdatePhysicsState();
 
-                    ballRigidbody.velocity = velocity;
-
                     ClearPhysicsState();
                 }
             }
@@ -355,6 +349,28 @@ namespace mikeee324.OpenPutt
                 ballRigidbody.velocity = Vector3.zero;
                 ballRigidbody.angularVelocity = Vector3.zero;
                 ballRigidbody.WakeUp();
+            }
+
+            if (ballRigidbody.isKinematic)
+                lastFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
+            else
+                lastFrameVelocity = ballRigidbody.velocity;
+
+            lastFramePosition = ballRigidbody.position;
+
+            // Push current position onto buffers
+            for (int i = lastPositions.Length; i-- > 0;)
+            {
+                if (i == 0)
+                {
+                    lastPositions[i] = ballRigidbody.position;
+                    lastPositionTimes[i] = Time.fixedDeltaTime;
+                }
+                else
+                {
+                    lastPositions[i] = lastPositions[i - 1];
+                    lastPositionTimes[i] = lastPositionTimes[i - 1] + Time.fixedDeltaTime;
+                }
             }
         }
 
@@ -458,7 +474,7 @@ namespace mikeee324.OpenPutt
             {
                 // Tell the club to disarm for a second
                 if (playerManager != null && playerManager.golfClub != null)
-                    playerManager.golfClub.OnBallHitWhileMoving();
+                    playerManager.golfClub.DisableClubColliderFor();
                 return;
             }
 
@@ -541,8 +557,6 @@ namespace mikeee324.OpenPutt
             var collisionNormal = contact.normal;
 
             // Checks if the collision was from "below" and ignores it
-            //if (Vector3.Dot(collisionNormal, Vector3.up) > wallBounceHeightIgnoreAmount)
-            //    return;
             if (collisionNormal.y > wallBounceHeightIgnoreAmount)
             {
                 Utils.Log(this, "Ignored wall bounce because it was below me!");
@@ -567,7 +581,7 @@ namespace mikeee324.OpenPutt
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
             // Set the ball velocity so it bounces the right way
-            ballRigidbody.velocity = newDirection;
+            lastFrameVelocity = velocity = ballRigidbody.velocity = newDirection;
 
             // Play a hit sound because we bounced off something
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
@@ -578,6 +592,7 @@ namespace mikeee324.OpenPutt
         {
             groundContactCount = steepContactCount = 0;
             contactNormal = steepNormal = Vector3.zero;
+            //  lastGroundContactNormal = 1f;
         }
 
         void UpdatePhysicsState()
@@ -586,7 +601,7 @@ namespace mikeee324.OpenPutt
             velocity = ballRigidbody.velocity;
             bool wasNotGrounded = stepsSinceLastGrounded > 30;
 
-            if (OnGround || SnapToGround() || CheckSteepContacts())
+            if (SnapToGround() || OnGround || CheckSteepContacts())
             {
                 stepsSinceLastGrounded = 0;
                 if (groundContactCount > 1)
@@ -607,32 +622,34 @@ namespace mikeee324.OpenPutt
         bool SnapToGround()
         {
             if (stepsSinceLastGrounded > 1)
-            {
                 return false;
-            }
+
+            if (!Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask))
+                return false;
+
+            float lastNormalY = lastGroundContactNormal.y;
+            lastGroundContactNormal = hit.normal;
+
             float speed = velocity.magnitude;
             if (speed < groundSnappingMinSpeed || speed > groundSnappingMaxSpeed)
-            {
                 return false;
-            }
-            if (!Physics.Raycast(
-                ballRigidbody.position, Vector3.down, out RaycastHit hit,
-                groundSnappingProbeDistance, groundSnappingProbeMask
-            ))
-            {
+
+            if (hit.normal.y < minGroundDotProduct || hit.normal.y > lastNormalY)
                 return false;
-            }
-            if (hit.normal.y < minGroundDotProduct)
-            {
-                return false;
-            }
 
             groundContactCount = 1;
             contactNormal = hit.normal;
+
+            // If we have a velocity from the previous frame use that as it will be our velocity before the bounce
+            if (lastFrameVelocity.magnitude > 0)
+                velocity = lastFrameVelocity;
+
             float dot = Vector3.Dot(velocity, hit.normal);
-            if (dot > 0f)
+
+            if (dot < 0f)
             {
-                velocity = (velocity - hit.normal * dot).normalized * speed;
+                ballRigidbody.velocity = (velocity - hit.normal * dot).normalized * speed;
+                lastFrameVelocity = ballRigidbody.velocity;
             }
             return true;
         }
@@ -741,6 +758,14 @@ namespace mikeee324.OpenPutt
 
                 spawnLineRenderer.gameObject.SetActive(false);
             }
+        }
+
+        private void ResetPositionBuffers()
+        {
+            for (int i = 0; i < lastPositions.Length - 1; i++)
+                lastPositions[i] = this.transform.position;
+            for (int i = 0; i < lastPositionTimes.Length - 1; i++)
+                lastPositionTimes[i] = 0f;
         }
     }
 }

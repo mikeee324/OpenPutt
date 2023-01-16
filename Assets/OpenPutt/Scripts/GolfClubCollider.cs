@@ -1,5 +1,6 @@
 using UdonSharp;
 using UnityEngine;
+using System;
 #if !COMPILER_UDONSHARP && UNITY_EDITOR
 using UdonSharpEditor;
 #endif
@@ -15,10 +16,16 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public Transform putterTarget;
+        [Tooltip("Not so experimental now.. cos i like it more")]
+        /// <summary>
+        /// The collider for the putter follows the club head instead of just being attached to it.<br/>
+        /// Allows us to grab the direction of travel and use that to direct where the ball goes when hit.
+        /// </summary>
         public bool experimentalCollisionDetection = false;
-
-        [Range(1, 15), Tooltip("How many steps backwards in the colliders path can we go? (Used to average out hit velocity")]
-        public int maxBacksteps = 3;
+        [Range(0, 14)]
+        public int hitBackstepOffset = 1;
+        [Range(1, 15)]
+        public int hitMaxBacksteps = 3;
         /// <summary>
         /// Defines how much we need to scale down any hit forces (Matches the weight of the ball rigidbody)
         /// </summary>
@@ -58,7 +65,7 @@ namespace mikeee324.OpenPutt
         public void OnClubArmed()
         {
             clubInsideBallCheck = true;
-            clubInsideBallCheckTimer = 0f;
+            clubInsideBallCheckTimer = 0.1f;
 
             myCollider = GetComponent<BoxCollider>();
             if (golfBall != null)
@@ -81,20 +88,22 @@ namespace mikeee324.OpenPutt
         {
             if (clubInsideBallCheck)
             {
-                if (ballCollider != null && myCollider != null)
+                if (golfClub != null && ballCollider != null && myCollider != null)
                 {
                     if (myCollider.bounds.Intersects(ballCollider.bounds))
                     {
                         // While the collider is intersecting with the ball, keep timer reset
-                        clubInsideBallCheckTimer = 0f;
+                        clubInsideBallCheckTimer = 0.05f;
+                        if (golfClub != null)
+                            golfClub.DisableClubColliderFor(1f);
                     }
                     else
                     {
                         // Start counting time away from the ball
-                        clubInsideBallCheckTimer += Time.fixedDeltaTime;
+                        clubInsideBallCheckTimer -= Time.fixedDeltaTime;
 
-                        // Wait half a second before enabling collisions with the ball
-                        if (clubInsideBallCheckTimer >= 0.5f)
+                        // Wait a little before enabling collisions with the ball
+                        if (clubInsideBallCheckTimer <= 0f)
                         {
                             Utils.Log(this, "Club head does not appear to be intersecting with the ball - collisions can happen now!");
                             clubInsideBallCheck = false;
@@ -118,12 +127,9 @@ namespace mikeee324.OpenPutt
             // Make collider look in the direction of travel
             if (experimentalCollisionDetection)
             {
-                if ((transform.position - lastPositions[1]).magnitude > 0.005f)
-                {
-                    transform.position = lastPositions[1];
-                    transform.LookAt(putterTarget, Vector3.up);
-                    transform.position = currentPos;
-                }
+                Vector3 directionOfTravel = currentPos - lastPositions[3];
+                if (directionOfTravel.magnitude > 0.005f)
+                    transform.rotation = Quaternion.LookRotation(directionOfTravel, Vector3.up);
             }
 
             // Attach this collider to the end of the club
@@ -139,26 +145,35 @@ namespace mikeee324.OpenPutt
                 // Extra precaution to stop hits while arming club while touching ball
                 if (!clubInsideBallCheck)
                 {
-                    // Step backwards as far as we can and find the start of the swing and use that to calculate the average speed of the club head
-                    int backBuffer = 0;
-                    float maxDistance = 0f;
-                    for (int i = 0; i < maxBacksteps; i++)
+                    // Grab positons/time taken
+                    Vector3 latestPos = currentPos;
+                    Vector3 oldestPos = lastPositions[0];
+                    float timeTaken = lastPositionTimes[0];
+
+                    if (hitBackstepOffset > 0)
                     {
-                        float thisDistance = Vector3.Distance(lastPositions[i], putterTarget.transform.position);
-                        if (thisDistance > maxDistance)
+                        latestPos = lastPositions[hitBackstepOffset];
+                        oldestPos = lastPositions[hitBackstepOffset + 1];
+                        timeTaken = lastPositionTimes[hitBackstepOffset + 1] - lastPositionTimes[hitBackstepOffset];
+
+                        for (int currentBackstep = hitBackstepOffset; currentBackstep < hitBackstepOffset + hitMaxBacksteps; currentBackstep++)
                         {
-                            maxDistance = thisDistance;
-                            backBuffer = i;
-                        }
-                        else
-                        {
+                            float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
+                            float currentDistance = Vector3.Distance(latestPos, oldestPos);
+                            if (thisDistance > currentDistance)
+                            {
+                                oldestPos = lastPositions[currentBackstep];
+                                timeTaken = lastPositionTimes[currentBackstep] - lastPositionTimes[hitBackstepOffset];
+                                continue;
+                            }
+
                             break;
                         }
+
                     }
 
                     // Work out velocity
-                    Vector3 distance = currentPos - lastPositions[backBuffer];
-                    Vector3 velocity = distance / lastPositionTimes[backBuffer];
+                    Vector3 velocity = (latestPos - oldestPos) / timeTaken;
 
                     // Scale the velocity down so it makes sense, then multiply that by what the player wants
                     velocity = (velocity * hitForceScale) * (golfClub.forceMultiplier);
