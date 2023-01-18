@@ -16,6 +16,7 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public Transform putterTarget;
+        public AnimationCurve hitForceMultiplier;
         [Tooltip("Not so experimental now.. cos i like it more")]
         /// <summary>
         /// The collider for the putter follows the club head instead of just being attached to it.<br/>
@@ -49,8 +50,6 @@ namespace mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private bool ballHasBeenHit = false;
-        private Vector3 ballHasBeenHitOnVector = Vector3.zero;
-
         private Rigidbody myRigidbody = null;
         private BoxCollider myCollider = null;
         private SphereCollider ballCollider = null;
@@ -60,6 +59,12 @@ namespace mikeee324.OpenPutt
             ResetPositionBuffers();
             golfClubHeadCollider = GetComponent<BoxCollider>();
             golfClubHeadColliderSize = golfClubHeadCollider.size;
+
+            if (hitForceMultiplier.length == 0)
+            {
+                hitForceMultiplier.AddKey(0, 1);
+                hitForceMultiplier.AddKey(10, 2);
+            }
         }
 
         public void OnClubArmed()
@@ -175,8 +180,14 @@ namespace mikeee324.OpenPutt
                     // Work out velocity
                     Vector3 velocity = (latestPos - oldestPos) / timeTaken;
 
-                    // Scale the velocity down so it makes sense, then multiply that by what the player wants
-                    velocity = (velocity * hitForceScale) * (golfClub.forceMultiplier);
+                    // Scale the velocity down to match the mass of the ball
+                    velocity *= hitForceScale;
+
+                    // Scale the velocity back up a bit
+                    velocity *= hitForceMultiplier.Evaluate(velocity.magnitude);
+
+                    // Apply the players final hit force multiplier
+                    velocity *= golfClub.forceMultiplier;
 
                     if (experimentalCollisionDetection)
                     {
@@ -212,7 +223,6 @@ namespace mikeee324.OpenPutt
 
                 // Consume the hit event
                 ballHasBeenHit = false;
-                ballHasBeenHitOnVector = Vector3.zero;
             }
 
             // Push current position onto buffers

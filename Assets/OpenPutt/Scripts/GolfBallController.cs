@@ -96,8 +96,7 @@ namespace mikeee324.OpenPutt
                 // Reset timers
                 timeNotMoving = 0f;
                 timeMoving = 0f;
-                if (value)
-                    ResetPositionBuffers();
+
                 ClearPhysicsState();
                 UpdateBallState();
 
@@ -176,8 +175,6 @@ namespace mikeee324.OpenPutt
         private float lerpToSpawnTime = -1f;
         private CourseManager courseThatIsBeingStarted = null;
         private PuttSync puttSync;
-        private Vector3[] lastPositions = new Vector3[16];
-        private float[] lastPositionTimes = new float[16];
         #endregion
 
         void Start()
@@ -357,21 +354,6 @@ namespace mikeee324.OpenPutt
                 lastFrameVelocity = ballRigidbody.velocity;
 
             lastFramePosition = ballRigidbody.position;
-
-            // Push current position onto buffers
-            for (int i = lastPositions.Length; i-- > 0;)
-            {
-                if (i == 0)
-                {
-                    lastPositions[i] = ballRigidbody.position;
-                    lastPositionTimes[i] = Time.fixedDeltaTime;
-                }
-                else
-                {
-                    lastPositions[i] = lastPositions[i - 1];
-                    lastPositionTimes[i] = lastPositionTimes[i - 1] + Time.fixedDeltaTime;
-                }
-            }
         }
 
         public override void OnPickup()
@@ -758,14 +740,6 @@ namespace mikeee324.OpenPutt
 
                 spawnLineRenderer.gameObject.SetActive(false);
             }
-        }
-
-        private void ResetPositionBuffers()
-        {
-            for (int i = 0; i < lastPositions.Length - 1; i++)
-                lastPositions[i] = this.transform.position;
-            for (int i = 0; i < lastPositionTimes.Length - 1; i++)
-                lastPositionTimes[i] = 0f;
         }
     }
 }

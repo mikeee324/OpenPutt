@@ -8,6 +8,11 @@ namespace mikeee324.OpenPutt
     public class CourseHole : UdonSharpBehaviour
     {
         public CourseManager courseManager;
+        /// <summary>
+        /// The number that will be added onto the players score when the players ball enters this hole
+        /// </summary>
+        [Tooltip("The number that will be added onto the players score when the players ball enters this hole")]
+        public int holeScoreAddition = 0;
 
         private void OnTriggerEnter(Collider other)
         {

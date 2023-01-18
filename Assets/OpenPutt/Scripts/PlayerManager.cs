@@ -273,8 +273,14 @@ namespace mikeee324.OpenPutt
 
             currentCourse = null;
 
+            // Add on any extra points to the players score that this particular hole has
+            courseScores[course.holeNumber] += hole.holeScoreAddition;
+
+            // If the player skipped this course - assign the max score for this course
             if (newCourseState == CourseState.PlayedAndSkipped || newCourseState == CourseState.Skipped)
                 courseScores[course.holeNumber] = course.maxScore;
+
+            // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
 
             if (newCourseState == CourseState.Completed && courseScores[course.holeNumber] == 1)
