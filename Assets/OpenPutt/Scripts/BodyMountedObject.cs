@@ -12,15 +12,24 @@ namespace mikeee324.OpenPutt
     {
         #region Public Settings
         [Header("Object Settings")]
-        [Tooltip("The actual object you want the player to see when they grab this body mounted object")]
-        public GameObject objectToAttach;
+        [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
+        private GameObject objectToAttach;
+        public GameObject ObjectToAttach
+        {
+            get => objectToAttach;
+            set
+            {
+                objectToAttach = value;
+
+                ActivateAndTakeOwnership();
+            }
+        }
         [Tooltip("When the player picks up this object it will send this an event with this name to the attached object")]
         public string pickupEventName = "OnScriptPickup";
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string dropEventName = "OnScriptDrop";
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
-        public PickupHelper pickupHelper;
         private VRCPickup pickup;
 
         [Header("Mounting Settings")]
@@ -76,40 +85,43 @@ namespace mikeee324.OpenPutt
 
         private Vector3 lastFramePosition = Vector3.zero;
         private Vector3 lastFrameVelocity = Vector3.zero;
+        private bool firstFrameCheck = false;
+        private bool userIsInVR = false;
         #endregion
 
         void Start()
         {
             if (objectToAttach != null)
                 originalRotation = objectToAttach.transform.rotation;
-            if (pickupHelper == null)
-                pickupHelper = GetComponent<PickupHelper>();
             if (pickup == null)
                 pickup = GetComponent<VRCPickup>();
         }
 
         private void Update()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer))
+            if (!Utilities.IsValid(Networking.LocalPlayer) || objectToAttach == null)
                 return;
 
-            if (objectToAttach == null)
-                return;
+            if (!firstFrameCheck)
+            {
+                userIsInVR = Networking.LocalPlayer.IsUserInVR();
+                firstFrameCheck = true;
+            }
 
             // Get VR pickup status
-            VRCPickup.PickupHand currentHand = pickupHelper != null ? pickupHelper.CurrentHand : VRCPickup.PickupHand.None;
+            VRCPickup.PickupHand currentHand = pickup != null ? pickup.currentHand : VRCPickup.PickupHand.None;
             // If player is on Desktop - override this if they press the correct key
-            if (!Networking.LocalPlayer.IsUserInVR())
+            if (!userIsInVR)
             {
                 pickupHandLimit = VRCPickup.PickupHand.None;
                 currentHand = Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
             }
 
             // If it is limited to one hand only and player picked it up with the wrong hand
-            if (pickupHandLimit != VRCPickup.PickupHand.None && pickupHelper != null && pickupHandLimit != currentHand)
+            if (pickupHandLimit != VRCPickup.PickupHand.None && pickup != null && pickupHandLimit != currentHand)
             {
                 // Drop this object
-                pickupHelper.Drop();
+                pickup.Drop();
                 currentHand = VRCPickup.PickupHand.None;
             }
 
@@ -117,7 +129,7 @@ namespace mikeee324.OpenPutt
             heldInHand = currentHand;
 
             // We either can't tell if it's being held or we know it's not being held
-            if (pickupHelper == null || currentHand == VRCPickup.PickupHand.None)
+            if (currentHand == VRCPickup.PickupHand.None)
             {
                 // Just pin the body object to the bone
                 gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(mountingOffset);
@@ -129,24 +141,19 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            ActivateAndTakeOwnership();
+            if (pickup != null)
+                pickup.pickupable = false;
 
-            if (Networking.LocalPlayer.IsOwner(objectToAttach))
+            objectToAttach.transform.position = gameObject.transform.position;
+            if (userIsInVR)
             {
-                if (pickup != null)
-                    pickup.pickupable = false;
-
-                objectToAttach.transform.position = gameObject.transform.position;
-                if (Networking.LocalPlayer.IsUserInVR())
-                {
-                    objectToAttach.transform.rotation = gameObject.transform.rotation;
-                }
-                else
-                {
-                    objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
-                    gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
-                    gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
-                }
+                objectToAttach.transform.rotation = gameObject.transform.rotation;
+            }
+            else
+            {
+                objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
+                gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
+                gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
             }
         }
 

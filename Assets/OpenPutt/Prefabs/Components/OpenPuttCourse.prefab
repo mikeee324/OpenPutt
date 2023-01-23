@@ -26,7 +26,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6202910580894832660}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.891, y: 0, z: 3.703}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 5881581481432900928}
@@ -59,6 +59,8 @@ MonoBehaviour:
   holeNumber: 0
   parScore: 0
   maxScore: 12
+  parTime: 120
+  maxTime: 300
   openPutt: {fileID: 0}
   startPad: {fileID: 6544930506992173050}
   ballSpawns:
@@ -69,6 +71,8 @@ MonoBehaviour:
   - {fileID: 6202910581709162212}
   floorObjects:
   - {fileID: 6544930506992173050}
+  alwaysDisplayGizmos: 1
+  ballSpawnGizmoRadius: 0.0225
 --- !u!114 &6202910580894832665
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -181,6 +185,7 @@ MonoBehaviour:
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6202910581709162217}
   courseManager: {fileID: 6202910580894832666}
+  holeScoreAddition: 0
 --- !u!114 &6202910581709162217
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -181,7 +181,6 @@ MonoBehaviour:
   pickupEventName: OnScriptPickup
   dropEventName: OnScriptDrop
   currentHandVariableName: currentOwnerHideOverride
-  pickupHelper: {fileID: 2925314032234985591}
   mountToBone: 10
   mountingOffset: {x: -0.07, y: 0.07, z: -0.05}
   desktopInputKey: 98
@@ -618,6 +617,7 @@ MonoBehaviour:
   openPutt: {fileID: 6945536582650298137}
   scoreboards: []
   maxRefreshInterval: 1
+  speedGolfMode: 0
   showAllPlayers: 0
 --- !u!114 &1044367484047784076
 MonoBehaviour:
@@ -827,7 +827,6 @@ MonoBehaviour:
   pickupEventName: OnScriptPickup
   dropEventName: OnScriptDrop
   currentHandVariableName: currentOwnerHideOverride
-  pickupHelper: {fileID: 4835784689299195682}
   mountToBone: 10
   mountingOffset: {x: 0.07, y: 0.07, z: -0.05}
   desktopInputKey: 109
@@ -1113,8 +1112,7 @@ MonoBehaviour:
   leftShoulderPickup: {fileID: 8456039099590683486}
   rightShoulderPickup: {fileID: 178743159397435406}
   SFXController: {fileID: 5037104764325859341}
-  BGMAudioSources:
-  - {fileID: 0}
+  BGMAudioSources: []
   WorldAudioSources: []
   eventListeners:
   - {fileID: 7237853329547285218}
@@ -1384,7 +1382,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4885318023293490358}
   m_Layer: 0
-  m_Name: Courses
+  m_Name: Holes
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

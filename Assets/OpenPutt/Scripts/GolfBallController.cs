@@ -447,6 +447,20 @@ namespace mikeee324.OpenPutt
             playerManager.RequestSync();
         }
 
+        public void RespawnBall(bool playErrorNoise = false)
+        {
+            Vector3 respawnPos = respawnPosition;
+
+            BallIsMoving = false;
+
+            ballRigidbody.MovePosition(respawnPos);
+            respawnPosition = respawnPos;
+
+            // Play the reset noise
+            if (playErrorNoise && playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
+                playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+        }
+
         public void OnBallHit(Vector3 withVelocity)
         {
             bool playerIsPlayingACourse = playerManager != null && playerManager.CurrentCourse != null;
@@ -485,10 +499,9 @@ namespace mikeee324.OpenPutt
                 playerManager.OnBallHit();
 
             // Vibrate the controller to give feedback to the player
-            VRCPickup.PickupHand currentHand = club.pickupHelper != null ? club.pickupHelper.CurrentHand : VRC_Pickup.PickupHand.None;
-            if (club.currentHandFromScript != VRC_Pickup.PickupHand.None)
-                currentHand = club.currentHandFromScript;
-            Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, 1f, 1f);
+            VRCPickup.PickupHand currentHand = club.CurrentHand;
+            if (currentHand != VRC_Pickup.PickupHand.None)
+                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, 1f, 1f);
 
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
                 playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(this.transform.position, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);

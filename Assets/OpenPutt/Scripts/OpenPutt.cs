@@ -51,7 +51,7 @@ namespace mikeee324.OpenPutt
         /// Get a list of players with active PlayerManager objects
         /// </summary>
         /// <returns></returns>
-        public PlayerManager[] GetPlayers(bool noSort = false)
+        public PlayerManager[] GetPlayers(bool noSort = false, bool hideInactivePlayers = true)
         {
 
             if (objectPool == null || objectAssigner == null)
@@ -67,7 +67,7 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < activeObjects.Length; i++)
             {
                 PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && pm.PlayerTotalScore > 0)
+                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerTotalScore > 0))
                     totalPlayers++;
             }
 
@@ -76,7 +76,7 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < activeObjects.Length; i++)
             {
                 PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && pm.PlayerTotalScore > 0 && aPCount < totalPlayers)
+                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerTotalScore > 0) && aPCount < totalPlayers)
                 {
                     activePlayers[aPCount++] = activeObjects[i].GetComponent<PlayerManager>();
                 }
@@ -86,24 +86,49 @@ namespace mikeee324.OpenPutt
 
             // Used to filter people who haven't started yet to the bottom
             int maxTotalScore = TotalMaxScore;
+            int maxTotalTime = TotalMaxTime;
 
             // Sort the PlayerManager list by score ascending - TODO: Is there a better way of sorting lists in Udon#? (LinQ and IEnumurators doesn't exist here)
             PlayerManager temp = null;
-            for (int i = 0; i <= activePlayers.Length - 1; i++)
+            if (scoreboardManager.speedGolfMode)
             {
-                for (int j = i + 1; j < activePlayers.Length; j++)
+                for (int i = 0; i <= activePlayers.Length - 1; i++)
                 {
-                    int score1 = activePlayers[i].PlayerTotalScore;
-                    if (score1 <= 0)
-                        score1 = maxTotalScore;
-                    int score2 = activePlayers[j].PlayerTotalScore;
-                    if (score2 <= 0)
-                        score2 = maxTotalScore;
-                    if (score1 > score2)
+                    for (int j = i + 1; j < activePlayers.Length; j++)
                     {
-                        temp = activePlayers[i];
-                        activePlayers[i] = activePlayers[j];
-                        activePlayers[j] = temp;
+                        int score1 = activePlayers[i].PlayerTotalTime;
+                        if (score1 <= 0)
+                            score1 = maxTotalTime;
+                        int score2 = activePlayers[j].PlayerTotalTime;
+                        if (score2 <= 0)
+                            score2 = maxTotalTime;
+                        if (score1 > score2)
+                        {
+                            temp = activePlayers[i];
+                            activePlayers[i] = activePlayers[j];
+                            activePlayers[j] = temp;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i <= activePlayers.Length - 1; i++)
+                {
+                    for (int j = i + 1; j < activePlayers.Length; j++)
+                    {
+                        int score1 = activePlayers[i].PlayerTotalScore;
+                        if (score1 <= 0)
+                            score1 = maxTotalScore;
+                        int score2 = activePlayers[j].PlayerTotalScore;
+                        if (score2 <= 0)
+                            score2 = maxTotalScore;
+                        if (score1 > score2)
+                        {
+                            temp = activePlayers[i];
+                            activePlayers[i] = activePlayers[j];
+                            activePlayers[j] = temp;
+                        }
                     }
                 }
             }
@@ -143,6 +168,19 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
+        /// Sums up the maximum time a player can score across all courses
+        /// </summary>
+        public int TotalMaxTime
+        {
+            get
+            {
+                int score = 0;
+                foreach (CourseManager course in courses)
+                    score += course.maxTimeMillis;
+                return score;
+            }
+        }
+        /// <summary>
         /// Sums up the par on all courses
         /// </summary>
         public int TotalParScore
@@ -152,6 +190,16 @@ namespace mikeee324.OpenPutt
                 int score = 0;
                 foreach (CourseManager course in courses)
                     score += course.parScore;
+                return score;
+            }
+        }
+        public int TotalParTime
+        {
+            get
+            {
+                int score = 0;
+                foreach (CourseManager course in courses)
+                    score += course.parTimeMillis;
                 return score;
             }
         }

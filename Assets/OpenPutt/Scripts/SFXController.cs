@@ -72,7 +72,7 @@ namespace mikeee324.OpenPutt
         {
             if (ballHitSounds.Length > 0)
             {
-                PlaySoundAtPosition(extraSource, ballResetSounds[Random.Range(0, ballResetSounds.Length)], position, false);
+                PlaySoundAtPosition(ballHitSource, ballResetSounds[Random.Range(0, ballResetSounds.Length)], position, false);
             }
         }
 
@@ -88,7 +88,7 @@ namespace mikeee324.OpenPutt
         {
             if (holeInOneSounds.Length > 0)
             {
-                PlaySoundAtPosition(extraSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], position, false);
+                PlaySoundAtPosition(ballHoleSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], position, false);
             }
         }
 

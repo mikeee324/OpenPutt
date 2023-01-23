@@ -1,6 +1,7 @@
 using UdonSharp;
 using UnityEngine;
 using System;
+using UnityEngine.InputSystem.EnhancedTouch;
 #if !COMPILER_UDONSHARP && UNITY_EDITOR
 using UdonSharpEditor;
 #endif
@@ -16,6 +17,7 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public Transform putterTarget;
+        public BoxCollider golfClubHeadCollider;
         public AnimationCurve hitForceMultiplier;
         [Tooltip("Not so experimental now.. cos i like it more")]
         /// <summary>
@@ -39,8 +41,7 @@ namespace mikeee324.OpenPutt
         /// Tracks how much time it has been since we recorded each position in the lastPositions array
         /// </summary>
         private float[] lastPositionTimes = new float[16];
-        private BoxCollider golfClubHeadCollider;
-        private Vector3 golfClubHeadColliderSize;
+        private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
         /// <summary>
         /// Prevents collisions with the ball from ocurring as soon as the player arms the club
         /// </summary>
@@ -51,14 +52,14 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private bool ballHasBeenHit = false;
         private Rigidbody myRigidbody = null;
-        private BoxCollider myCollider = null;
         private SphereCollider ballCollider = null;
 
         void Start()
         {
             ResetPositionBuffers();
-            golfClubHeadCollider = GetComponent<BoxCollider>();
-            golfClubHeadColliderSize = golfClubHeadCollider.size;
+
+            if (golfClubHeadCollider == null)
+                golfClubHeadCollider = GetComponent<BoxCollider>();
 
             if (hitForceMultiplier.length == 0)
             {
@@ -72,7 +73,6 @@ namespace mikeee324.OpenPutt
             clubInsideBallCheck = true;
             clubInsideBallCheckTimer = 0.1f;
 
-            myCollider = GetComponent<BoxCollider>();
             if (golfBall != null)
             {
                 ballCollider = golfBall.GetComponent<SphereCollider>();
@@ -87,20 +87,38 @@ namespace mikeee324.OpenPutt
             }
 
             ResetPositionBuffers();
+
+            ResizeClubCollider();
+        }
+
+        private void ResizeClubCollider(float overrideSpeed = -1f, float overrideScale = -1f)
+        {
+            if (golfClubHeadCollider != null && putterTarget != null)
+            {
+                int averageSpeedStep = (int)(lastPositions.Length * 0.5f);
+                float speed = (transform.position - lastPositions[averageSpeedStep]).magnitude / lastPositionTimes[averageSpeedStep];
+                if (overrideSpeed != -1f)
+                    speed = overrideSpeed;
+
+                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
+                if (overrideScale != -1f)
+                    golfClubHeadColliderSizeNow = golfClubHeadColliderSize * overrideScale;
+                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed * .2f);
+            }
         }
 
         private void FixedUpdate()
         {
             if (clubInsideBallCheck)
             {
-                if (golfClub != null && ballCollider != null && myCollider != null)
+                if (golfClub != null && ballCollider != null && golfClubHeadCollider != null)
                 {
-                    if (myCollider.bounds.Intersects(ballCollider.bounds))
+                    if (golfClubHeadCollider.bounds.Intersects(ballCollider.bounds))
                     {
                         // While the collider is intersecting with the ball, keep timer reset
                         clubInsideBallCheckTimer = 0.05f;
-                        if (golfClub != null)
-                            golfClub.DisableClubColliderFor(1f);
+                        //  if (golfClub != null)
+                        //   golfClub.DisableClubColliderFor(1f);
                     }
                     else
                     {
@@ -115,16 +133,11 @@ namespace mikeee324.OpenPutt
                         }
                     }
                 }
-                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
-                golfClubHeadCollider.size = golfClubHeadColliderSizeNow;
+                ResizeClubCollider(0);
             }
             else
             {
-                // Scale the club collider based on speed
-                int averageSpeedStep = (int)(lastPositions.Length * 0.5f);
-                float speed = (transform.position - lastPositions[averageSpeedStep]).magnitude / lastPositionTimes[averageSpeedStep];
-                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
-                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed / 5);
+                ResizeClubCollider();
             }
 
             Vector3 currentPos = transform.position;

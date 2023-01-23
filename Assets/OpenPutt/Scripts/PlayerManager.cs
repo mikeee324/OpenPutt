@@ -2,6 +2,7 @@
 using UnityEngine;
 using VRC.SDKBase;
 using Cyan.PlayerObjectPool;
+using VRC.SDK3.Components;
 
 namespace mikeee324.OpenPutt
 {
@@ -20,6 +21,8 @@ namespace mikeee324.OpenPutt
         public bool isPlaying = true;
         [UdonSynced]
         public int[] courseScores = { };
+        [UdonSynced]
+        public int[] courseTimes = { };
         [UdonSynced]
         public CourseState[] courseStates = { };
         [Range(5, 30), Tooltip("The number of seconds a ball can be away from the current course before being respawned back instantly")]
@@ -111,9 +114,9 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Needed to make sure this PlayerManager has been properly initialised before we try to use it
         /// </summary>
-        public bool IsReady => isPlaying && courseScores.Length > 0 && courseStates.Length > 0;
+        public bool IsReady => isPlaying && courseScores.Length > 0 && courseStates.Length > 0 && courseTimes.Length > 0;
         /// <summary>
-        /// Works out the players total score across all holes
+        /// Works out the players total score across all courses
         /// </summary>
         public int PlayerTotalScore
         {
@@ -126,17 +129,39 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
+        /// Total number of milliseconds the player took to complete the courses
+        /// </summary>
+        public int PlayerTotalTime
+        {
+            get
+            {
+                int totalTime = 0;
+                for (int i = 0; i < courseTimes.Length; i++)
+                {
+                    if (courseStates[i] == CourseState.Playing)
+                    {
+                        totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
+                    }
+                    else
+                    {
+                        totalTime += courseTimes[i];
+                    }
+                }
+                return totalTime;
+            }
+        }
+        /// <summary>
         /// Contains a reference to the players current course that they are playing on (returns null if they aren't playing any)
         /// </summary>
         public CourseManager CurrentCourse => currentCourse;
         private CourseManager currentCourse;
         public bool IsInLeftHandedMode
         {
-            get => openPutt != null && openPutt.leftShoulderPickup != null && openPutt.leftShoulderPickup.objectToAttach != null && openPutt.leftShoulderPickup.objectToAttach == golfClub.gameObject;
+            get => openPutt != null && openPutt.leftShoulderPickup != null && openPutt.leftShoulderPickup.ObjectToAttach != null && openPutt.leftShoulderPickup.ObjectToAttach == golfClub.gameObject;
             set
             {
-                openPutt.leftShoulderPickup.objectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                openPutt.rightShoulderPickup.objectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+                openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
+                openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
             }
         }
         /// <summary>
@@ -172,6 +197,7 @@ namespace mikeee324.OpenPutt
                         courseStates[i] = courseScores[i] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped;
                         Utils.Log(this, $"Skipped course {i} with score of {courseScores[i]} OldState={oldState} NewState={courseStates[i]}");
                         courseScores[i] = openPutt.courses[i].maxScore;
+                        courseTimes[i] = openPutt.courses[i].maxTimeMillis;
                     }
                 }
                 else if (i > currentCourse.holeNumber)
@@ -181,6 +207,7 @@ namespace mikeee324.OpenPutt
                     {
                         // And it isn't completed yet, reset it
                         courseScores[i] = 0;
+                        courseTimes[i] = 0;
                         courseStates[i] = CourseState.NotStarted;
                     }
                 }
@@ -191,6 +218,7 @@ namespace mikeee324.OpenPutt
                     {
                         case CourseState.NotStarted:
                             courseScores[i] = 1;
+                            courseTimes[i] = Networking.GetServerTimeInMilliseconds();
                             courseStates[i] = CourseState.Playing;
 
                             // Can we tell others straight away about starting a new course?
@@ -216,6 +244,7 @@ namespace mikeee324.OpenPutt
                             {
                                 // Players are allowed to restart completed courses
                                 courseScores[currentCourse.holeNumber] = 1;
+                                courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
                                 courseStates[currentCourse.holeNumber] = CourseState.Playing;
 
                                 // Can we tell others straight away about starting a new course?
@@ -228,6 +257,7 @@ namespace mikeee324.OpenPutt
                         case CourseState.Skipped:
                             // Players can start a course they haven't touched yet.. just in case they walked past some
                             courseScores[currentCourse.holeNumber] = 1;
+                            courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
                             courseStates[currentCourse.holeNumber] = CourseState.Playing;
 
                             // Can we tell others straight away about starting a new course?
@@ -251,6 +281,16 @@ namespace mikeee324.OpenPutt
 
         public void OnCourseStarted(CourseManager newCourse)
         {
+            bool canReplayCourses = openPutt != null && openPutt.replayableCourses;
+            if (courseStates[newCourse.holeNumber] == CourseState.Completed || courseStates[newCourse.holeNumber] == CourseState.PlayedAndSkipped)
+            {
+                if (!canReplayCourses)
+                {
+                    Utils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
+                    return;
+                }
+            }
+
             Utils.Log(this, $"Starting course number {newCourse.holeNumber}. Current course({(currentCourse != null ? currentCourse.holeNumber : -1)}) will be closed");
 
             // If the player is already on a hole say they skipped it
@@ -276,9 +316,20 @@ namespace mikeee324.OpenPutt
             // Add on any extra points to the players score that this particular hole has
             courseScores[course.holeNumber] += hole.holeScoreAddition;
 
-            // If the player skipped this course - assign the max score for this course
             if (newCourseState == CourseState.PlayedAndSkipped || newCourseState == CourseState.Skipped)
+            {
+                // If the player skipped this course - assign the max score for this course
                 courseScores[course.holeNumber] = course.maxScore;
+                courseTimes[course.holeNumber] = course.maxTimeMillis;
+            }
+            else
+            {
+                // Calculate the amount of time player spent on this course
+                courseTimes[course.holeNumber] = Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber];
+            }
+
+            if (courseTimes[course.holeNumber] > course.maxTimeMillis)
+                courseTimes[course.holeNumber] = course.maxTimeMillis;
 
             // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
@@ -288,7 +339,7 @@ namespace mikeee324.OpenPutt
                 hole.SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "OnHoleInOne");
             }
 
-            Utils.Log(this, $"Course({(courseStates[course.holeNumber])}) is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}.");
+            Utils.Log(this, $"Course({course.holeNumber}) was {(courseStates[course.holeNumber] == CourseState.Playing ? "Playing" : "Not Playing")} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}ms to do this.");
 
             if (openPutt != null && openPutt.scoreboardManager != null)
                 openPutt.scoreboardManager.RequestRefresh();
@@ -354,11 +405,11 @@ namespace mikeee324.OpenPutt
                 if (timeSinceLastLocationCheck > 1f)
                 {
                     // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
-                    if (openPutt != null && openPutt.rightShoulderPickup != null && openPutt.rightShoulderPickup.objectToAttach != null)
+                    if (openPutt != null && openPutt.rightShoulderPickup != null && openPutt.rightShoulderPickup.ObjectToAttach != null)
                     {
-                        PickupHelper pickupHelper = openPutt.rightShoulderPickup.objectToAttach.GetComponent<PickupHelper>();
+                        VRCPickup pickupHelper = openPutt.rightShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
                         if (pickupHelper != null)
-                            openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.CurrentHand == VRC_Pickup.PickupHand.None);
+                            openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
                     }
 
                     bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.transform.position, 100f);
@@ -493,7 +544,7 @@ namespace mikeee324.OpenPutt
                 BallColor = new Color(UnityEngine.Random.Range(0, 1f), UnityEngine.Random.Range(0, 1f), UnityEngine.Random.Range(0, 1f));
             }
 
-            if (localPlayerIsNowOwner || (courseScores.Length == 0 && courseStates.Length == 0))
+            if (localPlayerIsNowOwner || (courseScores.Length == 0 && courseStates.Length == 0 && courseTimes.Length == 0))
                 ResetPlayerScores();
 
             if (golfClub != null)
@@ -517,8 +568,8 @@ namespace mikeee324.OpenPutt
 
             if (localPlayerIsNowOwner)
             {
-                openPutt.leftShoulderPickup.objectToAttach = golfBall.gameObject;
-                openPutt.rightShoulderPickup.objectToAttach = golfClub.gameObject;
+                openPutt.leftShoulderPickup.ObjectToAttach = golfBall.gameObject;
+                openPutt.rightShoulderPickup.ObjectToAttach = golfClub.gameObject;
 
                 openPutt.leftShoulderPickup.gameObject.SetActive(true);
                 openPutt.rightShoulderPickup.gameObject.SetActive(true);
@@ -568,10 +619,12 @@ namespace mikeee324.OpenPutt
             isPlaying = true;
             currentCourse = null;
             courseScores = new int[openPutt != null ? openPutt.courses.Length : 0];
+            courseTimes = new int[openPutt != null ? openPutt.courses.Length : 0];
             courseStates = new CourseState[openPutt != null ? openPutt.courses.Length : 0];
             for (int i = 0; i < courseScores.Length; i++)
             {
                 courseScores[i] = 0;
+                courseTimes[i] = 0;
                 courseStates[i] = CourseState.NotStarted;
             }
         }

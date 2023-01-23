@@ -1,4 +1,5 @@
 ﻿
+using System.Collections.Concurrent;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -39,18 +40,29 @@ namespace mikeee324.OpenPutt
     {
         [HideInInspector]
         public int holeNumber = 0;
-        [Tooltip("The part score for this hole")]
+        [Header("Course Settings"), Tooltip("The par score for this hole")]
         public int parScore = 0;
         [Tooltip("This will stop the player after this many hits, also used as the default score if a player skips this hole")]
         public int maxScore = 12;
+        [Tooltip("The par time in seconds for this hole (Default is 5 mins)")]
+        public int parTime = 120;
+        [Tooltip("The maximum amount of seconds a player can have on this hole (Default is 5 mins)")]
+        public int maxTime = 300;
+        public int parTimeMillis => parTime * 1000;
+        public int maxTimeMillis => maxTime * 1000;
 
         [HideInInspector]
         public OpenPutt openPutt;
+        [Header("Object References")]
         public GameObject startPad;
         public GameObject[] ballSpawns;
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
+        [Header("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
+        public bool alwaysDisplayGizmos = true;
+        [Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
+        public float ballSpawnGizmoRadius = 0.0225f;
 
         public void OnBallEnterHole(CourseHole hole, Collider collider)
         {
@@ -60,6 +72,58 @@ namespace mikeee324.OpenPutt
             {
                 if (golfBall.BallIsMoving && !golfBall.pickedUpByPlayer)
                     golfBall.playerManager.OnCourseFinished(this, hole, CourseState.Completed);
+            }
+        }
+
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!alwaysDisplayGizmos)
+                DrawGizmos();
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (alwaysDisplayGizmos)
+                DrawGizmos();
+        }
+
+        private void DrawGizmos()
+        {
+            Gizmos.color = Color.green;
+            foreach (GameObject ballSpawn in ballSpawns)
+            {
+                if (ballSpawn == null) continue;
+
+                Gizmos.DrawWireSphere(ballSpawn.transform.position, ballSpawnGizmoRadius);
+            }
+
+            Gizmos.color = Color.red;
+            foreach (GameObject hole in holes)
+            {
+                if (hole == null) continue;
+
+                if (hole.GetComponent<BoxCollider>() != null)
+                {
+                    BoxCollider col = hole.GetComponent<BoxCollider>();
+                    Gizmos.DrawWireCube(hole.transform.TransformPoint(col.center), col.size);
+                }
+                else if (hole.GetComponent<SphereCollider>() != null)
+                {
+                    SphereCollider col = hole.GetComponent<SphereCollider>();
+                    Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
+                }
+                else if (hole.GetComponent<CapsuleCollider>() != null)
+                {
+                    CapsuleCollider col = hole.GetComponent<CapsuleCollider>();
+                    Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
+                }
+                else if (hole.GetComponent<MeshCollider>() != null)
+                {
+                    MeshCollider col = hole.GetComponent<MeshCollider>();
+                    Gizmos.DrawWireMesh(col.sharedMesh, -1, hole.transform.position, hole.transform.rotation, hole.transform.localScale);
+                }
+
             }
         }
     }

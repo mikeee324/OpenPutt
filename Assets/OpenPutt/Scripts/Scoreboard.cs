@@ -32,6 +32,7 @@ namespace mikeee324.OpenPutt
         public ScoreboardManager manager;
 
         [Header("Internal References (All are required to be set)")]
+        public RectTransform scoreboardHeader;
         public RectTransform settingsPanelHeader;
         public RectTransform settingsPanel;
         public RectTransform infoPanelHeader;
@@ -60,7 +61,7 @@ namespace mikeee324.OpenPutt
         public Image leftHandModeCheckbox;
         public Image enableBigShaftCheckbox;
         public Image courseReplaysCheckbox;
-        public Image experimentalCollisionCheckbox;
+        public Image showAllPlayersCheckbox;
         public Material checkboxOn;
         public Material checkboxOff;
         public Button resetButton;
@@ -71,10 +72,12 @@ namespace mikeee324.OpenPutt
         public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
         [Tooltip("How close the player needs to be to this scoreboard if one of the 'nearby' settings are used above")]
         public float nearbyMaxRadius = 10f;
-        [Tooltip("The maximum number of players this scoreobard can display (0=Show all players)")]
-        public int numberOfPlayersToDisplay = 10;
+        [Tooltip("The maximum number of players this scoreobard can display (0=Show all players, -1=Auto)")]
+        private int numberOfPlayersToDisplay = -1;
         [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
         public int attachedToCourse = -1;
+        [Tooltip("Toggles whether to hide people who haven't started playing yet (On by default)")]
+        public bool hideInactivePlayers = true;
         [Header("Background Colours")]
         public Color nameBackground1 = Color.black;
         public Color scoreBackground1 = Color.black;
@@ -102,6 +105,7 @@ namespace mikeee324.OpenPutt
 
         private bool initializedUI = false;
         private bool refreshWaitingForInit = false;
+        private float speedrunUpdateTimer = -1f;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
         public ScoreboardView CurrentScoreboardView
         {
@@ -110,6 +114,7 @@ namespace mikeee324.OpenPutt
             {
                 if (_currentScoreboardView != value)
                 {
+                    speedrunUpdateTimer = -1f;
                     switch (value)
                     {
                         case ScoreboardView.Scoreboard:
@@ -117,18 +122,29 @@ namespace mikeee324.OpenPutt
                             settingsPanelHeader.gameObject.SetActive(false);
                             infoPanel.gameObject.SetActive(false);
                             infoPanelHeader.gameObject.SetActive(false);
+                            topRowPanel.gameObject.SetActive(true);
+                            parRowPanel.gameObject.SetActive(true);
+                            playerListCanvas.gameObject.SetActive(true);
+                            if (manager != null && manager.speedGolfMode)
+                                speedrunUpdateTimer = 0;
                             break;
                         case ScoreboardView.Info:
                             settingsPanel.gameObject.SetActive(false);
                             settingsPanelHeader.gameObject.SetActive(false);
                             infoPanel.gameObject.SetActive(true);
                             infoPanelHeader.gameObject.SetActive(true);
+                            topRowPanel.gameObject.SetActive(false);
+                            parRowPanel.gameObject.SetActive(false);
+                            playerListCanvas.gameObject.SetActive(false);
                             break;
                         case ScoreboardView.Settings:
                             settingsPanel.gameObject.SetActive(true);
                             settingsPanelHeader.gameObject.SetActive(true);
                             infoPanel.gameObject.SetActive(false);
                             infoPanelHeader.gameObject.SetActive(false);
+                            topRowPanel.gameObject.SetActive(false);
+                            parRowPanel.gameObject.SetActive(false);
+                            playerListCanvas.gameObject.SetActive(false);
 
                             RefreshSettingsMenu();
 
@@ -154,7 +170,7 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                PlayerManager[] allPlayers = manager.openPutt.GetPlayers();
+                PlayerManager[] allPlayers = manager.openPutt.GetPlayers(noSort: false, hideInactivePlayers);
 
                 if (allPlayers == null)
                     return new PlayerManager[0];
@@ -207,6 +223,7 @@ namespace mikeee324.OpenPutt
 
             CurrentScoreboardView = ScoreboardView.Scoreboard;
 
+            // Make sure that the scoreboard has basically no thickness so the laser pointer works properly
             RectTransform rectTransform = GetComponent<RectTransform>();
             if (rectTransform != null)
             {
@@ -230,9 +247,18 @@ namespace mikeee324.OpenPutt
                 bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
                 worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
             }
+            else if (speedrunUpdateTimer != -1f)
+            {
+                speedrunUpdateTimer += Time.deltaTime;
+                if (speedrunUpdateTimer > 1f)
+                {
+                    RefreshScoreboard();
+                    speedrunUpdateTimer = 0f;
+                }
+            }
         }
 
-        public void RefreshScoreboard()
+        public void RefreshScoreboard(bool shouldScrollToLocalPlayer = false)
         {
             if (!initializedUI)
             {
@@ -241,20 +267,71 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
+            float totalheightOfScrollViewport = 1f;
+
+            RectTransform scoreboardPanel = GetComponent<RectTransform>();
+            if (scoreboardPanel != null && scoreboardHeader != null && topRowPanel != null && parRowPanel != null)
+            {
+                // Get the total height of the player canvas view
+                totalheightOfScrollViewport = scoreboardPanel.sizeDelta.y - scoreboardHeader.sizeDelta.y - topRowPanel.sizeDelta.y - parRowPanel.sizeDelta.y;
+            }
+
+            // Update size of canvas so scrollviews work
+            float totalHeightOfAllRows = (rowHeight + rowPadding) * VisibleScoreboardPlayers.Length;
+            playerListCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(playerListCanvas.GetComponent<RectTransform>().sizeDelta.x, totalHeightOfAllRows);
+
+            if (numberOfPlayersToDisplay == -1)
+            {
+                // Default to showing all players in case we can't work out how many to display
+                numberOfPlayersToDisplay = 0;
+
+                if (scoreboardPanel != null && scoreboardHeader != null && topRowPanel != null && parRowPanel != null)
+                {
+                    // Work out how many rows we can fit in that height
+                    numberOfPlayersToDisplay = (int)Math.Floor(totalheightOfScrollViewport / (rowHeight + rowPadding));
+                    if ((rowHeight + rowPadding) * numberOfPlayersToDisplay > totalheightOfScrollViewport)
+                        numberOfPlayersToDisplay--;
+
+                    Utils.Log(this, $"This scoreboard can display {numberOfPlayersToDisplay} players at once. ViewportHeight:{totalheightOfScrollViewport} Height:{(rowHeight + rowPadding) * numberOfPlayersToDisplay} RowHeight:{rowHeight + rowPadding}");
+                }
+            }
+
+            PlayerManager[] activePlayers = VisibleScoreboardPlayers;
+
             if (playerListCanvas.transform.childCount != manager.openPutt.MaxPlayerCount)
             {
                 Utils.LogWarning(this, $"Scoreboard tried to refresh with an incorrect number of player rows! Current={playerListCanvas.transform.childCount} Target={manager.openPutt.MaxPlayerCount}");
                 CreateAllRows();
             }
 
-            PlayerManager[] activePlayers = VisibleScoreboardPlayers;
+            // Toggle scrollview if the players list is taller than the viewport
+            ScrollRect scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
+            scrollRect.enabled = (rowHeight + rowPadding) * activePlayers.Length > totalheightOfScrollViewport;
 
+            // If scrollview is disabled scroll to top
+            if (!scrollRect.enabled)
+                SnapTo(null);
+
+            // Toggle raycast target depending on scrollRect state
+            Image scrollPanel = playerListCanvas.transform.parent.GetComponent<Image>();
+            if (scrollPanel != null)
+                scrollPanel.raycastTarget = scrollRect.enabled;
+
+            UpdateParRow();
             for (int position = 0; position < manager.openPutt.MaxPlayerCount; position++)
             {
                 if (position < activePlayers.Length && activePlayers[position].Owner != null)
                 {
-                    // There is a array going out of bounds here somewhere.....
                     UpdatePlayerRow(activePlayers[position], position);
+
+                    // If this is the local players row, and we need to scroll to their position
+                    if (scrollRect != null && scrollRect.enabled && shouldScrollToLocalPlayer && activePlayers[position].Owner == Networking.LocalPlayer)
+                    {
+                        // Find the row transform
+                        RectTransform newRow = playerListCanvas.GetChild(position).GetComponent<RectTransform>();
+                        if (newRow != null)
+                            SnapTo(newRow); // Snap the ScrollView to this position so the local player is in view
+                    }
                 }
                 else
                 {
@@ -262,16 +339,11 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            // Update size of canvas so scrollviews work
-            float totalHeight = (rowHeight + rowPadding) * VisibleScoreboardPlayers.Length;
-            playerListCanvas.GetComponent<RectTransform>().sizeDelta = new Vector2(playerListCanvas.GetComponent<RectTransform>().sizeDelta.x, totalHeight);
-
-            // Toggle scrollview
-            ScrollRect scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
-            scrollRect.enabled = NumberOfPlayersToDisplay == 0;
-
             if (CurrentScoreboardView == ScoreboardView.Settings)
                 RefreshSettingsMenu();
+
+            if (CurrentScoreboardView == ScoreboardView.Scoreboard)
+                speedrunUpdateTimer = activePlayers.Length > 0 && manager != null && manager.speedGolfMode ? 0 : -1;
         }
 
         private void UpdatePlayerRow(PlayerManager player, int position)
@@ -291,7 +363,7 @@ namespace mikeee324.OpenPutt
 
             if (rowRect.transform.childCount != manager.openPutt.courses.Length + 2)
             {
-                Utils.Log(this, $"This row({rowRect.name}-{position}) appears to ahave the incorrect number of columns on it! Should have {manager.openPutt.courses.Length + 2} but this row has {rowRect.transform.childCount}");
+                Utils.Log(this, $"This row({rowRect.name}-{position}) appears to have the incorrect number of columns on it! Should have {manager.openPutt.courses.Length + 2} but this row has {rowRect.transform.childCount}");
                 return;
             }
 
@@ -311,22 +383,40 @@ namespace mikeee324.OpenPutt
                     }
                     else if (col == rowRect.transform.childCount - 1)
                     {
+                        // Render the last column - This is usually the "Total" column
                         bool finishedAllCourses = true;
                         foreach (CourseState courseState in player.courseStates)
                         {
+                            // TODO: Maybe count skipped courses as completed too?
                             if (courseState != CourseState.Completed)
                             {
                                 finishedAllCourses = false;
                                 break;
                             }
                         }
-                        tmp.text = $"{player.PlayerTotalScore}";
-                        if (player.PlayerTotalScore > 0 && player.PlayerTotalScore > manager.openPutt.TotalParScore)
+
+                        bool playerIsAbovePar = false;
+                        bool playerIsBelowPar = false;
+
+                        if (manager.speedGolfMode)
+                        {
+                            tmp.text = TimeSpan.FromMilliseconds(player.PlayerTotalTime).ToString(@"m\:ss");
+                            playerIsAbovePar = player.PlayerTotalTime > 0 && player.PlayerTotalTime > (manager.openPutt.TotalParTime);
+                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalTime > 0 && player.PlayerTotalTime < (manager.openPutt.TotalParTime);
+                        }
+                        else
+                        {
+                            tmp.text = $"{player.PlayerTotalScore}";
+                            playerIsAbovePar = player.PlayerTotalScore > 0 && player.PlayerTotalScore > manager.openPutt.TotalParScore;
+                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalScore > 0 && player.PlayerTotalScore < manager.openPutt.TotalParScore;
+                        }
+
+                        if (playerIsAbovePar)
                         {
                             tmp.color = overParText;
                             columnBackground.color = overParBackground;
                         }
-                        else if (finishedAllCourses && player.PlayerTotalScore > 0 && player.PlayerTotalScore < manager.openPutt.TotalParScore)
+                        else if (playerIsBelowPar)
                         {
                             tmp.color = underParText;
                             columnBackground.color = underParBackground;
@@ -343,28 +433,49 @@ namespace mikeee324.OpenPutt
                         {
                             CourseState courseState = player.courseStates[col - 1];
                             int holeScore = player.courseScores[col - 1];
-                            tmp.text = $"{holeScore}";
 
                             columnBackground.color = position % 2 == 0 ? scoreBackground1 : scoreBackground2;
+
+                            bool playerIsAbovePar = false;
+                            bool playerIsBelowPar = false;
+
+                            if (manager.speedGolfMode)
+                            {
+                                double timeOnThisCourse = player.courseTimes[col - 1];
+
+                                // If the player is playing this course right now, then the stored value is the time when they started the course
+                                if (courseState == CourseState.Playing)
+                                    timeOnThisCourse = Networking.GetServerTimeInMilliseconds() - timeOnThisCourse;
+
+                                tmp.text = TimeSpan.FromMilliseconds(timeOnThisCourse).ToString(@"m\:ss");
+                                playerIsAbovePar = timeOnThisCourse > (manager.openPutt.courses[col - 1].parTimeMillis);
+                                playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < (manager.openPutt.courses[col - 1].parTimeMillis);
+                            }
+                            else
+                            {
+                                tmp.text = $"{holeScore}";
+                                playerIsAbovePar = holeScore > 0 && holeScore > manager.openPutt.courses[col - 1].parScore;
+                                playerIsBelowPar = courseState == CourseState.Completed && holeScore > 0 && holeScore < manager.openPutt.courses[col - 1].parScore;
+                            }
 
                             if (courseState == CourseState.Playing)
                             {
                                 tmp.color = currentCourseText;
                                 columnBackground.color = currentCourseBackground;
                                 // If we are in slow update mode we can't display a score as it will not be up to date
-                                if (manager.openPutt.playerSyncType != PlayerSyncType.All)
+                                if (player.Owner != Networking.LocalPlayer && manager.openPutt.playerSyncType != PlayerSyncType.All)
                                     tmp.text = "-";
                             }
                             else if (courseState == CourseState.NotStarted)
                             {
                                 tmp.text = "-";
                             }
-                            else if (holeScore > 0 && holeScore > manager.openPutt.courses[col - 1].parScore)
+                            else if (playerIsAbovePar)
                             {
                                 tmp.color = overParText;
                                 columnBackground.color = overParBackground;
                             }
-                            else if (courseState == CourseState.Completed && holeScore > 0 && holeScore < manager.openPutt.courses[col - 1].parScore)
+                            else if (playerIsBelowPar)
                             {
                                 tmp.color = underParText;
                                 columnBackground.color = underParBackground;
@@ -395,9 +506,16 @@ namespace mikeee324.OpenPutt
                 if (col >= 1 && col < columnCount - 1)
                 {
                     course = manager.openPutt.courses[col - 1];
-
-                    parScore = course.parScore;
-                    totalPar += course.parScore;
+                    if (manager.speedGolfMode)
+                    {
+                        parScore = course.parTimeMillis;
+                        totalPar += course.parTimeMillis;
+                    }
+                    else
+                    {
+                        parScore = course.parScore;
+                        totalPar += course.parScore;
+                    }
                 }
 
                 rowRect.GetChild(col).GetComponent<UnityEngine.UI.Image>().color = nameBackground2;
@@ -411,11 +529,17 @@ namespace mikeee324.OpenPutt
                     }
                     else if (col == columnCount - 1)
                     {
-                        tmp.text = $"{totalPar}";
+                        if (manager.speedGolfMode)
+                            tmp.text = TimeSpan.FromMilliseconds(totalPar).ToString(@"m\:ss");
+                        else
+                            tmp.text = $"{totalPar}";
                     }
                     else
                     {
-                        tmp.text = $"{parScore}";
+                        if (manager.speedGolfMode)
+                            tmp.text = TimeSpan.FromMilliseconds(parScore).ToString(@"m\:ss");
+                        else
+                            tmp.text = $"{parScore}";
                     }
 
                     tmp.color = text;
@@ -497,7 +621,9 @@ namespace mikeee324.OpenPutt
             RectTransform newRow = Instantiate(rowPrefab).GetComponent<RectTransform>();
             newRow.name = $"Player {position}";
 
-            float widthForEachHole = newRow.sizeDelta.x - nameColumnWidth - totalColumnWidth - (columnPadding * (scoreboardColumnCount - 1));
+            RectTransform scoreboardPanel = GetComponent<RectTransform>();
+
+            float widthForEachHole = scoreboardPanel.sizeDelta.x - nameColumnWidth - totalColumnWidth - (columnPadding * (scoreboardColumnCount - 1));
             widthForEachHole = widthForEachHole / (scoreboardColumnCount - 2);
 
             float columnXOffset = 0f;
@@ -582,7 +708,7 @@ namespace mikeee324.OpenPutt
             isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
-            experimentalCollisionCheckbox.material = playerManager.golfClub.putter.experimentalCollisionDetection ? checkboxOn : checkboxOff;
+            showAllPlayersCheckbox.material = manager.showAllPlayers ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -767,7 +893,7 @@ namespace mikeee324.OpenPutt
             else
             {
                 // Drop the shoulder objects and set them back to Vector3.zero
-                GameObject attachedObject = playerManager.openPutt.leftShoulderPickup.objectToAttach;
+                GameObject attachedObject = playerManager.openPutt.leftShoulderPickup.ObjectToAttach;
                 VRCPickup pickup = null;
                 if (attachedObject != null)
                 {
@@ -777,7 +903,7 @@ namespace mikeee324.OpenPutt
 
                     attachedObject.transform.localPosition = Vector3.zero;
                 }
-                attachedObject = playerManager.openPutt.rightShoulderPickup.objectToAttach;
+                attachedObject = playerManager.openPutt.rightShoulderPickup.ObjectToAttach;
                 if (attachedObject != null)
                 {
                     pickup = attachedObject.GetComponent<VRCPickup>();
@@ -877,6 +1003,34 @@ namespace mikeee324.OpenPutt
                 CurrentScoreboardView = ScoreboardView.Info;
         }
 
+        public void OnToggleTimerMode()
+        {
+            if (manager == null) return;
+
+            manager.speedGolfMode = true;
+            speedrunUpdateTimer = 0;
+            CurrentScoreboardView = ScoreboardView.Scoreboard;
+            RefreshScoreboard();
+        }
+
+        public void OnToggleAllPlayers()
+        {
+            if (manager == null) return;
+
+            manager.showAllPlayers = !manager.showAllPlayers;
+            RefreshScoreboard();
+        }
+
+        public void OnShowScoreboard()
+        {
+            if (manager == null) return;
+
+            manager.speedGolfMode = false;
+            speedrunUpdateTimer = -1;
+            CurrentScoreboardView = ScoreboardView.Scoreboard;
+            RefreshScoreboard();
+        }
+
         public void OnResetClick()
         {
             resetButton.gameObject.SetActive(false);
@@ -886,31 +1040,30 @@ namespace mikeee324.OpenPutt
 
         public void OnResetConfirm()
         {
-            if (manager != null && manager.openPutt != null)
-            {
-                PlayerManager pm = manager.openPutt.LocalPlayerManager;
-                if (pm != null)
-                {
-                    pm.ResetPlayerScores();
-                    if (pm.golfClub != null)
-                    {
-                        if (pm.golfClub.pickupHelper != null)
-                            pm.golfClub.pickupHelper.Drop();
-                        pm.golfClub.transform.localPosition = Vector3.zero;
-                    }
-                    if (pm.golfBall != null)
-                    {
-                        if (pm.golfBall.GetComponent<VRCPickup>() != null)
-                            pm.golfBall.GetComponent<VRCPickup>().Drop();
-                        pm.golfBall.transform.localPosition = Vector3.zero;
-                        pm.golfBall.BallIsMoving = false;
-                    }
-                    pm.RequestSync();
-                    Utils.Log(this, "Player reset their scores");
-                }
+            if (manager == null || manager.openPutt == null) return;
 
-                manager.RequestRefresh();
+            PlayerManager pm = manager.openPutt.LocalPlayerManager;
+            if (pm != null)
+            {
+                pm.ResetPlayerScores();
+                if (pm.golfClub != null)
+                {
+                    if (pm.golfClub.pickup != null)
+                        pm.golfClub.pickup.Drop();
+                    pm.golfClub.transform.localPosition = Vector3.zero;
+                }
+                if (pm.golfBall != null)
+                {
+                    if (pm.golfBall.GetComponent<VRCPickup>() != null)
+                        pm.golfBall.GetComponent<VRCPickup>().Drop();
+                    pm.golfBall.transform.localPosition = Vector3.zero;
+                    pm.golfBall.BallIsMoving = false;
+                }
+                pm.RequestSync();
+                Utils.Log(this, "Player reset their scores");
             }
+
+            manager.RequestRefresh();
 
             OnResetCancel();
 
@@ -922,6 +1075,19 @@ namespace mikeee324.OpenPutt
             resetButton.gameObject.SetActive(true);
             resetConfirmButton.gameObject.SetActive(false);
             resetCancelButton.gameObject.SetActive(false);
+        }
+
+        public void SnapTo(RectTransform target)
+        {
+            Canvas.ForceUpdateCanvases();
+
+            ScrollRect scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
+            if (target == null)
+                scrollRect.content.anchoredPosition = Vector2.zero;
+            else
+                scrollRect.content.anchoredPosition =
+                        (Vector2)scrollRect.transform.InverseTransformPoint(scrollRect.transform.position)
+                        - (Vector2)scrollRect.transform.InverseTransformPoint(target.position);
         }
     }
 }

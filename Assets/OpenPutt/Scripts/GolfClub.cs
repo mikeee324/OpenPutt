@@ -2,6 +2,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using VRC.Udon.Common;
 
 namespace mikeee324.OpenPutt
 {
@@ -15,7 +16,7 @@ namespace mikeee324.OpenPutt
         public MeshRenderer shaftMesh;
         public MeshRenderer headMesh;
         public GameObject shaftEndPostion;
-        public PickupHelper pickupHelper { get; private set; }
+        public VRCPickup pickup;
         public BodyMountedObject bodyMountedObject;
 
         public LayerMask resizeLayerMask;
@@ -25,8 +26,28 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                if (GetComponent<PickupHelper>() != null)
-                    return GetComponent<PickupHelper>().CurrentHand;
+                VRCPickup.PickupHand hand = CurrentHandFromBodyMount;
+                if (hand != VRC_Pickup.PickupHand.None)
+                {
+                    return hand;
+                }
+
+                if (GetComponent<VRCPickup>() != null)
+                    hand = GetComponent<VRCPickup>().currentHand;
+
+                return hand;
+            }
+        }
+        private VRCPickup.PickupHand CurrentHandFromBodyMount
+        {
+            get
+            {
+                if (playerManager != null && playerManager.openPutt != null)
+                {
+                    BodyMountedObject shoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.leftShoulderPickup : playerManager.openPutt.rightShoulderPickup;
+                    if (shoulderPickup != null && shoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                        return shoulderPickup.heldInHand;
+                }
                 return VRC_Pickup.PickupHand.None;
             }
         }
@@ -72,7 +93,8 @@ namespace mikeee324.OpenPutt
         [UdonSynced, HideInInspector]
         private float shaftScale = -1f;
         private float ballHitHelpTimer = -1f;
-        public VRCPickup.PickupHand currentHandFromScript { get; private set; }
+        private bool LeftUseButtonDown = false;
+        private bool RightUseButtonDown = false;
 
         void Start()
         {
@@ -82,8 +104,8 @@ namespace mikeee324.OpenPutt
             if (putter != null)
                 putter.gameObject.layer = this.gameObject.layer;
 
-            if (pickupHelper == null)
-                pickupHelper = GetComponent<PickupHelper>();
+            if (pickup == null)
+                pickup = GetComponent<VRCPickup>();
 
             if (puttSync == null)
                 puttSync = GetComponent<PuttSync>();
@@ -136,19 +158,15 @@ namespace mikeee324.OpenPutt
                 // Check if the club is armed or needs to enable scaling
                 bool newArmedState = false;
 
-                VRCPickup.PickupHand currentHand = pickupHelper != null ? pickupHelper.CurrentHand : VRC_Pickup.PickupHand.None;
-                if (currentHandFromScript != VRC_Pickup.PickupHand.None)
-                    currentHand = currentHandFromScript;
-
-                if (currentHand != VRC_Pickup.PickupHand.None)
+                if (CurrentHand != VRC_Pickup.PickupHand.None)
                 {
-                    if (currentHand == VRC_Pickup.PickupHand.Left)
-                        newArmedState = pickupHelper != null ? pickupHelper.LeftUseButtonDown : true;
-                    else if (currentHand == VRC_Pickup.PickupHand.Right)
-                        newArmedState = pickupHelper != null ? pickupHelper.RightUseButtonDown : true;
+                    if (CurrentHand == VRC_Pickup.PickupHand.Left)
+                        newArmedState = LeftUseButtonDown;
+                    else if (CurrentHand == VRC_Pickup.PickupHand.Right)
+                        newArmedState = RightUseButtonDown;
 
                     // If user is holding both triggers (or on desktop), enable club scaling
-                    if (pickupHelper != null && pickupHelper.LeftUseButtonDown && pickupHelper.RightUseButtonDown)
+                    if (LeftUseButtonDown && RightUseButtonDown)
                         RescaleClub(false);
                     else if (!Networking.LocalPlayer.IsUserInVR() && newArmedState)
                         RescaleClub(false);
@@ -193,7 +211,8 @@ namespace mikeee324.OpenPutt
         {
             VRCPickup pickup = GetComponent<VRCPickup>();
             if (pickup != null)
-                pickup.pickupable = Networking.IsOwner(Networking.LocalPlayer, gameObject) && currentHandFromScript == VRCPickup.PickupHand.None;
+                pickup.pickupable = Networking.IsOwner(Networking.LocalPlayer, gameObject) && CurrentHandFromBodyMount == VRCPickup.PickupHand.None;
+
             if (Networking.IsOwner(Networking.LocalPlayer, gameObject))
             {
                 PuttSync puttSync = GetComponent<PuttSync>();
@@ -251,12 +270,8 @@ namespace mikeee324.OpenPutt
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
 
-            if (playerManager.openPutt == null || playerManager.openPutt.rightShoulderPickup == null)
+            if (playerManager.openPutt == null)
                 return;
-
-            PickupHelper shoulderPickup = playerManager.openPutt.rightShoulderPickup.GetComponent<PickupHelper>();
-            if (shoulderPickup != null)
-                currentHandFromScript = shoulderPickup.CurrentHand;
 
             UpdateClubState();
         }
@@ -266,8 +281,6 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void OnScriptDrop()
         {
-            currentHandFromScript = VRCPickup.PickupHand.None;
-
             if (playerManager != null)
             {
                 playerManager.ClubVisible = true;
@@ -275,6 +288,15 @@ namespace mikeee324.OpenPutt
             }
 
             UpdateClubState();
+        }
+
+        public override void InputUse(bool value, UdonInputEventArgs args)
+        {
+            // Store button state
+            if (args.handType == HandType.LEFT)
+                LeftUseButtonDown = value;
+            else if (args.handType == HandType.RIGHT)
+                RightUseButtonDown = value;
         }
 
     }

@@ -41,6 +41,9 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private float updateTimer = 0f;
 
+        [Tooltip("Shows timers instead of scores on the scoreboard")]
+        public bool speedGolfMode = false;
+
         [Tooltip("Should the scoreboards show all players in a scrollable list? (This has a noticeable performance impact)")]
         public bool showAllPlayers = false;
 
@@ -104,9 +107,9 @@ namespace mikeee324.OpenPutt
                         scoreboard.gameObject.SetActive(isNowActive);
                         if (isNowActive)
                         {
-                            // Swap back to the scoreboard when disabling this scoreboard
+                            // Swap back to the scoreboard when enabling this scoreboard
                             scoreboard.CurrentScoreboardView = ScoreboardView.Scoreboard;
-                            scoreboard.RefreshScoreboard();
+                            scoreboard.RefreshScoreboard(true);
                         }
                     }
                 }
