@@ -42,6 +42,10 @@ namespace mikeee324.OpenPutt
         public RectTransform playerListCanvas;
         public GameObject rowPrefab;
         public GameObject columnPrefab;
+        public Image scoreboardTabBackground;
+        public Image scoreboardTimerTabBackground;
+        public Image infoTabBackground;
+        public Image settingsTabBackground;
 
         public Slider clubPowerSlider;
         public TextMeshProUGUI clubPowerValueLabel;
@@ -153,6 +157,13 @@ namespace mikeee324.OpenPutt
                     }
                 }
                 _currentScoreboardView = value;
+
+                // Update Tab Background Colours
+                Color defaultBackground = GetComponent<Image>().color;
+                scoreboardTabBackground.color = CurrentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.speedGolfMode) ? currentCourseBackground : defaultBackground;
+                scoreboardTimerTabBackground.color = CurrentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.speedGolfMode) ? currentCourseBackground : defaultBackground;
+                infoTabBackground.color = CurrentScoreboardView == ScoreboardView.Info ? currentCourseBackground : defaultBackground;
+                settingsTabBackground.color = CurrentScoreboardView == ScoreboardView.Settings ? currentCourseBackground : defaultBackground;
             }
         }
         private int NumberOfPlayersToDisplay
@@ -250,7 +261,7 @@ namespace mikeee324.OpenPutt
             else if (speedrunUpdateTimer != -1f)
             {
                 speedrunUpdateTimer += Time.deltaTime;
-                if (speedrunUpdateTimer > 1f)
+                if (speedrunUpdateTimer > manager.maxRefreshInterval)
                 {
                     RefreshScoreboard();
                     speedrunUpdateTimer = 0f;

@@ -294,15 +294,19 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            if (closestBallSpawn == null || !showLineToHoleStart)
+
+            if (spawnLineRenderer != null)
             {
-                spawnLineRenderer.SetPosition(0, Vector3.zero);
-                spawnLineRenderer.SetPosition(1, Vector3.zero);
-            }
-            else
-            {
-                spawnLineRenderer.SetPosition(0, this.transform.position);
-                spawnLineRenderer.SetPosition(1, closestBallSpawn.transform.position);
+                if (closestBallSpawn == null || !showLineToHoleStart)
+                {
+                    spawnLineRenderer.SetPosition(0, Vector3.zero);
+                    spawnLineRenderer.SetPosition(1, Vector3.zero);
+                }
+                else
+                {
+                    spawnLineRenderer.SetPosition(0, this.transform.position);
+                    spawnLineRenderer.SetPosition(1, closestBallSpawn.transform.position);
+                }
             }
 
             if (puttSync != null && sendFastPositionSync)
@@ -722,7 +726,8 @@ namespace mikeee324.OpenPutt
                 if (pickup != null)
                     pickup.pickupable = ballRigidbody.isKinematic && allowBallPickup;
 
-                spawnLineRenderer.gameObject.SetActive(true);
+                if (spawnLineRenderer != null)
+                    spawnLineRenderer.gameObject.SetActive(true);
 
                 PuttSync puttSync = GetComponent<PuttSync>();
                 if (puttSync != null)
@@ -751,7 +756,8 @@ namespace mikeee324.OpenPutt
                 if (pickup != null)
                     pickup.pickupable = false;
 
-                spawnLineRenderer.gameObject.SetActive(false);
+                if (spawnLineRenderer != null)
+                    spawnLineRenderer.gameObject.SetActive(false);
             }
         }
     }
