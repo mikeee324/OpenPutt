@@ -469,6 +469,25 @@ namespace mikeee324.OpenPutt
                                 playerIsBelowPar = courseState == CourseState.Completed && holeScore > 0 && holeScore < manager.openPutt.courses[col - 1].parScore;
                             }
 
+                            bool isDrivingRange = false;
+
+                            // We don't monitor par on driving ranges (for now)
+                            if (manager != null && manager.openPutt != null && manager.openPutt.courses[col - 1] != null)
+                            {
+                                isDrivingRange = manager.openPutt.courses[col - 1].drivingRangeMode;
+                            }
+
+                            if (isDrivingRange)
+                            {
+                                playerIsAbovePar = false;
+                                playerIsBelowPar = false;
+
+                                if (courseState == CourseState.Playing)
+                                    tmp.text = "-";
+                                else if (courseState == CourseState.Completed)
+                                    tmp.text = $"{holeScore}m";
+                            }
+
                             if (courseState == CourseState.Playing)
                             {
                                 tmp.color = currentCourseText;
@@ -547,7 +566,9 @@ namespace mikeee324.OpenPutt
                     }
                     else
                     {
-                        if (manager.speedGolfMode)
+                        if (course.drivingRangeMode)
+                            tmp.text = "-";
+                        else if (manager.speedGolfMode)
                             tmp.text = TimeSpan.FromMilliseconds(parScore).ToString(@"m\:ss");
                         else
                             tmp.text = $"{parScore}";

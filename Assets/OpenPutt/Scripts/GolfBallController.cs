@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -32,8 +33,8 @@ namespace mikeee324.OpenPutt
         public bool audioWhenBallHitsFloor = true;
         [Space]
         [Header("Ball Physics")]
-        [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
-        public LayerMask allowNonClubCollisionsFrom = 0;
+        // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
+        //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         public float maxBallSpeed = 15f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
@@ -107,6 +108,15 @@ namespace mikeee324.OpenPutt
 
                     if (ballWasMoving && !_ballMoving && respawnAutomatically)
                     {
+                        if (playerManager != null && playerManager.CurrentCourse != null && playerManager.CurrentCourse.drivingRangeMode)
+                        {
+                            int distance = (int)Math.Ceiling(Vector3.Distance(this.transform.position, respawnPosition));
+                            // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
+                            if (playerManager.courseScores[playerManager.CurrentCourse.holeNumber] < distance)
+                                playerManager.courseScores[playerManager.CurrentCourse.holeNumber] = distance;
+                            playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                        }
+
                         if (ballIsInValidPosition)
                         {
                             if (!pickedUpByPlayer)
@@ -248,8 +258,17 @@ namespace mikeee324.OpenPutt
                 // Has the ball been rolling for too long?
                 if (timeMoving > maxBallRollingTime)
                 {
-                    Utils.Log(this, "Rolled for too long");
-                    BallIsMoving = false; // Stop it
+                    bool keepBallMoving = false;
+                    if (Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask))
+                    {
+                        // If the ball is currently rolling down a slope
+                        if (hit.normal.y < 1f)
+                        {
+                            // Don't stop the ball from moving (people hate it stopping on slopes)
+                            keepBallMoving = true;
+                        }
+                    }
+                    BallIsMoving = keepBallMoving;
                 }
                 else if (ballRigidbody.velocity.magnitude < minBallSpeed)
                 {
@@ -259,7 +278,7 @@ namespace mikeee324.OpenPutt
                     // If the ball "hasn't moved" for this amount of time
                     if (timeNotMoving >= minBallSpeedMaxTime)
                     {
-                        Utils.Log(this, "Ball not moving");
+                        //Utils.Log(this, "Ball not moving");
                         BallIsMoving = false; // Stop it
                     }
                 }
@@ -364,7 +383,6 @@ namespace mikeee324.OpenPutt
         {
             pickedUpByPlayer = true;
 
-            Utils.Log(this, "Ball pickup");
             BallIsMoving = false;
 
             showLineToHoleStart = true;
@@ -436,6 +454,7 @@ namespace mikeee324.OpenPutt
 
             if (playerManager != null)
                 playerManager.BallVisible = true;
+
             playerManager.RequestSync(syncNow: true);
         }
 
@@ -448,6 +467,7 @@ namespace mikeee324.OpenPutt
 
             if (playerManager != null)
                 playerManager.BallVisible = true;
+
             playerManager.RequestSync();
         }
 
@@ -518,11 +538,20 @@ namespace mikeee324.OpenPutt
 
         private void OnCollisionEnter(Collision collision)
         {
-            if (!pickedUpByPlayer && (allowNonClubCollisionsFrom & (1 << collision.gameObject.layer)) != 0)
+            // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
+            if (!pickedUpByPlayer && collision != null && collision.rigidbody != null && collision.collider != null)
+            {
+                if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+                {
+                    BallIsMoving = true;
+                }
+            }
+
+            /*if (!pickedUpByPlayer && (allowNonClubCollisionsFrom & (1 << collision.gameObject.layer)) != 0)
             {
                 BallIsMoving = true;
                 timeMoving = 0f; // Reset moving timer so ball doesn't stop for another 30s
-            }
+            }*/
 
             if (!BallIsMoving)
             {
@@ -538,6 +567,15 @@ namespace mikeee324.OpenPutt
 
         void OnCollisionStay(Collision collision)
         {
+            // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
+            if (!pickedUpByPlayer && collision != null && collision.rigidbody != null && collision.collider != null)
+            {
+                if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+                {
+                    BallIsMoving = true;
+                }
+            }
+
             EvaluateCollision(collision);
         }
 

@@ -44,10 +44,10 @@ namespace mikeee324.OpenPutt
                 if (resetTicker > resetTime)
                 {
                     resetTicker = -1f;
-                    RespawnBall();
-
                     if (autoSpeedIncreases)
                     {
+                        RespawnBall();
+
                         //currentVelocity = currentVelocity * 1.1f;
                         hitBall = true;
                     }

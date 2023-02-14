@@ -35,6 +35,32 @@ namespace mikeee324.OpenPutt
         /// </summary>
         PlayedAndSkipped = 4
     }
+
+    /// <summary>
+    /// Helper functions for working with the CourseState enum
+    /// </summary>
+    static class CourseStateMethods
+    {
+        public static string GetString(this CourseState state)
+        {
+            switch (state)
+            {
+                case CourseState.NotStarted:
+                    return "Not Playing";
+                case CourseState.Playing:
+                    return "Playing";
+                case CourseState.PlayedAndSkipped:
+                    return "Played And Skipped";
+                case CourseState.Completed:
+                    return "Completed";
+                case CourseState.Skipped:
+                    return "Skipped";
+                default:
+                    return "Unknown";
+            }
+        }
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class CourseManager : UdonSharpBehaviour
     {
@@ -50,6 +76,10 @@ namespace mikeee324.OpenPutt
         public int maxTime = 300;
         public int parTimeMillis => parTime * 1000;
         public int maxTimeMillis => maxTime * 1000;
+        [Tooltip("The players score on this hole will be how far they hit the ball in meters from the start pad")]
+        public bool drivingRangeMode = false;
+        [Tooltip("Overrides the global replayable courses setting")]
+        public bool courseIsAlwaysReplayable = false;
 
         [HideInInspector]
         public OpenPutt openPutt;

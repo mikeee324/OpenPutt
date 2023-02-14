@@ -163,7 +163,11 @@ namespace mikeee324.OpenPutt
             {
                 int score = 0;
                 foreach (CourseManager course in courses)
+                {
+                    if (course == null || course.drivingRangeMode)
+                        continue;
                     score += course.maxScore;
+                }
                 return score;
             }
         }
@@ -176,7 +180,11 @@ namespace mikeee324.OpenPutt
             {
                 int score = 0;
                 foreach (CourseManager course in courses)
+                {
+                    if (course == null || course.drivingRangeMode)
+                        continue;
                     score += course.maxTimeMillis;
+                }
                 return score;
             }
         }
@@ -189,7 +197,11 @@ namespace mikeee324.OpenPutt
             {
                 int score = 0;
                 foreach (CourseManager course in courses)
+                {
+                    if (course == null || course.drivingRangeMode)
+                        continue;
                     score += course.parScore;
+                }
                 return score;
             }
         }
@@ -199,7 +211,11 @@ namespace mikeee324.OpenPutt
             {
                 int score = 0;
                 foreach (CourseManager course in courses)
+                {
+                    if (course == null || course.drivingRangeMode)
+                        continue;
                     score += course.parTimeMillis;
+                }
                 return score;
             }
         }
