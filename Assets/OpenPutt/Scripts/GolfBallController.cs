@@ -110,11 +110,17 @@ namespace mikeee324.OpenPutt
                     {
                         if (playerManager != null && playerManager.CurrentCourse != null && playerManager.CurrentCourse.drivingRangeMode)
                         {
+                            CourseManager course = playerManager.CurrentCourse;
+
                             int distance = (int)Math.Ceiling(Vector3.Distance(this.transform.position, respawnPosition));
                             // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
-                            if (playerManager.courseScores[playerManager.CurrentCourse.holeNumber] < distance)
-                                playerManager.courseScores[playerManager.CurrentCourse.holeNumber] = distance;
-                            playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                            if (playerManager.courseScores[course.holeNumber] < distance)
+                                playerManager.courseScores[course.holeNumber] = distance;
+                            playerManager.OnCourseFinished(course, null, CourseState.Completed);
+
+                            // If we can replay the course - automatically restart the course
+                            if (playerManager.openPutt.replayableCourses || course.courseIsAlwaysReplayable)
+                                playerManager.OnCourseStarted(course);
                         }
 
                         if (ballIsInValidPosition)
@@ -151,6 +157,9 @@ namespace mikeee324.OpenPutt
         private bool droppedByPlayer = false;
         [HideInInspector]
         public int currentOwnerHideOverride = 0;
+
+        [SerializeField]
+        private LayerMask courseStartPosLayerMask;
         #endregion
 
         #region Internal Vars
@@ -185,6 +194,8 @@ namespace mikeee324.OpenPutt
         private float lerpToSpawnTime = -1f;
         private CourseManager courseThatIsBeingStarted = null;
         private PuttSync puttSync;
+        private Collider[] localStartPadColliders = new Collider[32];
+        private AnimationCurve simpleEaseInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
         #endregion
 
         void Start()
@@ -224,12 +235,12 @@ namespace mikeee324.OpenPutt
 
             if (lerpToSpawnStartPos != Vector3.zero)
             {
-                float lerpMaxTime = 0.2f;
+                float lerpMaxTime = 0.5f;
                 float lerpProgress = Mathf.Clamp(lerpToSpawnTime / lerpMaxTime, 0, 1);
 
                 if (lerpProgress < 1f)
                 {
-                    this.transform.position = Vector3.Lerp(lerpToSpawnStartPos, closestBallSpawn.transform.position, lerpProgress);
+                    this.transform.position = Vector3.Lerp(lerpToSpawnStartPos, closestBallSpawn.transform.position, simpleEaseInOut.Evaluate(lerpProgress));
                     lerpToSpawnTime += Time.deltaTime;
                 }
                 else
@@ -292,20 +303,24 @@ namespace mikeee324.OpenPutt
             if (showLineToHoleStart)
             {
                 closestBallSpawn = null;
-                Collider[] hitColliders = Physics.OverlapSphere(this.transform.position, 2f);
-                foreach (Collider hitCollider in hitColliders)
+                int hitColliders = Physics.OverlapSphereNonAlloc(this.transform.position, 2f, localStartPadColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
+                if (hitColliders > 0)
                 {
-                    if (hitCollider != null && hitCollider.transform.parent != null)
+                    for (int i = 0; i < hitColliders; i++)
                     {
-                        CourseManager courseManager = hitCollider.transform.parent.gameObject.GetComponent<CourseManager>();
-                        if (courseManager != null && hitCollider.gameObject == courseManager.startPad.gameObject)
+                        Collider hitCollider = localStartPadColliders[i];
+                        if (hitCollider != null && hitCollider.transform.parent != null)
                         {
-                            foreach (GameObject ballSpawn in courseManager.ballSpawns)
+                            CourseManager courseManager = hitCollider.transform.parent.gameObject.GetComponent<CourseManager>();
+                            if (courseManager != null)
                             {
-                                if (closestBallSpawn == null || Vector3.Distance(this.transform.position, ballSpawn.transform.position) < Vector3.Distance(this.transform.position, closestBallSpawn.transform.position))
+                                foreach (GameObject ballSpawn in courseManager.ballSpawns)
                                 {
-                                    closestBallSpawn = ballSpawn;
-                                    courseThatIsBeingStarted = courseManager;
+                                    if (closestBallSpawn == null || Vector3.Distance(this.transform.position, ballSpawn.transform.position) < Vector3.Distance(this.transform.position, closestBallSpawn.transform.position))
+                                    {
+                                        closestBallSpawn = ballSpawn;
+                                        courseThatIsBeingStarted = courseManager;
+                                    }
                                 }
                             }
                         }

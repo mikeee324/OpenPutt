@@ -1,6 +1,7 @@
 
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
 {
@@ -14,12 +15,18 @@ namespace mikeee324.OpenPutt
 
         [Range(1, 10f), Tooltip("Time in seconds for each full up/down cycle of the steps")]
         public float stepCycleTime = 1f;
+        [Range(0, 5f), Tooltip("Time in seconds the steps will sit still for when they reach the up or down position")]
+        public float stepStopTime = 0.5f;
         public AnimationCurve stepCycleCurve;
 
         public Collider[] collidersToIgnore;
         private float stepCyclerTimer = 0f;
+        private float stepStopTimer = 0f;
         private Vector3[] stepRestLocations;
         private bool globalUpCycle = true;
+
+        [UdonSynced]
+        private bool _masterUpCycleState = false;
 
         void Start()
         {
@@ -45,10 +52,14 @@ namespace mikeee324.OpenPutt
             }
 
             if (stepCycleCurve.length == 0)
-            {
-                stepCycleCurve.AddKey(0, 0);
-                stepCycleCurve.AddKey(1, 1);
-            }
+                stepCycleCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        }
+
+        public override void OnDeserialization()
+        {
+            globalUpCycle = _masterUpCycleState;
+            stepCyclerTimer = 0f;
+            stepStopTimer = 0f;
         }
 
         void LateUpdate()
@@ -60,8 +71,8 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < steps.Length; i++)
             {
                 Transform thisStep = steps[i].transform;
-                Vector3 startPos = stepRestLocations[i];
-                Vector3 targetPos = stepRestLocations[i];
+                Vector3 startPos;
+                Vector3 targetPos;
 
                 if (i == 0)
                 {
@@ -120,8 +131,19 @@ namespace mikeee324.OpenPutt
 
             if (stepCyclerTimer > stepCycleTime)
             {
-                stepCyclerTimer = 0;
-                globalUpCycle = !globalUpCycle;
+                stepStopTimer += Time.deltaTime;
+                if (stepStopTimer > stepStopTime)
+                {
+                    stepCyclerTimer = 0;
+                    stepStopTimer = 0;
+                    globalUpCycle = !globalUpCycle;
+
+                    if (Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
+                    {
+                        _masterUpCycleState = globalUpCycle;
+                        RequestSerialization();
+                    }
+                }
             }
         }
     }

@@ -419,7 +419,7 @@ namespace mikeee324.OpenPutt
                         {
                             tmp.text = $"{player.PlayerTotalScore}";
                             playerIsAbovePar = player.PlayerTotalScore > 0 && player.PlayerTotalScore > manager.openPutt.TotalParScore;
-                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalScore > 0 && player.PlayerTotalScore < manager.openPutt.TotalParScore;
+                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalScore < manager.openPutt.TotalParScore;
                         }
 
                         if (playerIsAbovePar)
@@ -466,7 +466,7 @@ namespace mikeee324.OpenPutt
                             {
                                 tmp.text = $"{holeScore}";
                                 playerIsAbovePar = holeScore > 0 && holeScore > manager.openPutt.courses[col - 1].parScore;
-                                playerIsBelowPar = courseState == CourseState.Completed && holeScore > 0 && holeScore < manager.openPutt.courses[col - 1].parScore;
+                                playerIsBelowPar = courseState == CourseState.Completed && holeScore < manager.openPutt.courses[col - 1].parScore;
                             }
 
                             bool isDrivingRange = false;
@@ -600,7 +600,7 @@ namespace mikeee324.OpenPutt
                     totalPar += course.parScore;
                 }
 
-                rowRect.GetChild(col).GetComponent<UnityEngine.UI.Image>().color = nameBackground2;
+                rowRect.GetChild(col).GetComponent<Image>().color = nameBackground2;
 
                 TextMeshProUGUI tmp = rowRect.GetChild(col).transform.GetChild(0).GetComponent<TextMeshProUGUI>();
                 if (tmp != null)
@@ -616,6 +616,11 @@ namespace mikeee324.OpenPutt
                     else
                     {
                         tmp.text = $"{col}";
+
+                        if (course != null && course.scoreboardColumnText != null && course.scoreboardColumnText.Length > 0)
+                        {
+                            tmp.text = course.scoreboardColumnText;
+                        }
                     }
 
                     tmp.color = text;

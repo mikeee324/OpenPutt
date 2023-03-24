@@ -1152,15 +1152,12 @@ MonoBehaviour:
   allowBallPickup: 0
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
-  allowNonClubCollisionsFrom:
-    serializedVersion: 2
-    m_Bits: 131072
   maxBallSpeed: 8
   minBallSpeed: 0.04
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 30
-  groundSnappingMaxGroundAngle: 70
-  groundSnappingMinSpeed: 5
+  groundSnappingMaxGroundAngle: 90
+  groundSnappingMinSpeed: 2
   groundSnappingMaxSpeed: 100
   groundSnappingProbeDistance: 0.1
   groundSnappingProbeMask:
@@ -1173,6 +1170,9 @@ MonoBehaviour:
   respawnPosition: {x: 0, y: 0, z: 0}
   _ballMoving: 0
   currentOwnerHideOverride: 0
+  courseStartPosLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   requestedBallVelocity: {x: 0, y: 0, z: 0}
 --- !u!114 &6795647789150147966
 MonoBehaviour:

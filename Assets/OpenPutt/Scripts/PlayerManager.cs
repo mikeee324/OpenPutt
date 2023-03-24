@@ -159,6 +159,19 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
+        /// Check if the player has started at least 1 course in the world. Useful for checking if the player is actually playing the game or not.
+        /// </summary>
+        public bool PlayerHasStartedPlaying
+        {
+            get
+            {
+                for (int i = 0; i < courseStates.Length; i++)
+                    if (courseStates[i] != CourseState.NotStarted)
+                        return true;
+                return false;
+            }
+        }
+        /// <summary>
         /// Contains a reference to the players current course that they are playing on (returns null if they aren't playing any)
         /// </summary>
         public CourseManager CurrentCourse => currentCourse;
@@ -255,7 +268,7 @@ namespace mikeee324.OpenPutt
                             break;
                         case CourseState.Completed:
                         case CourseState.PlayedAndSkipped:
-                            if (openPutt != null && openPutt.replayableCourses)
+                            if (openPutt != null && (openPutt.replayableCourses || currentCourse.courseIsAlwaysReplayable))
                             {
                                 // Players are allowed to restart completed courses
                                 courseScores[currentCourse.holeNumber] = currentCourse.drivingRangeMode ? 0 : 1;
@@ -299,7 +312,7 @@ namespace mikeee324.OpenPutt
             bool canReplayCourses = openPutt != null && openPutt.replayableCourses;
             if (courseStates[newCourse.holeNumber] == CourseState.Completed || courseStates[newCourse.holeNumber] == CourseState.PlayedAndSkipped)
             {
-                if (!canReplayCourses)
+                if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
                 {
                     Utils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
                     return;

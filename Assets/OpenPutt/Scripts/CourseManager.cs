@@ -80,11 +80,12 @@ namespace mikeee324.OpenPutt
         public bool drivingRangeMode = false;
         [Tooltip("Overrides the global replayable courses setting")]
         public bool courseIsAlwaysReplayable = false;
+        [Tooltip("Override the hole number column text on scoreboards (Can be used to give holes names or something I dunno..)")]
+        public string scoreboardColumnText = "";
 
         [HideInInspector]
         public OpenPutt openPutt;
         [Header("Object References")]
-        public GameObject startPad;
         public GameObject[] ballSpawns;
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]

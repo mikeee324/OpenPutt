@@ -67,7 +67,7 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < activeObjects.Length; i++)
             {
                 PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerTotalScore > 0))
+                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerHasStartedPlaying))
                     totalPlayers++;
             }
 
@@ -76,7 +76,7 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < activeObjects.Length; i++)
             {
                 PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerTotalScore > 0) && aPCount < totalPlayers)
+                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerHasStartedPlaying) && aPCount < totalPlayers)
                 {
                     activePlayers[aPCount++] = activeObjects[i].GetComponent<PlayerManager>();
                 }
