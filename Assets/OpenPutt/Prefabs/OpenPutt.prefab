@@ -180,6 +180,7 @@ MonoBehaviour:
   pickupEventName: OnScriptPickup
   dropEventName: OnScriptDrop
   currentHandVariableName: currentOwnerHideOverride
+  pickup: {fileID: 0}
   mountToBone: 10
   mountingOffset: {x: -0.07, y: 0.07, z: -0.05}
   desktopInputKey: 98
@@ -615,8 +616,23 @@ MonoBehaviour:
   openPutt: {fileID: 6945536582650298137}
   scoreboards: []
   maxRefreshInterval: 1
+  refreshRequestedDuringRefresh: 0
   speedGolfMode: 0
   showAllPlayers: 0
+  hideInactivePlayers: 1
+  nameBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
+  scoreBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
+  totalBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
+  nameBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
+  scoreBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
+  totalBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
+  currentCourseBackground: {r: 0.36862746, g: 0.5058824, b: 0.6745098, a: 1}
+  underParBackground: {r: 0.6392157, g: 0.74509805, b: 0.54901963, a: 1}
+  overParBackground: {r: 0.7490196, g: 0.38039216, b: 0.41568628, a: 1}
+  text: {r: 1, g: 1, b: 1, a: 1}
+  currentCourseText: {r: 1, g: 1, b: 1, a: 1}
+  underParText: {r: 1, g: 1, b: 1, a: 1}
+  overParText: {r: 1, g: 1, b: 1, a: 1}
 --- !u!114 &1044367484047784076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -824,6 +840,7 @@ MonoBehaviour:
   pickupEventName: OnScriptPickup
   dropEventName: OnScriptDrop
   currentHandVariableName: currentOwnerHideOverride
+  pickup: {fileID: 0}
   mountToBone: 10
   mountingOffset: {x: 0.07, y: 0.07, z: -0.05}
   desktopInputKey: 109
@@ -1063,6 +1080,7 @@ MonoBehaviour:
   objectAssigner: {fileID: 2546430318601529664}
   scoreboardManager: {fileID: 8404226809006343142}
   courses: []
+  courseMarkers: []
   syncTimeCurve:
     serializedVersion: 2
     m_Curve:

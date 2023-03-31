@@ -81,7 +81,9 @@ namespace mikeee324.OpenPutt
         [Tooltip("Overrides the global replayable courses setting")]
         public bool courseIsAlwaysReplayable = false;
         [Tooltip("Override the hole number column text on scoreboards (Can be used to give holes names or something I dunno..)")]
-        public string scoreboardColumnText = "";
+        public string scoreboardShortName = "";
+        [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
+        public string scoreboardLongName = "";
 
         [HideInInspector]
         public OpenPutt openPutt;

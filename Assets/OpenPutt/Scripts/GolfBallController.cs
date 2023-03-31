@@ -106,40 +106,41 @@ namespace mikeee324.OpenPutt
                 {
                     bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(this.transform.position));
 
-                    if (ballWasMoving && !_ballMoving && respawnAutomatically)
+                    if (ballWasMoving && !_ballMoving)
                     {
                         if (playerManager != null && playerManager.CurrentCourse != null && playerManager.CurrentCourse.drivingRangeMode)
                         {
                             CourseManager course = playerManager.CurrentCourse;
 
-                            int distance = (int)Math.Ceiling(Vector3.Distance(this.transform.position, respawnPosition));
-                            // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
-                            if (playerManager.courseScores[course.holeNumber] < distance)
-                                playerManager.courseScores[course.holeNumber] = distance;
                             playerManager.OnCourseFinished(course, null, CourseState.Completed);
 
                             // If we can replay the course - automatically restart the course
                             if (playerManager.openPutt.replayableCourses || course.courseIsAlwaysReplayable)
-                                playerManager.OnCourseStarted(course);
-                        }
-
-                        if (ballIsInValidPosition)
-                        {
-                            if (!pickedUpByPlayer)
                             {
-                                // Ball stopped on top of a course - save this position so we can respawn here if needed
-                                respawnPosition = this.transform.position;
-                                Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                playerManager.OnCourseStarted(course);
+                                RespawnBall();
                             }
                         }
-                        else if (respawnPosition != Vector3.zero)
+                        else if (respawnAutomatically)
                         {
-                            // It is not on top of a course floor so move it to the previous position
-                            ballRigidbody.MovePosition(respawnPosition);
+                            if (ballIsInValidPosition)
+                            {
+                                if (!pickedUpByPlayer)
+                                {
+                                    // Ball stopped on top of a course - save this position so we can respawn here if needed
+                                    respawnPosition = this.transform.position;
+                                    Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                }
+                            }
+                            else if (respawnPosition != Vector3.zero)
+                            {
+                                // It is not on top of a course floor so move it to the previous position
+                                ballRigidbody.MovePosition(respawnPosition);
 
-                            // Play the reset noise
-                            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
-                                playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+                                // Play the reset noise
+                                if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
+                                    playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+                            }
                         }
                     }
 
@@ -180,7 +181,7 @@ namespace mikeee324.OpenPutt
 
         int groundContactCount, steepContactCount;
 
-        bool OnGround => groundContactCount > 0;
+        public bool OnGround => groundContactCount > 0;
 
         bool OnSteep => steepContactCount > 0;
 
@@ -245,10 +246,10 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    Utils.Log(this, "Ball on start pad");
-                    BallIsMoving = false;
-
                     this.transform.position = closestBallSpawn.transform.position;
+                    respawnPosition = closestBallSpawn.transform.position;
+
+                    BallIsMoving = false;
 
                     if (playerManager != null)
                         playerManager.OnCourseStarted(courseThatIsBeingStarted);
@@ -256,7 +257,6 @@ namespace mikeee324.OpenPutt
                     lerpToSpawnTime = 0f;
                     lerpToSpawnStartPos = Vector3.zero;
                     closestBallSpawn = null;
-                    respawnPosition = this.transform.position;
                     courseThatIsBeingStarted = null;
                 }
             }
@@ -309,7 +309,7 @@ namespace mikeee324.OpenPutt
                     for (int i = 0; i < hitColliders; i++)
                     {
                         Collider hitCollider = localStartPadColliders[i];
-                        if (hitCollider != null && hitCollider.transform.parent != null)
+                        if (hitCollider != null && hitCollider.transform.parent != null && hitCollider.GetComponent<CourseHole>() == null)
                         {
                             CourseManager courseManager = hitCollider.transform.parent.gameObject.GetComponent<CourseManager>();
                             if (courseManager != null)
@@ -333,11 +333,13 @@ namespace mikeee324.OpenPutt
             {
                 if (closestBallSpawn == null || !showLineToHoleStart)
                 {
+                    spawnLineRenderer.gameObject.SetActive(false);
                     spawnLineRenderer.SetPosition(0, Vector3.zero);
                     spawnLineRenderer.SetPosition(1, Vector3.zero);
                 }
                 else
                 {
+                    spawnLineRenderer.gameObject.SetActive(true);
                     spawnLineRenderer.SetPosition(0, this.transform.position);
                     spawnLineRenderer.SetPosition(1, closestBallSpawn.transform.position);
                 }
@@ -752,7 +754,15 @@ namespace mikeee324.OpenPutt
         {
             VRCPickup pickup = GetComponent<VRCPickup>();
 
-            if (Networking.LocalPlayer.IsOwner(gameObject))
+            // Fetch current owner from PlayerManager - This can be called before the actual owner "Owns" this object
+            bool localPlayerIsOwner = false;
+            if (Utils.LocalPlayerIsValid() && playerManager != null)
+                localPlayerIsOwner = playerManager.Owner == Networking.LocalPlayer;
+
+            // Toggle on GolfBallController if the local player is the owner
+            this.enabled = localPlayerIsOwner;
+
+            if (localPlayerIsOwner)
             {
                 // Enable the collider and make sure it can hit surfaces
                 if (ballCollider != null)
@@ -791,7 +801,7 @@ namespace mikeee324.OpenPutt
                 // Disable collider so other players can't collide
                 if (ballCollider != null)
                 {
-                    ballCollider.enabled = false;
+                    ballCollider.gameObject.SetActive(false);
                     ballCollider.isTrigger = true;
                 }
 

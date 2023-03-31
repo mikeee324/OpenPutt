@@ -18,5 +18,9 @@ namespace mikeee324.OpenPutt
                 course.openPutt.SFXController.PlayHoleInOneSoundAtPosition(hole.transform.position);
         }
 
+        public override void OnLocalPlayerBallHit()
+        {
+
+        }
     }
 }

@@ -121,40 +121,73 @@ namespace mikeee324.OpenPutt
 
         public static bool LocalPlayerIsValid()
         {
-            return Networking.LocalPlayer != null && Networking.LocalPlayer.IsValid();
+            return Utilities.IsValid(Networking.LocalPlayer);
+            //return Networking.LocalPlayer != null && Networking.LocalPlayer.IsValid();
         }
     }
 
     public static class Extensions
     {
-        public static T[] Prepend<T>(this T[] array, T item)
+        /// <summary>
+        /// Sorts an array of players by either their total score or their total time.<br/>
+        /// This is using a Quicksort algorithm I found here - https://code-maze.com/csharp-quicksort-algorithm/
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="sortByTime"></param>
+        /// <param name="leftIndex"></param>
+        /// <param name="rightIndex"></param>
+        /// <returns></returns>
+        [RecursiveMethod]
+        public static PlayerManager[] Sort(this PlayerManager[] array, bool sortByTime, int leftIndex, int rightIndex)
         {
-            T[] newArray = new T[array.Length + 1];
-            newArray[0] = item;
-            Array.Copy(array, 0, newArray, 1, array.Length);
-            return newArray;
+            if (array.Length == 0) return array;
+            var i = leftIndex;
+            var j = rightIndex;
+            var pivot = array[leftIndex].PlayerTotalScore;
+            if (sortByTime)
+                pivot = array[leftIndex].PlayerTotalTime;
+            while (i <= j)
+            {
+                if (sortByTime)
+                {
+                    while (array[i].PlayerTotalTime < pivot)
+                    {
+                        i++;
+                    }
+
+                    while (array[j].PlayerTotalTime > pivot)
+                    {
+                        j--;
+                    }
+                }
+                else
+                {
+                    while (array[i].PlayerTotalScore < pivot)
+                    {
+                        i++;
+                    }
+
+                    while (array[j].PlayerTotalScore > pivot)
+                    {
+                        j--;
+                    }
+                }
+                if (i <= j)
+                {
+                    PlayerManager temp = array[i];
+                    array[i] = array[j];
+                    array[j] = temp;
+                    i++;
+                    j--;
+                }
+            }
+
+            if (leftIndex < j)
+                array.Sort(sortByTime, leftIndex, j);
+            if (i < rightIndex)
+                array.Sort(sortByTime, i, rightIndex);
+
+            return array;
         }
-
-        public static T[] Add<T>(this T[] array, T item)
-        {
-            T[] newArray = new T[array.Length + 1];
-            newArray[array.Length] = item;
-            Array.Copy(array, newArray, array.Length);
-            return newArray;
-        }
-
-        public static T[] Remove<T>(this T[] array, T item)
-        {
-            int index = Array.IndexOf(array, item);
-            if (index == -1)
-                return array;
-
-            T[] newArray = new T[array.Length - 1];
-            Array.Copy(array, newArray, index);
-            Array.Copy(array, index + 1, newArray, index, array.Length - index - 1);
-            return newArray;
-        }
-
-        public static bool Contains<T>(this T[] array, T item) => Array.IndexOf(array, item) != -1;
     }
 }

@@ -18,5 +18,10 @@ namespace mikeee324.OpenPutt
         /// <param name="course">Which course the player was playing on</param>
         /// <param name="hole">The hole that the ball entered</param>
         public abstract void OnBallEnterHole(CourseManager course, CourseHole hole);
+
+        /// <summary>
+        /// Called when local player hits their ball
+        /// </summary>
+        public abstract void OnLocalPlayerBallHit();
     }
 }

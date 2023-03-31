@@ -101,7 +101,7 @@ namespace mikeee324.OpenPutt
                     speed = overrideSpeed;
 
                 Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
-                if (overrideScale != -1f)
+                if (overrideScale > 0f)
                     golfClubHeadColliderSizeNow = golfClubHeadColliderSize * overrideScale;
                 golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed * .2f);
             }

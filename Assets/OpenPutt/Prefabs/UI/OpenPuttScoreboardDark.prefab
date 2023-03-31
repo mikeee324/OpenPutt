@@ -2393,13 +2393,14 @@ GameObject:
   m_Component:
   - component: {fileID: 2477002540971460736}
   - component: {fileID: 6083217284007441653}
+  - component: {fileID: 4848223571607997366}
   m_Layer: 17
   m_Name: ParHeader
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2477002540971460736
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2427,6 +2428,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2046708210653221768}
   m_CullTransparentMesh: 1
+--- !u!223 &4848223571607997366
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2046708210653221768}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
 --- !u!1 &2049555019256119090
 GameObject:
   m_ObjectHideFlags: 0
@@ -2985,7 +3007,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6886785411086402962
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6740,6 +6762,7 @@ MonoBehaviour:
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 5614136399917363269}
   manager: {fileID: 0}
+  myCanvas: {fileID: 5614136399917363267}
   scoreboardHeader: {fileID: 5614136399877551507}
   settingsPanelHeader: {fileID: 905823908690966428}
   settingsPanel: {fileID: 1075905794482739172}
@@ -6747,15 +6770,19 @@ MonoBehaviour:
   infoPanel: {fileID: 1515767286793125935}
   parRowPanel: {fileID: 2477002540971460736}
   topRowPanel: {fileID: 4581703336729868973}
-  playerListCanvas: {fileID: 5614136400345047886}
+  parRowCanvas: {fileID: 4848223571607997366}
+  topRowCanvas: {fileID: 7700330423943046271}
+  playerListCanvas: {fileID: 8999332702110290878}
   rowPrefab: {fileID: 6854239977690447805, guid: a91348cdfcf1d7d408f064c6bb7235e1,
     type: 3}
   columnPrefab: {fileID: 2486962986696755445, guid: 79eb9f8154b16f944919181b56d6cc3f,
     type: 3}
+  raycaster: {fileID: 2264371436754714040}
   scoreboardTabBackground: {fileID: 943787871236303721}
   scoreboardTimerTabBackground: {fileID: 5137790913267391747}
   infoTabBackground: {fileID: 6135166699330762822}
   settingsTabBackground: {fileID: 791549645818968392}
+  scoreboardBackground: {fileID: 3583509326715068146}
   clubPowerSlider: {fileID: 8324230771501270159}
   clubPowerValueLabel: {fileID: 2800754930553744055}
   sfxVolumeSlider: {fileID: 2095496634088691781}
@@ -6782,25 +6809,12 @@ MonoBehaviour:
   scoreboardVisiblility: 2
   nearbyMaxRadius: 20
   attachedToCourse: -1
-  hideInactivePlayers: 1
-  nameBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
-  scoreBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
-  totalBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
-  nameBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
-  scoreBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
-  totalBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
-  currentCourseBackground: {r: 0.36862746, g: 0.5058824, b: 0.6745098, a: 1}
-  underParBackground: {r: 0.6392157, g: 0.74509805, b: 0.54901963, a: 1}
-  overParBackground: {r: 0.7490196, g: 0.38039216, b: 0.41568628, a: 1}
-  text: {r: 1, g: 1, b: 1, a: 1}
-  currentCourseText: {r: 1, g: 1, b: 1, a: 1}
-  underParText: {r: 1, g: 1, b: 1, a: 1}
-  overParText: {r: 1, g: 1, b: 1, a: 1}
   nameColumnWidth: 0.35
   totalColumnWidth: 0.2
   columnPadding: 0.005
   rowPadding: 0.01
   rowHeight: 0.15
+  MaxVisibleRowCount: 12
 --- !u!114 &5614136399917363269
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6915,14 +6929,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5614136400345047886}
-  - component: {fileID: 8659620289345259152}
+  - component: {fileID: 8999332702110290878}
   m_Layer: 17
   m_Name: PlayerList
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5614136400345047886
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6942,14 +6956,14 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0.1}
   m_Pivot: {x: 0, y: 1}
---- !u!223 &8659620289345259152
+--- !u!223 &8999332702110290878
 Canvas:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5614136400345047887}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_RenderMode: 2
   m_Camera: {fileID: 0}
@@ -7158,7 +7172,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.18039216, g: 0.20392157, b: 0.2509804, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
@@ -7193,7 +7207,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5614136401766469569}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1aa08ab6e0800fa44ae55d278d1423e3, type: 3}
   m_Name: 
@@ -8270,7 +8284,20 @@ MonoBehaviour:
     Material
     Design Icons
 
-    materialdesignicons.com'
+    materialdesignicons.com
+
+
+    BGM Music
+
+    "Smooth Lovin"
+    Kevin MacLeod (incompetech.com)
+
+    "Airport Lounge" Kevin MacLeod (incompetech.com)
+
+    Licensed
+    under Creative Commons: By Attribution 4.0 License
+
+    http://creativecommons.org/licenses/by/4.0/'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f38bdc2a423216499bd33b711e5052e, type: 2}
   m_sharedMaterial: {fileID: -124922234474188667, guid: 6f38bdc2a423216499bd33b711e5052e,
@@ -9631,13 +9658,14 @@ GameObject:
   m_Component:
   - component: {fileID: 4581703336729868973}
   - component: {fileID: 4781880574382761748}
+  - component: {fileID: 7700330423943046271}
   m_Layer: 17
   m_Name: CourseHeader
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &4581703336729868973
 RectTransform:
   m_ObjectHideFlags: 0
@@ -9665,6 +9693,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8352949235275227243}
   m_CullTransparentMesh: 1
+--- !u!223 &7700330423943046271
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8352949235275227243}
+  m_Enabled: 0
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 0
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 0
+  m_TargetDisplay: 0
 --- !u!1 &8429056934472503623
 GameObject:
   m_ObjectHideFlags: 0

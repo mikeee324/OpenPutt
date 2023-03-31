@@ -30,6 +30,8 @@ namespace mikeee324.OpenPutt
 
         #region Internal Vars
         public bool IsMyLabel { get; private set; }
+        private Vector3 lastKnownScale = Vector3.zero;
+        private Color lastKnownColor = Color.black;
         #endregion
 
         void Start()
@@ -54,10 +56,7 @@ namespace mikeee324.OpenPutt
 
         void Update()
         {
-            if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
-                return;
-
-            if (!canvas.enabled)
+            if (!canvas.enabled || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
                 return;
 
             transform.LookAt(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head));
@@ -67,18 +66,26 @@ namespace mikeee324.OpenPutt
             TextMeshProUGUI currentLabel = CurrentLabel;
             if (attachToObject != null && currentLabel != null)
             {
-                Color oldColor = currentLabel.color;
-                Vector3 oldScale = currentLabel.transform.localScale;
-
                 // Lerp label properties based on player distance to ball
                 float distance = Vector3.Distance(transform.position, Networking.LocalPlayer.GetPosition());
                 float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
 
-                currentLabel.color = Color.Lerp(labelHideColor, labelVisibleColor, visiblityVal);
-                currentLabel.transform.localScale = new Vector3(-visiblityVal, visiblityVal, 1);
+                Vector3 newScale = new Vector3(visiblityVal, visiblityVal, 1);
+                Color newColor = Color.Lerp(labelHideColor, labelVisibleColor, visiblityVal);
 
-                if (oldColor != currentLabel.color || currentLabel.transform.localScale != oldScale)
-                    currentLabel.ForceMeshUpdate();
+                if (lastKnownScale != newScale)
+                {
+                    canvas.transform.localScale = newScale;
+
+                    lastKnownScale = newScale;
+
+                    if (lastKnownColor != newColor)
+                    {
+                        currentLabel.color = newColor;
+                        currentLabel.ForceMeshUpdate();
+                        lastKnownColor = newColor;
+                    }
+                }
             }
         }
 

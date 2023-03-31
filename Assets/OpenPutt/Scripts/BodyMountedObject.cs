@@ -30,7 +30,7 @@ namespace mikeee324.OpenPutt
         public string dropEventName = "OnScriptDrop";
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
-        private VRCPickup pickup;
+        public VRCPickup pickup;
 
         [Header("Mounting Settings")]
         [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]

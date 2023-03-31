@@ -4,8 +4,9 @@ This is a very early test version of OpenPutt.
 Most of the systems are working, the main issues right now are physics based. If anybody has ideas on how to solve these please let me know!
 
 # Dependencies (Install these first!!!)
-- UdonSharp 1.1.6 (Use VCC!)
-- CyanLasers Player Object Pool - https://github.com/CyanLaser/CyanPlayerObjectPool
+- UdonSharp 1.1.7 (Use VCC!)
+- CyanLasers Player Object Pool - https://github.com/CyanLaser/CyanPlayerObjectPool/releases/latest
+- Varneons Array Extensions - https://github.com/Varneon/VUdon-ArrayExtensions/releases/tag/0.3.0
 
 # Installation
 > 1. Download the latest `OpenPutt` Unity package from [here](https://github.com/mikeee324/OpenPutt/releases/latest)

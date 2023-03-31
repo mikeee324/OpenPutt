@@ -1,7 +1,10 @@
 ﻿
 using Cyan.PlayerObjectPool;
+using System;
+using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
@@ -16,6 +19,7 @@ namespace mikeee324.OpenPutt
         public CyanPlayerObjectAssigner objectAssigner;
         public ScoreboardManager scoreboardManager;
         public CourseManager[] courses;
+        public CourseMarker[] courseMarkers;
         public AnimationCurve syncTimeCurve;
         [Header("Local Player Objects")]
         public BodyMountedObject leftShoulderPickup;
@@ -64,76 +68,21 @@ namespace mikeee324.OpenPutt
             if (activeObjects == null)
                 return new PlayerManager[0];
 
+            PlayerManager[] activePlayers = new PlayerManager[activeObjects.Length];
+
             for (int i = 0; i < activeObjects.Length; i++)
             {
-                PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerHasStartedPlaying))
+                activePlayers[i] = activeObjects[i].GetComponent<PlayerManager>();
+                if (activePlayers[i].IsReady && (!hideInactivePlayers || activePlayers[i].PlayerHasStartedPlaying))
                     totalPlayers++;
             }
 
-            int aPCount = 0;
-            PlayerManager[] activePlayers = new PlayerManager[totalPlayers];
-            for (int i = 0; i < activeObjects.Length; i++)
-            {
-                PlayerManager pm = activeObjects[i].GetComponent<PlayerManager>();
-                if (pm.IsReady && (!hideInactivePlayers || pm.PlayerHasStartedPlaying) && aPCount < totalPlayers)
-                {
-                    activePlayers[aPCount++] = activeObjects[i].GetComponent<PlayerManager>();
-                }
-            }
+            // Resize the array to the correct length
+            activePlayers = activePlayers.Resize(totalPlayers);
 
             if (noSort) return activePlayers;
 
-            // Used to filter people who haven't started yet to the bottom
-            int maxTotalScore = TotalMaxScore;
-            int maxTotalTime = TotalMaxTime;
-
-            // Sort the PlayerManager list by score ascending - TODO: Is there a better way of sorting lists in Udon#? (LinQ and IEnumurators doesn't exist here)
-            PlayerManager temp = null;
-            if (scoreboardManager.speedGolfMode)
-            {
-                for (int i = 0; i <= activePlayers.Length - 1; i++)
-                {
-                    for (int j = i + 1; j < activePlayers.Length; j++)
-                    {
-                        int score1 = activePlayers[i].PlayerTotalTime;
-                        if (score1 <= 0)
-                            score1 = maxTotalTime;
-                        int score2 = activePlayers[j].PlayerTotalTime;
-                        if (score2 <= 0)
-                            score2 = maxTotalTime;
-                        if (score1 > score2)
-                        {
-                            temp = activePlayers[i];
-                            activePlayers[i] = activePlayers[j];
-                            activePlayers[j] = temp;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i <= activePlayers.Length - 1; i++)
-                {
-                    for (int j = i + 1; j < activePlayers.Length; j++)
-                    {
-                        int score1 = activePlayers[i].PlayerTotalScore;
-                        if (score1 <= 0)
-                            score1 = maxTotalScore;
-                        int score2 = activePlayers[j].PlayerTotalScore;
-                        if (score2 <= 0)
-                            score2 = maxTotalScore;
-                        if (score1 > score2)
-                        {
-                            temp = activePlayers[i];
-                            activePlayers[i] = activePlayers[j];
-                            activePlayers[j] = temp;
-                        }
-                    }
-                }
-            }
-
-            return activePlayers;
+            return activePlayers.Sort(scoreboardManager.speedGolfMode, 0, activePlayers.Length - 1);
         }
         /// <summary>
         /// Convenience property to get the local players PlayerManager object (Assigned by Cyan Object Pool)<br/>
@@ -234,6 +183,12 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < courses.Length; i++)
                 courses[i].holeNumber = i;
 
+            foreach (CourseMarker marker in courseMarkers)
+            {
+                if (marker == null) continue;
+                marker.ResetUI();
+            }
+
             // Allow the player managers access to the whole OpenPutt system (For updating scoreboards etc)
             for (int i = 0; i < MaxPlayerCount; i++)
             {
@@ -259,7 +214,7 @@ namespace mikeee324.OpenPutt
         public override void OnDeserialization()
         {
             if (scoreboardManager != null)
-                scoreboardManager.RequestRefresh();
+                scoreboardManager.RequestPlayerListRefresh();
         }
 
         public override void OnPlayerJoined(VRCPlayerApi player)
