@@ -14,59 +14,67 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     public TextMeshProUGUI distanceLabel;
     private PlayerManager playerManager;
     private GolfBallController golfBall;
-    private float resetTimer = -1f;
     private int highestScoreSoFar = 0;
-    private bool monitorDistance = false;
-    private float initTimer = 0f;
+    private bool MonitoringDistance
+    {
+        set => this.enabled = value;
+    }
 
     void Start()
     {
+        // Disable Update() and LateUpdate() calls - we will enable things as when we need to monitor the ball distance
+        this.enabled = false;
         if (openPutt == null || drivingRangeCourse == null || distanceLabel == null)
         {
-            this.enabled = false;
             return;
         }
     }
 
     private void LateUpdate()
     {
-        if (initTimer > 5f)
+        if (!this.enabled)
+            return;
+
+        if (playerManager == null)
+            return;
+
+        if (golfBall == null)
+            golfBall = playerManager.golfBall;
+        if (golfBall == null)
+            return;
+
+        if (playerManager.CurrentCourse == drivingRangeCourse)
         {
-            if (playerManager == null)
-                playerManager = openPutt.LocalPlayerManager;
-            if (playerManager == null)
-                return;
-            if (golfBall == null)
-                golfBall = playerManager.golfBall;
-            if (golfBall == null)
-                return;
-
-            if (!monitorDistance)
-                return;
-
-            if (playerManager.CurrentCourse == drivingRangeCourse)
+            if (!golfBall.BallIsMoving)
             {
-                if (!golfBall.BallIsMoving)
-                {
-                    monitorDistance = false;
-                }
-
-                int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
-                if (distance > highestScoreSoFar)
-                {
-                    highestScoreSoFar = distance;
-                    distanceLabel.text = $"{distance}m";
-                }
+                MonitoringDistance = false;
             }
-            else
+
+            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+            if (distance > highestScoreSoFar)
             {
-                monitorDistance = false;
+                highestScoreSoFar = distance;
+                distanceLabel.text = $"{distance}m";
             }
         }
         else
         {
-            initTimer += Time.deltaTime;
+            MonitoringDistance = false;
         }
+    }
+
+    public override void OnPlayerTriggerEnter(VRCPlayerApi player)
+    {
+        if (player == Networking.LocalPlayer)
+        {
+            distanceLabel.text = $"-";
+        }
+    }
+
+    public override void OnPlayerTriggerExit(VRCPlayerApi player)
+    {
+        if (player == Networking.LocalPlayer)
+            this.enabled = false;
     }
 
     public override void OnHoleInOne(CourseManager course, CourseHole hole)
@@ -89,6 +97,8 @@ public class DrivingRangeDisplay : OpenPuttEventListener
             return;
 
         if (playerManager.CurrentCourse == drivingRangeCourse)
-            monitorDistance = true;
+        {
+            MonitoringDistance = true;
+        }
     }
 }

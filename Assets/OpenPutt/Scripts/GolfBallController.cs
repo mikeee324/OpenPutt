@@ -91,7 +91,7 @@ namespace mikeee324.OpenPutt
                 }
 
                 // Only the owner of the ball can run physics on it (everyone else should only receive ObjectSync updates)
-                if (!Networking.LocalPlayer.IsOwner(gameObject))
+                if (!Utils.LocalPlayerIsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
                     _ballMoving = false;
 
                 // Reset timers
@@ -801,7 +801,7 @@ namespace mikeee324.OpenPutt
                 // Disable collider so other players can't collide
                 if (ballCollider != null)
                 {
-                    ballCollider.gameObject.SetActive(false);
+                    ballCollider.enabled = false;
                     ballCollider.isTrigger = true;
                 }
 

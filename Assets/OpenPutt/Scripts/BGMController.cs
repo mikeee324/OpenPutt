@@ -33,33 +33,40 @@ namespace mikeee324.OpenPutt
             audioSource.Stop();
         }
 
-        void Update()
+        public void PlayNextTrack()
         {
-            if (audioSource == null)
-                return;
-
-            if (Networking.LocalPlayer == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
-                return;
-
-            if (Networking.LocalPlayer.IsOwner(gameObject) && !audioSource.isPlaying)
+            if (audioSource == null || audioSource.isPlaying || Networking.LocalPlayer == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
             {
-                currentTrackID++;
-                if (currentTrackID >= audioClips.Length)
-                    currentTrackID = 0;
-
-                audioSource.clip = audioClips[currentTrackID];
-                currentTrackStartedTime = (float)Networking.GetServerTimeInSeconds();
-
-                audioSource.Play();
-
-                RequestSerialization();
+                this.enabled = false;
+                return;
             }
+            currentTrackID++;
+            if (currentTrackID >= audioClips.Length)
+                currentTrackID = 0;
+
+            audioSource.clip = audioClips[currentTrackID];
+            currentTrackStartedTime = (float)Networking.GetServerTimeInSeconds();
+
+            audioSource.Play();
+            RequestSerialization();
+
+            // Try to play next track after this one finishes
+            SendCustomEventDelayedSeconds(nameof(PlayNextTrack), audioSource.clip.length + .05f);
+        }
+
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            // If local player has taken ownership of this then enable the Update() calls
+            this.enabled = player == Networking.LocalPlayer;
         }
 
         public override void OnDeserialization()
         {
             if (audioSource == null)
+            {
+                this.enabled = false;
                 return;
+            }
 
             audioSource.clip = audioClips[currentTrackID];
             audioSource.time = (float)Networking.GetServerTimeInSeconds() - currentTrackStartedTime;

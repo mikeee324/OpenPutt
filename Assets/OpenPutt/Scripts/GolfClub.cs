@@ -132,7 +132,7 @@ namespace mikeee324.OpenPutt
             {
                 putter.transform.position = putter.putterTarget.position;
                 putter.transform.rotation = putter.putterTarget.rotation;
-            }           
+            }
         }
 
         /// <summary>
@@ -208,13 +208,16 @@ namespace mikeee324.OpenPutt
             }
         }
 
-        public void UpdateClubState()
+        public void UpdateClubState(bool isNewOwner = false)
         {
             VRCPickup pickup = GetComponent<VRCPickup>();
             if (pickup != null)
                 pickup.pickupable = Networking.IsOwner(Networking.LocalPlayer, gameObject) && CurrentHandFromBodyMount == VRCPickup.PickupHand.None;
 
-            if (Networking.IsOwner(Networking.LocalPlayer, gameObject))
+            if (!isNewOwner)
+                isNewOwner = Networking.IsOwner(Networking.LocalPlayer, gameObject);
+
+            if (isNewOwner)
             {
                 PuttSync puttSync = GetComponent<PuttSync>();
                 if (puttSync != null)

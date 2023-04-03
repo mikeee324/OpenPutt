@@ -239,7 +239,7 @@ namespace mikeee324.OpenPutt
         {
             if (scoreboard == null) return;
 
-            foreach(Scoreboard thisScoreboard in scoreboards)
+            foreach (Scoreboard thisScoreboard in scoreboards)
             {
                 if (thisScoreboard == null) continue;
                 if (thisScoreboard.gameObject != scoreboard.gameObject)
@@ -444,6 +444,8 @@ namespace mikeee324.OpenPutt
 
             foreach (Scoreboard scoreboard in scoreboards)
             {
+                if (!scoreboard.HasInitializedUI)
+                    continue;
                 if (!scoreboard.UpdateField(fieldToUpdate, player, columnText, columnTextColor, columnBGColor))
                     thisRowIsVisible = false;
             }

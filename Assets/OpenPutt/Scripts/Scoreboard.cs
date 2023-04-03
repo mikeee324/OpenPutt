@@ -92,6 +92,7 @@ namespace mikeee324.OpenPutt
         public float rowHeight = 0.15f;
 
         private bool initializedUI = false;
+        public bool HasInitializedUI => initializedUI;
         private float totalHeightOfScrollViewport = 0f;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
 
@@ -386,6 +387,10 @@ namespace mikeee324.OpenPutt
             }
 
             initializedUI = true;
+
+            // Just in case this scoreboard initialized after the manager did and missed an update
+            if (manager != null)
+                manager.RequestPlayerListRefresh();
         }
 
         private RectTransform CreateRow(int position, Transform parent)

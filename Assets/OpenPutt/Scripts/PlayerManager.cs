@@ -637,7 +637,7 @@ namespace mikeee324.OpenPutt
             {
                 golfClub.transform.position = Vector3.zero;
                 golfClub.RescaleClub(true);
-                golfClub.UpdateClubState();
+                golfClub.UpdateClubState(localPlayerIsNowOwner);
             }
             if (golfBall != null)
             {

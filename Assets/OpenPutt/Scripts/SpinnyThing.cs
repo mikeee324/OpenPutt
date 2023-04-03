@@ -21,6 +21,7 @@ namespace mikeee324.OpenPutt
         [Range(0.1f, 20f)]
         public float maxRotationSpeed = 0f;
         private Rigidbody rb;
+        public CollisionDetectionMode rigidbodyTargetCollisionMode = CollisionDetectionMode.ContinuousDynamic;
         public LayerMask layersToIgnore;
         public Collider[] myColliders;
         public Collider[] collidersToIgnore;
@@ -93,6 +94,25 @@ namespace mikeee324.OpenPutt
         void LateUpdate()
         {
             transform.position = originalPosition;
+        }
+        
+        private void OnEnable()
+        {
+            rb = GetComponent<Rigidbody>();
+            rb.isKinematic = false;
+            rb.collisionDetectionMode = rigidbodyTargetCollisionMode;
+        }
+
+        private void OnDisable()
+        {
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+
+            transform.position = originalPosition;
+            transform.localRotation = originalRotationQuaternion;
+
+            rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+            rb.isKinematic = true;
         }
     }
 }

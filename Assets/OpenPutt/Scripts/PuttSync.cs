@@ -12,12 +12,18 @@ namespace mikeee324.OpenPutt
         [Header("Sync Settings")]
         [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
         public float fastSyncTimeout = 0.5f;
+
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve fastSyncIntervalCurve;
+
         [Tooltip("Will periodically try to send a sync in the background every 3-10 seconds. Off by default as build 1258 should solve later joiner issues (Will only actually sync if this.transform has been touched)")]
         public bool enableSlowSync = false;
+
         [Tooltip("Experimental - Reduces network traffic by syncing")]
         public bool disableSyncWhileHeld = true;
+
+        [Tooltip("If enabled PuttSync will go to sleep while it is idle to save resources")]
+        public bool autoDisableWhileIdle = true;
 
         [Header("Pickup Settings")]
         [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
@@ -128,6 +134,8 @@ namespace mikeee324.OpenPutt
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
+
+            SetEnabled(false);
         }
 
         void Update()
@@ -222,9 +230,19 @@ namespace mikeee324.OpenPutt
                         transform.localPosition = newPosition;
                         transform.localRotation = newRotation;
                     }
+                    else
+                    {
+                        SetEnabled(false);
+                    }
+                }
+                else
+                {
+                    SetEnabled(false);
                 }
                 return;
             }
+
+            bool shouldStayEnabled = false;
 
             VRCPickup.PickupHand handStateThisFrame = pickup != null ? pickup.currentHand : VRC_Pickup.PickupHand.None;
             if (currentOwnerHideOverride > 0)
@@ -245,18 +263,25 @@ namespace mikeee324.OpenPutt
 
             if (autoRespawn && transform.position.y < autoRespawnHeight)
             {
-                Utils.Log(this, "Object dropped below respawn height");
                 Respawn();
             }
 
-            if (returnAfterDrop)
+            if (returnAfterDrop && timeSincePlayerDroppedObject >= 0f)
             {
                 if (currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
-                    timeSincePlayerDroppedObject = 0f;
+                {
+                    timeSincePlayerDroppedObject = -1f;
+                    shouldStayEnabled = true;
+                }
                 else if (timeSincePlayerDroppedObject < returnAfterDropTime)
+                {
                     timeSincePlayerDroppedObject += Time.deltaTime;
+                    shouldStayEnabled = true;
+                }
                 else if (timeSincePlayerDroppedObject >= returnAfterDropTime)
+                {
                     Respawn();
+                }
             }
 
             if (monitorPickupEvents && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
@@ -271,6 +296,7 @@ namespace mikeee324.OpenPutt
                     syncRotation = transform.localRotation;
                     RequestFastSync();
                 }
+                shouldStayEnabled = true;
             }
             else
             {
@@ -287,6 +313,7 @@ namespace mikeee324.OpenPutt
 
             if (currentSyncInterval >= 0f)
             {
+                shouldStayEnabled = true;
                 if (syncTimer > currentSyncInterval)
                 {
                     // Send a network sync if enough time has passed and the object has moved/rotated (seems to work fine if the parent of this object moves also)
@@ -307,8 +334,12 @@ namespace mikeee324.OpenPutt
                 syncTimer += Time.deltaTime;
 
                 if (currentFastSyncTimeout > 0f)
+                {
                     currentFastSyncTimeout -= Time.deltaTime;
+                }
             }
+
+            SetEnabled(shouldStayEnabled);
         }
 
         public override void OnDeserialization()
@@ -316,6 +347,9 @@ namespace mikeee324.OpenPutt
             if (!hasSynced)
                 isFirstSync = true;
             hasSynced = true;
+
+            // Enable PuttSync until we think it needs switching off
+            SetEnabled(true);
         }
 
         public override void OnPickup()
@@ -353,25 +387,29 @@ namespace mikeee324.OpenPutt
         {
             if (pickup == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid()) return;
 
-            currentOwnerHand = VRCPickup.PickupHand.None;
-
-            // If we can manage the rigidbody state automatically
-            if (objectRB != null && canManageRigidbodyState)
+            if ((int)currentOwnerHand != (int)VRCPickup.PickupHand.None)
             {
-                // Set the settings back to how they were originally
-                objectRB.useGravity = rigidBodyUseGravity;
-                objectRB.isKinematic = rigidBodyisKinematic;
-            }
-
-            if (Networking.LocalPlayer.IsOwner(gameObject))
-            {
-                syncPosition = transform.localPosition;
-                syncRotation = transform.localRotation;
-
+                timeSincePlayerDroppedObject = 0f;
                 currentOwnerHand = VRCPickup.PickupHand.None;
 
-                // Notify other clients about the drop
-                RequestFastSync();
+                // If we can manage the rigidbody state automatically
+                if (objectRB != null && canManageRigidbodyState)
+                {
+                    // Set the settings back to how they were originally
+                    objectRB.useGravity = rigidBodyUseGravity;
+                    objectRB.isKinematic = rigidBodyisKinematic;
+                }
+
+                if (Networking.LocalPlayer.IsOwner(gameObject))
+                {
+                    syncPosition = transform.localPosition;
+                    syncRotation = transform.localRotation;
+
+                    currentOwnerHand = VRCPickup.PickupHand.None;
+
+                    // Notify other clients about the drop
+                    RequestFastSync();
+                }
             }
         }
 
@@ -408,12 +446,25 @@ namespace mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Toggles whether this script is currently running. (Used to save resources while this script isn't actually doing anything)
+        /// </summary>
+        /// <param name="enabled"></param>
+        private void SetEnabled(bool enabled)
+        {
+            if (autoDisableWhileIdle)
+                this.enabled = enabled;
+        }
+
+        /// <summary>
         /// Triggers PuttSync to start sending fast position updates for an amount of time (fastSyncTimeout)<br/>
         /// Having this slight delay for stopping lets the sync catch up and show where the object came to stop
         /// </summary>
         public void RequestFastSync()
         {
             currentFastSyncTimeout = fastSyncTimeout;
+
+            // Enable PuttSync until we think it needs switching off
+            SetEnabled(true);
         }
 
         /// <summary>

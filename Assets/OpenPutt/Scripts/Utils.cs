@@ -128,6 +128,10 @@ namespace mikeee324.OpenPutt
 
     public static class Extensions
     {
+        public static bool IsPointWithin(this Collider collider, Vector3 point)
+        {
+            return (collider.ClosestPoint(point) - point).sqrMagnitude < Mathf.Epsilon * Mathf.Epsilon;
+        }
         /// <summary>
         /// Sorts an array of players by either their total score or their total time.<br/>
         /// This is using a Quicksort algorithm I found here - https://code-maze.com/csharp-quicksort-algorithm/

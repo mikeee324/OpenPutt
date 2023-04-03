@@ -103,6 +103,7 @@ namespace mikeee324.OpenPutt
                 return null;
             }
         }
+
         /// <summary>
         /// Sums up the maximum score a player can get across all courses
         /// </summary>
