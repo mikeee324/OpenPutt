@@ -201,7 +201,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Used to rate-limit network sync for each PlayerManager
         /// </summary>
-        private float syncDebounceTimer = -1f;
+        private bool syncRequested = false;
         /// <summary>
         /// Counts how many seconds a ball has not been on top of it's current course (Used to reset the ball quicker if it flies off the course)
         /// </summary>
@@ -432,142 +432,6 @@ namespace mikeee324.OpenPutt
             ResetPlayerScores();
         }
 
-        void Update()
-        {
-            if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
-                return;
-
-            if (Networking.LocalPlayer.IsOwner(gameObject))
-            {
-                if (syncDebounceTimer != -1f)
-                {
-                    syncDebounceTimer += Time.deltaTime;
-
-                    float maxRefreshInterval = openPutt != null ? openPutt.maxRefreshInterval : 1f;
-
-                    if (syncDebounceTimer >= maxRefreshInterval)
-                    {
-                        syncDebounceTimer = -1f;
-
-                        RequestSerialization();
-                    }
-                }
-            }
-            else
-            {
-                syncDebounceTimer = -1f;
-            }
-
-            // Toggle this players ball label on/off depending on where the local player is
-            if (golfBall != null && playerLabel != null)
-            {
-                float distance = Vector3.Distance(golfBall.transform.position, Networking.LocalPlayer.GetPosition());
-                float visiblityVal = playerLabel.IsMyLabel ? playerLabel.localLabelVisibilityCurve.Evaluate(distance) : playerLabel.remoteLabelVisibilityCurve.Evaluate(distance);
-                bool newActiveState = visiblityVal > 0.1f;
-
-                if (playerLabel.enabled != newActiveState)
-                {
-                    // Stop script from being called in Update()
-                    playerLabel.enabled = newActiveState;
-
-                    // Also toggle canvas off as this saves some time during rendering
-                    playerLabel.canvas.enabled = newActiveState;
-
-                    // If the label is now visible snap it back to th eball before the next frame
-                    if (newActiveState)
-                        playerLabel.UpdatePosition();
-                }
-            }
-
-            if (Owner == Networking.LocalPlayer)
-            {
-                // Every second check if player is on top of the course they are currently playing
-                if (timeSinceLastLocationCheck > 1f)
-                {
-                    // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
-                    if (openPutt != null && openPutt.rightShoulderPickup != null && openPutt.rightShoulderPickup.ObjectToAttach != null)
-                    {
-                        VRCPickup pickupHelper = openPutt.rightShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
-                        if (pickupHelper != null)
-                            openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
-                    }
-
-                    bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.transform.position, 100f);
-
-                    if (openPutt != null && openPutt.leftShoulderPickup != null)
-                    {
-                        bool shouldEnablePickup = true;
-
-                        // If the player is stood on their current course
-                        if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 100f))
-                        {
-                            // Disable the pickup
-                            shouldEnablePickup = false;
-
-                            // If the ball is not on the course though - enable the pickup (so they can reset the ball to the start if they wish)
-                            if (!ballIsOnCurrentCourse)
-                                shouldEnablePickup = true;
-                        }
-
-                        if (!isPlaying)
-                            shouldEnablePickup = false;
-                        else if (golfBall.pickedUpByPlayer)
-                            shouldEnablePickup = true;
-
-                        if (shouldEnablePickup != openPutt.leftShoulderPickup.gameObject.activeInHierarchy)
-                            openPutt.leftShoulderPickup.gameObject.SetActive(shouldEnablePickup);
-                    }
-
-                    if (CurrentCourse != null)
-                    {
-                        // Live driving range updates (kinda)
-                        if (CurrentCourse.drivingRangeMode)
-                        {
-                            if (golfBall.BallIsMoving)
-                            {
-                                // If the ball is fairly close to any floor, start the count down to reset the ball
-                                ballIsOnCurrentCourse = !golfBall.OnGround;
-
-                                // We half the amount of time on the ground for driving ranges before resetting
-                                if (golfBall.OnGround)
-                                    ballNotOnCourseCounter++; 
-
-                                int distance = (int)Math.Floor(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
-                                if (distance > courseScores[CurrentCourse.holeNumber])
-                                {
-                                    courseScores[CurrentCourse.holeNumber] = distance;
-
-                                    //if (openPutt != null && openPutt.scoreboardManager != null)
-                                    //    openPutt.scoreboardManager.RequestPlayerListRefresh();
-                                }
-                            }
-                        }
-
-                        // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
-                        // Could count if there has been more than 10 frames of constant collision with a non course floor
-                        if (!ballIsOnCurrentCourse)
-                        {
-                            ballNotOnCourseCounter++;
-
-                            if (ballNotOnCourseCounter > ballOffCourseRespawnTime)
-                            {
-                                Utils.Log(this, "Ball has been off its course for too long");
-                                ballNotOnCourseCounter = 0;
-                                golfBall.BallIsMoving = false;
-                            }
-                        }
-                        else
-                        {
-                            ballNotOnCourseCounter = 0;
-                        }
-                    }
-
-                    timeSinceLastLocationCheck = 0f;
-                }
-                timeSinceLastLocationCheck += Time.deltaTime;
-            }
-        }
-
         public override void OnDeserialization()
         {
             if (Owner == null)
@@ -587,9 +451,108 @@ namespace mikeee324.OpenPutt
                 return;
 
             if (syncNow)
-                RequestSerialization();
+            {
+                SyncNow();
+            }
             else
-                syncDebounceTimer = 0f;
+            {
+                syncRequested = true;
+                float maxRefreshInterval = openPutt != null ? openPutt.maxRefreshInterval : 1f;
+                SendCustomEventDelayedSeconds(nameof(SyncNow), maxRefreshInterval);
+            }
+        }
+
+        public void SyncNow()
+        {
+            RequestSerialization();
+            syncRequested = false;
+        }
+
+        public void CheckPlayerLocation()
+        {
+            // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
+            if (openPutt != null && openPutt.rightShoulderPickup != null && openPutt.rightShoulderPickup.ObjectToAttach != null)
+            {
+                VRCPickup pickupHelper = openPutt.rightShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
+                if (pickupHelper != null)
+                    openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
+            }
+
+            bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.transform.position, 100f);
+
+            if (openPutt != null && openPutt.leftShoulderPickup != null)
+            {
+                bool shouldEnablePickup = true;
+
+                // If the player is stood on their current course
+                if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 100f))
+                {
+                    // Disable the pickup
+                    shouldEnablePickup = false;
+
+                    // If the ball is not on the course though - enable the pickup (so they can reset the ball to the start if they wish)
+                    if (!ballIsOnCurrentCourse)
+                        shouldEnablePickup = true;
+                }
+
+                if (!isPlaying)
+                    shouldEnablePickup = false;
+                else if (golfBall.pickedUpByPlayer)
+                    shouldEnablePickup = true;
+
+                if (shouldEnablePickup != openPutt.leftShoulderPickup.gameObject.activeInHierarchy)
+                    openPutt.leftShoulderPickup.gameObject.SetActive(shouldEnablePickup);
+            }
+
+            if (CurrentCourse != null)
+            {
+                // Live driving range updates (kinda)
+                if (CurrentCourse.drivingRangeMode)
+                {
+                    if (golfBall.BallIsMoving)
+                    {
+                        // If the ball is fairly close to any floor, start the count down to reset the ball
+                        ballIsOnCurrentCourse = !golfBall.OnGround;
+
+                        // We half the amount of time on the ground for driving ranges before resetting
+                        if (golfBall.OnGround)
+                            ballNotOnCourseCounter++;
+
+                        int distance = (int)Math.Floor(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+                        if (distance > courseScores[CurrentCourse.holeNumber])
+                        {
+                            courseScores[CurrentCourse.holeNumber] = distance;
+
+                            //if (openPutt != null && openPutt.scoreboardManager != null)
+                            //    openPutt.scoreboardManager.RequestPlayerListRefresh();
+                        }
+                    }
+                }
+
+                // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
+                // Could count if there has been more than 10 frames of constant collision with a non course floor
+                if (!ballIsOnCurrentCourse)
+                {
+                    ballNotOnCourseCounter++;
+
+                    if (ballNotOnCourseCounter > ballOffCourseRespawnTime)
+                    {
+                        Utils.Log(this, "Ball has been off its course for too long");
+                        ballNotOnCourseCounter = 0;
+                        golfBall.BallIsMoving = false;
+                    }
+                }
+                else
+                {
+                    ballNotOnCourseCounter = 0;
+                }
+            }
+
+            // If the local player still owns this PlayerManager check for their location again in another second
+            if (this.LocalPlayerOwnsThisObject())
+            {
+                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
+            }
         }
 
         public override string ToString()
@@ -647,7 +610,6 @@ namespace mikeee324.OpenPutt
 
             if (playerLabel != null)
             {
-                playerLabel.gameObject.SetActive(true);
                 playerLabel.UpdatePosition();
                 playerLabel.RefreshPlayerName();
             }
@@ -659,6 +621,9 @@ namespace mikeee324.OpenPutt
 
                 openPutt.leftShoulderPickup.gameObject.SetActive(true);
                 openPutt.rightShoulderPickup.gameObject.SetActive(true);
+
+                // Do a regular check for the players location
+                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
             }
 
             // Get the local player to send their current score
@@ -685,8 +650,6 @@ namespace mikeee324.OpenPutt
             ClubVisible = false;
             BallVisible = false;
 
-            if (playerLabel != null)
-                playerLabel.gameObject.SetActive(false);
             if (golfClub != null)
                 golfClub.gameObject.SetActive(false);
             if (golfClubHead != null)

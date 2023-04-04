@@ -113,6 +113,8 @@ namespace mikeee324.OpenPutt
 
             // Update the collider states
             RefreshState();
+
+            this.enabled = false;
         }
 
         private void Update()
@@ -133,6 +135,11 @@ namespace mikeee324.OpenPutt
                 putter.transform.position = putter.putterTarget.position;
                 putter.transform.rotation = putter.putterTarget.rotation;
             }
+        }
+
+        public override void OnDeserialization()
+        {
+            this.enabled = false;
         }
 
         /// <summary>
@@ -206,6 +213,11 @@ namespace mikeee324.OpenPutt
 
                 headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
             }
+            else
+            {
+                if (!isOwner)
+                    this.enabled = false;
+            }
         }
 
         public void UpdateClubState(bool isNewOwner = false)
@@ -271,6 +283,8 @@ namespace mikeee324.OpenPutt
             if (playerManager == null)
                 return;
 
+            this.enabled = true;
+
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
 
@@ -285,6 +299,8 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void OnScriptDrop()
         {
+            this.enabled = false;
+
             if (playerManager != null)
             {
                 playerManager.ClubVisible = true;
@@ -294,6 +310,16 @@ namespace mikeee324.OpenPutt
             UpdateClubState();
         }
 
+        public override void OnPickup()
+        {
+            this.enabled = true;
+        }
+
+        public override void OnDrop()
+        {
+            this.enabled = false;
+        }
+
         public override void InputUse(bool value, UdonInputEventArgs args)
         {
             // Store button state
@@ -301,6 +327,9 @@ namespace mikeee324.OpenPutt
                 LeftUseButtonDown = value;
             else if (args.handType == HandType.RIGHT)
                 RightUseButtonDown = value;
+
+            if (LeftUseButtonDown || RightUseButtonDown)
+                this.enabled = true;
         }
 
     }

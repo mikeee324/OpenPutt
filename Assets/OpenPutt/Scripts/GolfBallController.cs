@@ -82,6 +82,8 @@ namespace mikeee324.OpenPutt
             {
                 bool ballWasMoving = _ballMoving;
 
+
+
                 // Store the new value
                 _ballMoving = value;
 
@@ -92,7 +94,10 @@ namespace mikeee324.OpenPutt
 
                 // Only the owner of the ball can run physics on it (everyone else should only receive ObjectSync updates)
                 if (!Utils.LocalPlayerIsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+                {
                     _ballMoving = false;
+                    this.enabled = false;
+                }
 
                 // Reset timers
                 timeNotMoving = 0f;
@@ -104,6 +109,7 @@ namespace mikeee324.OpenPutt
                 // If the ball stopped moving and we can respawn it automatically
                 if (Networking.LocalPlayer.IsOwner(gameObject))
                 {
+                    this.enabled = value;
                     bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(this.transform.position));
 
                     if (ballWasMoving && !_ballMoving)
@@ -218,6 +224,8 @@ namespace mikeee324.OpenPutt
                 ballCollider = GetComponent<SphereCollider>();
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
+
+            this.enabled = false;
         }
 
         private void Update()

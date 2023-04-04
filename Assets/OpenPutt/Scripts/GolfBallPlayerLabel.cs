@@ -52,6 +52,11 @@ namespace mikeee324.OpenPutt
                 remoteLabelVisibilityCurve.AddKey(10f, 0f);
                 remoteLabelVisibilityCurve.AddKey(50f, 0f);
             }
+
+            // Do a regular check to see if the label should be turned on or off
+            SendCustomEventDelayedSeconds(nameof(CheckVisibility), 0.15f);
+
+            this.enabled = false;
         }
 
         void Update()
@@ -108,6 +113,29 @@ namespace mikeee324.OpenPutt
 
             localPlayerLabel.enabled = IsMyLabel;
             remotePlayerLabel.enabled = !localPlayerLabel.enabled;
+        }
+
+        public void CheckVisibility()
+        {
+            float distance = Vector3.Distance(attachToObject.transform.position, Networking.LocalPlayer.GetPosition());
+            float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
+            bool newActiveState = visiblityVal > 0.1f;
+
+            if (this.enabled != newActiveState)
+            {
+                // Stop script from being called in Update()
+                this.enabled = newActiveState;
+
+                // Also toggle canvas off as this saves some time during rendering
+                this.canvas.enabled = newActiveState;
+
+                // If the label is now visible snap it back to th eball before the next frame
+                if (newActiveState)
+                    this.UpdatePosition();
+            }
+
+            // Vary the time between each check to try and stop them all happening at once
+            SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .15f));
         }
     }
 }

@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDKBase;
+using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
@@ -128,6 +129,11 @@ namespace mikeee324.OpenPutt
 
     public static class Extensions
     {
+        public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour)
+        {
+            return Utils.LocalPlayerIsValid() && behaviour != null && Networking.LocalPlayer.IsOwner(behaviour.gameObject);
+        }
+
         public static bool IsPointWithin(this Collider collider, Vector3 point)
         {
             return (collider.ClosestPoint(point) - point).sqrMagnitude < Mathf.Epsilon * Mathf.Epsilon;

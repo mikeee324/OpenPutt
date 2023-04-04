@@ -33,6 +33,20 @@ namespace mikeee324.OpenPutt
             audioSource.Stop();
         }
 
+        private void Update()
+        {
+            if (Utils.LocalPlayerIsValid())
+            {
+                if (this.LocalPlayerOwnsThisObject())
+                {
+                    currentTrackID = audioClips.Length;
+                    PlayNextTrack();
+                }
+
+                this.enabled = false;
+            }
+        }
+
         public void PlayNextTrack()
         {
             if (audioSource == null || audioSource.isPlaying || Networking.LocalPlayer == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
