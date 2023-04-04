@@ -82,8 +82,6 @@ namespace mikeee324.OpenPutt
             {
                 bool ballWasMoving = _ballMoving;
 
-
-
                 // Store the new value
                 _ballMoving = value;
 
@@ -96,7 +94,6 @@ namespace mikeee324.OpenPutt
                 if (!Utils.LocalPlayerIsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
                 {
                     _ballMoving = false;
-                    this.enabled = false;
                 }
 
                 // Reset timers
@@ -109,7 +106,7 @@ namespace mikeee324.OpenPutt
                 // If the ball stopped moving and we can respawn it automatically
                 if (Networking.LocalPlayer.IsOwner(gameObject))
                 {
-                    this.enabled = value;
+                    this.enabled = _ballMoving;
                     bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(this.transform.position));
 
                     if (ballWasMoving && !_ballMoving)
@@ -231,7 +228,10 @@ namespace mikeee324.OpenPutt
         private void Update()
         {
             if (!Utils.LocalPlayerIsValid() || !Networking.IsOwner(Networking.LocalPlayer, gameObject) || ballRigidbody == null)
+            {
+                this.enabled = false;
                 return;
+            }
 
             if (!BallIsMoving)
             {
@@ -360,7 +360,10 @@ namespace mikeee324.OpenPutt
         private void FixedUpdate()
         {
             if (!Utils.LocalPlayerIsValid() || !Networking.IsOwner(Networking.LocalPlayer, gameObject) || ballRigidbody == null)
+            {
+                this.enabled = false;
                 return;
+            }
 
             if (!BallIsMoving && requestedBallVelocity != Vector3.zero)
                 BallIsMoving = true;
@@ -416,6 +419,8 @@ namespace mikeee324.OpenPutt
             lerpToSpawnStartPos = Vector3.zero;
             closestBallSpawn = null;
             courseThatIsBeingStarted = null;
+
+            this.enabled = true;
         }
 
         public override void OnDrop()
@@ -463,8 +468,6 @@ namespace mikeee324.OpenPutt
                 BallIsMoving = true;
                 droppedByPlayer = true;
                 stepsSinceLastGrounded = 2;
-
-                Utils.Log(this, "Player dropped ball");
             }
 
             pickedUpByPlayer = false;
@@ -475,6 +478,8 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void OnScriptPickup()
         {
+            this.enabled = true;
+
             OnPickup();
 
             if (playerManager != null)
@@ -512,6 +517,8 @@ namespace mikeee324.OpenPutt
 
         public void OnBallHit(Vector3 withVelocity)
         {
+            this.enabled = true;
+
             bool playerIsPlayingACourse = playerManager != null && playerManager.CurrentCourse != null;
 
             // Discard any hits while the ball is already moving and the player is playing a course (allows them to hit the ball as much as they want otherwise)
@@ -568,6 +575,7 @@ namespace mikeee324.OpenPutt
             {
                 if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
+                    this.enabled = true;
                     BallIsMoving = true;
                 }
             }
@@ -766,9 +774,6 @@ namespace mikeee324.OpenPutt
             bool localPlayerIsOwner = false;
             if (Utils.LocalPlayerIsValid() && playerManager != null)
                 localPlayerIsOwner = playerManager.Owner == Networking.LocalPlayer;
-
-            // Toggle on GolfBallController if the local player is the owner
-            this.enabled = localPlayerIsOwner;
 
             if (localPlayerIsOwner)
             {

@@ -195,10 +195,6 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
-        /// A little timer that runs once a second to manage shoulder pickups etc
-        /// </summary>
-        private float timeSinceLastLocationCheck = 0f;
-        /// <summary>
         /// Used to rate-limit network sync for each PlayerManager
         /// </summary>
         private bool syncRequested = false;
@@ -454,8 +450,9 @@ namespace mikeee324.OpenPutt
             {
                 SyncNow();
             }
-            else
+            else if (!syncRequested)
             {
+                // If we aren't already waiting for a sync to happen schedule one in
                 syncRequested = true;
                 float maxRefreshInterval = openPutt != null ? openPutt.maxRefreshInterval : 1f;
                 SendCustomEventDelayedSeconds(nameof(SyncNow), maxRefreshInterval);
