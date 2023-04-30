@@ -17,7 +17,7 @@ namespace mikeee324.OpenPutt
     public class ScoreboardPositioner : UdonSharpBehaviour
     {
         [Header("References")]
-        public OpenPutt openPutt = null;
+        public ScoreboardManager manager = null;
         public Canvas backgroundCanvas = null;
 
         [Space, Header("Settings")]
@@ -54,7 +54,7 @@ namespace mikeee324.OpenPutt
 
                     if (isNowActive && this.attachedToCourse >= 0)
                     {
-                        PlayerManager playerManager = openPutt != null ? openPutt.LocalPlayerManager : null;
+                        PlayerManager playerManager = manager != null && manager.openPutt != null ? manager.openPutt.LocalPlayerManager : null;
 
                         if (playerManager == null || !playerManager.IsReady || playerManager.courseStates[this.attachedToCourse] != CourseState.Completed)
                         {
