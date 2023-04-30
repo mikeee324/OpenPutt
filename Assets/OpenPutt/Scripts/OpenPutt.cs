@@ -1,25 +1,30 @@
-﻿
-using Cyan.PlayerObjectPool;
-using System;
-using System.Diagnostics;
+﻿using Cyan.PlayerObjectPool;
 using UdonSharp;
 using UnityEngine;
-using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
+using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class OpenPutt : UdonSharpBehaviour
+    public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
         [Header("Internal References")]
+        [Tooltip("This is a reference to Cyans Player Object Pool")]
         public CyanPlayerObjectPool objectPool;
+        [Tooltip("This is a reference to Cyans Player Object Pool Assigner")]
         public CyanPlayerObjectAssigner objectAssigner;
+        [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
+        public PlayerListManager playerListManager;
+        [Tooltip("The ScoreboardManager looks after all scoreboards in the world (Moving them between positions and refreshing them)")]
         public ScoreboardManager scoreboardManager;
+        [Tooltip("This array holds a reference to all Courses that you create for your world")]
         public CourseManager[] courses;
+        [Tooltip("This array holds a reference to the little canvases that display hole numbers/names/par score")]
         public CourseMarker[] courseMarkers;
+        [Tooltip("This curve is used to stop players sending syncs too often depending on the amount of players in the instance (If blank OpenPutt will populate this at runtime)")]
         public AnimationCurve syncTimeCurve;
         [Header("Local Player Objects")]
         public BodyMountedObject leftShoulderPickup;
@@ -46,63 +51,18 @@ namespace mikeee324.OpenPutt
         #endregion
 
         #region API
+        public PlayerManager[] PlayersSortedByScore => playerListManager.PlayersSortedByScore;
+        public PlayerManager[] PlayersSortedByTime => playerListManager.PlayersSortedByTime;
         public float maxRefreshInterval { get; private set; }
         [HideInInspector, Tooltip("If enabled all players will receive score updates as they happen. If disabled scores will only be updated as each player finishes a hole.")]
         public PlayerSyncType playerSyncType = PlayerSyncType.All;
         public int MaxPlayerCount => objectPool != null ? objectPool.poolSize : 0;
         public int CurrentPlayerCount => objectPool != null && objectAssigner != null ? objectAssigner._GetActivePoolObjects().Length : 0;
+
         /// <summary>
-        /// Get a list of players with active PlayerManager objects
+        /// Keeps a reference to the PlayerManager that is assigned to the local player
         /// </summary>
-        /// <returns></returns>
-        public PlayerManager[] GetPlayers(bool noSort = false, bool hideInactivePlayers = true)
-        {
-
-            if (objectPool == null || objectAssigner == null)
-                return new PlayerManager[0];
-
-            // Grab a list of active PlayerManager objects
-            int totalPlayers = 0;
-            Component[] activeObjects = objectAssigner._GetActivePoolObjects();
-
-            if (activeObjects == null)
-                return new PlayerManager[0];
-
-            PlayerManager[] activePlayers = new PlayerManager[activeObjects.Length];
-
-            for (int i = 0; i < activeObjects.Length; i++)
-            {
-                activePlayers[i] = activeObjects[i].GetComponent<PlayerManager>();
-                if (activePlayers[i].IsReady && (!hideInactivePlayers || activePlayers[i].PlayerHasStartedPlaying))
-                    totalPlayers++;
-            }
-
-            // Resize the array to the correct length
-            activePlayers = activePlayers.Resize(totalPlayers);
-
-            if (noSort) return activePlayers;
-
-            return activePlayers.Sort(scoreboardManager.speedGolfMode, 0, activePlayers.Length - 1);
-        }
-        /// <summary>
-        /// Convenience property to get the local players PlayerManager object (Assigned by Cyan Object Pool)<br/>
-        /// <b>Can be null</b> if the pool hasn't been able to assign an object yet.
-        /// </summary>
-        public PlayerManager LocalPlayerManager
-        {
-            get
-            {
-                if (objectPool != null && objectAssigner != null)
-                {
-                    GameObject playerObject = objectAssigner._GetPlayerPooledObject(Networking.LocalPlayer);
-                    if (playerObject != null)
-                    {
-                        return objectAssigner._GetPlayerPooledObject(Networking.LocalPlayer).GetComponent<PlayerManager>();
-                    }
-                }
-                return null;
-            }
-        }
+        public PlayerManager LocalPlayerManager { get; private set; }
 
         /// <summary>
         /// Sums up the maximum score a player can get across all courses
@@ -185,10 +145,7 @@ namespace mikeee324.OpenPutt
                 courses[i].holeNumber = i;
 
             foreach (CourseMarker marker in courseMarkers)
-            {
-                if (marker == null) continue;
                 marker.ResetUI();
-            }
 
             // Allow the player managers access to the whole OpenPutt system (For updating scoreboards etc)
             for (int i = 0; i < MaxPlayerCount; i++)
@@ -202,12 +159,7 @@ namespace mikeee324.OpenPutt
             }
 
             foreach (CourseManager course in courses)
-            {
                 course.openPutt = this;
-            }
-
-            // Set Physics Timestep to 75FPS
-            Time.fixedDeltaTime = 1.0f / 75f;
 
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
         }
@@ -215,25 +167,14 @@ namespace mikeee324.OpenPutt
         public override void OnDeserialization()
         {
             if (scoreboardManager != null)
-                scoreboardManager.RequestPlayerListRefresh();
-        }
-
-        public override void OnPlayerJoined(VRCPlayerApi player)
-        {
-            Utils.Log(this, "A player joined - sending a sync for local player manager!");
-            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
-        }
-
-        public override void OnPlayerLeft(VRCPlayerApi player)
-        {
-            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+                scoreboardManager.RefreshSettingsIfVisible();
         }
 
         public void UpdateRefreshSettings(int numberOfPlayers)
         {
-            if (numberOfPlayers < 20)
+            if (numberOfPlayers < 5)
                 playerSyncType = PlayerSyncType.All;
-            else if (numberOfPlayers < 40)
+            else if (numberOfPlayers < 20)
                 playerSyncType = PlayerSyncType.StartAndFinish;
             else
                 playerSyncType = PlayerSyncType.FinishOnly;
@@ -249,6 +190,33 @@ namespace mikeee324.OpenPutt
             }
 
             maxRefreshInterval = syncTimeCurve.Evaluate(numberOfPlayers);
+        }
+
+        public override void _OnLocalPlayerAssigned()
+        {
+        }
+
+        public override void _OnPlayerAssigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
+        {
+            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+
+            if (player.isLocal)
+                LocalPlayerManager = poolObject.GetComponent<PlayerManager>();
+        }
+
+        public override void _OnPlayerUnassigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
+        {
+            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+
+            if (player.isLocal)
+                LocalPlayerManager = null;
+
+            playerListManager.OnPlayerUpdate(poolObject.GetComponent<PlayerManager>());
+        }
+
+        public void OnPlayerUpdate(PlayerManager playerManager)
+        {
+            playerListManager.OnPlayerUpdate(playerManager);
         }
     }
 }

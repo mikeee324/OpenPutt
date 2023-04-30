@@ -2,6 +2,8 @@ using UdonSharp;
 using UnityEngine;
 using System;
 using UnityEngine.InputSystem.EnhancedTouch;
+using Varneon.VUdon.ArrayExtensions;
+using System.Diagnostics;
 #if !COMPILER_UDONSHARP && UNITY_EDITOR
 using UdonSharpEditor;
 #endif
@@ -17,6 +19,7 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public Transform putterTarget;
+        [SerializeField] private Rigidbody myRigidbody = null;
         public BoxCollider golfClubHeadCollider;
         public AnimationCurve hitForceMultiplier;
         [Tooltip("Not so experimental now.. cos i like it more")]
@@ -51,7 +54,6 @@ namespace mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private bool ballHasBeenHit = false;
-        private Rigidbody myRigidbody = null;
         private SphereCollider ballCollider = null;
 
         void Start()
@@ -60,6 +62,9 @@ namespace mikeee324.OpenPutt
 
             if (golfClubHeadCollider == null)
                 golfClubHeadCollider = GetComponent<BoxCollider>();
+
+            if (myRigidbody == null)
+                myRigidbody = GetComponent<Rigidbody>();
 
             if (hitForceMultiplier.length == 0)
             {
@@ -79,12 +84,7 @@ namespace mikeee324.OpenPutt
                 hitForceScale = golfBall.GetComponent<Rigidbody>().mass;
             }
 
-            myRigidbody = GetComponent<Rigidbody>();
-            if (myRigidbody != null && putterTarget != null)
-            {
-                myRigidbody.MovePosition(putterTarget.position);
-                myRigidbody.MoveRotation(putterTarget.rotation);
-            }
+            MoveToClubWithoutVelocity();
 
             ResetPositionBuffers();
 
@@ -187,7 +187,6 @@ namespace mikeee324.OpenPutt
 
                             break;
                         }
-
                     }
 
                     // Work out velocity
@@ -238,20 +237,12 @@ namespace mikeee324.OpenPutt
                 ballHasBeenHit = false;
             }
 
+            int originalSize = lastPositions.Length;
             // Push current position onto buffers
-            for (int i = lastPositions.Length; i-- > 0;)
-            {
-                if (i == 0)
-                {
-                    lastPositions[i] = currentPos;
-                    lastPositionTimes[i] = Time.fixedDeltaTime;
-                }
-                else
-                {
-                    lastPositions[i] = lastPositions[i - 1];
-                    lastPositionTimes[i] = lastPositionTimes[i - 1] + Time.fixedDeltaTime;
-                }
-            }
+            lastPositions = lastPositions.Insert(0, currentPos).Resize(originalSize);
+            lastPositionTimes = lastPositionTimes.Insert(0, Time.fixedDeltaTime).Resize(originalSize);
+            for (int i = 1; i < lastPositions.Length; i++)
+                lastPositionTimes[i] += Time.fixedDeltaTime;
         }
 
         private void OnTriggerEnter(Collider other)
@@ -276,6 +267,17 @@ namespace mikeee324.OpenPutt
                 lastPositions[i] = this.transform.position;
             for (int i = 0; i < lastPositionTimes.Length - 1; i++)
                 lastPositionTimes[i] = 0f;
+        }
+
+        public void MoveToClubWithoutVelocity()
+        {
+            if (myRigidbody != null && putterTarget != null)
+            {
+                myRigidbody.position = putterTarget.position;
+                myRigidbody.rotation = putterTarget.rotation;
+                myRigidbody.velocity = Vector3.zero;
+                myRigidbody.angularVelocity = Vector3.zero;
+            }
         }
     }
 }

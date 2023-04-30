@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Diagnostics;
 using Cyan.PlayerObjectPool;
 using TMPro;
 using UdonSharp;
@@ -8,6 +9,7 @@ using UnityEngine.SocialPlatforms.Impl;
 using UnityEngine.UI;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
+using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
@@ -27,31 +29,21 @@ namespace mikeee324.OpenPutt
         FinishOnly
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(99)]
     public class ScoreboardManager : UdonSharpBehaviour
     {
         [Header("The scoreboard manager handles refreshing all scoreboards in the scene and makes sure it doesn't happen too often.")]
         public OpenPutt openPutt;
 
         public Scoreboard[] scoreboards;
+        public ScoreboardPositioner[] scoreboardPositions;
 
-        [Space, Header("Settings"), Range(1f, 5f)]
+        [Space, Header("Settings")]
+        [Range(1f, 5f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
         public float maxRefreshInterval = 1f;
-        private float refreshTimer = 0f;
-        public bool refreshRequestedDuringRefresh = false;
-
-        /// <summary>
-        /// Used to prevent updates running every frame as it's not needed here
-        /// </summary>
-        private float updateTimer = 0f;
-
-        [Tooltip("Shows timers instead of scores on the scoreboard")]
-        public bool speedGolfMode = false;
-
-        [Tooltip("Should the scoreboards show all players in a scrollable list? (This has a noticeable performance impact)")]
-        public bool showAllPlayers = false;
-
-        [Tooltip("Toggles whether to hide people who haven't started playing yet (On by default)")]
+        [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]
+        public int numberOfPlayersToDisplay = 12;
+        [Tooltip("This should stay enabled unless you're debugging the scoreboard player lists")]
         public bool hideInactivePlayers = true;
 
         [Header("Background Colours")]
@@ -72,23 +64,40 @@ namespace mikeee324.OpenPutt
         public Color underParText = Color.white;
         public Color overParText = Color.white;
 
-        public int NumberOfPlayersToDisplay
-        {
-            get
-            {
-                int maxPlayers = 12;
-                foreach (Scoreboard scoreboard in scoreboards)
-                {
-                    if (scoreboard == null) continue;
-                    if (scoreboard.MaxVisibleRowCount > maxPlayers)
-                        maxPlayers = scoreboard.MaxVisibleRowCount;
-                }
-                //if (CurrentPlayerList != null && CurrentPlayerList.Length > 0 && CurrentPlayerList.Length < maxPlayers)
-                //  maxPlayers = CurrentPlayerList.Length;
+        [Header("Prefab References")]
+        public GameObject rowPrefab;
+        public GameObject colPrefab;
 
-                return maxPlayers;
+        #region Internal Vars
+        /// <summary>
+        /// Whether or not the scoreboard is showing course times instead of scores
+        /// </summary>
+        public bool SpeedGolfMode
+        {
+            get => _speedGolfMode;
+            set
+            {
+                if (value != _speedGolfMode)
+                {
+                    CheckPlayerListForChanges(forceUpdate: true);
+                }
+                _speedGolfMode = value;
             }
         }
+        private bool _speedGolfMode = false;
+        /// <summary>
+        /// Returns the last known list of players that was pushed out to all scoreboards
+        /// </summary>
+        public PlayerManager[] CurrentPlayerList { get; private set; }
+
+        public int NumberOfColumns => openPutt != null ? openPutt.courses.Length + 2 : 0;
+        [HideInInspector]
+        public ScoreboardView requestedScoreboardView = ScoreboardView.Info;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+
+        private int progressiveUpdateCurrentScoreboardID = 0;
+        private int[] progressiveRowUpdateQueue = new int[0];
+        private bool allScoreboardsInitialised = false;
+        #endregion
 
         void Start()
         {
@@ -104,131 +113,198 @@ namespace mikeee324.OpenPutt
             foreach (Scoreboard scoreboard in scoreboards)
                 scoreboard.manager = this;
 
-            RequestPlayerListRefresh();
+            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), maxRefreshInterval);
         }
 
-        private void LateUpdate()
+        public void UpdateScoreboardVisibility()
         {
-            if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
+            // Schedule the next update before anything else
+            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), maxRefreshInterval);
+
+            // Don't do anything if we can't find the local player
+            if (!Utils.LocalPlayerIsValid())
                 return;
 
-            updateTimer += Time.deltaTime;
-
-            if (updateTimer > maxRefreshInterval)
+            // After all scoreboard have initialised - queue a full refresh
+            if (!allScoreboardsInitialised)
             {
-                Vector3 localPlayerPos = Networking.LocalPlayer.GetPosition();
+                bool queueBigRefresh = true;
                 foreach (Scoreboard scoreboard in scoreboards)
+                    if (!scoreboard.HasInitializedUI)
+                        queueBigRefresh = false;
+
+                if (queueBigRefresh)
                 {
-                    bool isNowActive = false;
-                    bool isPlayerListActive = false;
-
-                    bool playerIsNearby = Vector3.Distance(localPlayerPos, scoreboard.transform.position) < scoreboard.nearbyMaxRadius;
-
-                    switch (scoreboard.scoreboardVisiblility)
-                    {
-                        case ScoreboardVisibility.AlwaysVisible:
-                            isNowActive = true;
-
-                            // Only activate player list is nearby (Rest of scoreboard is always visible)
-                            isPlayerListActive = playerIsNearby;
-                            break;
-                        case ScoreboardVisibility.NearbyOnly:
-                            isNowActive = playerIsNearby;
-
-                            // Only activate player list is nearby (Rest of scoreboard is always visible)
-                            isPlayerListActive = playerIsNearby;
-                            break;
-                        case ScoreboardVisibility.NearbyAndCourseFinished:
-                            isNowActive = playerIsNearby;
-
-                            // Only activate player list is nearby (Rest of scoreboard is always visible)
-                            isPlayerListActive = playerIsNearby;
-
-                            if (isNowActive && scoreboard.attachedToCourse >= 0)
-                            {
-                                PlayerManager playerManager = openPutt != null ? openPutt.LocalPlayerManager : null;
-
-                                if (playerManager == null || !playerManager.IsReady || playerManager.courseStates[scoreboard.attachedToCourse] != CourseState.Completed)
-                                {
-                                    isNowActive = false;
-                                    isPlayerListActive = false;
-                                }
-                            }
-                            break;
-                        case ScoreboardVisibility.Hidden:
-                            isNowActive = false;
-                            isPlayerListActive = false;
-                            break;
-                    }
-
-                    // If the state of this scoreboard has changed
-                    bool wasActive = scoreboard.myCanvas.enabled;
-                    if (wasActive != isNowActive)
-                    {
-                        scoreboard.myCanvas.enabled = isNowActive;
-                        scoreboard.CurrentScoreboardView = ScoreboardView.Scoreboard;
-                    }
-
-                    // Make sure we don't render the player list if the scoreboard is showing something else
-                    if (isPlayerListActive)
-                        isPlayerListActive = scoreboard.CurrentScoreboardView == ScoreboardView.Scoreboard;
-
-                    // If the state of the player list has changed
-                    bool wasPlayerListActive = scoreboard.playerListCanvas.enabled;
-                    if (wasPlayerListActive != isPlayerListActive)
-                        scoreboard.playerListCanvas.enabled = isPlayerListActive;
-
-                    // Toggle raycast if player is nearby
-                    bool raycastEnabled = playerIsNearby && isNowActive;
-                    if (scoreboard.raycaster.enabled != raycastEnabled)
-                    {
-                        scoreboard.raycaster.enabled = raycastEnabled;
-                    }
-                }
-                updateTimer = 0f;
-            }
-
-            if (refreshTimer != -1f)
-            {
-                refreshTimer += Time.deltaTime;
-
-                if (refreshTimer >= maxRefreshInterval)
-                {
-                    refreshTimer = -1f;
-                    updateCurrentFieldID = 0;
-
-                    _currentPlayerList = GetPlayerList();
+                    allScoreboardsInitialised = true;
+                    CheckPlayerListForChanges();
                 }
             }
+            int currentVisibleScoreboardID = 0;
 
-            if (updateCurrentFieldID != -1)
+            Vector3 localPlayerPos = Networking.LocalPlayer.GetPosition();
+            ScoreboardPositioner[] scoreboardPositionsByDistance = this.scoreboardPositions.SortByDistance(localPlayerPos);
+
+            foreach (ScoreboardPositioner position in scoreboardPositionsByDistance)
             {
-                bool rowIsVisible = UpdateField(updateCurrentFieldID);
+                bool isVisibleHere = position.ShouldBeVisible(localPlayerPos);
 
-                if (rowIsVisible)
+                if (currentVisibleScoreboardID >= scoreboards.Length)
+                    isVisibleHere = false;
+
+                if (isVisibleHere)
                 {
-                    // If this row is still visible (has a valid player) continue to next column
-                    updateCurrentFieldID += 1;
+                    // Hide the background of the positioner
+                    position.backgroundCanvas.enabled = false;
 
-                    // If we reached the end of the update
-                    if (updateCurrentFieldID >= _currentPlayerList.Length * NumberOfColumns)
-                        updateCurrentFieldID = -1;
+                    // Move this scoreboard to the correct position
+                    Scoreboard scoreboard = this.scoreboards[currentVisibleScoreboardID];
+                    scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
+                    scoreboard.transform.localScale = position.transform.lossyScale;
+
+                    // Make it so we use the next scoreboard in the list next loop
+                    currentVisibleScoreboardID += 1;
                 }
                 else
                 {
-                    // If we need to start hiding rows, skip to start of each row and get scoreboards to hide them
-                    for (int i = updateCurrentFieldID + NumberOfColumns + 1; i < _currentPlayerList.Length * NumberOfColumns; i += NumberOfColumns + 1)
-                        UpdateField(i);
-
-                    // Finish the update
-                    updateCurrentFieldID = -1;
+                    // Re-enable the background if it was on by default
+                    if (position.CanvasWasEnabledAtStart)
+                        position.backgroundCanvas.enabled = true;
                 }
             }
-            else if (refreshRequestedDuringRefresh)
+
+            while (currentVisibleScoreboardID < scoreboards.Length)
             {
-                refreshTimer = 0;
-                refreshRequestedDuringRefresh = false;
+                // Hide the scoreboard far down
+                scoreboards[currentVisibleScoreboardID].transform.position = new Vector3(0, -100, 0);
+
+                currentVisibleScoreboardID += 1;
             }
+
+            // Swap all scoreboard views to be the same
+            foreach (Scoreboard scoreboard in scoreboards)
+            {
+                if (scoreboard.HasInitializedUI)
+                    scoreboard.CurrentScoreboardView = requestedScoreboardView;
+            }
+        }
+
+        /// <summary>
+        /// Updates the settings page on all scoreboards if the settings are currently visible.<br/>
+        /// If the settings aren't visible then we don't need to do anything as they get refreshed when players click the settings cog
+        /// </summary>
+        public void RefreshSettingsIfVisible()
+        {
+            if (requestedScoreboardView != ScoreboardView.Settings)
+                return;
+
+            foreach (Scoreboard scoreboard in scoreboards)
+                scoreboard.RefreshSettingsMenu();
+        }
+
+        public void RequestRefreshForRow(int rowID, bool startNextFrameIfPossible = false)
+        {
+            // If queue is empty start a new refresh
+            if (progressiveRowUpdateQueue.Length == 0)
+            {
+                progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
+
+                // Empty the player list before the update - Progressive update will fetch a new list before it starts
+                CurrentPlayerList = new PlayerManager[0];
+
+                if (startNextFrameIfPossible)
+                    SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
+                else
+                    SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), maxRefreshInterval);
+            }
+            else
+            {
+                if (!progressiveRowUpdateQueue.Contains(rowID))
+                    progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
+            }
+        }
+
+        /// <summary>
+        /// Performs a check on all player rows and checks if they need to be updated. If they do a request for a refresh will be added to the queue.
+        /// </summary>
+        /// <param name="forceUpdate">True forces an update on all rows</param>
+        public void CheckPlayerListForChanges(bool forceUpdate = false)
+        {
+            PlayerManager[] newList = GetPlayerList();
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            // We need to check which rows have changed and request a refresh
+            for (int i = 0; i < numberOfPlayersToDisplay; i++)
+            {
+                PlayerManager thisRowPlayer = null;
+                if (CurrentPlayerList != null && i < CurrentPlayerList.Length)
+                    thisRowPlayer = CurrentPlayerList[i];
+
+                PlayerManager thisRowNewPlayer = null;
+                if (newList != null && i < newList.Length)
+                    thisRowNewPlayer = newList[i];
+
+                bool requestRefresh = forceUpdate;
+
+                if (!requestRefresh)
+                    requestRefresh = thisRowNewPlayer != thisRowPlayer;
+
+                if (!requestRefresh)
+                    requestRefresh = thisRowNewPlayer != null && thisRowNewPlayer.scoreboardRowNeedsUpdating;
+
+                if (requestRefresh)
+                    RequestRefreshForRow(i, true);
+            }
+            CurrentPlayerList = newList;
+
+            stopwatch.Stop();
+            Utils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
+        }
+
+        public void ProgressiveScoreboardRowUpdate()
+        {
+            if (!allScoreboardsInitialised)
+            {
+                // Wait for a second until all the scoreboards have initialised
+                SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 1);
+                return;
+            }
+
+            if (progressiveUpdateCurrentScoreboardID == 0 && (CurrentPlayerList == null || CurrentPlayerList.Length == 0))
+            {
+                CurrentPlayerList = GetPlayerList();
+            }
+
+            if (progressiveUpdateCurrentScoreboardID >= scoreboards.Length)
+            {
+                // We updated all scoreboards for the first player on the queue, reset ID and remove from the queue
+                progressiveUpdateCurrentScoreboardID = 0;
+
+                if (progressiveRowUpdateQueue.Length > 0)
+                    progressiveRowUpdateQueue = progressiveRowUpdateQueue.RemoveAt(0);
+            }
+
+            // Queue is empty
+            if (progressiveRowUpdateQueue.Length == 0)
+            {
+                // Just check if players are not in the correct order and move them if needed
+                //SortPlayerUI();
+                return;
+            }
+
+            // Update the row on this scoreboard
+            Scoreboard scoreboard = scoreboards[progressiveUpdateCurrentScoreboardID++];
+            int rowIDToUpdate = progressiveRowUpdateQueue[0];
+
+            // Update the row for this player if we found one
+            if (CurrentPlayerList != null && rowIDToUpdate >= 0 && rowIDToUpdate < scoreboard.scoreboardRows.Length)
+            {
+                scoreboard.scoreboardRows[rowIDToUpdate].Refresh(rowIDToUpdate < CurrentPlayerList.Length ? CurrentPlayerList[rowIDToUpdate] : null);
+            }
+
+            // Loop again next frame to process the queue until it's empty
+            //SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
+            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.1f);
         }
 
         /// <summary>
@@ -250,232 +326,30 @@ namespace mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Queues a refresh of all scoreboards if one isn't already in progress
+        /// Gets a sorted list of players for the scoreboards to display
         /// </summary>
-        /// <param name="refreshNow">Forces a refresh to start on the next frame</param>
-        public void RequestPlayerListRefresh(bool refreshNow = false)
-        {
-            // If we are queuing a normal refresh - only start if we aren't currently refreshing or waiting for a refresh
-            if (refreshTimer <= 0f && updateCurrentFieldID == -1)
-                refreshTimer = 0;
-            else
-                refreshRequestedDuringRefresh = true;
-
-            // If we are forcing a refresh - start now
-            if (refreshNow)
-            {
-                updateCurrentFieldID = 0;
-                refreshTimer = maxRefreshInterval;
-                refreshRequestedDuringRefresh = false;
-            }
-        }
-
-        private PlayerManager[] _currentPlayerList = null;
-        /// <summary>
-        /// Returns the last known list of players that was pushed out to all scoreboards
-        /// </summary>
-        public PlayerManager[] CurrentPlayerList => _currentPlayerList;
-
-        public int NumberOfColumns => openPutt != null ? openPutt.courses.Length + 2 : 0;
-        private int updateCurrentFieldID = -1;
-
-        private bool UpdateField(int fieldToUpdate)
-        {
-            if (openPutt == null) return false;
-
-            int row = fieldToUpdate <= 0 ? 0 : fieldToUpdate / NumberOfColumns;
-            int col = fieldToUpdate <= 0 ? 0 : fieldToUpdate % NumberOfColumns;
-
-            PlayerManager player = row >= _currentPlayerList.Length ? null : _currentPlayerList[row];
-
-            string columnText = "";
-            Color columnTextColor = text;
-            Color columnBGColor = nameBackground1;
-
-            if (player != null)
-            {
-                if (col == 0)
-                {
-                    columnText = player.Owner.displayName;
-                    columnTextColor = text;
-                    columnBGColor = row % 2 == 0 ? nameBackground1 : nameBackground2;
-                }
-                else if (col == NumberOfColumns - 1)
-                {
-                    // Render the last column - This is usually the "Total" column
-                    bool finishedAllCourses = true;
-                    foreach (CourseState courseState in player.courseStates)
-                    {
-                        // TODO: Maybe count skipped courses as completed too?
-                        if (courseState != CourseState.Completed)
-                        {
-                            finishedAllCourses = false;
-                            break;
-                        }
-                    }
-
-                    bool playerIsAbovePar;
-                    bool playerIsBelowPar;
-
-                    if (speedGolfMode)
-                    {
-                        if (player.PlayerTotalTime == 999999)
-                        {
-                            columnText = "-";
-                            playerIsAbovePar = false;
-                            playerIsBelowPar = false;
-                        }
-                        else
-                        {
-                            columnText = TimeSpan.FromMilliseconds(player.PlayerTotalTime).ToString(@"m\:ss");
-                            playerIsAbovePar = player.PlayerTotalTime > 0 && player.PlayerTotalTime > (openPutt.TotalParTime);
-                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalTime > 0 && player.PlayerTotalTime < (openPutt.TotalParTime);
-                        }
-                    }
-                    else
-                    {
-                        if (player.PlayerTotalScore == 999999)
-                        {
-                            columnText = "-";
-                            playerIsAbovePar = false;
-                            playerIsBelowPar = false;
-                        }
-                        else
-                        {
-                            columnText = $"{player.PlayerTotalScore}";
-                            playerIsAbovePar = player.PlayerTotalScore > 0 && player.PlayerTotalScore > openPutt.TotalParScore;
-                            playerIsBelowPar = finishedAllCourses && player.PlayerTotalScore < openPutt.TotalParScore;
-                        }
-                    }
-
-                    if (playerIsAbovePar)
-                    {
-                        columnTextColor = overParText;
-                        columnBGColor = overParBackground;
-                    }
-                    else if (playerIsBelowPar)
-                    {
-                        columnTextColor = underParText;
-                        columnBGColor = underParBackground;
-                    }
-                    else
-                    {
-                        columnTextColor = text;
-                        columnBGColor = row % 2 == 0 ? totalBackground1 : totalBackground2;
-                    }
-                }
-                else if (col > 0 || col < NumberOfColumns - 1)
-                {
-                    if (col - 1 < player.courseStates.Length)
-                    {
-                        CourseState courseState = player.courseStates[col - 1];
-                        int holeScore = player.courseScores[col - 1];
-
-                        columnBGColor = row % 2 == 0 ? scoreBackground1 : scoreBackground2;
-
-                        bool playerIsAbovePar;
-                        bool playerIsBelowPar;
-
-                        CourseManager course = openPutt.courses[col - 1];
-
-                        bool courseIsDrivingRange = openPutt != null && course != null && course.drivingRangeMode;
-
-
-                        if (courseIsDrivingRange)
-                        {
-                            playerIsAbovePar = false;
-                            playerIsBelowPar = false;
-
-                            if (courseState == CourseState.Playing)
-                                columnText = "-";
-                            else if (courseState == CourseState.Completed)
-                                columnText = $"{holeScore}m";
-                        }
-                        else if (speedGolfMode)
-                        {
-                            double timeOnThisCourse = player.courseTimes[col - 1];
-
-                            // If the player is playing this course right now, then the stored value is the time when they started the course
-                            if (courseState == CourseState.Playing)
-                                timeOnThisCourse = Networking.GetServerTimeInMilliseconds() - timeOnThisCourse;
-
-                            columnText = TimeSpan.FromMilliseconds(timeOnThisCourse).ToString(@"m\:ss");
-                            playerIsAbovePar = timeOnThisCourse > (course.parTimeMillis);
-                            playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < (course.parTimeMillis);
-                        }
-                        else
-                        {
-                            columnText = $"{holeScore}";
-                            playerIsAbovePar = holeScore > 0 && holeScore > course.parScore;
-                            playerIsBelowPar = courseState == CourseState.Completed && holeScore < course.parScore;
-                        }
-
-                        if (courseState == CourseState.Playing)
-                        {
-                            columnTextColor = currentCourseText;
-                            columnBGColor = currentCourseBackground;
-                            // If we are in slow update mode we can't display a score as it will not be up to date
-                            if (player.Owner != Networking.LocalPlayer && openPutt.playerSyncType != PlayerSyncType.All)
-                                columnText = "-";
-                        }
-                        else if (courseState == CourseState.NotStarted)
-                        {
-                            columnText = "-";
-                        }
-                        else if (playerIsAbovePar)
-                        {
-                            columnTextColor = overParText;
-                            columnBGColor = overParBackground;
-                        }
-                        else if (playerIsBelowPar)
-                        {
-                            columnTextColor = underParText;
-                            columnBGColor = underParBackground;
-                        }
-                        else
-                        {
-                            columnTextColor = text;
-                        }
-                    }
-                }
-            }
-
-            bool thisRowIsVisible = true;
-
-            foreach (Scoreboard scoreboard in scoreboards)
-            {
-                if (!scoreboard.HasInitializedUI)
-                    continue;
-                if (!scoreboard.UpdateField(fieldToUpdate, player, columnText, columnTextColor, columnBGColor))
-                    thisRowIsVisible = false;
-            }
-
-            return thisRowIsVisible;
-        }
-
+        /// <returns></returns>
         public PlayerManager[] GetPlayerList()
         {
-            PlayerManager[] allPlayers = openPutt.GetPlayers(noSort: false, hideInactivePlayers: hideInactivePlayers);
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            PlayerManager[] allPlayers = SpeedGolfMode ? openPutt.PlayersSortedByTime : openPutt.PlayersSortedByScore;
 
             if (allPlayers == null)
                 return new PlayerManager[0];
 
-            if (showAllPlayers)
-                return allPlayers;
-
-            int numberOfPlayersToDisplay = NumberOfPlayersToDisplay;
-
-            // Default to the top of the list
-            int myPosition = 0;
-            for (int i = 0; i < allPlayers.Length; i++)
+            if (allPlayers.Length <= numberOfPlayersToDisplay)
             {
-                if (allPlayers[i].Owner == Networking.LocalPlayer)
-                {
-                    // Found the local player
-                    myPosition = i;
-                    break;
-                }
+                stopwatch.Stop();
+                Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Can fit all players inside available rows. No array slicing required.");
+                return allPlayers;
             }
+
+            // Warning, this can be slow!
+
+            // Find current players position in the list
+            int myPosition = SpeedGolfMode ? openPutt.LocalPlayerManager.ScoreboardPositionByTime : openPutt.LocalPlayerManager.ScoreboardPositionByScore;
+            myPosition = Mathf.Clamp(myPosition, 0, allPlayers.Length);
 
             // Work out where we need to slice the array
             int startPos = myPosition - (int)Math.Ceiling(numberOfPlayersToDisplay / 2d);
@@ -486,14 +360,15 @@ namespace mikeee324.OpenPutt
             endPos += startPos < 0 ? 0 - startPos : 0;
 
             // Make sure we never go out of bounds
-            if (startPos < 0)
-                startPos = 0;
-            if (endPos >= allPlayers.Length)
-                endPos = allPlayers.Length;
-            if (endPos < 0)
-                endPos = 0;
+            startPos = Mathf.Clamp(startPos, 0, allPlayers.Length);
+            endPos = Mathf.Clamp(endPos, 0, allPlayers.Length);
 
-            allPlayers = allPlayers.GetRange(0, endPos - startPos);
+            // Take a slice of the array that should hopefully contain the local player
+            allPlayers = allPlayers.GetRange(startPos, endPos - startPos);
+
+            stopwatch.Stop();
+
+            Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Could not fit all players inside available rows. Array slicing was required. Returning {allPlayers.Length} players for the scoreboards.");
 
             return allPlayers;
         }

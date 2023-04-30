@@ -8,14 +8,6 @@ using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
 {
-    public enum ScoreboardVisibility
-    {
-        AlwaysVisible,
-        NearbyAndCourseFinished,
-        NearbyOnly,
-        Hidden,
-    }
-
     public enum ScoreboardView
     {
         Scoreboard,
@@ -23,7 +15,7 @@ namespace mikeee324.OpenPutt
         Settings
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
         [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")]
@@ -32,25 +24,25 @@ namespace mikeee324.OpenPutt
         public ScoreboardManager manager;
 
         [Header("Internal References (All are required to be set)")]
+        public ScoreboardPlayerRow[] scoreboardRows = new ScoreboardPlayerRow[0];
+        public RectTransform rectTransform;
         public Canvas myCanvas;
         public RectTransform scoreboardHeader;
-        public RectTransform settingsPanelHeader;
-        public RectTransform settingsPanel;
-        public RectTransform infoPanelHeader;
-        public RectTransform infoPanel;
+        public Canvas settingsPanel;
+        public Canvas infoPanel;
         public RectTransform parRowPanel;
         public RectTransform topRowPanel;
         public Canvas parRowCanvas;
         public Canvas topRowCanvas;
+        public Canvas scoreboardCanvas;
         public Canvas playerListCanvas;
         public GameObject rowPrefab;
         public GameObject columnPrefab;
-        public GraphicRaycaster raycaster;
-        public Image scoreboardTabBackground;
-        public Image scoreboardTimerTabBackground;
-        public Image infoTabBackground;
-        public Image settingsTabBackground;
-        public Image scoreboardBackground;
+        public UnityEngine.UI.Image scoreboardTabBackground;
+        public UnityEngine.UI.Image scoreboardTimerTabBackground;
+        public UnityEngine.UI.Image infoTabBackground;
+        public UnityEngine.UI.Image settingsTabBackground;
+        public UnityEngine.UI.Image scoreboardBackground;
 
         public Slider clubPowerSlider;
         public TextMeshProUGUI clubPowerValueLabel;
@@ -63,26 +55,18 @@ namespace mikeee324.OpenPutt
         public Slider ballRColorSlider;
         public Slider ballGColorSlider;
         public Slider ballBColorSlider;
-        public Image ballColorPreview;
+        public UnityEngine.UI.Image ballColorPreview;
 
-        public Image verticalHitsCheckbox;
-        public Image isPlayingCheckbox;
-        public Image leftHandModeCheckbox;
-        public Image enableBigShaftCheckbox;
-        public Image courseReplaysCheckbox;
-        public Image showAllPlayersCheckbox;
+        public UnityEngine.UI.Image verticalHitsCheckbox;
+        public UnityEngine.UI.Image isPlayingCheckbox;
+        public UnityEngine.UI.Image leftHandModeCheckbox;
+        public UnityEngine.UI.Image enableBigShaftCheckbox;
+        public UnityEngine.UI.Image courseReplaysCheckbox;
         public Material checkboxOn;
         public Material checkboxOff;
         public Button resetButton;
         public Button resetConfirmButton;
         public Button resetCancelButton;
-
-        [Space, Header("Settings")]
-        public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
-        [Tooltip("How close the player needs to be to this scoreboard if one of the 'nearby' settings are used above")]
-        public float nearbyMaxRadius = 10f;
-        [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
-        public int attachedToCourse = -1;
 
         [Space, Header("Sizing")]
         public float nameColumnWidth = 0.35f;
@@ -100,9 +84,6 @@ namespace mikeee324.OpenPutt
         [HideInInspector]
         public int MaxVisibleRowCount = 12;
 
-        private Canvas[] scoreboardRows = new Canvas[0];
-        private UnityEngine.UI.Image[] scoreboardFieldBackgrounds = new Image[0];
-        private TextMeshProUGUI[] scoreboardFieldLabels = new TextMeshProUGUI[0];
         public ScoreboardView CurrentScoreboardView
         {
             get => _currentScoreboardView;
@@ -114,36 +95,42 @@ namespace mikeee324.OpenPutt
                     {
                         case ScoreboardView.Scoreboard:
                             settingsPanel.gameObject.SetActive(false);
-                            settingsPanelHeader.gameObject.SetActive(false);
-                            infoPanel.gameObject.SetActive(false);
-                            infoPanelHeader.gameObject.SetActive(false);
-                            topRowCanvas.enabled = true;
-                            parRowCanvas.enabled = true;
-                            playerListCanvas.enabled = true;
+                            infoPanel.enabled = false;
+                            scoreboardCanvas.enabled = true;
                             break;
                         case ScoreboardView.Info:
                             settingsPanel.gameObject.SetActive(false);
-                            settingsPanelHeader.gameObject.SetActive(false);
-                            infoPanel.gameObject.SetActive(true);
-                            infoPanelHeader.gameObject.SetActive(true);
-                            topRowCanvas.enabled = false;
-                            parRowCanvas.enabled = false;
-                            playerListCanvas.enabled = false;
+                            infoPanel.enabled = true;
+                            scoreboardCanvas.enabled = false;
                             break;
                         case ScoreboardView.Settings:
                             settingsPanel.gameObject.SetActive(true);
-                            settingsPanelHeader.gameObject.SetActive(true);
-                            infoPanel.gameObject.SetActive(false);
-                            infoPanelHeader.gameObject.SetActive(false);
-                            topRowCanvas.enabled = false;
-                            parRowCanvas.enabled = false;
-                            playerListCanvas.enabled = false;
+                            infoPanel.enabled = false;
+                            scoreboardCanvas.enabled = false;
 
                             RefreshSettingsMenu();
 
                             OnResetCancel();
                             break;
                     }
+
+                    // Toggle extra canvases (parent canvas.enabled doesn't seem to be passed down properly)
+                    if (scoreboardCanvas != null)
+                    {
+                        if (playerListCanvas != null)
+                            playerListCanvas.enabled = scoreboardCanvas.enabled;
+                        if (topRowCanvas != null)
+                            topRowCanvas.enabled = scoreboardCanvas.enabled;
+                        if (parRowCanvas != null)
+                            parRowCanvas.enabled = scoreboardCanvas.enabled;
+
+                        for (int i = 0; i < scoreboardRows.Length; i++)
+                            if (manager.CurrentPlayerList != null && i < manager.CurrentPlayerList.Length)
+                                scoreboardRows[i].UpdateVisibility(manager.CurrentPlayerList[i]);
+                    }
+
+                    if (manager != null)
+                        manager.requestedScoreboardView = value;
                 }
                 _currentScoreboardView = value;
 
@@ -160,10 +147,21 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            CurrentScoreboardView = ScoreboardView.Scoreboard;
+            if (topRowCanvas == null)
+                topRowCanvas = topRowPanel.transform.GetChild(0).GetComponent<Canvas>();
+            if (parRowCanvas == null)
+                parRowCanvas = parRowPanel.transform.GetChild(0).GetComponent<Canvas>();
+
+            CurrentScoreboardView = ScoreboardView.Info;
+
+            // This is here because i haven't figured out how to make editor scripts properly yet
+            scoreboardRows = new ScoreboardPlayerRow[playerListCanvas.transform.childCount];
+            for (int i = 0; i < playerListCanvas.transform.childCount; i++)
+                scoreboardRows[i] = playerListCanvas.transform.GetChild(i).GetComponent<ScoreboardPlayerRow>();
 
             // Make sure that the scoreboard has basically no thickness so the laser pointer works properly
-            RectTransform rectTransform = GetComponent<RectTransform>();
+            if (rectTransform == null)
+                rectTransform = transform.GetChild(0).GetComponent<RectTransform>();
             if (rectTransform != null)
             {
                 Vector3 scoreboardScale = rectTransform.localScale;
@@ -171,271 +169,19 @@ namespace mikeee324.OpenPutt
                     rectTransform.localScale = new Vector3(scoreboardScale.x, scoreboardScale.y, 0.01f);
             }
 
-            InitUI();
+            SendCustomEventDelayedSeconds(nameof(InitUI), 0.05f);
         }
 
-        /// <summary>
-        /// Updates a field on the scoreboard
-        /// </summary>
-        /// <param name="fieldToUpdate">The ID of the field to update - Goes left-to-right and top-to-bottom</param>
-        /// <param name="player">The PlayerManager that this row belongs to</param>
-        /// <param name="columnText">The new text of the column</param>
-        /// <param name="columnTextColor">The new color of the text in this column</param>
-        /// <param name="columnBGColor">The new background colour of this column</param>
-        /// <returns></returns>
-        public bool UpdateField(int fieldToUpdate, PlayerManager player, string columnText, Color columnTextColor, Color columnBGColor)
-        {
-            if (manager == null || manager.openPutt == null) return false;
-
-            int row = fieldToUpdate <= 0 ? 0 : fieldToUpdate / NumberOfColumns;
-            //int col = fieldToUpdate <= 0 ? 0 : fieldToUpdate % NumberOfColumns;
-
-            // It's out of bounds
-            if (row >= playerListCanvas.transform.childCount)
-                return false;
-
-            Canvas playerRow = scoreboardRows[row];
-            UnityEngine.UI.Image columnBackground = scoreboardFieldBackgrounds[fieldToUpdate];
-            TextMeshProUGUI tmp = scoreboardFieldLabels[fieldToUpdate];
-
-            if (player == null || columnBackground == null || tmp == null)
-            {
-                playerRow.enabled = false;
-                return false;
-            }
-
-            playerRow.enabled = true;
-
-            string oldColumnText = tmp.text;
-            Color oldColumnTextColor = tmp.color;
-            Color oldColumnBGColor = columnBackground.color;
-
-            if (oldColumnText != columnText)
-                tmp.text = columnText;
-            if (oldColumnTextColor != columnTextColor)
-                tmp.color = columnTextColor;
-            if (oldColumnBGColor != columnBGColor)
-                columnBackground.color = columnBGColor;
-
-            return true;
-        }
-
-        private void UpdateParRow()
-        {
-            RectTransform rowRect = parRowPanel.GetChild(0).gameObject.GetComponent<RectTransform>();
-            //rowRect.gameObject.SetActive(true);
-
-            int totalPar = 0;
-
-            // Generate data for all columns
-            int columnCount = manager.openPutt.courses.Length + 2;
-            for (int col = 0; col < columnCount; col++)
-            {
-                CourseManager course = null;
-                int parScore = 0;
-                if (col >= 1 && col < columnCount - 1)
-                {
-                    course = manager.openPutt.courses[col - 1];
-                    if (manager.speedGolfMode)
-                    {
-                        parScore = course.parTimeMillis;
-                        totalPar += course.parTimeMillis;
-                    }
-                    else
-                    {
-                        parScore = course.parScore;
-                        totalPar += course.parScore;
-                    }
-                }
-
-                rowRect.GetChild(col).GetComponent<UnityEngine.UI.Image>().color = manager.nameBackground2;
-
-                TextMeshProUGUI tmp = rowRect.GetChild(col).transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-                if (tmp != null)
-                {
-                    string newText = "-";
-                    if (col == 0)
-                    {
-                        newText = "Par";
-                    }
-                    else if (col == columnCount - 1)
-                    {
-                        if (manager.speedGolfMode)
-                            newText = TimeSpan.FromMilliseconds(totalPar).ToString(@"m\:ss");
-                        else
-                            newText = $"{totalPar}";
-                    }
-                    else
-                    {
-                        if (course.drivingRangeMode)
-                            newText = "-";
-                        else if (manager.speedGolfMode)
-                            newText = TimeSpan.FromMilliseconds(parScore).ToString(@"m\:ss");
-                        else
-                            newText = $"{parScore}";
-                    }
-
-                    if (tmp.text != newText)
-                    {
-                        tmp.text = newText;
-
-                        tmp.color = manager.text;
-                    }
-                }
-            }
-        }
-
-        private void UpdateTopRow()
-        {
-            RectTransform rowRect = topRowPanel.GetChild(0).gameObject.GetComponent<RectTransform>();
-            //rowRect.gameObject.SetActive(true);
-
-            // Generate data for all columns
-            int columnCount = manager.openPutt.courses.Length + 2;
-            for (int col = 0; col < columnCount; col++)
-            {
-
-                rowRect.GetChild(col).GetComponent<Image>().color = manager.nameBackground2;
-
-                TextMeshProUGUI tmp = rowRect.GetChild(col).transform.GetChild(0).GetComponent<TextMeshProUGUI>();
-                if (tmp != null)
-                {
-                    string newText = "";
-                    if (col == 0)
-                    {
-                        newText = "#";
-                    }
-                    else if (col == columnCount - 1)
-                    {
-                        newText = $"";
-                    }
-                    else
-                    {
-                        newText = $"{col}";
-
-                        if (col >= 1 && col < columnCount - 1)
-                        {
-                            CourseManager course = manager.openPutt.courses[col - 1];
-
-                            if (course != null && course.scoreboardShortName != null && course.scoreboardShortName.Length > 0)
-                            {
-                                newText = course.scoreboardShortName;
-                            }
-                        }
-                    }
-
-                    if (tmp.text != newText)
-                    {
-                        tmp.text = newText;
-                        tmp.color = manager.text;
-                    }
-                }
-            }
-        }
-
-        private void InitUI()
+        public void InitUI()
         {
             initializedUI = false;
 
-            if (topRowPanel.childCount == 0)
-            {
-                CreateRow(0, topRowPanel).GetComponent<Canvas>().enabled = true;
-            }
-            if (parRowPanel.childCount == 0)
-            {
-                CreateRow(0, parRowPanel).GetComponent<Canvas>().enabled = true;
-            }
-
-            UpdateTopRow();
-            UpdateParRow();
-
-            int howManyRows = manager.NumberOfPlayersToDisplay;
-
-            // If we have the wrong number of rows displayed
-            if (howManyRows != playerListCanvas.transform.childCount)
-            {
-                // Delete any excess rows
-                for (int i = howManyRows; i < playerListCanvas.transform.childCount; i++)
-                {
-                    Destroy(playerListCanvas.transform.GetChild(i).gameObject);
-                }
-
-                // Create any missing rows
-                for (int position = playerListCanvas.transform.childCount; position < howManyRows; position++)
-                {
-                    CreateRow(position, playerListCanvas.transform);
-                }
-
-                // Cache all components that we need for refreshing
-                scoreboardRows = new Canvas[howManyRows];
-                scoreboardFieldBackgrounds = new Image[howManyRows * NumberOfColumns];
-                scoreboardFieldLabels = new TextMeshProUGUI[howManyRows * NumberOfColumns];
-                int lastRowID = -1;
-                Canvas lastRow = null;
-                for (int i = 0; i < howManyRows * NumberOfColumns; i++)
-                {
-                    int rowID = i <= 0 ? 0 : i / NumberOfColumns;
-                    if (lastRowID != rowID)
-                        lastRow = playerListCanvas.transform.GetChild(rowID).GetComponent<Canvas>();
-
-                    scoreboardRows[rowID] = lastRow;
-
-                    Transform column = lastRow.transform.GetChild(i <= 0 ? 0 : i % NumberOfColumns);
-                    scoreboardFieldBackgrounds[i] = column.GetComponent<UnityEngine.UI.Image>();
-                    scoreboardFieldLabels[i] = column.GetChild(0).GetComponent<TextMeshProUGUI>();
-                }
-            }
+            if (topRowPanel.transform.childCount > 0)
+                topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+            if (parRowPanel.transform.childCount > 0)
+                parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
 
             initializedUI = true;
-
-            // Just in case this scoreboard initialized after the manager did and missed an update
-            if (manager != null)
-                manager.RequestPlayerListRefresh();
-        }
-
-        private RectTransform CreateRow(int position, Transform parent)
-        {
-            int scoreboardColumnCount = manager.openPutt.courses.Length + 2; // + Name + Total
-            RectTransform newRow = Instantiate(rowPrefab).GetComponent<RectTransform>();
-            newRow.name = $"Player {position}";
-
-            RectTransform scoreboardPanel = GetComponent<RectTransform>();
-
-            float widthForEachHole = scoreboardPanel.sizeDelta.x - nameColumnWidth - totalColumnWidth - (columnPadding * (scoreboardColumnCount - 1));
-            widthForEachHole = widthForEachHole / (scoreboardColumnCount - 2);
-
-            float columnXOffset = 0f;
-            for (int col = 0; col < scoreboardColumnCount; col++)
-            {
-                RectTransform rect = Instantiate(columnPrefab).GetComponent<RectTransform>();
-                rect.SetParent(newRow, false);
-                rect.anchoredPosition = new Vector3(columnXOffset, 0f);
-
-                if (col == 0)
-                {
-                    rect.sizeDelta = new Vector2(nameColumnWidth, rowHeight);
-                }
-                else if (col == scoreboardColumnCount - 1)
-                {
-                    rect.sizeDelta = new Vector2(totalColumnWidth, rowHeight);
-                }
-                else
-                {
-                    rect.sizeDelta = new Vector2(widthForEachHole, rowHeight);
-                }
-
-                rect.GetChild(0).GetComponent<RectTransform>().sizeDelta = rect.sizeDelta;
-
-                columnXOffset += rect.sizeDelta.x + columnPadding;
-            }
-
-            // Position this row in the list
-            newRow.SetParent(parent, false);
-            newRow.anchoredPosition = new Vector3(0f, -(rowHeight + rowPadding) * position);
-
-            //newRow.gameObject.SetActive(false);
-
-            return newRow;
         }
 
         /// <summary>
@@ -488,7 +234,6 @@ namespace mikeee324.OpenPutt
             isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
-            showAllPlayersCheckbox.material = manager.showAllPlayers ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -498,14 +243,6 @@ namespace mikeee324.OpenPutt
 
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
             ballColorPreview.color = playerManager.BallColor;
-        }
-
-        public void ToggleAllPlayers()
-        {
-            if (manager != null)
-            {
-                manager.showAllPlayers = !manager.showAllPlayers;
-            }
         }
 
         public void OnClubPowerChanged()
@@ -661,7 +398,7 @@ namespace mikeee324.OpenPutt
             {
                 // Drop the shoulder objects and set them back to Vector3.zero
                 GameObject attachedObject = playerManager.openPutt.leftShoulderPickup.ObjectToAttach;
-                VRCPickup pickup = null;
+                VRCPickup pickup;
                 if (attachedObject != null)
                 {
                     pickup = attachedObject.GetComponent<VRCPickup>();
@@ -695,7 +432,10 @@ namespace mikeee324.OpenPutt
 
             RefreshSettingsMenu();
 
-            manager.RequestPlayerListRefresh();
+            playerManager.UpdateTotals();
+
+            playerManager.openPutt.OnPlayerUpdate(playerManager);
+            playerManager.RequestSync();
         }
 
         public void OnToggleUnlimitedShaftSize()
@@ -748,60 +488,44 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleSettings()
         {
-            if (CurrentScoreboardView == ScoreboardView.Settings)
+            if (manager != null)
             {
-                CurrentScoreboardView = ScoreboardView.Scoreboard;
+                manager.requestedScoreboardView = ScoreboardView.Settings;
+                manager.OnPlayerOpenSettings(this);
             }
-            else
-            {
-                CurrentScoreboardView = ScoreboardView.Settings;
-
-                // Close settings tab on other scoreboards
-                if (manager != null)
-                    manager.OnPlayerOpenSettings(this);
-            }
+            CurrentScoreboardView = ScoreboardView.Settings;
         }
 
         public void OnToggleInfo()
         {
-            if (CurrentScoreboardView == ScoreboardView.Info)
-                CurrentScoreboardView = ScoreboardView.Scoreboard;
-            else
-                CurrentScoreboardView = ScoreboardView.Info;
+            if (manager != null)
+            {
+                manager.requestedScoreboardView = ScoreboardView.Info;
+            }
+            CurrentScoreboardView = ScoreboardView.Info;
         }
 
         public void OnToggleTimerMode()
         {
             if (manager == null) return;
 
-            // If we were previously in the normal scoreboard - update player list
-            if (!manager.speedGolfMode)
-                manager.RequestPlayerListRefresh();
+            manager.SpeedGolfMode = true;
+            if (parRowPanel.transform.childCount > 0)
+                parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
 
-            manager.speedGolfMode = true;
-            UpdateParRow();
-
+            manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
-        }
-
-        public void OnToggleAllPlayers()
-        {
-            if (manager == null) return;
-
-            manager.showAllPlayers = !manager.showAllPlayers;
         }
 
         public void OnShowScoreboard()
         {
             if (manager == null) return;
 
-            // If we were previously in timer mode - update player list
-            if (manager.speedGolfMode)
-                manager.RequestPlayerListRefresh();
+            manager.SpeedGolfMode = false;
+            if (parRowPanel.transform.childCount > 0)
+                parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
 
-            manager.speedGolfMode = false;
-            UpdateParRow();
-
+            manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
         }
 
@@ -820,6 +544,7 @@ namespace mikeee324.OpenPutt
             if (pm != null)
             {
                 pm.ResetPlayerScores();
+
                 if (pm.golfClub != null)
                 {
                     if (pm.golfClub.pickup != null)
@@ -834,10 +559,13 @@ namespace mikeee324.OpenPutt
                     pm.golfBall.BallIsMoving = false;
                 }
                 pm.RequestSync();
+
+                pm.UpdateTotals();
+
+                pm.openPutt.OnPlayerUpdate(pm);
+
                 Utils.Log(this, "Player reset their scores");
             }
-
-            manager.RequestPlayerListRefresh();
 
             OnResetCancel();
 
@@ -868,8 +596,8 @@ namespace mikeee324.OpenPutt
             // Update Tab Background Colours
             Color defaultBackground = scoreboardBackground.color;
 
-            Color newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.speedGolfMode) ? manager.currentCourseBackground : defaultBackground;
-            Color newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.speedGolfMode) ? manager.currentCourseBackground : defaultBackground;
+            Color newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.SpeedGolfMode) ? manager.currentCourseBackground : defaultBackground;
+            Color newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.SpeedGolfMode) ? manager.currentCourseBackground : defaultBackground;
             Color newInfoCol = _currentScoreboardView == ScoreboardView.Info ? manager.currentCourseBackground : defaultBackground;
             Color newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? manager.currentCourseBackground : defaultBackground;
 
@@ -930,7 +658,7 @@ namespace mikeee324.OpenPutt
                     SnapTo(scrollRect, null);
 
                 // Toggle raycast target depending on scrollRect state
-                Image scrollPanel = playerListCanvas.transform.parent.GetComponent<Image>();
+                UnityEngine.UI.Image scrollPanel = playerListCanvas.transform.parent.GetComponent<UnityEngine.UI.Image>();
                 if (scrollPanel != null)
                     scrollPanel.raycastTarget = scrollRect.enabled;
             }
@@ -965,6 +693,79 @@ namespace mikeee324.OpenPutt
             {
                 SnapTo(scrollRect, null); // Scrolls to the top
             }
+        }
+    }
+
+    public static class ScoreboardExtensions
+    {
+        public static ScoreboardPlayerRow CreateRow(this Scoreboard scoreboard, int rowID, RectTransform parent = null)
+        {
+            int scoreboardColumnCount = scoreboard.manager.openPutt.courses.Length + 2; // + Name + Total
+            RectTransform newRow = GameObject.Instantiate(scoreboard.manager.rowPrefab).GetComponent<RectTransform>();
+
+            ScoreboardPlayerRow row = newRow.GetComponent<ScoreboardPlayerRow>();
+            row.name = $"Player {rowID}";
+            row.gameObject.SetActive(true);
+            row.rowCanvas = row.GetComponent<Canvas>();
+            row.scoreboard = scoreboard;
+            //if (parent == null)
+            //    row.player = scoreboard.manager.openPutt.objectAssigner.transform.GetChild(rowID).GetComponent<PlayerManager>();
+            row.rectTransform = newRow;
+            row.columns = new ScoreboardPlayerColumn[scoreboardColumnCount];
+
+            row.rectTransform.anchoredPosition = new Vector3(0f, -(scoreboard.rowHeight + scoreboard.rowPadding) * rowID);
+
+            float columnXOffset = 0f;
+            for (int col = 0; col < scoreboardColumnCount; col++)
+            {
+                RectTransform rect = GameObject.Instantiate(scoreboard.manager.colPrefab).GetComponent<RectTransform>();
+
+                if (col == 0)
+                    rect.name = "Player Name";
+                else if (col == scoreboardColumnCount - 1)
+                    rect.name = "Player Total Score";
+                else
+                    rect.name = $"Course {col}";
+
+                ScoreboardPlayerColumn rowCol = rect.GetComponent<ScoreboardPlayerColumn>();
+                rowCol.scoreboardRow = row;
+                rowCol.colBackground = rect.GetComponent<UnityEngine.UI.Image>();
+                rowCol.colText = rect.GetChild(0).GetComponent<TextMeshProUGUI>();
+                row.columns[col] = rowCol;
+
+                rect.SetParent(newRow, false);
+                rect.anchoredPosition = new Vector3(columnXOffset, 0f);
+
+                if (col == 0)
+                {
+                    rect.sizeDelta = new Vector2(scoreboard.nameColumnWidth, scoreboard.rowHeight);
+                }
+                else if (col == scoreboardColumnCount - 1)
+                {
+                    rect.sizeDelta = new Vector2(scoreboard.totalColumnWidth, scoreboard.rowHeight);
+                }
+                else
+                {
+                    float widthForEachHole = (scoreboard.rectTransform.sizeDelta.x - scoreboard.nameColumnWidth - scoreboard.totalColumnWidth - (scoreboard.columnPadding * (scoreboardColumnCount - 1))) / (scoreboardColumnCount - 2);
+                    rect.sizeDelta = new Vector2(widthForEachHole, scoreboard.rowHeight);
+                }
+
+                rect.GetChild(0).GetComponent<RectTransform>().sizeDelta = rect.sizeDelta;
+
+                columnXOffset += rect.sizeDelta.x + scoreboard.columnPadding;
+            }
+
+            // Position this row in the list
+            if (parent == null)
+                newRow.SetParent(scoreboard.playerListCanvas.GetComponent<RectTransform>(), false);
+            else
+                newRow.SetParent(parent, false);
+
+
+            if (parent == null && rowID < scoreboard.scoreboardRows.Length)
+                scoreboard.scoreboardRows[rowID] = row;
+
+            return row;
         }
     }
 }

@@ -12,6 +12,7 @@ namespace mikeee324.OpenPutt
         #region Public Settings
         [Header("References")]
         public GolfClub club;
+        public PuttSync puttSync;
         [Tooltip("Used to identify a wall collider and perform a bounce")]
         public PhysicMaterial wallMaterial;
         [Tooltip("Used to identify whether the ball is still on the course or not when it stops rolling")]
@@ -106,6 +107,10 @@ namespace mikeee324.OpenPutt
                 // If the ball stopped moving and we can respawn it automatically
                 if (Networking.LocalPlayer.IsOwner(gameObject))
                 {
+                    // Tells the players golf club to update its current state
+                    if (club != null)
+                        club.RefreshState();
+
                     this.enabled = _ballMoving;
                     bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(this.transform.position));
 
@@ -138,7 +143,7 @@ namespace mikeee324.OpenPutt
                             else if (respawnPosition != Vector3.zero)
                             {
                                 // It is not on top of a course floor so move it to the previous position
-                                ballRigidbody.MovePosition(respawnPosition);
+                                ballRigidbody.position = respawnPosition;
 
                                 // Play the reset noise
                                 if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
@@ -197,7 +202,6 @@ namespace mikeee324.OpenPutt
         private Vector3 lerpToSpawnStartPos = Vector3.zero;
         private float lerpToSpawnTime = -1f;
         private CourseManager courseThatIsBeingStarted = null;
-        private PuttSync puttSync;
         private Collider[] localStartPadColliders = new Collider[32];
         private AnimationCurve simpleEaseInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
         #endregion
@@ -213,7 +217,8 @@ namespace mikeee324.OpenPutt
             if (floorMaterial == null)
                 Utils.LogError(this, "Cannot detect floors! Please assign a floor PhysicMaterial to this ball!");
 
-            puttSync = GetComponent<PuttSync>();
+            if (puttSync == null)
+                puttSync = GetComponent<PuttSync>();
 
             if (ballRigidbody == null)
                 ballRigidbody = GetComponent<Rigidbody>();
@@ -227,7 +232,7 @@ namespace mikeee324.OpenPutt
 
         private void Update()
         {
-            if (!Utils.LocalPlayerIsValid() || !Networking.IsOwner(Networking.LocalPlayer, gameObject) || ballRigidbody == null)
+            if (!this.LocalPlayerOwnsThisObject() || ballRigidbody == null)
             {
                 this.enabled = false;
                 return;
@@ -450,7 +455,7 @@ namespace mikeee324.OpenPutt
                         BallIsMoving = false;
 
                         // Put the ball back where it last stopped on the course so the player can continue
-                        ballRigidbody.MovePosition(respawnPosition);
+                        ballRigidbody.position = respawnPosition;
 
                         // Play the reset noise
                         if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)

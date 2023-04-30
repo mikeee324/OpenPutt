@@ -5,6 +5,7 @@ using Cyan.PlayerObjectPool;
 using VRC.SDK3.Components;
 using System;
 using UnityEngine.UIElements;
+using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
@@ -80,6 +81,7 @@ namespace mikeee324.OpenPutt
         private bool _clubVisible = false;
         [UdonSynced, FieldChangeCallback(nameof(BallVisible))]
         private bool _ballVisible = false;
+        public int PlayerID => transform.GetSiblingIndex();
         /// <summary>
         /// Used to sync the visible state of this club to other players
         /// </summary>
@@ -120,52 +122,14 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Works out the players total score across all courses
         /// </summary>
-        public int PlayerTotalScore
-        {
-            get
-            {
-                if (!IsReady || !PlayerHasStartedPlaying)
-                    return 999999;
-
-                int score = 0;
-                for (int i = 0; i < courseScores.Length; i++)
-                {
-                    if (openPutt != null && openPutt.courses[i] != null && openPutt.courses[i].drivingRangeMode)
-                        continue;
-                    score += courseScores[i];
-                }
-
-                return score;
-            }
-        }
+        [UdonSynced]
+        public int PlayerTotalScore = 999999;
         /// <summary>
         /// Total number of milliseconds the player took to complete the courses
         /// </summary>
-        public int PlayerTotalTime
-        {
-            get
-            {
-                if (!IsReady || !PlayerHasStartedPlaying)
-                    return 999999;
+        [UdonSynced]
+        public int PlayerTotalTime  = 999999;
 
-                int totalTime = 0;
-                for (int i = 0; i < courseTimes.Length; i++)
-                {
-                    if (openPutt != null && openPutt.courses[i] != null && openPutt.courses[i].drivingRangeMode)
-                        continue;
-
-                    if (courseStates[i] == CourseState.Playing)
-                    {
-                        totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
-                    }
-                    else
-                    {
-                        totalTime += courseTimes[i];
-                    }
-                }
-                return totalTime;
-            }
-        }
         /// <summary>
         /// Check if the player has started at least 1 course in the world. Useful for checking if the player is actually playing the game or not.
         /// </summary>
@@ -202,6 +166,19 @@ namespace mikeee324.OpenPutt
         /// Counts how many seconds a ball has not been on top of it's current course (Used to reset the ball quicker if it flies off the course)
         /// </summary>
         private int ballNotOnCourseCounter = 0;
+        /// <summary>
+        /// The current position of this PlayerManager for the scoreboards - order by score ASC
+        /// </summary>
+        public int ScoreboardPositionByScore = -1;
+        /// <summary>
+        /// The current position of this PlayerManager for the scoreboards - order by time ASC
+        /// </summary>
+        public int ScoreboardPositionByTime = -1;
+        /// <summary>
+        /// Basically marks this PlayerManager as 'dirty' and the scoreboards need to refresh the row for this player.<br/>
+        /// The ScoreboardManager will reset this to false when it has updated the row for this player
+        /// </summary>
+        public bool scoreboardRowNeedsUpdating = false;
 
         public void OnBallHit()
         {
@@ -323,9 +300,11 @@ namespace mikeee324.OpenPutt
                 }
             }
 
+            UpdateTotals();
+
             // Update local scoreboards
-            if (openPutt != null && openPutt.scoreboardManager != null)
-                openPutt.scoreboardManager.RequestPlayerListRefresh();
+            if (openPutt != null)
+                openPutt.OnPlayerUpdate(this);
 
             // If fast updates are on send current state of player to everybody - otherwise it will be done when the player finishes the course
             if (sendSync)
@@ -411,7 +390,11 @@ namespace mikeee324.OpenPutt
             }
 
             if (openPutt != null && openPutt.scoreboardManager != null)
-                openPutt.scoreboardManager.RequestPlayerListRefresh();
+            {
+                openPutt.scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
+                UpdateTotals();
+                openPutt.OnPlayerUpdate(this);
+            }
 
             if (newCourseState == CourseState.Completed)
             {
@@ -433,9 +416,12 @@ namespace mikeee324.OpenPutt
             if (Owner == null)
                 return;
 
-            Utils.Log(this, $"Received score update from {Owner.displayName}!\r\n{ToString()}");
+            Utils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");
+
+            UpdateTotals();
+
             if (openPutt != null && openPutt.scoreboardManager != null)
-                openPutt.scoreboardManager.RequestPlayerListRefresh();
+                openPutt.OnPlayerUpdate(this);
         }
 
         /// <summary>
@@ -467,6 +453,12 @@ namespace mikeee324.OpenPutt
 
         public void CheckPlayerLocation()
         {
+            if (!Utils.LocalPlayerIsValid())
+            {
+                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
+                return;
+            }
+
             // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
             if (openPutt != null && openPutt.rightShoulderPickup != null && openPutt.rightShoulderPickup.ObjectToAttach != null)
             {
@@ -623,20 +615,20 @@ namespace mikeee324.OpenPutt
                 SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
             }
 
+            UpdateTotals();
+
             // Get the local player to send their current score
             RequestSync();
 
             // Refresh scoreboards
             if (openPutt != null && openPutt.scoreboardManager != null)
-                openPutt.scoreboardManager.RequestPlayerListRefresh();
+                openPutt.OnPlayerUpdate(this);
         }
 
         // This method will be called on all clients when the original owner has left and the object is about to be disabled.
         public override void _OnCleanup()
         {
             // Cleanup the object here
-            if (openPutt != null && openPutt.scoreboardManager != null)
-                openPutt.scoreboardManager.RequestPlayerListRefresh();
 
             BallColor = Color.red;
             isPlaying = true;
@@ -653,6 +645,11 @@ namespace mikeee324.OpenPutt
                 golfClubHead.gameObject.SetActive(false);
             if (golfBall != null)
                 golfBall.gameObject.SetActive(false);
+
+            UpdateTotals();
+
+            if (openPutt != null)
+                openPutt.OnPlayerUpdate(this);
 
             RequestSerialization();
 
@@ -672,6 +669,39 @@ namespace mikeee324.OpenPutt
                 courseScores[i] = 0;
                 courseTimes[i] = 0;
                 courseStates[i] = CourseState.NotStarted;
+            }
+            UpdateTotals();
+        }
+        public void UpdateTotals()
+        {
+            if (PlayerHasStartedPlaying)
+            {
+                if (openPutt == null)
+                    return;
+                int score = 0;
+                int totalTime = 0;
+
+                for (int i = 0; i < courseScores.Length; i++)
+                {
+                    if (openPutt.courses[i] != null && openPutt.courses[i].drivingRangeMode)
+                        continue;
+
+                    score += courseScores[i];
+
+                    if (courseStates[i] != CourseState.Playing)
+                    {
+                        totalTime += courseTimes[i];
+                        // Not counting courses that are in progress for now (but this is how you'd do it!)
+                        //  totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
+                    }
+                }
+                PlayerTotalScore = score;
+                PlayerTotalTime = totalTime;
+            }
+            else
+            {
+                PlayerTotalScore = 999999;
+                PlayerTotalTime = 999999;
             }
         }
 

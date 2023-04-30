@@ -1,9 +1,6 @@
-﻿using System;
-using UdonSharp;
-using UnityEditor;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
@@ -13,17 +10,29 @@ namespace mikeee324.OpenPutt
 
         public static void Log(string tag, string message, string tagColor = "green")
         {
+#if UNITY_STANDALONE_WIN
             Debug.Log($"[<color={tagColor}>{tag}</color>] {message}");
+#elif UNITY_EDITOR
+            Debug.Log($"[<color={tagColor}>{tag}</color>] {message}");
+#endif
         }
 
         public static void LogWarning(string tag, string message, string tagColor = "green")
         {
+#if UNITY_STANDALONE_WIN
             Debug.LogWarning($"[<color={tagColor}>{tag}</color>] {message}");
+#elif UNITY_EDITOR
+            Debug.LogWarning($"[<color={tagColor}>{tag}</color>] {message}");
+#endif
         }
 
         public static void LogError(string tag, string message, string tagColor = "green")
         {
+#if UNITY_STANDALONE_WIN
             Debug.LogError($"[<color={tagColor}>{tag}</color>] {message}");
+#elif UNITY_EDITOR
+            Debug.LogError($"[<color={tagColor}>{tag}</color>] {message}");
+#endif
         }
 
         public static void Log(UdonSharpBehaviour context, string message, string tagColor = "green")
@@ -34,7 +43,11 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Debug.Log($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}");
+#if UNITY_STANDALONE_WIN
+            Debug.Log($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#elif UNITY_EDITOR
+            Debug.Log($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#endif
         }
 
         public static void LogWarning(UdonSharpBehaviour context, string message, string tagColor = "green")
@@ -45,7 +58,11 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Debug.LogWarning($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}");
+#if UNITY_STANDALONE_WIN
+            Debug.LogWarning($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#elif UNITY_EDITOR
+            Debug.LogWarning($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#endif
         }
         public static void LogError(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
@@ -55,7 +72,11 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Debug.LogError($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}");
+#if UNITY_STANDALONE_WIN
+            Debug.LogError($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#elif UNITY_EDITOR
+            Debug.LogError($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
+#endif
         }
 
         /// <summary>
@@ -94,97 +115,74 @@ namespace mikeee324.OpenPutt
             return false;
         }
 
-        public static float GetUnixTimestamp()
+        /// <summary>
+        /// Works out the closest position on a line relative to a position in the world. Useful for making an object follow a particular path.
+        /// </summary>
+        /// <param name="lineStartPosition"></param>
+        /// <param name="lineEndPosition"></param>
+        /// <param name="worldPosition"></param>
+        /// <returns>A position in world space that represents the closest point on the line</returns>
+        public static Vector3 ClosestPointOnLine(Vector3 lineStartPosition, Vector3 lineEndPosition, Vector3 worldPosition)
         {
-            System.DateTime offsetDateTime = new System.DateTime(2022, 6, 13, 0, 0, 0, System.DateTimeKind.Utc);
-            return (float)(System.DateTime.UtcNow - offsetDateTime).TotalSeconds;
-        }
-        public static Vector3 ClosestPointOnLine(Vector3 vA, Vector3 vB, Vector3 vPoint)
-        {
-            var vVector1 = vPoint - vA;
-            var vVector2 = (vB - vA).normalized;
+            var vVector1 = worldPosition - lineStartPosition;
+            var vVector2 = (lineEndPosition - lineStartPosition).normalized;
 
-            var d = Vector3.Distance(vA, vB);
+            var d = Vector3.Distance(lineStartPosition, lineEndPosition);
             var t = Vector3.Dot(vVector2, vVector1);
 
             if (t <= 0)
-                return vA;
+                return lineStartPosition;
 
             if (t >= d)
-                return vB;
+                return lineEndPosition;
 
             var vVector3 = vVector2 * t;
 
-            var vClosestPoint = vA + vVector3;
-
-            return vClosestPoint;
+            return lineStartPosition + vVector3;
         }
 
-        public static bool LocalPlayerIsValid()
-        {
-            return Utilities.IsValid(Networking.LocalPlayer);
-            //return Networking.LocalPlayer != null && Networking.LocalPlayer.IsValid();
-        }
+        /// <summary>
+        /// Shortcut for Utilities.IsValid(Networking.LocalPlayer);
+        /// </summary>
+        /// <returns>True if the local player is valid</returns>
+        public static bool LocalPlayerIsValid() => Utilities.IsValid(Networking.LocalPlayer);
+
+        /// <summary>
+        /// Gets a UNIX-like timestamp but starts at 2023-01-01 00:00:00 UTC so float precision is better (maybe?)
+        /// </summary>
+        /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
+        public static float GetUnixTimestamp() => (float)(System.DateTime.UtcNow - new System.DateTime(2023, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
     }
 
     public static class Extensions
     {
-        public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour)
-        {
-            return Utils.LocalPlayerIsValid() && behaviour != null && Networking.LocalPlayer.IsOwner(behaviour.gameObject);
-        }
+        public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(behaviour.gameObject);
+        public static bool IsPointWithin(this Collider collider, Vector3 point) =>  (collider.ClosestPoint(point) - point).sqrMagnitude < Mathf.Epsilon * Mathf.Epsilon;
 
-        public static bool IsPointWithin(this Collider collider, Vector3 point)
-        {
-            return (collider.ClosestPoint(point) - point).sqrMagnitude < Mathf.Epsilon * Mathf.Epsilon;
-        }
-        /// <summary>
-        /// Sorts an array of players by either their total score or their total time.<br/>
-        /// This is using a Quicksort algorithm I found here - https://code-maze.com/csharp-quicksort-algorithm/
-        /// </summary>
-        /// <param name="array"></param>
-        /// <param name="sortByTime"></param>
-        /// <param name="leftIndex"></param>
-        /// <param name="rightIndex"></param>
-        /// <returns></returns>
         [RecursiveMethod]
-        public static PlayerManager[] Sort(this PlayerManager[] array, bool sortByTime, int leftIndex, int rightIndex)
+        public static ScoreboardPositioner[] SortByDistance(this ScoreboardPositioner[] array, Vector3 position, int leftIndex = 0, int rightIndex = -1)
         {
             if (array.Length == 0) return array;
+            if (rightIndex == -1)
+                rightIndex = array.Length - 1;
+
             var i = leftIndex;
             var j = rightIndex;
-            var pivot = array[leftIndex].PlayerTotalScore;
-            if (sortByTime)
-                pivot = array[leftIndex].PlayerTotalTime;
+            var pivot = Vector3.Distance(array[leftIndex].transform.position, position);
             while (i <= j)
             {
-                if (sortByTime)
+                while (Vector3.Distance(array[i].transform.position, position) < pivot)
                 {
-                    while (array[i].PlayerTotalTime < pivot)
-                    {
-                        i++;
-                    }
-
-                    while (array[j].PlayerTotalTime > pivot)
-                    {
-                        j--;
-                    }
+                    i++;
                 }
-                else
-                {
-                    while (array[i].PlayerTotalScore < pivot)
-                    {
-                        i++;
-                    }
 
-                    while (array[j].PlayerTotalScore > pivot)
-                    {
-                        j--;
-                    }
+                while (Vector3.Distance(array[j].transform.position, position) > pivot)
+                {
+                    j--;
                 }
                 if (i <= j)
                 {
-                    PlayerManager temp = array[i];
+                    ScoreboardPositioner temp = array[i];
                     array[i] = array[j];
                     array[j] = temp;
                     i++;
@@ -193,9 +191,9 @@ namespace mikeee324.OpenPutt
             }
 
             if (leftIndex < j)
-                array.Sort(sortByTime, leftIndex, j);
+                array.SortByDistance(position, leftIndex, j);
             if (i < rightIndex)
-                array.Sort(sortByTime, i, rightIndex);
+                array.SortByDistance(position, i, rightIndex);
 
             return array;
         }

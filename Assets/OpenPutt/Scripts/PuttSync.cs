@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System.Diagnostics;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -16,14 +17,8 @@ namespace mikeee324.OpenPutt
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve fastSyncIntervalCurve;
 
-        [Tooltip("Will periodically try to send a sync in the background every 3-10 seconds. Off by default as build 1258 should solve later joiner issues (Will only actually sync if this.transform has been touched)")]
-        public bool enableSlowSync = false;
-
         [Tooltip("Experimental - Reduces network traffic by syncing")]
         public bool disableSyncWhileHeld = true;
-
-        [Tooltip("If enabled PuttSync will go to sleep while it is idle to save resources")]
-        public bool autoDisableWhileIdle = true;
 
         [Header("Pickup Settings")]
         [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
@@ -32,14 +27,16 @@ namespace mikeee324.OpenPutt
         public bool monitorPickupEvents = true;
         [Tooltip("Should this object be returned to its spawn position after players let go of it")]
         public bool returnAfterDrop = false;
-        [Range(2f, 30f), Tooltip("If ReturnAfterDrop is enabled this object will be put back into its original position after this many seconds of not being held")]
+        [Range(2f, 300f), Tooltip("If ReturnAfterDrop is enabled this object will be put back into its original position after this many seconds of not being held")]
         public float returnAfterDropTime = 10f;
+        [Tooltip("Designate a script that is being called when object is returned. Calls the remote function written in the box below. ")]
+        public UdonSharpBehaviour returnListener;
+        public string remoteReturnFunction = "ReturnFunction";
         [Tooltip("Should the object be respawned if it goes below the height specified below?")]
         public bool autoRespawn = true;
         [Tooltip("The minimum height that this object can go to before being respawned (if enabled)")]
         public float autoRespawnHeight = -100f;
         public bool canManagePickupable = true;
-        public bool canManageRigidbodyState = true;
         #endregion
 
         #region Private References
@@ -71,38 +68,18 @@ namespace mikeee324.OpenPutt
         private VRCPickup.PickupHand currentOwnerHand
         {
             get => (VRCPickup.PickupHand)currentOwnerHandInt;
-            set
-            {
-                currentOwnerHandInt = (int)value;
-            }
+            set => currentOwnerHandInt = (int)value;
         }
-        [HideInInspector]
-        public int currentOwnerHideOverride = 0;
         #endregion
 
         #region Internal Working Vars
-        /// <summary>
-        /// A local timer that stores how much time has passed since the owner last tried to sync this object
-        /// </summary>
-        private float syncTimer = 0f;
-        /// <summary>
-        /// A local timer that tracks how much longer this object can send fast updates for
-        /// </summary>
-        private float currentFastSyncTimeout = 0f;
+        private bool isBeingHeldByExternalScript = false;
         /// <summary>
         /// Amount of time (in seconds) between fast object syncs for this object (Scaled based on player count using fastSyncIntervalCurve)
         /// </summary>
         private float fastSyncInterval = 0.05f;
-        /// <summary>
-        /// Amount of time (in seconds) between slow object syncs for this object (Is set to a random value between 3-10 each time)
-        /// </summary>
-        private float slowSyncInterval = 1f;
-        /// <summary>
-        /// A local timer that tracks how long since the owner of this object dropped it
-        /// </summary>
-        private float timeSincePlayerDroppedObject = -1f;
-        private bool rigidBodyUseGravity = false;
-        private bool rigidBodyisKinematic = false;
+        private float fastSyncStopTime = -1f;
+        private float returnAfterDropEndTime = -1f;
         /// <summary>
         /// True if we just received the first network sync for this object
         /// </summary>
@@ -111,12 +88,23 @@ namespace mikeee324.OpenPutt
         /// True if this object has had at least 1 network update
         /// </summary>
         private bool hasSynced = false;
+        /// <summary>
+        /// Keeps track of whether PuttSync is already monitoring remote updates and syncing positions etc
+        /// </summary>
+        private bool isHandlingRemoteUpdates = false;
+        /// <summary>
+        /// Used to allow a sync in case some extra data changed (e.g. player changed which hand they hold the pickup with)
+        /// </summary>
+        private bool extraDataChanged = false;
+        private bool firstEnable = true;
         #endregion
 
         void Start()
         {
-            pickup = GetComponent<VRCPickup>();
-            objectRB = GetComponent<Rigidbody>();
+            if (pickup == null)
+                pickup = GetComponent<VRCPickup>();
+            if (objectRB == null)
+                objectRB = GetComponent<Rigidbody>();
 
             originalPosition = this.transform.localPosition;
             originalRotation = this.transform.localRotation;
@@ -134,212 +122,146 @@ namespace mikeee324.OpenPutt
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
-
-            SetEnabled(false);
         }
 
-        void Update()
+        /// <summary>
+        /// This function is where the data is gathered and then sent if needed
+        /// </summary>
+        public void HandleSendSync()
         {
-            if (Networking.LocalPlayer == null) return;
-
-            Transform transform = this.transform;
-
-            if (!Networking.LocalPlayer.IsOwner(gameObject))
-            {
-                // Disable pickup for other players if theft is disabled
-                if (canManagePickupable && pickup != null)
-                {
-                    bool newPickupState = true;
-
-                    // If somebody else is holding this object disable pickup (when theft is disabled)
-                    if (pickup.DisallowTheft && Networking.GetOwner(gameObject) != Networking.LocalPlayer && currentOwnerHand != VRCPickup.PickupHand.None)
-                        newPickupState = false;
-
-                    if (newPickupState != pickup.pickupable)
-                        pickup.pickupable = newPickupState;
-
-                    bool shouldDropPickup = false;
-                    if (Networking.GetOwner(gameObject) != Networking.LocalPlayer)
-                        shouldDropPickup = true;
-                    if (!newPickupState)
-                        shouldDropPickup = true;
-
-                    if (shouldDropPickup && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
-                        pickup.Drop();
-                }
-
-                if (canManageRigidbodyState && objectRB != null && !objectRB.isKinematic)
-                {
-                    // If we are being moved by something else make the rigidbody kinematic
-                    objectRB.useGravity = false;
-                    objectRB.isKinematic = true;
-                }
-
-                if (syncPositionAndRot)
-                {
-                    // Attach this object to the players hand if they are currently holding it
-                    if (disableSyncWhileHeld && currentOwnerHand != VRCPickup.PickupHand.None)
-                    {
-                        // In this case syncPosition/syncRotation will be offsets from the owners hand bone
-                        VRCPlayerApi owner = Networking.GetOwner(gameObject);
-
-                        // Get the world space position/rotation of the hand that is holding this object
-                        HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
-
-                        Vector3 handPosition = owner.GetBonePosition(currentTrackedBone);
-                        Quaternion handRotation = owner.GetBoneRotation(currentTrackedBone);
-
-                        // If the offset shave changed, try to lerp them?
-                        GetPickupHandOffsets(owner, out Vector3 currentOwnerHandOffset, out Quaternion currentOwnerHandOffsetRotation);
-
-                        Vector3 oldPos = transform.position;
-
-                        Vector3 newPos = handPosition + transform.TransformDirection(syncPosition);
-                        Quaternion newOffsetRot = handRotation * syncRotation;
-                        if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
-                            newPos = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
-
-                        if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
-                        {
-                            float lerpProgress = 1.0f - Mathf.Pow(0.000001f, Time.deltaTime);
-                            newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, lerpProgress);
-                        }
-
-                        transform.position = newPos;
-                        transform.rotation = newOffsetRot;
-                    }
-                    else if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Angle(transform.localRotation, syncRotation) > 0.01f)
-                    {
-                        Vector3 newPosition = syncPosition;
-                        Quaternion newRotation = syncRotation;
-
-                        if (!isFirstSync && hasSynced)
-                        {
-                            // Try to smooth out the lerps
-                            //float lerpProgress = Time.deltaTime / fastSyncInterval;
-                            float lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
-
-                            // Lerp the object to it's current position
-                            newPosition = Vector3.Lerp(transform.localPosition, syncPosition, lerpProgress);
-                            newRotation = Quaternion.Slerp(transform.localRotation, syncRotation, lerpProgress);
-                        }
-
-                        isFirstSync = false;
-
-                        // Move this object
-                        transform.localPosition = newPosition;
-                        transform.localRotation = newRotation;
-                    }
-                    else
-                    {
-                        SetEnabled(false);
-                    }
-                }
-                else
-                {
-                    SetEnabled(false);
-                }
-                return;
-            }
-
-            bool shouldStayEnabled = false;
-
-            VRCPickup.PickupHand handStateThisFrame = pickup != null ? pickup.currentHand : VRC_Pickup.PickupHand.None;
-            if (currentOwnerHideOverride > 0)
-                handStateThisFrame = (VRCPickup.PickupHand)currentOwnerHideOverride;
-
-            // If the pickup state has changed and the player is no longer holding this object - tell other clients
-            if (pickup != null && handStateThisFrame != currentOwnerHand && handStateThisFrame == VRCPickup.PickupHand.None)
-            {
-                // Send to other clients
-                RequestFastSync();
-            }
-
-            currentOwnerHand = handStateThisFrame;
-
-            // Enable pickup for the owner
-            if (canManagePickupable && pickup != null && !pickup.pickupable)
-                pickup.pickupable = true;
-
+            // If the owner sees the object go underneath the respawn height
             if (autoRespawn && transform.position.y < autoRespawnHeight)
             {
+                // The master will respawn the object
                 Respawn();
             }
 
-            if (returnAfterDrop && timeSincePlayerDroppedObject >= 0f)
-            {
-                if (currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
-                {
-                    timeSincePlayerDroppedObject = -1f;
-                    shouldStayEnabled = true;
-                }
-                else if (timeSincePlayerDroppedObject < returnAfterDropTime)
-                {
-                    timeSincePlayerDroppedObject += Time.deltaTime;
-                    shouldStayEnabled = true;
-                }
-                else if (timeSincePlayerDroppedObject >= returnAfterDropTime)
-                {
-                    Respawn();
-                }
-            }
+            // Sync local pos/rot
+            syncPosition = transform.localPosition;
+            syncRotation = transform.localRotation;
 
+            // If player is holding this object and PuttSync is tracking pickup stuff
             if (monitorPickupEvents && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
             {
                 if (disableSyncWhileHeld)
-                {
-                    UpdatePickupHandOffsets();
-                }
+                    UpdatePickupHandOffsets(); // Attaches the object to local space of the players hand on remote clients
                 else
-                {
-                    syncPosition = transform.localPosition;
-                    syncRotation = transform.localRotation;
-                    RequestFastSync();
-                }
-                shouldStayEnabled = true;
+                    RequestFastSync(); // Just syncs the position/rotation normally
+            }
+
+            // Send a network sync if enough time has passed and the object has moved/rotated (seems to work fine if the parent of this object moves also)
+            if (this.transform.hasChanged || extraDataChanged || !monitorPickupEvents)
+            {
+                RequestSerialization();
+                this.transform.hasChanged = false;
+                extraDataChanged = false;
+            }
+
+            // If we still have time left to sync, schedule in the next sync
+            if (fastSyncStopTime > Time.timeSinceLevelLoad)
+            {
+                SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
             }
             else
             {
-                syncPosition = transform.localPosition;
-                syncRotation = transform.localRotation;
+                fastSyncStopTime = -1f;
+            }
+        }
+
+        /// <summary>
+        /// This handles syncing the positions up and smoothing the mnotion for remote players
+        /// </summary>
+        public void HandleRemoteUpdate()
+        {
+            VRCPlayerApi owner = Networking.GetOwner(gameObject);
+            if (owner == Networking.LocalPlayer)
+            {
+                isHandlingRemoteUpdates = false;
+                return;
             }
 
-            // Work out which timer we are currently using (Fast/Slow/None)
-            float currentSyncInterval = -1;
-            if (currentFastSyncTimeout > 0f)
-                currentSyncInterval = fastSyncInterval;
-            else if (enableSlowSync)
-                currentSyncInterval = slowSyncInterval;
-
-            if (currentSyncInterval >= 0f)
+            // Disable pickup for other players if theft is disabled
+            if (canManagePickupable && pickup != null)
             {
-                shouldStayEnabled = true;
-                if (syncTimer > currentSyncInterval)
+                bool newPickupState = true;
+
+                // If somebody else is holding this object disable pickup (when theft is disabled)
+                if (pickup.DisallowTheft && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
+                    newPickupState = false;
+
+                if (newPickupState != pickup.pickupable)
+                    pickup.pickupable = newPickupState;
+
+                bool shouldDropPickup = false;
+                if (!newPickupState)
+                    shouldDropPickup = true;
+
+                if (shouldDropPickup && pickup.currentHand != VRCPickup.PickupHand.None)
+                    pickup.Drop();
+            }
+
+            if (syncPositionAndRot)
+            {
+                // Attach this object to the players hand if they are currently holding it
+                if (disableSyncWhileHeld && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
                 {
-                    // Send a network sync if enough time has passed and the object has moved/rotated (seems to work fine if the parent of this object moves also)
-                    if (this.transform.hasChanged || currentFastSyncTimeout > 0f)
+                    // Get the world space position/rotation of the hand that is holding this object
+                    HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
+
+                    Vector3 handPosition = owner.GetBonePosition(currentTrackedBone);
+                    Quaternion handRotation = owner.GetBoneRotation(currentTrackedBone);
+
+                    // If the offset shave changed, try to lerp them?
+                    GetPickupHandOffsets(owner, out Vector3 currentOwnerHandOffset, out Quaternion currentOwnerHandOffsetRotation);
+
+                    Vector3 oldPos = transform.position;
+
+                    Vector3 newPos = handPosition + transform.TransformDirection(syncPosition);
+                    Quaternion newOffsetRot = handRotation * syncRotation;
+                    if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
+                        newPos = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
+
+                    if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
                     {
-                        RequestSerialization();
-                        this.transform.hasChanged = false;
+                        float lerpProgress = 1.0f - Mathf.Pow(0.000001f, Time.deltaTime);
+                        newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, lerpProgress);
                     }
 
-                    // Reset the timer
-                    syncTimer = 0f;
+                    transform.SetPositionAndRotation(newPos, newOffsetRot);
 
-                    // Randomize the slow sync interval each time we do one so they don't all happen at the same time
-                    if (currentFastSyncTimeout <= 0f)
-                        slowSyncInterval = Random.Range(3f, 10f);
+                    // Run this for the next frame too
+                    SendCustomEventDelayedFrames(nameof(HandleRemoteUpdate), 0);
+
+                    return;
                 }
-
-                syncTimer += Time.deltaTime;
-
-                if (currentFastSyncTimeout > 0f)
+                else if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Angle(transform.localRotation, syncRotation) > 0.01f)
                 {
-                    currentFastSyncTimeout -= Time.deltaTime;
+                    Vector3 newPosition = syncPosition;
+                    Quaternion newRotation = syncRotation;
+
+                    if (!isFirstSync && hasSynced)
+                    {
+                        // Try to smooth out the lerps
+                        float lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
+
+                        // Lerp the object to it's current position
+                        newPosition = Vector3.Lerp(transform.localPosition, syncPosition, lerpProgress);
+                        newRotation = Quaternion.Slerp(transform.localRotation, syncRotation, lerpProgress);
+                    }
+
+                    // Move this object
+                    transform.localPosition = newPosition;
+                    transform.localRotation = newRotation;
+
+                    // Run this for the next frame too
+                    SendCustomEventDelayedFrames(nameof(HandleRemoteUpdate), 0);
+
+                    return;
                 }
             }
 
-            SetEnabled(shouldStayEnabled);
+            // If we got here we aren't doing anything so stop updating
+            isHandlingRemoteUpdates = false;
         }
 
         public override void OnDeserialization()
@@ -348,8 +270,61 @@ namespace mikeee324.OpenPutt
                 isFirstSync = true;
             hasSynced = true;
 
-            // Enable PuttSync until we think it needs switching off
-            SetEnabled(true);
+            if (!isHandlingRemoteUpdates)
+            {
+                isHandlingRemoteUpdates = true;
+                HandleRemoteUpdate();
+            }
+
+            isFirstSync = false;
+        }
+
+        /// <summary>
+        /// Is called whenever a player drops this pickup.. if they drop it multiple times quickly this should only respawn once when it receives the last check
+        /// </summary>
+        public void ReturnAfterDropTimer()
+        {
+            if (!this.LocalPlayerOwnsThisObject() || returnAfterDropEndTime == -1)
+                return;
+
+            // If we haven't gotten past the respawn timer
+            if (Time.timeSinceLevelLoad < returnAfterDropEndTime)
+            {
+                // Schedule another check in the future
+                //Utils.Log(this, "Can't check for a respawn yet!");
+                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
+                return;
+            }
+
+            // If the player isn't holding this object anymore
+            if (pickup.currentHand == VRC_Pickup.PickupHand.None)
+            {
+                // We can respawn it
+                Respawn();
+                returnAfterDropEndTime = -1;
+            }
+        }
+
+        public void UpdatePickupCurrentHand()
+        {
+            if (!this.LocalPlayerOwnsThisObject() || pickup == null)
+                return;
+
+            VRCPickup.PickupHand handStateThisFrame = pickup.currentHand;
+            if (isBeingHeldByExternalScript)
+                handStateThisFrame = VRC_Pickup.PickupHand.Right;
+
+            // If the pickup state has changed and the player is no longer holding this object - tell other clients
+            if ((int)handStateThisFrame != (int)currentOwnerHand)
+            {
+                currentOwnerHandInt = (int)handStateThisFrame;
+
+                RequestFastSync(extraDataChanged: true);
+            }
+
+            // If we are still holding something - check again soon
+            if ((int)currentOwnerHand != (int)VRC_Pickup.PickupHand.None)
+                SendCustomEventDelayedSeconds(nameof(UpdatePickupCurrentHand), 1f);
         }
 
         public override void OnPickup()
@@ -358,8 +333,10 @@ namespace mikeee324.OpenPutt
 
             if (monitorPickupEvents)
             {
+                returnAfterDropEndTime = -1;
+
                 bool shouldDropPickup = false;
-                if (pickup.DisallowTheft && Networking.GetOwner(gameObject) != Networking.LocalPlayer && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
+                if (pickup.DisallowTheft && !this.LocalPlayerOwnsThisObject() && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
                     shouldDropPickup = true;
                 if (!pickup.pickupable)
                     shouldDropPickup = true;
@@ -372,45 +349,31 @@ namespace mikeee324.OpenPutt
 
                 Utils.SetOwner(Networking.LocalPlayer, gameObject);
 
-                // Sync which hand the player is holding this object in
-                currentOwnerHand = pickup.currentHand;
-
                 syncPosition = Vector3.zero;
                 syncRotation = Quaternion.identity;
 
-                // Notify other clients that this player picked the object up
-                RequestFastSync();
+                // Keep a track of which hand the player is holding the pickup in
+                UpdatePickupCurrentHand();
             }
         }
 
         public override void OnDrop()
         {
-            if (pickup == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid()) return;
+            isBeingHeldByExternalScript = false;
 
-            if ((int)currentOwnerHand != (int)VRCPickup.PickupHand.None)
+            if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
+
+            if (returnAfterDrop && returnAfterDropEndTime == -1)
             {
-                timeSincePlayerDroppedObject = 0f;
-                currentOwnerHand = VRCPickup.PickupHand.None;
-
-                // If we can manage the rigidbody state automatically
-                if (objectRB != null && canManageRigidbodyState)
-                {
-                    // Set the settings back to how they were originally
-                    objectRB.useGravity = rigidBodyUseGravity;
-                    objectRB.isKinematic = rigidBodyisKinematic;
-                }
-
-                if (Networking.LocalPlayer.IsOwner(gameObject))
-                {
-                    syncPosition = transform.localPosition;
-                    syncRotation = transform.localRotation;
-
-                    currentOwnerHand = VRCPickup.PickupHand.None;
-
-                    // Notify other clients about the drop
-                    RequestFastSync();
-                }
+                returnAfterDropEndTime = Time.timeSinceLevelLoad + returnAfterDropTime;
+                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
             }
+
+            syncPosition = transform.localPosition;
+            syncRotation = transform.localRotation;
+
+            // Keep a track of which hand the player is holding the pickup in
+            UpdatePickupCurrentHand();
         }
 
         /// <summary>
@@ -418,6 +381,7 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void OnScriptPickup()
         {
+            isBeingHeldByExternalScript = true;
             OnPickup();
         }
 
@@ -431,7 +395,7 @@ namespace mikeee324.OpenPutt
 
         void OnDisable()
         {
-            if (Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
+            if (this.LocalPlayerOwnsThisObject())
             {
                 OnDrop();
             }
@@ -439,32 +403,29 @@ namespace mikeee324.OpenPutt
 
         void OnEnable()
         {
-            if (Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
+            if (!firstEnable && this.LocalPlayerOwnsThisObject())
             {
                 OnDrop();
             }
-        }
 
-        /// <summary>
-        /// Toggles whether this script is currently running. (Used to save resources while this script isn't actually doing anything)
-        /// </summary>
-        /// <param name="enabled"></param>
-        private void SetEnabled(bool enabled)
-        {
-            if (autoDisableWhileIdle)
-                this.enabled = enabled;
+            firstEnable = false;
         }
 
         /// <summary>
         /// Triggers PuttSync to start sending fast position updates for an amount of time (fastSyncTimeout)<br/>
         /// Having this slight delay for stopping lets the sync catch up and show where the object came to stop
         /// </summary>
-        public void RequestFastSync()
+        public void RequestFastSync(bool extraDataChanged = false)
         {
-            currentFastSyncTimeout = fastSyncTimeout;
+            if (extraDataChanged)
+                this.extraDataChanged = true;
 
-            // Enable PuttSync until we think it needs switching off
-            SetEnabled(true);
+            // If there isn't a sync running already, schedule it in
+            if (fastSyncStopTime == -1f)
+                SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
+
+            // Update the stop time for fast updates
+            fastSyncStopTime = Time.timeSinceLevelLoad + fastSyncTimeout;
         }
 
         /// <summary>
@@ -475,28 +436,41 @@ namespace mikeee324.OpenPutt
             if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
                 return;
 
-            timeSincePlayerDroppedObject = -1f;
+            returnAfterDropEndTime = -1;
 
             // Tell player to drop the object if they're holding it
             if (pickup != null)
                 pickup.Drop();
 
-            // Freeze this object at it's spawn point
             if (objectRB != null)
             {
+                objectRB.Sleep();
                 objectRB.velocity = Vector3.zero;
                 objectRB.angularVelocity = Vector3.zero;
-                if (canManageRigidbodyState)
-                {
-                    objectRB.useGravity = false;
-                    objectRB.isKinematic = true;
-                }
             }
 
             this.transform.localPosition = originalPosition;
             this.transform.localRotation = originalRotation;
 
+            if (returnListener != null)
+                returnListener.SendCustomEvent(remoteReturnFunction);
+
             RequestFastSync();
+        }
+
+        public void ResetReturnTimer()
+        {
+            if (!returnAfterDrop)
+                return;
+
+            Utils.SetOwner(Networking.LocalPlayer, gameObject);
+
+            // If there isn't a timer running, start one
+            if (returnAfterDropEndTime == -1)
+                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
+
+            // Update the timer end stop
+            returnAfterDropEndTime = Time.timeSinceLevelLoad + returnAfterDropTime;
         }
 
         /// <summary>
@@ -526,6 +500,15 @@ namespace mikeee324.OpenPutt
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
         }
 
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            bool localPlayerIsOwner = Networking.LocalPlayer == player;
+            bool isPickupable = Utils.LocalPlayerIsValid() && localPlayerIsOwner;
+            // Enable pickup for the owner
+            if (canManagePickupable && pickup != null && !pickup.pickupable)
+                pickup.pickupable = isPickupable;
+        }
+
         private void UpdatePickupHandOffsets()
         {
             // Cache old values so we can check for changes that need syncing
@@ -550,6 +533,13 @@ namespace mikeee324.OpenPutt
 
         private void GetPickupHandOffsets(VRCPlayerApi player, out Vector3 posOffset, out Quaternion rotOffset)
         {
+            if (player == null || !player.IsValid())
+            {
+                posOffset = Vector3.zero;
+                rotOffset = Quaternion.identity;
+                return;
+            }
+
             HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
             Vector3 handPosition = player.GetBonePosition(currentTrackedBone);

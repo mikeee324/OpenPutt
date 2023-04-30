@@ -42,7 +42,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 7396963429056534661, guid: fb755539252018e4eb4ca29f9015ac46, type: 3}
---- !u!1001 &4405639380059230412
+--- !u!1001 &1854837678875918703
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -52,7 +52,7 @@ PrefabInstance:
     - target: {fileID: 5614136399917363264, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
       propertyPath: m_Name
-      value: OpenPuttScoreboardDark
+      value: ScoreboardPositioner
       objectReference: {fileID: 0}
     - target: {fileID: 5614136399917363266, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
@@ -117,7 +117,7 @@ PrefabInstance:
     - target: {fileID: 5614136399917363266, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0
       objectReference: {fileID: 0}
     - target: {fileID: 5614136399917363266, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
@@ -164,16 +164,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 5614136399917363268, guid: 12269e5165ebe304cbabfa420655cffe,
-        type: 3}
-      propertyPath: nearbyMaxRadius
-      value: 12
-      objectReference: {fileID: 0}
-    - target: {fileID: 5614136399917363268, guid: 12269e5165ebe304cbabfa420655cffe,
+    - target: {fileID: 5724333730846871208, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
       propertyPath: serializationData.Prefab
       value: 
-      objectReference: {fileID: 5614136399917363268, guid: 12269e5165ebe304cbabfa420655cffe,
+      objectReference: {fileID: 5724333730846871208, guid: 12269e5165ebe304cbabfa420655cffe,
         type: 3}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 12269e5165ebe304cbabfa420655cffe, type: 3}
@@ -241,9 +236,34 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: fb755539252018e4eb4ca29f9015ac46,
         type: 3}
+      propertyPath: m_ReceiveGI
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: a2c4b6c920ac19a4295618e2a1c1cede, type: 2}
+    - target: {fileID: -6814178957461502696, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -5781414489912325621, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_ReceiveGI
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -5781414489912325621, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: -5781414489912325621, guid: fb755539252018e4eb4ca29f9015ac46,
         type: 3}
       propertyPath: m_Materials.Array.data[0]
@@ -253,6 +273,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_StaticEditorFlags
       value: 4294967295
+      objectReference: {fileID: 0}
+    - target: {fileID: -1284953027892672604, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_ReceiveGI
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -1284953027892672604, guid: fb755539252018e4eb4ca29f9015ac46,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: -1284953027892672604, guid: fb755539252018e4eb4ca29f9015ac46,
         type: 3}

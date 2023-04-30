@@ -117,6 +117,13 @@ namespace mikeee324.OpenPutt
 
         public void CheckVisibility()
         {
+            if (!Utils.LocalPlayerIsValid())
+            {
+                // Vary the time between each check to try and stop them all happening at once
+                SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .15f));
+                return;
+            }
+
             float distance = Vector3.Distance(attachToObject.transform.position, Networking.LocalPlayer.GetPosition());
             float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
             bool newActiveState = visiblityVal > 0.1f;

@@ -18,7 +18,6 @@ namespace mikeee324.OpenPutt
         public MeshRenderer headMesh;
         public GameObject shaftEndPostion;
         public VRCPickup pickup;
-        public BodyMountedObject bodyMountedObject;
 
         public LayerMask resizeLayerMask;
 
@@ -52,25 +51,43 @@ namespace mikeee324.OpenPutt
                 return VRC_Pickup.PickupHand.None;
             }
         }
+        [UdonSynced, FieldChangeCallback(nameof(ClubIsArmed))]
+        private bool _clubArmed = false;
         public bool ClubIsArmed
         {
-            get => putter != null && putter.gameObject.activeInHierarchy;
+            get => _clubArmed;
             set
             {
+                if (overrideIsArmed)
+                    value = true;
+
                 // If the state of the club has changed
                 if (ClubIsArmed != value)
                 {
-                    // Club can never be armed for remote players
-                    if (!Networking.LocalPlayer.IsOwner(gameObject))
-                        value = false;
+                    if (this.LocalPlayerOwnsThisObject())
+                    {
+                        if (clubColliderIsTempDisabled)
+                            value = false;
 
-                    // Toggle the collider object
-                    if (putter != null)
-                        putter.gameObject.SetActive(value);
+                        if (overrideIsArmed)
+                            value = true;
 
-                    // Tell the collider that it was just switched back on
-                    if (value)
-                        putter.OnClubArmed();
+                        // Toggle the collider object
+                        if (putter != null)
+                        {
+                            putter.gameObject.SetActive(value);
+
+                            // Tell the collider that it was just switched back on
+                            if (value)
+                                putter.OnClubArmed();
+                        }
+                    }
+                    else
+                    {
+                        // Toggle the collider object
+                        if (putter != null)
+                            putter.gameObject.SetActive(false);
+                    }
 
                     // Toggle golf club mesh materials
                     if (headMesh != null)
@@ -78,6 +95,8 @@ namespace mikeee324.OpenPutt
                     if (shaftMesh != null)
                         shaftMesh.material = value ? onMaterial : offMaterial;
                 }
+
+                _clubArmed = value;
             }
         }
         [Tooltip("Forces the club to be armed - useful for testing")]
@@ -93,9 +112,10 @@ namespace mikeee324.OpenPutt
 
         [UdonSynced, HideInInspector]
         private float shaftScale = -1f;
-        private float ballHitHelpTimer = -1f;
         private bool LeftUseButtonDown = false;
         private bool RightUseButtonDown = false;
+        private bool clubColliderIsTempDisabled = false;
+        private 
 
         void Start()
         {
@@ -119,84 +139,17 @@ namespace mikeee324.OpenPutt
 
         private void Update()
         {
-            if (ballHitHelpTimer != -1f)
-            {
-                ballHitHelpTimer -= Time.deltaTime;
-                if (ballHitHelpTimer <= 0f)
-                    ballHitHelpTimer = -1f;
-            }
-
-            // Update the collider states
-            RefreshState();
-
-            // While the collider is off keep the rigidbody attached to the club (So it doesn't fly to catch up when armed)
-            if (!ClubIsArmed && putter != null)
-            {
-                putter.transform.position = putter.putterTarget.position;
-                putter.transform.rotation = putter.putterTarget.rotation;
-            }
-        }
-
-        public override void OnDeserialization()
-        {
-            this.enabled = false;
-        }
-
-        /// <summary>
-        /// Disarms the club for the player for an amount of time
-        /// </summary>
-        /// <param name="duration">Amount of time to disable the club for in seconds</param>
-        public void DisableClubColliderFor(float duration = 1f)
-        {
-            ballHitHelpTimer = duration;
-        }
-
-        private void RefreshState()
-        {
-            if (Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
-                return;
-
-            if (shaftScale == -1 || shaftDefaultSize == -1)
-                RescaleClub(true);
-
-            bool isOwner = Networking.LocalPlayer.IsOwner(gameObject);
+            bool isOwner = this.LocalPlayerOwnsThisObject();
 
             if (isOwner)
             {
-                // Check if the club is armed or needs to enable scaling
-                bool newArmedState = false;
-
-                if (CurrentHand != VRC_Pickup.PickupHand.None)
-                {
-                    if (CurrentHand == VRC_Pickup.PickupHand.Left)
-                        newArmedState = LeftUseButtonDown;
-                    else if (CurrentHand == VRC_Pickup.PickupHand.Right)
-                        newArmedState = RightUseButtonDown;
-
-                    // If user is holding both triggers (or on desktop), enable club scaling
-                    if (LeftUseButtonDown && RightUseButtonDown)
-                        RescaleClub(false);
-                    else if (!Networking.LocalPlayer.IsUserInVR() && newArmedState)
-                        RescaleClub(false);
-                }
-
-                if (playerManager != null && playerManager.golfBall != null)
-                {
-                    bool playerIsPlayingCourse = playerManager.CurrentCourse != null;
-                    bool allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
-                    bool ballIsMoving = playerManager.golfBall.BallIsMoving;
-
-                    if (playerIsPlayingCourse && !allowHitWhileMoving && ballIsMoving)
-                        newArmedState = false;
-                }
-
-                ClubIsArmed = ballHitHelpTimer == -1f && (newArmedState || overrideIsArmed);
+                // Player is rescaling club
+                if (LeftUseButtonDown && RightUseButtonDown)
+                    RescaleClub(false);
+                else if (!Networking.LocalPlayer.IsUserInVR() && RightUseButtonDown)
+                    RescaleClub(false);
             }
-            else
-            {
-                ClubIsArmed = false;
-            }
-
+            
             if (shaftScale != shaftMesh.transform.localScale.z)
             {
                 float newShaftScale = shaftScale;
@@ -213,10 +166,73 @@ namespace mikeee324.OpenPutt
 
                 headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
             }
+            else if (!isOwner)
+            {
+                // Local player doesn't own this club and the scale hasn't changed - do nothing
+                this.enabled = false;
+            }
+        }
+
+        public override void OnDeserialization()
+        {
+            this.enabled = true;
+        }
+
+        /// <summary>
+        /// Disarms the club for the player for an amount of time
+        /// </summary>
+        /// <param name="duration">Amount of time to disable the club for in seconds</param>
+        public void DisableClubColliderFor(float duration = 1f)
+        {
+            if (!clubColliderIsTempDisabled)
+            {
+                clubColliderIsTempDisabled = true;
+                SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
+            }
+        }
+
+        public void EnableClubCollider()
+        {
+            clubColliderIsTempDisabled = false;
+        }
+
+        public void RefreshState()
+        {
+            if (shaftScale == -1 || shaftDefaultSize == -1)
+                RescaleClub(true);
+
+            bool isOwner = this.LocalPlayerOwnsThisObject();
+
+            if (isOwner)
+            {
+                bool newArmedState = false;
+                if (CurrentHand == VRC_Pickup.PickupHand.Left)
+                    newArmedState = LeftUseButtonDown;
+                else if (CurrentHand == VRC_Pickup.PickupHand.Right)
+                    newArmedState = RightUseButtonDown;
+
+                // If player has armed the club - check if we need to disable it
+                if (newArmedState)
+                {
+                    if (playerManager != null && playerManager.golfBall != null)
+                    {
+                        bool playerIsPlayingCourse = playerManager.CurrentCourse != null;
+
+                        if (playerIsPlayingCourse)
+                        {
+                            bool allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
+                            bool ballIsMoving = playerManager.golfBall.BallIsMoving;
+                            if (ballIsMoving && !allowHitWhileMoving)
+                                newArmedState = false;
+                        }
+                    }
+                }
+
+                ClubIsArmed = newArmedState;
+            }
             else
             {
-                if (!isOwner)
-                    this.enabled = false;
+                ClubIsArmed = false;
             }
         }
 
@@ -250,6 +266,8 @@ namespace mikeee324.OpenPutt
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
         public void RescaleClub(bool resetToDefault)
         {
+            float oldShaftScale = shaftScale;
+
             if (resetToDefault)
             {
                 // Reset all mesh scaling and work out actual default bounds
@@ -271,7 +289,7 @@ namespace mikeee324.OpenPutt
                     shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.y) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
             }
 
-            if (puttSync != null)
+            if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())
                 puttSync.RequestFastSync();
         }
 
@@ -287,6 +305,9 @@ namespace mikeee324.OpenPutt
 
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
+
+            if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())
+                puttSync.RequestFastSync();
 
             if (playerManager.openPutt == null)
                 return;
@@ -307,17 +328,26 @@ namespace mikeee324.OpenPutt
                 playerManager.RequestSync();
             }
 
+            if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())
+                puttSync.RequestFastSync();
+
             UpdateClubState();
+
+            RefreshState();
         }
 
         public override void OnPickup()
         {
             this.enabled = true;
+
+            RefreshState();
         }
 
         public override void OnDrop()
         {
             this.enabled = false;
+
+            RefreshState();
         }
 
         public override void InputUse(bool value, UdonInputEventArgs args)
@@ -328,8 +358,7 @@ namespace mikeee324.OpenPutt
             else if (args.handType == HandType.RIGHT)
                 RightUseButtonDown = value;
 
-            if (LeftUseButtonDown || RightUseButtonDown)
-                this.enabled = true;
+            RefreshState();
         }
 
     }

@@ -11,8 +11,7 @@ GameObject:
   - component: {fileID: 264096079}
   - component: {fileID: 264096082}
   - component: {fileID: 264096081}
-  - component: {fileID: 264096080}
-  m_Layer: 5
+  m_Layer: 17
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -82,23 +81,6 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
---- !u!114 &264096080
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 264096078}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_IgnoreReversedGraphics: 1
-  m_BlockingObjects: 0
-  m_BlockingMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
 --- !u!1 &939149342
 GameObject:
   m_ObjectHideFlags: 0
@@ -110,7 +92,7 @@ GameObject:
   - component: {fileID: 939149343}
   - component: {fileID: 939149345}
   - component: {fileID: 939149344}
-  m_Layer: 5
+  m_Layer: 17
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -222,7 +204,7 @@ MonoBehaviour:
   m_verticalMapping: 0
   m_uvLineOffset: 0
   m_geometrySortingOrder: 0
-  m_IsTextObjectScaleStatic: 0
+  m_IsTextObjectScaleStatic: 1
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
@@ -243,7 +225,7 @@ GameObject:
   - component: {fileID: 1637099107508499163}
   - component: {fileID: 2274492569932325524}
   - component: {fileID: 6655450071837550638}
-  m_Layer: 5
+  m_Layer: 17
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -357,7 +339,7 @@ MonoBehaviour:
   m_verticalMapping: 0
   m_uvLineOffset: 0
   m_geometrySortingOrder: 0
-  m_IsTextObjectScaleStatic: 0
+  m_IsTextObjectScaleStatic: 1
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
@@ -448,6 +430,19 @@ MonoBehaviour:
   courseManager: {fileID: 0}
   topText: {fileID: 939149344}
   bottomText: {fileID: 6655450071837550638}
+--- !u!65 &1980062727724097129
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7648339271944803018}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 0.10000016, y: 0.10000034, z: 1.5000004}
+  m_Center: {x: -0.00000006378116, y: -0.07500021, z: 0.9500003}
 --- !u!1 &7953980974547982071
 GameObject:
   m_ObjectHideFlags: 0
@@ -459,7 +454,7 @@ GameObject:
   - component: {fileID: 1748363529302713417}
   - component: {fileID: 2447634179305854710}
   - component: {fileID: 7357725760024535166}
-  m_Layer: 5
+  m_Layer: 17
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -609,7 +604,7 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
       propertyPath: m_ReceiveGI
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
@@ -620,6 +615,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_ReceiveShadows
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -7511558181221131132, guid: 5bad367128ab18e419ca06bfd7838409,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: -7511558181221131132, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
@@ -634,7 +634,7 @@ PrefabInstance:
     - target: {fileID: -2939131105567895472, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
       propertyPath: m_ReceiveGI
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -2939131105567895472, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
@@ -645,6 +645,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_ReceiveShadows
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -2939131105567895472, guid: 5bad367128ab18e419ca06bfd7838409,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: -2939131105567895472, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
@@ -674,7 +679,7 @@ PrefabInstance:
     - target: {fileID: 7208256277374513177, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
       propertyPath: m_ReceiveGI
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7208256277374513177, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}
@@ -685,6 +690,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_ReceiveShadows
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7208256277374513177, guid: 5bad367128ab18e419ca06bfd7838409,
+        type: 3}
+      propertyPath: m_ScaleInLightmap
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 7208256277374513177, guid: 5bad367128ab18e419ca06bfd7838409,
         type: 3}

@@ -49,11 +49,15 @@ namespace mikeee324.OpenPutt
 
         public void PlayNextTrack()
         {
-            if (audioSource == null || audioSource.isPlaying || Networking.LocalPlayer == null || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+            if (audioSource == null || !this.LocalPlayerOwnsThisObject())
+                return;
+
+            if (audioSource.isPlaying)
             {
-                this.enabled = false;
+                SendCustomEventDelayedSeconds(nameof(PlayNextTrack), 1f);
                 return;
             }
+
             currentTrackID++;
             if (currentTrackID >= audioClips.Length)
                 currentTrackID = 0;
@@ -70,8 +74,9 @@ namespace mikeee324.OpenPutt
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
-            // If local player has taken ownership of this then enable the Update() calls
-            this.enabled = player == Networking.LocalPlayer;
+            if (player == Networking.LocalPlayer)
+                // If local player has taken ownership of this then start checking if we can play the next track
+                SendCustomEventDelayedSeconds(nameof(PlayNextTrack), 1f);
         }
 
         public override void OnDeserialization()
