@@ -33,26 +33,25 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
 
         foreach (Scoreboard scoreboard in openPutt.scoreboardManager.scoreboards)
         {
-            if (scoreboard.parRowCanvas == null || scoreboard.topRowCanvas == null || scoreboard.parRowCanvas.transform.childCount == 0 || scoreboard.topRowCanvas.transform.childCount == 0)
+            if (scoreboard.parRowCanvas == null || scoreboard.topRowCanvas == null)
             {
                 needsToBuildScoreboards = true;
                 break;
             }
 
-            ScoreboardPlayerRow parRow = scoreboard.parRowCanvas.transform.GetChild(0).GetComponent<ScoreboardPlayerRow>();
-            ScoreboardPlayerRow topRow = scoreboard.topRowCanvas.transform.GetChild(0).GetComponent<ScoreboardPlayerRow>();
+            ScoreboardPlayerRow parRow = scoreboard.parRowCanvas.GetComponent<ScoreboardPlayerRow>();
+            ScoreboardPlayerRow topRow = scoreboard.topRowCanvas.GetComponent<ScoreboardPlayerRow>();
 
-            if (parRow.columns.Length != numberOfColumnsOnScoreboard)
+            if (parRow == null || parRow.columns.Length != numberOfColumnsOnScoreboard)
             {
                 needsToBuildScoreboards = true;
                 break;
             }
-            if (topRow.columns.Length != numberOfColumnsOnScoreboard)
+            if (topRow == null || topRow.columns.Length != numberOfColumnsOnScoreboard)
             {
                 needsToBuildScoreboards = true;
                 break;
             }
-
 
             Transform playerList = scoreboard.playerListCanvas.transform;
 
@@ -65,13 +64,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
             for (int i = 0; i < playerList.childCount; i++)
             {
                 ScoreboardPlayerRow row = playerList.GetChild(i).GetComponent<ScoreboardPlayerRow>();
-                if (row == null)
-                {
-                    needsToBuildScoreboards = true;
-                    break;
-                }
-
-                if (row.columns.Length != numberOfColumnsOnScoreboard)
+                if (row == null || row.columns.Length != numberOfColumnsOnScoreboard)
                 {
                     needsToBuildScoreboards = true;
                     break;
@@ -85,6 +78,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
         if (needsToBuildScoreboards)
         {
             BuildScoreboards(openPutt.scoreboardManager);
+            Utils.LogWarning(openPutt.scoreboardManager, $"Scoreboards were populated because some rows or columns were missing. If you would like to avoid this click the 'Setup Scoreboards' button on the ScoreboardManager inspector window!");
         }
     }
 
@@ -172,7 +166,6 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                 Utils.Log("ScoreboardBuildProcessor", $"Creating row {playerID} for scoreboard ID {scoreboardID}({manager.scoreboards[scoreboardID].name})");
             }
         }
-        Utils.LogWarning(manager, $"Scoreboards were populated because some rows or columns were missing. If you would like to avoid this click the 'Setup Scoreboards' button on the ScoreboardManager inspector window!");
 
         if (showProgressBar)
         {
