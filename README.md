@@ -8,6 +8,9 @@ Most of the systems are working, the main issues right now are physics based. If
 - CyanLasers Player Object Pool - https://github.com/CyanLaser/CyanPlayerObjectPool/releases/latest
 - Varneons Array Extensions - https://github.com/Varneon/VUdon-ArrayExtensions/releases/tag/0.3.0
 
+Also wanted to mention the Udon profiler from here - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5  
+This is included in the project for ease of use on my part  
+
 # Installation
 > 1. Download the latest `OpenPutt` Unity package from [here](https://github.com/mikeee324/OpenPutt/releases/latest)
 > 2. Import the downloaded .unitypackage into your Unity project
