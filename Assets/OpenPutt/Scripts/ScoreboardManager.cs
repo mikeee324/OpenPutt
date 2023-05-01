@@ -92,7 +92,7 @@ namespace mikeee324.OpenPutt
 
         public int NumberOfColumns => openPutt != null ? openPutt.courses.Length + 2 : 0;
         [HideInInspector]
-        public ScoreboardView requestedScoreboardView = ScoreboardView.Info;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+        public ScoreboardView requestedScoreboardView = ScoreboardView.Info;
 
         private int progressiveUpdateCurrentScoreboardID = 0;
         private int[] progressiveRowUpdateQueue = new int[0];
@@ -218,7 +218,8 @@ namespace mikeee324.OpenPutt
             }
             else
             {
-                if (!progressiveRowUpdateQueue.Contains(rowID))
+                // Only add row to the queue if they aren't in it or are the first one in the queue
+                if (progressiveRowUpdateQueue.IndexOf(rowID) <= 0)
                     progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
             }
         }
@@ -236,6 +237,13 @@ namespace mikeee324.OpenPutt
             // We need to check which rows have changed and request a refresh
             for (int i = 0; i < numberOfPlayersToDisplay; i++)
             {
+                if (forceUpdate)
+                {
+                    // We are forcing an update on all rows - so just do it no need to waste time checking other stuff below (halves the time for switching between timer/normal scoreboards)
+                    RequestRefreshForRow(i, true);
+                    continue;
+                }
+
                 PlayerManager thisRowPlayer = null;
                 if (CurrentPlayerList != null && i < CurrentPlayerList.Length)
                     thisRowPlayer = CurrentPlayerList[i];
@@ -244,10 +252,7 @@ namespace mikeee324.OpenPutt
                 if (newList != null && i < newList.Length)
                     thisRowNewPlayer = newList[i];
 
-                bool requestRefresh = forceUpdate;
-
-                if (!requestRefresh)
-                    requestRefresh = thisRowNewPlayer != thisRowPlayer;
+                bool requestRefresh = thisRowNewPlayer != thisRowPlayer;
 
                 if (!requestRefresh)
                     requestRefresh = thisRowNewPlayer != null && thisRowNewPlayer.scoreboardRowNeedsUpdating;
