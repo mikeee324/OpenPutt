@@ -33,9 +33,12 @@ Floor meshes for your courses need to use the FloorPhysics material so OpenPutt 
 Anything that the ball needs to bounce off (walls, obstacles etc) please use the WallPhysics material so OpenPutt can handle the bouncing properly (default unity physics doesn't do this so well)
 ```
 
-# Adding scoreboards
-1. Drag in the ScoreboardDark prefab into your scene (Preferably inside the ScoreboardManager object in the OpenPutt prefab)
-2. Add the new scoreboard to the list of scoreboards attached to the ScoreboardManager script
+# Adding scoreboards to the world
+1. Drag in a new ScoreboardPositioner prefab into the scene and position it to where you would like it to be
+2. You can adjust rules on when a scoreboard will be shown at that position in the inspector window
+3. Assign the reference to the ScoreboardManager and add the ScoreboardPositioner to the list of 'Scoreboard Positions' on the ScoreboardManager itself
+
+The scoreboards themselves are in a 'pool' and will be moved around to the closest avaiable position. There are 3 scoreboards in the pool by default but you can add/remove them as you like. Just remember to set up the references between the scoreboards and ScoreboardManager correctly!
 
 # Notes
 There will be more docs on everything at some point (like how to set up the meshes for courses etc), this is just a first go at releasing something so people can have a play with it
