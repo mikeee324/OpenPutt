@@ -62,6 +62,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Keeps a reference to the PlayerManager that is assigned to the local player
         /// </summary>
+        [HideInInspector]
         public PlayerManager LocalPlayerManager = null;
 
         /// <summary>
@@ -194,6 +195,10 @@ namespace mikeee324.OpenPutt
 
         public override void _OnLocalPlayerAssigned()
         {
+            if (LocalPlayerManager == null)
+            {
+                Utils.LogError(this, "LocalPlayerManager not found! Something bad happened!");
+            }
         }
 
         public override void _OnPlayerAssigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
