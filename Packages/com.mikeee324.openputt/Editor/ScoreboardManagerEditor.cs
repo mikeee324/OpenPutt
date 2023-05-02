@@ -1,13 +1,7 @@
-﻿using Cysharp.Threading.Tasks.Triggers;
-using mikeee324.OpenPutt;
-using System.Threading;
-using TMPro;
+﻿using mikeee324.OpenPutt;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UIElements;
-using Varneon.VUdon.ArrayExtensions;
 
 [CustomEditor(typeof(ScoreboardManager))]
 public class ScoreboardManagerEditor : Editor
