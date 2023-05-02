@@ -88,7 +88,7 @@ namespace mikeee324.OpenPutt
         [HideInInspector]
         public OpenPutt openPutt;
         [Header("Object References")]
-        public GameObject[] ballSpawns;
+        public CourseStartPosition[] ballSpawns;
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
@@ -124,7 +124,7 @@ namespace mikeee324.OpenPutt
         private void DrawGizmos()
         {
             Gizmos.color = Color.green;
-            foreach (GameObject ballSpawn in ballSpawns)
+            foreach (CourseStartPosition ballSpawn in ballSpawns)
             {
                 if (ballSpawn == null) continue;
 

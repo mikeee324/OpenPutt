@@ -322,6 +322,9 @@ namespace mikeee324.OpenPutt
         {
             this.enabled = false;
 
+            LeftUseButtonDown = false;
+            RightUseButtonDown = false;
+
             if (playerManager != null)
             {
                 playerManager.ClubVisible = true;
@@ -346,6 +349,9 @@ namespace mikeee324.OpenPutt
         public override void OnDrop()
         {
             this.enabled = false;
+
+            LeftUseButtonDown = false;
+            RightUseButtonDown = false;
 
             RefreshState();
         }

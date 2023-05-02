@@ -62,7 +62,7 @@ namespace mikeee324.OpenPutt
             stepStopTimer = 0f;
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             stepCyclerTimer += Time.deltaTime;
 

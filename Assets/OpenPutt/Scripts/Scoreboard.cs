@@ -12,7 +12,8 @@ namespace mikeee324.OpenPutt
     {
         Scoreboard,
         Info,
-        Settings
+        Settings,
+        DevMode
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
@@ -30,6 +31,7 @@ namespace mikeee324.OpenPutt
         public RectTransform scoreboardHeader;
         public Canvas settingsPanel;
         public Canvas infoPanel;
+        public Canvas devModelPanel;
         public RectTransform parRowPanel;
         public RectTransform topRowPanel;
         public Canvas parRowCanvas;
@@ -38,10 +40,12 @@ namespace mikeee324.OpenPutt
         public Canvas playerListCanvas;
         public GameObject rowPrefab;
         public GameObject columnPrefab;
-        public UnityEngine.UI.Image scoreboardTabBackground;
-        public UnityEngine.UI.Image scoreboardTimerTabBackground;
-        public UnityEngine.UI.Image infoTabBackground;
-        public UnityEngine.UI.Image settingsTabBackground;
+        public Button scoreboardTabBackground;
+        public Button scoreboardTimerTabBackground;
+        public Button infoTabBackground;
+        public Button settingsTabBackground;
+        public Button devModeTabBackground;
+
         public UnityEngine.UI.Image scoreboardBackground;
 
         public Slider clubPowerSlider;
@@ -56,6 +60,15 @@ namespace mikeee324.OpenPutt
         public Slider ballGColorSlider;
         public Slider ballBColorSlider;
         public UnityEngine.UI.Image ballColorPreview;
+
+        public Slider devModeBallWeightSlider;
+        public Slider devModeBallFrictionSlider;
+        public Slider devModeBallDragSlider;
+        public Slider devModeBallADragSlider;
+        public TextMeshProUGUI devModeBallWeightValueLabel;
+        public TextMeshProUGUI devModeBallFrictionValueLabel;
+        public TextMeshProUGUI devModeBallDragValueLabel;
+        public TextMeshProUGUI devModeBallADragValueLabel;
 
         public UnityEngine.UI.Image verticalHitsCheckbox;
         public UnityEngine.UI.Image isPlayingCheckbox;
@@ -95,16 +108,27 @@ namespace mikeee324.OpenPutt
                     {
                         case ScoreboardView.Scoreboard:
                             settingsPanel.gameObject.SetActive(false);
+                            devModelPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = true;
                             break;
                         case ScoreboardView.Info:
                             settingsPanel.gameObject.SetActive(false);
+                            devModelPanel.gameObject.SetActive(false);
                             infoPanel.enabled = true;
                             scoreboardCanvas.enabled = false;
                             break;
+                        case ScoreboardView.DevMode:
+                            settingsPanel.gameObject.SetActive(false);
+                            devModelPanel.gameObject.SetActive(true);
+                            infoPanel.enabled = false;
+                            scoreboardCanvas.enabled = false;
+
+                            RefreshSettingsMenu();
+                            break;
                         case ScoreboardView.Settings:
                             settingsPanel.gameObject.SetActive(true);
+                            devModelPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
@@ -199,6 +223,12 @@ namespace mikeee324.OpenPutt
 
             sfxVolumeSlider.value = playerManager.openPutt.SFXController.Volume;
             sfxVolumeValueLabel.text = String.Format("{0:P0}", sfxVolumeSlider.value);
+
+            devModeBallWeightSlider.value = playerManager.golfBall.BallWeight;
+            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+
+            devModeBallFrictionSlider.value = playerManager.golfBall.BallFriction;
+            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
 
             // Just use the first audio source volume
             foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
@@ -331,6 +361,90 @@ namespace mikeee324.OpenPutt
             RefreshSettingsMenu();
         }
 
+        public void OnBallWeightReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallWeight = 0.05f;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnBallWeightChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallWeight = devModeBallWeightSlider.value;
+            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+        }
+
+        public void OnBallFrictionReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallFriction = 0.01f;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnBallFrictionChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallFriction = devModeBallFrictionSlider.value;
+            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
+        }
+
+        public void OnBallADragReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallAngularDrag = 0f;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnBallADragChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallAngularDrag = devModeBallADragSlider.value;
+            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
+        }
+
+        public void OnBallDragReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallDrag = 0.85f;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnBallDragChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallDrag = devModeBallDragSlider.value;
+            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+        }
+
         public void OnBallColorChanged()
         {
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
@@ -383,8 +497,10 @@ namespace mikeee324.OpenPutt
 
         public void OnTogglePlayerManager()
         {
+            Utils.Log(this, "Player manager toggle");
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
                 return;
+            Utils.Log(this, "Player manager toggle2");
 
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.isPlaying = !playerManager.isPlaying;
@@ -496,6 +612,16 @@ namespace mikeee324.OpenPutt
             CurrentScoreboardView = ScoreboardView.Settings;
         }
 
+        public void OnToggleDevMode()
+        {
+            if (manager != null)
+            {
+                manager.requestedScoreboardView = ScoreboardView.DevMode;
+                manager.OnPlayerOpenSettings(this);
+            }
+            CurrentScoreboardView = ScoreboardView.DevMode;
+        }
+
         public void OnToggleInfo()
         {
             if (manager != null)
@@ -594,21 +720,45 @@ namespace mikeee324.OpenPutt
         public void UpdateTabColours()
         {
             // Update Tab Background Colours
-            Color defaultBackground = scoreboardBackground.color;
+            Color defaultBackground = Color.clear;
+            Color selectedBackground = Color.white;
 
-            Color newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.SpeedGolfMode) ? manager.currentCourseBackground : defaultBackground;
-            Color newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.SpeedGolfMode) ? manager.currentCourseBackground : defaultBackground;
-            Color newInfoCol = _currentScoreboardView == ScoreboardView.Info ? manager.currentCourseBackground : defaultBackground;
-            Color newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? manager.currentCourseBackground : defaultBackground;
+            Color newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
+            Color newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
+            Color newInfoCol = _currentScoreboardView == ScoreboardView.Info ? selectedBackground : defaultBackground;
+            Color newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? selectedBackground : defaultBackground;
+            Color newDevModeCol = _currentScoreboardView == ScoreboardView.DevMode ? selectedBackground : defaultBackground;
 
-            if (scoreboardTabBackground.color != newScoreboardCol)
-                scoreboardTabBackground.color = newScoreboardCol;
-            if (scoreboardTimerTabBackground.color != newSpeedrunCol)
-                scoreboardTimerTabBackground.color = newSpeedrunCol;
-            if (infoTabBackground.color != newInfoCol)
-                infoTabBackground.color = newInfoCol;
-            if (settingsTabBackground.color != newSettingsCol)
-                settingsTabBackground.color = newSettingsCol;
+            if (scoreboardTabBackground.colors.normalColor != newScoreboardCol)
+            {
+                ColorBlock colorBlock = scoreboardTabBackground.colors;
+                colorBlock.normalColor = newScoreboardCol;
+                scoreboardTabBackground.colors = colorBlock;
+            }
+            if (scoreboardTimerTabBackground.colors.normalColor != newSpeedrunCol)
+            {
+                ColorBlock colorBlock = scoreboardTimerTabBackground.colors;
+                colorBlock.normalColor = newSpeedrunCol;
+                scoreboardTimerTabBackground.colors = colorBlock;
+            }
+            if (infoTabBackground.colors.normalColor != newInfoCol)
+            {
+                ColorBlock colorBlock = infoTabBackground.colors;
+                colorBlock.normalColor = newInfoCol;
+                infoTabBackground.colors = colorBlock;
+            }
+            if (settingsTabBackground.colors.normalColor != newSettingsCol)
+            {
+                ColorBlock colorBlock = settingsTabBackground.colors;
+                colorBlock.normalColor = newSettingsCol;
+                settingsTabBackground.colors = colorBlock;
+            }
+            if (devModeTabBackground.colors.normalColor != newDevModeCol)
+            {
+                ColorBlock colorBlock = devModeTabBackground.colors;
+                colorBlock.normalColor = newDevModeCol;
+                devModeTabBackground.colors = colorBlock;
+            }
         }
 
         public void UpdateViewportHeight()

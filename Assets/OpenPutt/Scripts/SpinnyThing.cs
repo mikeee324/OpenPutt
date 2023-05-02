@@ -91,7 +91,7 @@ namespace mikeee324.OpenPutt
             }
         }
 
-        void LateUpdate()
+        private void LateUpdate()
         {
             transform.position = originalPosition;
         }

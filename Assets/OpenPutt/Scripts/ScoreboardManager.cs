@@ -181,10 +181,13 @@ namespace mikeee324.OpenPutt
             }
 
             // Swap all scoreboard views to be the same
-            foreach (Scoreboard scoreboard in scoreboards)
+            if (requestedScoreboardView != ScoreboardView.Settings && requestedScoreboardView != ScoreboardView.DevMode)
             {
-                if (scoreboard.HasInitializedUI)
-                    scoreboard.CurrentScoreboardView = requestedScoreboardView;
+                foreach (Scoreboard scoreboard in scoreboards)
+                {
+                    if (scoreboard.HasInitializedUI)
+                        scoreboard.CurrentScoreboardView = requestedScoreboardView;
+                }
             }
         }
 

@@ -38,6 +38,7 @@ namespace mikeee324.OpenPutt
         public Vector3 mountingOffset = Vector3.zero;
         public KeyCode desktopInputKey = KeyCode.M;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
+        public bool applyVelocityAfterDrop = false;
         #endregion
 
         #region Internal Vars
@@ -61,9 +62,12 @@ namespace mikeee324.OpenPutt
                         listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
                     }
 
-                    Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
-                    if (rb != null)
-                        rb.AddForce(lastFrameVelocity * 0.06f, ForceMode.Impulse);
+                    if (applyVelocityAfterDrop)
+                    {
+                        Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
+                        if (rb != null)
+                            rb.AddForce(lastFrameVelocity * rb.mass, ForceMode.Impulse);
+                    }
                 }
                 if (_heldInHand == VRCPickup.PickupHand.None && value != VRCPickup.PickupHand.None)
                 {
@@ -97,7 +101,7 @@ namespace mikeee324.OpenPutt
                 pickup = GetComponent<VRCPickup>();
         }
 
-        private void Update()
+        public override void PostLateUpdate()
         {
             if (!Utilities.IsValid(Networking.LocalPlayer) || objectToAttach == null)
                 return;
@@ -179,6 +183,9 @@ namespace mikeee324.OpenPutt
                 lastFrameVelocity = rigidbody.velocity;
 
             lastFramePosition = rigidbody.position;
+
+            rigidbody.velocity = Vector3.zero;
+            rigidbody.angularVelocity = Vector3.zero;
         }
     }
 }

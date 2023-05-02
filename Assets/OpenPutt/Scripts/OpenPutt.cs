@@ -62,7 +62,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Keeps a reference to the PlayerManager that is assigned to the local player
         /// </summary>
-        public PlayerManager LocalPlayerManager { get; private set; }
+        public PlayerManager LocalPlayerManager = null;
 
         /// <summary>
         /// Sums up the maximum score a player can get across all courses
@@ -208,10 +208,12 @@ namespace mikeee324.OpenPutt
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
+            PlayerManager playerManager = poolObject.GetComponent<PlayerManager>();
+
             if (player.isLocal)
                 LocalPlayerManager = null;
 
-            playerListManager.OnPlayerUpdate(poolObject.GetComponent<PlayerManager>());
+            playerListManager.OnPlayerUpdate(playerManager);
         }
 
         public void OnPlayerUpdate(PlayerManager playerManager)

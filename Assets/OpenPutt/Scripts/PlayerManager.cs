@@ -6,6 +6,7 @@ using VRC.SDK3.Components;
 using System;
 using UnityEngine.UIElements;
 using Varneon.VUdon.ArrayExtensions;
+using JetBrains.Annotations;
 
 namespace mikeee324.OpenPutt
 {
@@ -109,7 +110,7 @@ namespace mikeee324.OpenPutt
                 if (golfBall != null && value != _ballVisible)
                 {
                     golfBall.gameObject.SetActive(value);
-                    golfBall.UpdateBallState();
+                    golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
                 }
                 _ballVisible = value;
             }
@@ -564,6 +565,7 @@ namespace mikeee324.OpenPutt
         }
 
         // This method will be called on all clients when the object is enabled and the Owner has been assigned.
+        [PublicAPI]
         public override void _OnOwnerSet()
         {
             if (Owner == null || Owner.displayName == null)
@@ -573,6 +575,11 @@ namespace mikeee324.OpenPutt
             }
 
             bool localPlayerIsNowOwner = Owner == Networking.LocalPlayer;
+
+            if (localPlayerIsNowOwner)
+            {
+                openPutt.LocalPlayerManager = this;
+            }
 
             Utils.Log(this, $"{Owner.displayName}({(localPlayerIsNowOwner ? "me" : "not me")}) now owns this object!");
 
@@ -594,7 +601,7 @@ namespace mikeee324.OpenPutt
             if (golfBall != null)
             {
                 golfBall.transform.position = Vector3.zero;
-                golfBall.UpdateBallState();
+                golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
 
             if (playerLabel != null)
@@ -626,6 +633,7 @@ namespace mikeee324.OpenPutt
         }
 
         // This method will be called on all clients when the original owner has left and the object is about to be disabled.
+        [PublicAPI]
         public override void _OnCleanup()
         {
             // Cleanup the object here

@@ -62,7 +62,7 @@ MonoBehaviour:
       Data: 3|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: Cyan.PlayerObjectPool.CyanPlayerObjectPool, Assembly-CSharp
+      Data: Cyan.PlayerObjectPool.CyanPlayerObjectPool, Cyan.PlayerObjectPool.UdonSharp
     - Name: 
       Entry: 8
       Data: 
@@ -150,7 +150,7 @@ MonoBehaviour:
       Data: 10|System.RuntimeType, mscorlib
     - Name: 
       Entry: 1
-      Data: Cyan.PlayerObjectPool.CyanPlayerObjectAssigner, Assembly-CSharp
+      Data: Cyan.PlayerObjectPool.CyanPlayerObjectAssigner, Cyan.PlayerObjectPool.UdonSharp
     - Name: 
       Entry: 8
       Data: 
@@ -1198,13 +1198,13 @@ MonoBehaviour:
       Data: 
     - Name: $k
       Entry: 1
-      Data: <LocalPlayerManager>k__BackingField
+      Data: LocalPlayerManager
     - Name: $v
       Entry: 7
       Data: 75|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
     - Name: <Name>k__BackingField
       Entry: 1
-      Data: <LocalPlayerManager>k__BackingField
+      Data: LocalPlayerManager
     - Name: <UserType>k__BackingField
       Entry: 7
       Data: 76|System.RuntimeType, mscorlib
@@ -1228,7 +1228,7 @@ MonoBehaviour:
       Data: 
     - Name: <IsSerialized>k__BackingField
       Entry: 5
-      Data: false
+      Data: true
     - Name: _fieldAttributes
       Entry: 7
       Data: 77|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
