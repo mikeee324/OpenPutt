@@ -5,7 +5,7 @@ using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-1)]
     public class GolfClubCollider : UdonSharpBehaviour
     {
         [Tooltip("Which golf club is this collider attached to?")]
@@ -23,14 +23,8 @@ namespace mikeee324.OpenPutt
         /// Allows us to grab the direction of travel and use that to direct where the ball goes when hit.
         /// </summary>
         public bool experimentalCollisionDetection = false;
-        [Range(0, 14)]
-        public int hitBackstepOffset = 1;
-        [Range(1, 15)]
+        [Range(0, 15)]
         public int hitMaxBacksteps = 3;
-        /// <summary>
-        /// Defines how much we need to scale down any hit forces (Matches the weight of the ball rigidbody)
-        /// </summary>
-        private float hitForceScale = 0.04593f;
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames
         /// </summary>
@@ -48,7 +42,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
-        private bool ballHasBeenHit = false;
+        private int framesSinceHit = -1;
         private SphereCollider ballCollider = null;
 
         void Start()
@@ -76,7 +70,6 @@ namespace mikeee324.OpenPutt
             if (golfBall != null)
             {
                 ballCollider = golfBall.GetComponent<SphereCollider>();
-                hitForceScale = golfBall.GetComponent<Rigidbody>().mass;
             }
 
             MoveToClubWithoutVelocity();
@@ -95,10 +88,14 @@ namespace mikeee324.OpenPutt
                 if (overrideSpeed != -1f)
                     speed = overrideSpeed;
 
+                speed *= .2f;
+                if (speed <= 0f)
+                    speed = 0f;
+
                 Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
                 if (overrideScale > 0f)
                     golfClubHeadColliderSizeNow = golfClubHeadColliderSize * overrideScale;
-                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 5, speed * .2f);
+                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 3, speed);
             }
         }
 
@@ -153,91 +150,33 @@ namespace mikeee324.OpenPutt
                     myRigidbody.MoveRotation(putterTarget.rotation);
             }
 
-            if (ballHasBeenHit)
+            if (framesSinceHit != -1)
             {
-                // Extra precaution to stop hits while arming club while touching ball
-                if (!clubInsideBallCheck)
+                framesSinceHit += 1;
+                if (hitMaxBacksteps == 0 || framesSinceHit >= Mathf.FloorToInt(hitMaxBacksteps / 2))
                 {
-                    // Grab positons/time taken
-                    Vector3 latestPos = currentPos;
-                    Vector3 oldestPos = lastPositions[0];
-                    float timeTaken = lastPositionTimes[0];
-
-                    if (hitBackstepOffset > 0)
-                    {
-                        latestPos = lastPositions[hitBackstepOffset];
-                        oldestPos = lastPositions[hitBackstepOffset + 1];
-                        timeTaken = lastPositionTimes[hitBackstepOffset + 1] - lastPositionTimes[hitBackstepOffset];
-
-                        for (int currentBackstep = hitBackstepOffset; currentBackstep < hitBackstepOffset + hitMaxBacksteps; currentBackstep++)
-                        {
-                            float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
-                            float currentDistance = Vector3.Distance(latestPos, oldestPos);
-                            if (thisDistance > currentDistance)
-                            {
-                                oldestPos = lastPositions[currentBackstep];
-                                timeTaken = lastPositionTimes[currentBackstep] - lastPositionTimes[hitBackstepOffset];
-                                continue;
-                            }
-
-                            break;
-                        }
-                    }
-
-                    // Work out velocity
-                    Vector3 velocity = (latestPos - oldestPos) / timeTaken;
-
-                    // Scale the velocity down to match the mass of the ball
-                    velocity *= hitForceScale;
-
-                    // Scale the velocity back up a bit
-                    velocity *= hitForceMultiplier.Evaluate(velocity.magnitude);
-
-                    // Apply the players final hit force multiplier
-                    velocity *= golfClub.forceMultiplier;
-
-                    if (experimentalCollisionDetection)
-                    {
-                        // Hit ball in direction of this collider
-                        velocity = velocity.magnitude * this.transform.forward;
-                    }
-
-                    OpenPutt openPutt = null;
-                    if (golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
-                        openPutt = golfClub.playerManager.openPutt;
-
-                    // Mini golf usually works best when the ball stays on the floor initially
-                    if (openPutt != null && openPutt.enableVerticalHits)
-                        velocity.y = Mathf.Clamp(velocity.y, 0, 10f);
-                    else
-                        velocity.y = 0;
-
-                    // Fix NaNs so we don't die
-                    if (float.IsNaN(velocity.y))
-                        velocity.y = 0;
-                    if (float.IsNaN(velocity.x))
-                        velocity.x = 0;
-                    if (float.IsNaN(velocity.z))
-                        velocity.z = 0;
-
-                    // Register the hit with the ball
-                    golfBall.OnBallHit(velocity);
-
-                    // Disable club collision for a short while
-                    clubInsideBallCheck = true;
-                    clubInsideBallCheckTimer = 0f;
+                    HandleBallHit();
                 }
-
-                // Consume the hit event
-                ballHasBeenHit = false;
             }
 
-            int originalSize = lastPositions.Length;
-            // Push current position onto buffers
-            lastPositions = lastPositions.Insert(0, currentPos).Resize(originalSize);
-            lastPositionTimes = lastPositionTimes.Insert(0, Time.fixedDeltaTime).Resize(originalSize);
-            for (int i = 1; i < lastPositions.Length; i++)
-                lastPositionTimes[i] += Time.fixedDeltaTime;
+            bool logPos = true;
+            if (lastPositions.Length > 0)
+            {
+                Vector3 lastPos = lastPositions[0];
+                if ((currentPos - lastPos).magnitude <= 0.001f)
+                {
+                    logPos = false;
+                }
+            }
+
+            if (logPos)
+            {
+                // Push current position onto buffers
+                lastPositions = lastPositions.Push(currentPos, false);
+                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
+                for (int i = 1; i < lastPositions.Length; i++)
+                    lastPositionTimes[i] += Time.fixedDeltaTime;
+            }
         }
 
         private void OnTriggerEnter(Collider other)
@@ -253,7 +192,84 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            ballHasBeenHit = true;
+            framesSinceHit = 0;
+        }
+
+        private void HandleBallHit()
+        {
+
+            // Grab positons/time taken
+            Vector3 latestPos = myRigidbody.position;
+            Vector3 oldestPos = lastPositions[0];
+            float timeTaken = lastPositionTimes[0];
+
+            // If we want to take an average velocity over the past few frames
+            if (hitMaxBacksteps > 0)
+            {
+                float furthestDistance = Vector3.Distance(latestPos, oldestPos); ;
+                for (int currentBackstep = 0; currentBackstep < hitMaxBacksteps && currentBackstep < lastPositions.Length; currentBackstep++)
+                {
+                    float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
+                    if (thisDistance > furthestDistance)
+                    {
+                        oldestPos = lastPositions[currentBackstep];
+                        timeTaken = lastPositionTimes[currentBackstep];
+                        furthestDistance = Vector3.Distance(latestPos, oldestPos);
+                        continue;
+                    }
+
+                    // We found the furthest backstep - break out and use that as the start point of the swing
+                    break;
+                }
+            }
+
+            // Add in the time for this frame too
+            timeTaken += Time.fixedDeltaTime;
+
+            // Work out velocity
+            Vector3 directionOfTravel = latestPos - oldestPos;
+            float velocityVal = directionOfTravel.magnitude / timeTaken;
+            Vector3 velocity = velocityVal * directionOfTravel;
+
+            if (experimentalCollisionDetection)
+            {
+                // Hit ball in direction of this collider
+                velocity = velocityVal * this.transform.forward;
+            }
+
+            // Scale the velocity back up a bit
+            velocity *= hitForceMultiplier.Evaluate(velocityVal);
+
+            // Apply the players final hit force multiplier
+            velocity *= golfClub.forceMultiplier;
+
+            OpenPutt openPutt = null;
+            if (golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
+                openPutt = golfClub.playerManager.openPutt;
+
+            // Mini golf usually works best when the ball stays on the floor initially
+            if (openPutt != null && openPutt.enableVerticalHits)
+                velocity.y = Mathf.Clamp(velocity.y, 0, 10f);
+            else
+                velocity.y = 0;
+
+            // Fix NaNs so we don't die
+            if (float.IsNaN(velocity.y))
+                velocity.y = 0;
+            if (float.IsNaN(velocity.x))
+                velocity.x = 0;
+            if (float.IsNaN(velocity.z))
+                velocity.z = 0;
+
+            // Register the hit with the ball
+            golfBall.OnBallHit(velocity);
+
+            // Disable club collision for a short while
+            clubInsideBallCheck = true;
+            clubInsideBallCheckTimer = 0f;
+
+            // Consume the hit event
+            framesSinceHit = -1;
         }
 
         private void ResetPositionBuffers()

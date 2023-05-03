@@ -196,6 +196,10 @@ namespace mikeee324.OpenPutt
             get => ballRigidbody.angularDrag;
             set => ballRigidbody.angularDrag = value;
         }
+        public float DefaultBallWeight { get; private set; }
+        public float DefaultBallFriction { get; private set; }
+        public float DefaultBallDrag { get; private set; }
+        public float DefaultBallAngularDrag { get; private set; }
         #endregion
 
         #region Internal Vars
@@ -247,6 +251,14 @@ namespace mikeee324.OpenPutt
             if (pickup == null)
                 pickup = GetComponent<VRCPickup>();
 
+            if (ballRigidbody != null)
+            {
+                DefaultBallWeight = BallWeight;
+                DefaultBallFriction = BallFriction;
+                DefaultBallDrag = BallDrag;
+                DefaultBallAngularDrag = BallAngularDrag;
+            }
+
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
             SetEnabled(false);
@@ -266,25 +278,34 @@ namespace mikeee324.OpenPutt
             this.enabled = enabled;
         }
 
+        public int numberOfPickedUpFrames = 0;
         public int numberOfStillPickedUpFrames = 0;
 
         private void FixedUpdate()
         {
             if (pickedUpByPlayer)
             {
-                Vector3 newFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
-                if (newFrameVelocity.magnitude > 0.05f)
+                if (numberOfPickedUpFrames < 3)
                 {
-                    numberOfStillPickedUpFrames = 0;
-                    lastFrameVelocity = newFrameVelocity * ballRigidbody.mass;
+                    numberOfPickedUpFrames++;
+                    lastFrameVelocity = Vector3.zero;
                 }
                 else
                 {
-                    numberOfStillPickedUpFrames++;
-
-                    if (numberOfStillPickedUpFrames >= 5)
+                    Vector3 newFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
+                    if (newFrameVelocity.magnitude > 0.05f)
                     {
-                        lastFrameVelocity = Vector3.zero;
+                        numberOfStillPickedUpFrames = 0;
+                        lastFrameVelocity = newFrameVelocity * ballRigidbody.mass;
+                    }
+                    else
+                    {
+                        numberOfStillPickedUpFrames++;
+
+                        if (numberOfStillPickedUpFrames >= 5)
+                        {
+                            lastFrameVelocity = Vector3.zero;
+                        }
                     }
                 }
 
@@ -313,10 +334,11 @@ namespace mikeee324.OpenPutt
                 if (requestedBallVelocity != Vector3.zero)
                 {
                     // Reset velocity of ball
-                    ballRigidbody.velocity = Vector3.zero;
+                    //ballRigidbody.velocity = Vector3.zero;
+                    ballRigidbody.velocity = requestedBallVelocity;
 
                     // Apply new force to ball
-                    ballRigidbody.AddForce(requestedBallVelocity, ForceMode.Impulse);
+                    //ballRigidbody.AddForce(requestedBallVelocity, ForceMode.Impulse);
 
                     // Ball shouldn't be able to bounce off things faster than this hit for now
                     //rb.maxDepenetrationVelocity = requestedBallVelocity.magnitude;
@@ -386,12 +408,12 @@ namespace mikeee324.OpenPutt
                 puttSync.RequestFastSync();
         }
 
-        public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, Vector3 position)
+        public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
         {
             startLine.SetEnabled(false);
 
-            this.transform.position = position;
-            respawnPosition = position;
+            this.transform.position = position.transform.position;
+            respawnPosition = position.transform.position;
 
             BallIsMoving = false;
 
@@ -401,6 +423,12 @@ namespace mikeee324.OpenPutt
 
         public override void OnPickup()
         {
+            ballRigidbody.velocity = Vector3.zero;
+            ballRigidbody.angularVelocity = Vector3.zero;
+            lastFramePosition = this.transform.position;
+            lastFrameVelocity = Vector3.zero;
+
+            numberOfPickedUpFrames = 0;
             numberOfStillPickedUpFrames = 0;
             pickedUpByPlayer = true;
 
@@ -467,8 +495,6 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void OnScriptPickup()
         {
-            SetEnabled(true);
-
             OnPickup();
 
             if (playerManager != null)

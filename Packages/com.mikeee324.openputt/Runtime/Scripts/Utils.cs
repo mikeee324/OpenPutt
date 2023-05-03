@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
@@ -196,6 +197,37 @@ namespace mikeee324.OpenPutt
                 array.SortByDistance(position, i, rightIndex);
 
             return array;
+        }
+
+        /// <summary>
+        /// Pushes an element into an array and pops an element off the other side of the array (For queues/stacks)
+        /// <para>
+        /// Based on: <see href="https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1.insert?view=net-6.0">List&lt;T&gt;.Insert(Int32, T)</see>
+        /// </para>
+        /// </summary>
+        /// <returns>Modified T[]</returns>
+        /// <typeparam name="T">The type of elements in the array.</typeparam>
+        /// <param name="array">Source T[] to modify.</param>
+        /// <param name="item">The object to insert.</param>
+        /// <param name="atStart">True=push onto index 0, false=push onto end of array</param>
+        public static T[] Push<T>(this T[] array, T item, bool atStart = true)
+        {
+            int length = array.Length;
+
+            T[] newArray = new T[length];
+
+            newArray.SetValue(item, atStart ? 0 : array.Length - 1);
+
+            if (atStart)
+            {
+                Array.Copy(array, 0, newArray, 1, length - 1);
+            }
+            else
+            {
+                Array.Copy(array, 1, newArray, 0, length - 1);
+            }
+
+            return newArray;
         }
     }
 }

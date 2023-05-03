@@ -367,7 +367,7 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfBall.BallWeight = 0.05f;
+            player.golfBall.BallWeight = player.golfBall.DefaultBallWeight;
 
             RefreshSettingsMenu();
         }
@@ -388,7 +388,7 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfBall.BallFriction = 0.01f;
+            player.golfBall.BallFriction = player.golfBall.DefaultBallFriction;
 
             RefreshSettingsMenu();
         }
@@ -409,7 +409,7 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfBall.BallAngularDrag = 0f;
+            player.golfBall.BallAngularDrag = player.golfBall.DefaultBallAngularDrag;
 
             RefreshSettingsMenu();
         }
@@ -430,7 +430,7 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfBall.BallDrag = 0.85f;
+            player.golfBall.BallDrag = player.golfBall.DefaultBallDrag;
 
             RefreshSettingsMenu();
         }

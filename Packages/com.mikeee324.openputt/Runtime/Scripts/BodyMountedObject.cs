@@ -7,7 +7,7 @@ using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(-1)]
     public class BodyMountedObject : UdonSharpBehaviour
     {
         #region Public Settings

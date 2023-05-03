@@ -47,7 +47,7 @@ namespace mikeee324.OpenPutt
                 if (!localAreaCheckActive)
                 {
                     localAreaCheckActive = true;
-                    CheckLocalAreaForStartPositions();
+                    SendCustomEventDelayedSeconds(nameof(CheckLocalAreaForStartPositions), .25f);
                 }
             }
         }
@@ -147,7 +147,8 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart.transform.position);
+                    golfBall.transform.position = closestBallStart.transform.position;
+                    golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
 
                     ResetDropAnimation();
                 }
