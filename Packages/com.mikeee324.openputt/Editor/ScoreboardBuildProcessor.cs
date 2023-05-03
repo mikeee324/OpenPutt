@@ -1,4 +1,5 @@
-﻿using mikeee324.OpenPutt;
+﻿#if UNITY_EDITOR
+using mikeee324.OpenPutt;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
@@ -176,3 +177,4 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
         }
     }
 }
+#endif
