@@ -14,23 +14,25 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public Transform putterTarget;
-        [SerializeField] private Rigidbody myRigidbody = null;
+        [SerializeField]
+        private SphereCollider ballCollider = null;
+        [SerializeField]
+        private Rigidbody myRigidbody = null;
         public BoxCollider golfClubHeadCollider;
         public AnimationCurve hitForceMultiplier;
-        [Tooltip("Not so experimental now.. cos i like it more")]
-        /// <summary>
-        /// The collider for the putter follows the club head instead of just being attached to it.<br/>
-        /// Allows us to grab the direction of travel and use that to direct where the ball goes when hit.
-        /// </summary>
-        public bool experimentalCollisionDetection = false;
-        [Range(0, 15)]
+        [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
+        public int hitWaitFrames = 3;
+        [Range(0, 15), Tooltip("Used to help average out the speed of the hit")]
         public int hitMaxBacksteps = 3;
+        public bool experimentalCollisionDetection = false;
         /// <summary>
-        /// Tracks the path of the club head so we can work out an average velocity over several frames
+        /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
+        /// MUST be the same length as lastPositionTimes
         /// </summary>
         private Vector3[] lastPositions = new Vector3[16];
         /// <summary>
-        /// Tracks how much time it has been since we recorded each position in the lastPositions array
+        /// Tracks how much time it has been since we recorded each position in the lastPositions array<br/>
+        /// MUST be the same length as lastPositions
         /// </summary>
         private float[] lastPositionTimes = new float[16];
         private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
@@ -43,7 +45,7 @@ namespace mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
-        private SphereCollider ballCollider = null;
+        private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         void Start()
         {
@@ -54,6 +56,9 @@ namespace mikeee324.OpenPutt
 
             if (myRigidbody == null)
                 myRigidbody = GetComponent<Rigidbody>();
+
+            if (golfBall != null && ballCollider == null)
+                ballCollider = golfBall.GetComponent<SphereCollider>();
 
             if (hitForceMultiplier.length == 0)
             {
@@ -66,11 +71,6 @@ namespace mikeee324.OpenPutt
         {
             clubInsideBallCheck = true;
             clubInsideBallCheckTimer = 0.1f;
-
-            if (golfBall != null)
-            {
-                ballCollider = golfBall.GetComponent<SphereCollider>();
-            }
 
             MoveToClubWithoutVelocity();
 
@@ -92,10 +92,13 @@ namespace mikeee324.OpenPutt
                 if (speed <= 0f)
                     speed = 0f;
 
-                Vector3 golfClubHeadColliderSizeNow = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
+                Vector3 minSize = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
                 if (overrideScale > 0f)
-                    golfClubHeadColliderSizeNow = golfClubHeadColliderSize * overrideScale;
-                golfClubHeadCollider.size = Vector3.Lerp(golfClubHeadColliderSizeNow, golfClubHeadColliderSizeNow * 3, speed);
+                    minSize = golfClubHeadColliderSize * overrideScale;
+
+                Vector3 maxSize = new Vector3(minSize.x * 3, minSize.y * 3, minSize.z);
+
+                golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, easeInOut.Evaluate(speed));
             }
         }
 
@@ -134,29 +137,29 @@ namespace mikeee324.OpenPutt
 
             Vector3 currentPos = transform.position;
 
-            // Make collider look in the direction of travel
-            if (experimentalCollisionDetection)
-            {
-                Vector3 directionOfTravel = currentPos - lastPositions[3];
-                if (directionOfTravel.magnitude > 0.005f)
-                    transform.rotation = Quaternion.LookRotation(directionOfTravel, Vector3.up);
-            }
-
             // Attach this collider to the end of the club
             if (putterTarget != null && myRigidbody != null)
             {
                 myRigidbody.MovePosition(putterTarget.position);
-                if (!experimentalCollisionDetection || clubInsideBallCheck)
+
+                if (experimentalCollisionDetection)
+                {
+                    Vector3 directionOfTravel = currentPos - lastPositions[3];
+                    if (directionOfTravel.magnitude > 0.005f)
+                        myRigidbody.MoveRotation(Quaternion.LookRotation(directionOfTravel, Vector3.up));
+                }
+                else
+                {
                     myRigidbody.MoveRotation(putterTarget.rotation);
+                }
             }
 
             if (framesSinceHit != -1)
             {
                 framesSinceHit += 1;
-                if (hitMaxBacksteps == 0 || framesSinceHit >= Mathf.FloorToInt(hitMaxBacksteps / 2))
-                {
+
+                if (framesSinceHit >= hitWaitFrames)
                     HandleBallHit();
-                }
             }
 
             bool logPos = true;
@@ -197,7 +200,6 @@ namespace mikeee324.OpenPutt
 
         private void HandleBallHit()
         {
-
             // Grab positons/time taken
             Vector3 latestPos = myRigidbody.position;
             Vector3 oldestPos = lastPositions[0];
@@ -206,8 +208,9 @@ namespace mikeee324.OpenPutt
             // If we want to take an average velocity over the past few frames
             if (hitMaxBacksteps > 0)
             {
-                float furthestDistance = Vector3.Distance(latestPos, oldestPos); ;
-                for (int currentBackstep = 0; currentBackstep < hitMaxBacksteps && currentBackstep < lastPositions.Length; currentBackstep++)
+                float furthestDistance = Vector3.Distance(latestPos, oldestPos);
+                int maxBacksteps = Math.Min(hitMaxBacksteps, lastPositions.Length);
+                for (int currentBackstep = 0; currentBackstep < maxBacksteps; currentBackstep++)
                 {
                     float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
                     if (thisDistance > furthestDistance)
@@ -274,10 +277,11 @@ namespace mikeee324.OpenPutt
 
         private void ResetPositionBuffers()
         {
-            for (int i = 0; i < lastPositions.Length - 1; i++)
+            for (int i = 0; i < lastPositions.Length; i++)
+            {
                 lastPositions[i] = this.transform.position;
-            for (int i = 0; i < lastPositionTimes.Length - 1; i++)
                 lastPositionTimes[i] = 0f;
+            }
         }
 
         public void MoveToClubWithoutVelocity()

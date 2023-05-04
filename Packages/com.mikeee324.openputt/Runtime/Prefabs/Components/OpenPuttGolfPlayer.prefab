@@ -482,7 +482,8 @@ MonoBehaviour:
   lineRenderer: {fileID: 4926412383804392850}
   courseStartPosLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 16384
+  maximumNoOfColliders: 32
 --- !u!114 &4733841148693973384
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -596,6 +597,7 @@ MonoBehaviour:
   golfClub: {fileID: 4926412383973621141}
   golfBall: {fileID: 4926412384239502559}
   putterTarget: {fileID: 4926412384597107417}
+  ballCollider: {fileID: 7951477845536573217}
   myRigidbody: {fileID: 4926412383994304881}
   golfClubHeadCollider: {fileID: 4926412383994304882}
   hitForceMultiplier:
@@ -622,8 +624,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  experimentalCollisionDetection: 0
+  hitWaitFrames: 2
   hitMaxBacksteps: 4
+  experimentalCollisionDetection: 1
 --- !u!114 &4926412383994304880
 MonoBehaviour:
   m_ObjectHideFlags: 0

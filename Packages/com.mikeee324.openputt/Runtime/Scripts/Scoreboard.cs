@@ -61,14 +61,21 @@ namespace mikeee324.OpenPutt
         public Slider ballBColorSlider;
         public UnityEngine.UI.Image ballColorPreview;
 
+        #region Dev Mode Stuff
+        public Slider devModeClubWaitSlider;
+        public Slider devModeClubBackstepSlider;
         public Slider devModeBallWeightSlider;
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
         public Slider devModeBallADragSlider;
+        public TextMeshProUGUI devModeClubWaitValueLabel;
+        public TextMeshProUGUI devModeClubBackstepValueLabel;
         public TextMeshProUGUI devModeBallWeightValueLabel;
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
+        public UnityEngine.UI.Image devModeExperimentalClubCollider;
+        #endregion
 
         public UnityEngine.UI.Image verticalHitsCheckbox;
         public UnityEngine.UI.Image isPlayingCheckbox;
@@ -230,6 +237,12 @@ namespace mikeee324.OpenPutt
             devModeBallFrictionSlider.value = playerManager.golfBall.BallFriction;
             devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
 
+            devModeClubWaitSlider.value = playerManager.golfClub.putter.hitWaitFrames;
+            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
+
+            devModeClubBackstepSlider.value = playerManager.golfClub.putter.hitMaxBacksteps;
+            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
+
             // Just use the first audio source volume
             foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
             {
@@ -264,6 +277,7 @@ namespace mikeee324.OpenPutt
             isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
+            devModeExperimentalClubCollider.material = playerManager.golfClub.putter.experimentalCollisionDetection ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -382,6 +396,48 @@ namespace mikeee324.OpenPutt
             devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
         }
 
+        public void OnClubWaitFramesReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitWaitFrames = 2;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnClubWaitFramesChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitWaitFrames = Mathf.RoundToInt(devModeClubWaitSlider.value);
+            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
+        }
+
+        public void OnClubHitBackstepReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitMaxBacksteps = 4;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnClubHitBackstepChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitMaxBacksteps = Mathf.RoundToInt(devModeClubBackstepSlider.value);
+            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
+        }
+
         public void OnBallFrictionReset()
         {
             PlayerManager player = manager.openPutt.LocalPlayerManager;
@@ -493,6 +549,18 @@ namespace mikeee324.OpenPutt
 
                 RefreshSettingsMenu();
             }
+        }
+
+        public void OnToggleExperimentalClub()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+
+            playerManager.golfClub.putter.experimentalCollisionDetection = !playerManager.golfClub.putter.experimentalCollisionDetection;
+
+            RefreshSettingsMenu();
         }
 
         public void OnTogglePlayerManager()

@@ -1,4 +1,5 @@
 ﻿using UdonSharp;
+using UnityEngine;
 
 namespace mikeee324.OpenPutt
 {
@@ -6,11 +7,7 @@ namespace mikeee324.OpenPutt
     public class CourseStartPosition : UdonSharpBehaviour
     {
         public CourseManager courseManager;
-
-        void Start()
-        {
-
-        }
+        public Collider myCollider;
     }
 }
 

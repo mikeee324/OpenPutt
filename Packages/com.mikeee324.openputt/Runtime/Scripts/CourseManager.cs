@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using UdonSharp;
 using UnityEngine;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -89,6 +90,8 @@ namespace mikeee324.OpenPutt
         public OpenPutt openPutt;
         [Header("Object References")]
         public CourseStartPosition[] ballSpawns;
+        [HideInInspector]
+        public Collider[] ballSpawnColliders;
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
@@ -96,6 +99,14 @@ namespace mikeee324.OpenPutt
         public bool alwaysDisplayGizmos = true;
         [Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
         public float ballSpawnGizmoRadius = 0.0225f;
+
+        private void Start()
+        {
+            for (int i = 0; i < ballSpawns.Length; i++)
+            {
+                ballSpawnColliders = ballSpawnColliders.Add(ballSpawns[i].myCollider);
+            }
+        }
 
         public void OnBallEnterHole(CourseHole hole, Collider collider)
         {
