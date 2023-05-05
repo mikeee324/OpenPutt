@@ -47,6 +47,9 @@ namespace mikeee324.OpenPutt
         private int framesSinceHit = -1;
         private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
+        private Vector3 FrameVelocity { get; set; }
+        private Vector3 PrevPosition { get; set; }
+
         void Start()
         {
             ResetPositionBuffers();
