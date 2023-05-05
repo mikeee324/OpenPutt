@@ -157,6 +157,10 @@ namespace mikeee324.OpenPutt
                 }
             }
 
+            Vector3 currFrameVelocity = (myRigidbody.position - PrevPosition) / Time.deltaTime;
+            FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, 0.1f);
+            PrevPosition = myRigidbody.position;
+
             if (framesSinceHit != -1)
             {
                 framesSinceHit += 1;
