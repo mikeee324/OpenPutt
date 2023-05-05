@@ -225,7 +225,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     else if (columnIndex == scoreboardRow.NumberOfColumns - 1)
                     {
                         if (scoreboardManager.SpeedGolfMode)
-                            SetText(TimeSpan.FromMilliseconds(openPutt.TotalParTime).ToString(@"m\:ss"));
+                            SetText(TimeSpan.FromSeconds(openPutt.TotalParTime).ToString(@"m\:ss"));
                         else
                             SetText($"{openPutt.TotalParScore}");
                     }
@@ -233,7 +233,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     {
                         CourseManager course = openPutt.courses[columnIndex - 1];
                         if (scoreboardManager.SpeedGolfMode)
-                            SetText(TimeSpan.FromMilliseconds(course.parTime).ToString(@"m\:ss"));
+                            SetText(TimeSpan.FromSeconds(course.parTime).ToString(@"m\:ss"));
                         else
                             SetText($"{course.parScore}");
                     }

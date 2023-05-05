@@ -54,16 +54,30 @@ namespace mikeee324.OpenPutt
         public PlayerManager[] PlayersSortedByScore => playerListManager.PlayersSortedByScore;
         public PlayerManager[] PlayersSortedByTime => playerListManager.PlayersSortedByTime;
         public float maxRefreshInterval { get; private set; }
-        [HideInInspector, Tooltip("If enabled all players will receive score updates as they happen. If disabled scores will only be updated as each player finishes a hole.")]
+        /// <summary>
+        /// Determines when PlayerManagers will sync their score data (Used to reduce network traffic when there's lots of players)
+        /// </summary>
+        [HideInInspector]
         public PlayerSyncType playerSyncType = PlayerSyncType.All;
+        /// <summary>
+        /// Shortcut for asking the object pool for the size of the pool.
+        /// </summary>
         public int MaxPlayerCount => objectPool != null ? objectPool.poolSize : 0;
-        public int CurrentPlayerCount => objectPool != null && objectAssigner != null ? objectAssigner._GetActivePoolObjects().Length : 0;
+        /// <summary>
+        /// Returns the current number of players that have started playing at least 1 course
+        /// </summary>
+        public int CurrentPlayerCount => playerListManager != null && playerListManager.PlayersSortedByScore != null ? playerListManager.PlayersSortedByScore.Length : 0;
 
         /// <summary>
         /// Keeps a reference to the PlayerManager that is assigned to the local player
         /// </summary>
         [HideInInspector]
         public PlayerManager LocalPlayerManager = null;
+        /// <summary>
+        /// Is a list of all PlayerManagers from the object pool - Can be used as a shortcut to getting player data without any GetComponent calls etc
+        /// </summary>
+        [HideInInspector]
+        public PlayerManager[] allPlayerManagers = null;
 
         /// <summary>
         /// Sums up the maximum score a player can get across all courses
@@ -141,26 +155,8 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            // Automatically assign course numbers based on their position in the array so we don't get mixed up
-            for (int i = 0; i < courses.Length; i++)
-                courses[i].holeNumber = i;
-
             foreach (CourseMarker marker in courseMarkers)
                 marker.ResetUI();
-
-            // Allow the player managers access to the whole OpenPutt system (For updating scoreboards etc)
-            for (int i = 0; i < MaxPlayerCount; i++)
-            {
-                PlayerManager pm = objectAssigner.transform.GetChild(i).GetComponent<PlayerManager>();
-                if (pm != null)
-                {
-                    // Register the OpenPutt manager script with each player object
-                    pm.openPutt = this;
-                }
-            }
-
-            foreach (CourseManager course in courses)
-                course.openPutt = this;
 
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
         }
@@ -173,7 +169,7 @@ namespace mikeee324.OpenPutt
 
         public void UpdateRefreshSettings(int numberOfPlayers)
         {
-            if (numberOfPlayers < 5)
+            if (numberOfPlayers < 10)
                 playerSyncType = PlayerSyncType.All;
             else if (numberOfPlayers < 20)
                 playerSyncType = PlayerSyncType.StartAndFinish;
@@ -205,15 +201,19 @@ namespace mikeee324.OpenPutt
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
+            PlayerManager playerManager = allPlayerManagers[poolIndex];
+
+            playerManager.openPutt = this;
+
             if (player.isLocal)
-                LocalPlayerManager = poolObject.GetComponent<PlayerManager>();
+                LocalPlayerManager = playerManager;
         }
 
         public override void _OnPlayerUnassigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            PlayerManager playerManager = poolObject.GetComponent<PlayerManager>();
+            PlayerManager playerManager = allPlayerManagers[poolIndex];
 
             if (player.isLocal)
                 LocalPlayerManager = null;

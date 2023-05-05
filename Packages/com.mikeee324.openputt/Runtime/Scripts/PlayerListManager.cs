@@ -1,6 +1,7 @@
 ﻿
 using System.Diagnostics;
 using UdonSharp;
+using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
@@ -8,6 +9,7 @@ namespace mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlayerListManager : UdonSharpBehaviour
     {
+        [Header("This script keeps track of what positions players are in on the scoreboards - You only need to assign OpenPutt in this script")]
         public OpenPutt openPutt;
         public PlayerManager[] PlayersSortedByScore = new PlayerManager[0];// { get; private set; }
         public PlayerManager[] PlayersSortedByTime = new PlayerManager[0];// { get; private set; }

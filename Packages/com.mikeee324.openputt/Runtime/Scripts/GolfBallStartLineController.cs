@@ -6,7 +6,7 @@ using Varneon.VUdon.ArrayExtensions;
 namespace mikeee324.OpenPutt
 {
     // This needs to run after the ball has moved so the line draws in the correct place
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10), RequireComponent(typeof(LineRenderer))]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(50), RequireComponent(typeof(LineRenderer))]
     public class GolfBallStartLineController : UdonSharpBehaviour
     {
         #region Public Setting/References
@@ -39,11 +39,13 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// A list that is populated with a list of CourseStartPositions that is assigned at startup to speed up checks
         /// </summary>
-        private CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
+        [HideInInspector]
+        public CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
         /// <summary>
         /// A list that is populated with a list of Colliders that we can use to quickly filter out non CourseStartPositions
         /// </summary>
-        private Collider[] knownStartColliders = new Collider[0];
+        [HideInInspector]
+        public Collider[] knownStartColliders = new Collider[0];
         #endregion
 
         #region Animation Stuff
@@ -57,13 +59,6 @@ namespace mikeee324.OpenPutt
         {
             if (maximumNoOfColliders != localAreaColliders.Length)
                 localAreaColliders = new Collider[maximumNoOfColliders];
-
-            for (int i = 0; i < golfBall.playerManager.openPutt.courses.Length; i++)
-            {
-                CourseManager course = golfBall.playerManager.openPutt.courses[i];
-                knownStartPositions = knownStartPositions.AddRange(course.ballSpawns);
-                knownStartColliders = knownStartColliders.AddRange(course.ballSpawnColliders);
-            }
         }
 
         public void SetEnabled(bool enabled)

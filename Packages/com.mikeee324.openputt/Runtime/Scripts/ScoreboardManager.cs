@@ -221,9 +221,28 @@ namespace mikeee324.OpenPutt
             }
             else
             {
-                // Only add row to the queue if they aren't in it or are the first one in the queue
-                if (progressiveRowUpdateQueue.IndexOf(rowID) <= 0)
-                    progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
+                progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
+            }
+        }
+
+        public void RequestRefreshForRows(int[] rowIDs, bool startNextFrameIfPossible = false)
+        {
+            // If queue is empty start a new refresh
+            if (progressiveRowUpdateQueue.Length == 0)
+            {
+                progressiveRowUpdateQueue = progressiveRowUpdateQueue.AddRange(rowIDs);
+
+                // Empty the player list before the update - Progressive update will fetch a new list before it starts
+                CurrentPlayerList = new PlayerManager[0];
+
+                if (startNextFrameIfPossible)
+                    SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
+                else
+                    SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), maxRefreshInterval);
+            }
+            else
+            {
+                progressiveRowUpdateQueue = progressiveRowUpdateQueue.AddRange(rowIDs);
             }
         }
 
@@ -235,35 +254,51 @@ namespace mikeee324.OpenPutt
         {
             PlayerManager[] newList = GetPlayerList();
 
+            if (CurrentPlayerList == null)
+            {
+                CurrentPlayerList = new PlayerManager[0];
+                forceUpdate = true;
+            }
+
             Stopwatch stopwatch = Stopwatch.StartNew();
+
+            int[] rowsToUpdate = new int[0];
 
             // We need to check which rows have changed and request a refresh
             for (int i = 0; i < numberOfPlayersToDisplay; i++)
             {
-                if (forceUpdate)
-                {
-                    // We are forcing an update on all rows - so just do it no need to waste time checking other stuff below (halves the time for switching between timer/normal scoreboards)
-                    RequestRefreshForRow(i, true);
-                    continue;
-                }
-
+                // Find the current player in this row
                 PlayerManager thisRowPlayer = null;
-                if (CurrentPlayerList != null && i < CurrentPlayerList.Length)
+                if (i < CurrentPlayerList.Length)
                     thisRowPlayer = CurrentPlayerList[i];
 
+                // Find the player that will be in this row after the update
                 PlayerManager thisRowNewPlayer = null;
-                if (newList != null && i < newList.Length)
+                if (i < newList.Length)
                     thisRowNewPlayer = newList[i];
 
-                bool requestRefresh = thisRowNewPlayer != thisRowPlayer;
+                // If this row has no player and hasn't changed - we don't need to check any more rows as the rest should be the same
+                if (thisRowPlayer == null && thisRowNewPlayer == null)
+                    break;
 
+                // Check if an update is being force (for when player toggles between timer/normal mode)
+                bool requestRefresh = forceUpdate;
+
+                // Check if player in this row has changed
+                if (!requestRefresh)
+                    requestRefresh = thisRowNewPlayer != thisRowPlayer;
+
+                // Check if this row has been marked as dirty and needs refreshing
                 if (!requestRefresh)
                     requestRefresh = thisRowNewPlayer != null && thisRowNewPlayer.scoreboardRowNeedsUpdating;
 
+                // Add to the list to refresh
                 if (requestRefresh)
-                    RequestRefreshForRow(i, true);
+                    rowsToUpdate = rowsToUpdate.Add(i);
             }
-            CurrentPlayerList = newList;
+
+            // Bulk add all rows to update at once
+            RequestRefreshForRows(rowsToUpdate, true);
 
             stopwatch.Stop();
             Utils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");

@@ -90,8 +90,6 @@ namespace mikeee324.OpenPutt
         public OpenPutt openPutt;
         [Header("Object References")]
         public CourseStartPosition[] ballSpawns;
-        [HideInInspector]
-        public Collider[] ballSpawnColliders;
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
@@ -102,10 +100,8 @@ namespace mikeee324.OpenPutt
 
         private void Start()
         {
-            for (int i = 0; i < ballSpawns.Length; i++)
-            {
-                ballSpawnColliders = ballSpawnColliders.Add(ballSpawns[i].myCollider);
-            }
+            if (ballSpawns == null)
+                ballSpawns = new CourseStartPosition[0];
         }
 
         public void OnBallEnterHole(CourseHole hole, Collider collider)

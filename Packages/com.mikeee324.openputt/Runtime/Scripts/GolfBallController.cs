@@ -210,6 +210,9 @@ namespace mikeee324.OpenPutt
         /// Tracks the velocity of the ball in the last frame so we can reflect properly on walls
         private Vector3 lastFrameVelocity;
         private Vector3 lastFramePosition;
+        /// Tracks the velocity of the ball in the last frame when the player was holding it
+        private Vector3 lastHeldFrameVelocity;
+        private Vector3 lastHeldFramePosition;
         /// Stores the velocity of the club that needs to be applied in the next FixedUpdate() frame
         [SerializeField]
         public Vector3 requestedBallVelocity = Vector3.zero;
@@ -288,28 +291,29 @@ namespace mikeee324.OpenPutt
                 if (numberOfPickedUpFrames < 3)
                 {
                     numberOfPickedUpFrames++;
-                    lastFrameVelocity = Vector3.zero;
+                    lastHeldFrameVelocity = Vector3.zero;
+                    lastHeldFramePosition = ballRigidbody.position;
                 }
                 else
                 {
-                    Vector3 newFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
+                    Vector3 newFrameVelocity = (ballRigidbody.position - lastHeldFramePosition) / Time.deltaTime;
                     if (newFrameVelocity.magnitude > 0.05f)
                     {
                         numberOfStillPickedUpFrames = 0;
-                        lastFrameVelocity = newFrameVelocity * ballRigidbody.mass;
+                        lastHeldFrameVelocity = newFrameVelocity;
                     }
                     else
                     {
                         numberOfStillPickedUpFrames++;
 
-                        if (numberOfStillPickedUpFrames >= 5)
+                        if (numberOfStillPickedUpFrames >= 10)
                         {
-                            lastFrameVelocity = Vector3.zero;
+                            lastHeldFrameVelocity = Vector3.zero;
                         }
                     }
                 }
 
-                lastFramePosition = ballRigidbody.position;
+                lastHeldFramePosition = ballRigidbody.position;
 
                 if (puttSync != null)
                     puttSync.RequestFastSync();
@@ -403,7 +407,7 @@ namespace mikeee324.OpenPutt
             lastFramePosition = ballRigidbody.position;
 
             // Tell PuttSync to sync position if it's attached
-            bool sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || startLine.gameObject.activeSelf;
+            bool sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (startLine != null && startLine.gameObject.activeSelf);
             if (puttSync != null && sendFastPositionSync)
                 puttSync.RequestFastSync();
         }
@@ -427,6 +431,8 @@ namespace mikeee324.OpenPutt
             ballRigidbody.angularVelocity = Vector3.zero;
             lastFramePosition = this.transform.position;
             lastFrameVelocity = Vector3.zero;
+            lastHeldFramePosition = this.transform.position;
+            lastHeldFrameVelocity = Vector3.zero;
 
             numberOfPickedUpFrames = 0;
             numberOfStillPickedUpFrames = 0;
@@ -483,7 +489,7 @@ namespace mikeee324.OpenPutt
                 BallIsMoving = true;
 
                 // Apply velocity of the ball that we saw last frame so players can throw the ball
-                requestedBallVelocity = lastFrameVelocity;
+                requestedBallVelocity = lastHeldFrameVelocity;
 
                 // Allows ball to bounce
                 stepsSinceLastGrounded = 2;

@@ -6,7 +6,7 @@ using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(50)]
     public class GolfBallPlayerLabel : UdonSharpBehaviour
     {
         #region Public Settings
@@ -58,8 +58,7 @@ namespace mikeee324.OpenPutt
 
             this.enabled = false;
         }
-
-        void Update()
+        public override void PostLateUpdate()
         {
             if (!canvas.enabled || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
                 return;
