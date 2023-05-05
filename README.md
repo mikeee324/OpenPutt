@@ -12,9 +12,9 @@ Also wanted to mention the Udon profiler from here - https://gist.github.com/Mer
 This is included in the project for ease of use on my part  
 
 # Installation
-> Add OpenPutt to VCC by visiting [this page](https://mikeee324.github.io/OpenPutt/)
-> Click 'Add to VCC' and follow the instructions to add the repository
-> You can then add OpenPutt to your project inside VCC
+1. Add OpenPutt to VCC by visiting [this page](https://mikeee324.github.io/OpenPutt/)
+2. Click 'Add to VCC' and follow the instructions to add the repository
+3. You can then add OpenPutt to your project inside VCC
 
 # Scene Setup
 1. Drag in the OpenPutt prefab from Packages/OpenPutt/Prefabs
