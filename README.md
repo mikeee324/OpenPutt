@@ -11,6 +11,12 @@ Most of the systems are working, the main issues right now are physics based. If
 Also wanted to mention the Udon profiler from here - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5  
 This is included in the project for ease of use on my part  
 
+# Updates from non VCC builds
+1. Close Unity
+2. Delete the Assets/OpenPutt folder and .meta file
+3. Install VCC build of OpenPutt as per below
+4. Open your project and hopefully it's not brokey (You may have to drag in a new Openputt prefab and use that if it's broken)
+
 # Installation
 1. Add OpenPutt to VCC by visiting [this page](https://mikeee324.github.io/OpenPutt/)
 2. Click 'Add to VCC' and follow the instructions to add the repository
