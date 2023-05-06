@@ -48,6 +48,7 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
             {
                 openPutt.allPlayerManagers[i] = openPutt.objectAssigner.transform.GetChild(i).GetComponent<PlayerManager>();
                 openPutt.allPlayerManagers[i].openPutt = openPutt;
+                openPutt.allPlayerManagers[i].golfClubHead.openPutt = openPutt;
             }
         }
 

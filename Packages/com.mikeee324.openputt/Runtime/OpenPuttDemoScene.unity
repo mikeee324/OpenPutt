@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -5476,6 +5476,21 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 58326739060605810, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 58326739060605810, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 58326739060605810, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 178743159397435406, guid: e299e558bf21de243949f1524ba74aec,
         type: 3}
       propertyPath: serializationData.Prefab
@@ -5836,6 +5851,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: OpenPutt
+      objectReference: {fileID: 0}
+    - target: {fileID: 5385661656436827316, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5385661656436827316, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5391828591464284519, guid: e299e558bf21de243949f1524ba74aec,
         type: 3}
@@ -15880,19 +15905,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 2143695080}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1759823080
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1759823075}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 229740497, guid: 4ecd63eff847044b68db9453ce219299, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  contentType: 1
 --- !u!1 &1777868007
 GameObject:
   m_ObjectHideFlags: 0

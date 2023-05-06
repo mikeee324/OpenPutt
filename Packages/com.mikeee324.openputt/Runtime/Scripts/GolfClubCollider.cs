@@ -5,9 +5,17 @@ using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
+    public enum ClubColliderVelocityType
+    {
+        SingleFrame = 0,
+        SingleFrameSmoothed = 1,
+        MultiFrameAverage = 2
+    }
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-1)]
     public class GolfClubCollider : UdonSharpBehaviour
     {
+        [Tooltip("Reference to OpenPutt to skip a few steps")]
+        public OpenPutt openPutt;
         [Tooltip("Which golf club is this collider attached to?")]
         public GolfClub golfClub;
         [Tooltip("Which golf ball can this collider interact with?")]
@@ -22,9 +30,14 @@ namespace mikeee324.OpenPutt
         public AnimationCurve hitForceMultiplier;
         [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
         public int hitWaitFrames = 3;
-        [Range(0, 15), Tooltip("Used to help average out the speed of the hit")]
-        public int hitMaxBacksteps = 3;
-        public bool experimentalCollisionDetection = false;
+        [Tooltip("Debug stuff: Used for trying various ways of getting a velocity for the ball after a hit")]
+        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.MultiFrameAverage;
+        [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
+        public int multiFrameAverageMaxBacksteps = 3;
+        [Range(0f, 1f), Tooltip("How quickly the velocity smoothing will react to changes")]
+        public float singleFrameSmoothFactor = 0.5f;
+        [Tooltip("Smooths out the direction that the ball will travel over multiple frames")]
+        public bool smoothedHitDirection = false;
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
@@ -48,7 +61,7 @@ namespace mikeee324.OpenPutt
         private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         private Vector3 FrameVelocity { get; set; }
-        private Vector3 PrevPosition { get; set; }
+        private Vector3 FrameVelocitySmoothed { get; set; }
 
         void Start()
         {
@@ -99,7 +112,7 @@ namespace mikeee324.OpenPutt
                 if (overrideScale > 0f)
                     minSize = golfClubHeadColliderSize * overrideScale;
 
-                Vector3 maxSize = new Vector3(minSize.x * 3, minSize.y * 3, minSize.z);
+                Vector3 maxSize = new Vector3(minSize.x * 2, minSize.y * 3, minSize.z);
 
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, easeInOut.Evaluate(speed));
             }
@@ -107,6 +120,7 @@ namespace mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
+
             if (clubInsideBallCheck)
             {
                 if (golfClub != null && ballCollider != null && golfClubHeadCollider != null)
@@ -138,14 +152,14 @@ namespace mikeee324.OpenPutt
                 ResizeClubCollider();
             }
 
-            Vector3 currentPos = transform.position;
+            Vector3 currentPos = myRigidbody.position;
 
             // Attach this collider to the end of the club
             if (putterTarget != null && myRigidbody != null)
             {
                 myRigidbody.MovePosition(putterTarget.position);
 
-                if (experimentalCollisionDetection)
+                if (smoothedHitDirection)
                 {
                     Vector3 directionOfTravel = currentPos - lastPositions[3];
                     if (directionOfTravel.magnitude > 0.005f)
@@ -157,35 +171,32 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            Vector3 currFrameVelocity = (myRigidbody.position - PrevPosition) / Time.deltaTime;
-            FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, 0.1f);
-            PrevPosition = myRigidbody.position;
+            // Log last known velocity if it's not totally 0
+            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
+            if (currFrameVelocity != Vector3.zero)
+            {
+                FrameVelocity = currFrameVelocity;
+                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
+            }
 
+            // If it looks like a proper move
+            if (currFrameVelocity.magnitude > 0.001f)
+            {
+                // Push current position onto buffers
+                lastPositions = lastPositions.Push(currentPos);
+                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
+                for (int i = 1; i < lastPositions.Length; i++)
+                    lastPositionTimes[i] += Time.fixedDeltaTime;
+            }
+
+            // If the ball has been hit
             if (framesSinceHit != -1)
             {
                 framesSinceHit += 1;
 
+                // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
                 if (framesSinceHit >= hitWaitFrames)
                     HandleBallHit();
-            }
-
-            bool logPos = true;
-            if (lastPositions.Length > 0)
-            {
-                Vector3 lastPos = lastPositions[0];
-                if ((currentPos - lastPos).magnitude <= 0.001f)
-                {
-                    logPos = false;
-                }
-            }
-
-            if (logPos)
-            {
-                // Push current position onto buffers
-                lastPositions = lastPositions.Push(currentPos, false);
-                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
-                for (int i = 1; i < lastPositions.Length; i++)
-                    lastPositionTimes[i] += Time.fixedDeltaTime;
             }
         }
 
@@ -207,58 +218,73 @@ namespace mikeee324.OpenPutt
 
         private void HandleBallHit()
         {
-            // Grab positons/time taken
-            Vector3 latestPos = myRigidbody.position;
-            Vector3 oldestPos = lastPositions[0];
-            float timeTaken = lastPositionTimes[0];
+            Vector3 directionOfTravel = Vector3.zero;
+            float velocityMagnitude = 0f;
 
-            // If we want to take an average velocity over the past few frames
-            if (hitMaxBacksteps > 0)
+            switch (velocityCalculationType)
             {
-                float furthestDistance = Vector3.Distance(latestPos, oldestPos);
-                int maxBacksteps = Math.Min(hitMaxBacksteps, lastPositions.Length);
-                for (int currentBackstep = 0; currentBackstep < maxBacksteps; currentBackstep++)
-                {
-                    float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
-                    if (thisDistance > furthestDistance)
-                    {
-                        oldestPos = lastPositions[currentBackstep];
-                        timeTaken = lastPositionTimes[currentBackstep];
-                        furthestDistance = Vector3.Distance(latestPos, oldestPos);
-                        continue;
-                    }
-
-                    // We found the furthest backstep - break out and use that as the start point of the swing
+                case ClubColliderVelocityType.SingleFrame:
+                    directionOfTravel = FrameVelocity.normalized;
+                    velocityMagnitude = FrameVelocity.magnitude;
                     break;
-                }
+                case ClubColliderVelocityType.SingleFrameSmoothed:
+                    directionOfTravel = FrameVelocitySmoothed.normalized;
+                    velocityMagnitude = FrameVelocitySmoothed.magnitude;
+                    break;
+                case ClubColliderVelocityType.MultiFrameAverage:
+                    {
+                        // Grab positons/time taken
+                        Vector3 latestPos = lastPositions[0];
+                        Vector3 oldestPos = lastPositions[1];
+                        float timeTaken = lastPositionTimes[0];
+
+                        // If we want to take an average velocity over the past few frames
+                        if (multiFrameAverageMaxBacksteps > 0)
+                        {
+                            float furthestDistance = Vector3.Distance(latestPos, oldestPos);
+                            int maxBacksteps = Math.Min(multiFrameAverageMaxBacksteps, lastPositions.Length);
+                            for (int currentBackstep = 1; currentBackstep < maxBacksteps; currentBackstep++)
+                            {
+                                float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
+                                if (thisDistance > furthestDistance)
+                                {
+                                    oldestPos = lastPositions[currentBackstep];
+                                    timeTaken = lastPositionTimes[currentBackstep];
+                                    furthestDistance = Vector3.Distance(latestPos, oldestPos);
+                                    continue;
+                                }
+
+                                // We found the furthest backstep - break out and use that as the start point of the swing
+                                break;
+                            }
+                        }
+
+                        Vector3 newVel = (latestPos - oldestPos) / timeTaken;
+                        directionOfTravel = newVel.normalized;
+                        velocityMagnitude = newVel.magnitude;
+                        break;
+                    }
             }
 
-            // Add in the time for this frame too
-            timeTaken += Time.fixedDeltaTime;
+            // Use the smmothed collider direction if we are told to
+            if (smoothedHitDirection)
+                directionOfTravel = directionOfTravel.magnitude * this.transform.forward;
 
-            // Work out velocity
-            Vector3 directionOfTravel = latestPos - oldestPos;
-            float velocityVal = directionOfTravel.magnitude / timeTaken;
-            Vector3 velocity = velocityVal * directionOfTravel;
-
-            if (experimentalCollisionDetection)
-            {
-                // Hit ball in direction of this collider
-                velocity = velocityVal * this.transform.forward;
-            }
+            // Put the direction and magnitude back together
+            Vector3 velocity = directionOfTravel * velocityMagnitude;
 
             // Scale the velocity back up a bit
-            velocity *= hitForceMultiplier.Evaluate(velocityVal);
+            velocity *= hitForceMultiplier.Evaluate(velocity.magnitude);
 
             // Apply the players final hit force multiplier
             velocity *= golfClub.forceMultiplier;
 
-            OpenPutt openPutt = null;
-            if (golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
+            // OpenPutt is null and we can find it
+            if (openPutt == null && golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
                 openPutt = golfClub.playerManager.openPutt;
 
             // Mini golf usually works best when the ball stays on the floor initially
-            if (openPutt != null && openPutt.enableVerticalHits)
+            if (openPutt.enableVerticalHits)
                 velocity.y = Mathf.Clamp(velocity.y, 0, 10f);
             else
                 velocity.y = 0;
