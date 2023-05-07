@@ -570,8 +570,6 @@ namespace mikeee324.OpenPutt
             // Tell the ball to apply the velocity in the next FixedUpdate() frame
             requestedBallVelocity = withVelocity;
 
-            Utils.Log(this, $"Ball has been hit (vel={requestedBallVelocity}) (mag={speed})");
-
             if (playerManager != null)
                 playerManager.OnBallHit();
 

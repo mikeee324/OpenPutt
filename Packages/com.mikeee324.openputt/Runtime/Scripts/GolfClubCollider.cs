@@ -58,7 +58,7 @@ namespace mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
-        private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 1, 1, 1);
 
         private Vector3 FrameVelocity { get; set; }
         private Vector3 FrameVelocitySmoothed { get; set; }
@@ -107,12 +107,17 @@ namespace mikeee324.OpenPutt
                 speed *= .2f;
                 if (speed <= 0f)
                     speed = 0f;
+                if (float.IsNaN(speed))
+                    speed = 1f;
 
                 Vector3 minSize = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
                 if (overrideScale > 0f)
                     minSize = golfClubHeadColliderSize * overrideScale;
 
                 Vector3 maxSize = new Vector3(minSize.x * 2, minSize.y * 3, minSize.z);
+
+                if (easeInOut == null)
+                    easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, easeInOut.Evaluate(speed));
             }
@@ -296,6 +301,8 @@ namespace mikeee324.OpenPutt
                 velocity.x = 0;
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
+
+            Utils.Log(this, $"Ball has been hit! ClubHeadVelocity({velocityMagnitude}) NewBallVelocity({velocity.magnitude}) DirectionOfTravel({directionOfTravel})");
 
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
