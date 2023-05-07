@@ -134,7 +134,7 @@ namespace mikeee324.OpenPutt
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
-                            RefreshSettingsMenu();
+                            RefreshDevModeMenu();
                             break;
                         case ScoreboardView.Settings:
                             settingsPanel.gameObject.SetActive(true);
@@ -234,25 +234,6 @@ namespace mikeee324.OpenPutt
             sfxVolumeSlider.value = playerManager.openPutt.SFXController.Volume;
             sfxVolumeValueLabel.text = String.Format("{0:P0}", sfxVolumeSlider.value);
 
-            devModeBallWeightSlider.value = playerManager.golfBall.BallWeight;
-            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
-
-            devModeBallFrictionSlider.value = playerManager.golfBall.BallFriction;
-            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
-
-            devModeClubWaitSlider.value = playerManager.golfClub.putter.hitWaitFrames;
-            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
-
-            devModeClubBackstepSlider.value = playerManager.golfClub.putter.multiFrameAverageMaxBacksteps;
-            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
-
-            devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
-            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
-
-            devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
-            devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
-            devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
-
             // Just use the first audio source volume
             foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
             {
@@ -287,7 +268,6 @@ namespace mikeee324.OpenPutt
             isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
-            devModeExperimentalClubCollider.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -385,153 +365,6 @@ namespace mikeee324.OpenPutt
             RefreshSettingsMenu();
         }
 
-        public void OnBallWeightReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallWeight = player.golfBall.DefaultBallWeight;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnBallWeightChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallWeight = devModeBallWeightSlider.value;
-            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
-        }
-
-        public void OnClubWaitFramesReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.hitWaitFrames = 2;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnClubWaitFramesChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.hitWaitFrames = Mathf.RoundToInt(devModeClubWaitSlider.value);
-            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
-        }
-
-        public void OnClubHitBackstepReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnClubHitBackstepChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = Mathf.RoundToInt(devModeClubBackstepSlider.value);
-            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
-        }
-
-        public void OnClubHitVelSmoothReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnClubHitVelSmoothChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfClub.putter.singleFrameSmoothFactor = Mathf.RoundToInt(devModeClubVelSmoothSlider.value);
-            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
-        }
-
-        public void OnBallFrictionReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallFriction = player.golfBall.DefaultBallFriction;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnBallFrictionChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallFriction = devModeBallFrictionSlider.value;
-            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
-        }
-
-        public void OnBallADragReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallAngularDrag = player.golfBall.DefaultBallAngularDrag;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnBallADragChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallAngularDrag = devModeBallADragSlider.value;
-            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
-        }
-
-        public void OnBallDragReset()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallDrag = player.golfBall.DefaultBallDrag;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnBallDragChanged()
-        {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
-
-            if (player == null) return;
-
-            player.golfBall.BallDrag = devModeBallDragSlider.value;
-            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
-        }
-
         public void OnBallColorChanged()
         {
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
@@ -591,7 +424,7 @@ namespace mikeee324.OpenPutt
 
             playerManager.golfClub.putter.smoothedHitDirection = !playerManager.golfClub.putter.smoothedHitDirection;
 
-            RefreshSettingsMenu();
+            RefreshDevModeMenu();
         }
 
         public void OnColliderVelocityTypeChanged()
@@ -606,7 +439,7 @@ namespace mikeee324.OpenPutt
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(val == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(val == 2);
 
-            RefreshSettingsMenu();
+            RefreshDevModeMenu();
         }
 
         public void OnTogglePlayerManager()
@@ -818,6 +651,189 @@ namespace mikeee324.OpenPutt
             resetConfirmButton.gameObject.SetActive(false);
             resetCancelButton.gameObject.SetActive(false);
         }
+
+        #region Dev Mode UI Functions
+        public void RefreshDevModeMenu()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+
+            devModeBallWeightSlider.value = playerManager.golfBall.BallWeight;
+            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+
+            devModeBallFrictionSlider.value = playerManager.golfBall.BallFriction;
+            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
+
+            devModeBallDragSlider.value = playerManager.golfBall.BallDrag;
+            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+
+            devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
+            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
+
+            devModeClubWaitSlider.value = playerManager.golfClub.putter.hitWaitFrames;
+            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
+
+            devModeClubBackstepSlider.value = playerManager.golfClub.putter.multiFrameAverageMaxBacksteps;
+            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
+
+            devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
+            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
+
+            devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
+            devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
+            devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
+            devModeExperimentalClubCollider.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
+        }
+
+        public void OnBallWeightReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallWeight = player.golfBall.DefaultBallWeight;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnBallWeightChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallWeight = devModeBallWeightSlider.value;
+            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+        }
+
+        public void OnClubWaitFramesReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitWaitFrames = 2;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnClubWaitFramesChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.hitWaitFrames = Mathf.RoundToInt(devModeClubWaitSlider.value);
+            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
+        }
+
+        public void OnClubHitBackstepReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnClubHitBackstepChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.multiFrameAverageMaxBacksteps = Mathf.RoundToInt(devModeClubBackstepSlider.value);
+            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
+        }
+
+        public void OnClubHitVelSmoothReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnClubHitVelSmoothChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfClub.putter.singleFrameSmoothFactor = Mathf.RoundToInt(devModeClubVelSmoothSlider.value);
+            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
+        }
+
+        public void OnBallFrictionReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallFriction = player.golfBall.DefaultBallFriction;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnBallFrictionChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallFriction = devModeBallFrictionSlider.value;
+            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
+        }
+
+        public void OnBallADragReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallAngularDrag = player.golfBall.DefaultBallAngularDrag;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnBallADragChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallAngularDrag = devModeBallADragSlider.value;
+            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
+        }
+
+        public void OnBallDragReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallDrag = player.golfBall.DefaultBallDrag;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnBallDragChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallDrag = devModeBallDragSlider.value;
+            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+        }
+        #endregion
 
         public void SnapTo(ScrollRect scrollRect, Transform target)
         {
