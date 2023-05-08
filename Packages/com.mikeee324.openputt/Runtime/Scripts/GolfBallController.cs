@@ -437,6 +437,7 @@ namespace mikeee324.OpenPutt
             numberOfPickedUpFrames = 0;
             numberOfStillPickedUpFrames = 0;
             pickedUpByPlayer = true;
+            playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = true;
 
             BallIsMoving = false;
 
@@ -450,6 +451,7 @@ namespace mikeee324.OpenPutt
         public override void OnDrop()
         {
             pickedUpByPlayer = false;
+            playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = false;
 
             if (startLine.StartDropAnimation(this.transform.position))
             {

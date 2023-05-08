@@ -67,6 +67,7 @@ public class ScoreboardManagerEditor : Editor
         if (GUILayout.Button("Setup Scoreboards"))
         {
             ScoreboardBuildProcessor.BuildScoreboards(manager, showProgressBar: true);
+            ScoreboardBuildProcessor.BuildStaticScoreboards(manager, showProgressBar: true);
         }
 
         // Show default inspector property editor

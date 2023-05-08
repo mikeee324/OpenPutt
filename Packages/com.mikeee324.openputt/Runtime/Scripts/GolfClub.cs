@@ -110,6 +110,8 @@ namespace mikeee324.OpenPutt
 
         private float shaftDefaultSize = -1f;
 
+        [HideInInspector]
+        public bool heldByPlayer = false;
         [UdonSynced, HideInInspector]
         private float shaftScale = -1f;
         private bool LeftUseButtonDown = false;
@@ -302,6 +304,8 @@ namespace mikeee324.OpenPutt
                 return;
 
             this.enabled = true;
+            heldByPlayer = true;
+            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
 
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
@@ -321,6 +325,9 @@ namespace mikeee324.OpenPutt
         public void OnScriptDrop()
         {
             this.enabled = false;
+
+            heldByPlayer = false;
+            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
 
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
@@ -343,6 +350,9 @@ namespace mikeee324.OpenPutt
         {
             this.enabled = true;
 
+            heldByPlayer = true;
+            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
+
             RefreshState();
         }
 
@@ -352,6 +362,9 @@ namespace mikeee324.OpenPutt
 
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
+
+            heldByPlayer = false;
+            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
 
             RefreshState();
         }

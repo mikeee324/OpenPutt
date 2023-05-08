@@ -49,6 +49,8 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private float[] lastPositionTimes = new float[16];
         private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
+
+        public Vector3 golfClubHeadColliderMaxSize = new Vector3(2, 1.2f, 4);
         /// <summary>
         /// Prevents collisions with the ball from ocurring as soon as the player arms the club
         /// </summary>
@@ -58,7 +60,7 @@ namespace mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
-        private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 1, 1, 1);
+        private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         private Vector3 FrameVelocity { get; set; }
         private Vector3 FrameVelocitySmoothed { get; set; }
@@ -99,27 +101,23 @@ namespace mikeee324.OpenPutt
         {
             if (golfClubHeadCollider != null && putterTarget != null)
             {
-                int averageSpeedStep = (int)(lastPositions.Length * 0.5f);
-                float speed = (transform.position - lastPositions[averageSpeedStep]).magnitude / lastPositionTimes[averageSpeedStep];
+                float speed = FrameVelocitySmoothed.magnitude;
                 if (overrideSpeed != -1f)
                     speed = overrideSpeed;
-
-                speed *= .2f;
-                if (speed <= 0f)
+                if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
                     speed = 0f;
-                if (float.IsNaN(speed))
-                    speed = 1f;
+                speed = easeInOut.Evaluate(speed / 10f);
+
+                if (easeInOut == null)
+                    easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
                 Vector3 minSize = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
                 if (overrideScale > 0f)
                     minSize = golfClubHeadColliderSize * overrideScale;
 
-                Vector3 maxSize = new Vector3(minSize.x * 2, minSize.y * 3, minSize.z);
+                Vector3 maxSize = new Vector3(minSize.x * golfClubHeadColliderMaxSize.x, minSize.y * golfClubHeadColliderMaxSize.y, minSize.z * golfClubHeadColliderMaxSize.z);
 
-                if (easeInOut == null)
-                    easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
-
-                golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, easeInOut.Evaluate(speed));
+                golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, speed);
             }
         }
 
@@ -164,16 +162,16 @@ namespace mikeee324.OpenPutt
             {
                 myRigidbody.MovePosition(putterTarget.position);
 
-                if (smoothedHitDirection)
-                {
-                    Vector3 directionOfTravel = currentPos - lastPositions[3];
-                    if (directionOfTravel.magnitude > 0.005f)
-                        myRigidbody.MoveRotation(Quaternion.LookRotation(directionOfTravel, Vector3.up));
-                }
-                else
-                {
-                    myRigidbody.MoveRotation(putterTarget.rotation);
-                }
+                /*  if (smoothedHitDirection)
+                  {
+                      Vector3 directionOfTravel = currentPos - lastPositions[3];
+                      if (directionOfTravel.magnitude > 0.005f)
+                          myRigidbody.MoveRotation(Quaternion.LookRotation(directionOfTravel, Vector3.up));
+                  }
+                  else
+                  {*/
+                myRigidbody.MoveRotation(putterTarget.rotation);
+                // }
             }
 
             // Log last known velocity if it's not totally 0
@@ -273,7 +271,7 @@ namespace mikeee324.OpenPutt
 
             // Use the smmothed collider direction if we are told to
             if (smoothedHitDirection)
-                directionOfTravel = directionOfTravel.magnitude * this.transform.forward;
+                directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
 
             // Put the direction and magnitude back together
             Vector3 velocity = directionOfTravel * velocityMagnitude;

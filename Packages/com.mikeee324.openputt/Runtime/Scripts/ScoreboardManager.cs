@@ -36,6 +36,7 @@ namespace mikeee324.OpenPutt
         public OpenPutt openPutt;
 
         public Scoreboard[] scoreboards;
+        public Scoreboard[] staticScoreboards;
         public ScoreboardPositioner[] scoreboardPositions;
 
         [Space, Header("Settings")]
@@ -318,7 +319,7 @@ namespace mikeee324.OpenPutt
                 CurrentPlayerList = GetPlayerList();
             }
 
-            if (progressiveUpdateCurrentScoreboardID >= scoreboards.Length)
+            if (progressiveUpdateCurrentScoreboardID >= scoreboards.Length + staticScoreboards.Length)
             {
                 // We updated all scoreboards for the first player on the queue, reset ID and remove from the queue
                 progressiveUpdateCurrentScoreboardID = 0;
@@ -336,7 +337,15 @@ namespace mikeee324.OpenPutt
             }
 
             // Update the row on this scoreboard
-            Scoreboard scoreboard = scoreboards[progressiveUpdateCurrentScoreboardID++];
+            Scoreboard scoreboard = null;
+
+            if (progressiveUpdateCurrentScoreboardID < scoreboards.Length)
+                scoreboard = scoreboards[progressiveUpdateCurrentScoreboardID];
+            else
+                scoreboard = staticScoreboards[progressiveUpdateCurrentScoreboardID - scoreboards.Length];
+
+            progressiveUpdateCurrentScoreboardID += 1;
+
             int rowIDToUpdate = progressiveRowUpdateQueue[0];
 
             // Update the row for this player if we found one
