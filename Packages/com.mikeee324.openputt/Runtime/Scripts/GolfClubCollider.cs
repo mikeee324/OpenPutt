@@ -284,8 +284,11 @@ namespace mikeee324.OpenPutt
             // Apply the players final hit force multiplier
             velocityMagnitude *= golfClub.forceMultiplier;
 
+            // Only clamp hit speed if they player is on a normal course
+            bool shouldClampSpeed = golfClub.playerManager == null || (golfClub.playerManager.CurrentCourse != null && !golfClub.playerManager.CurrentCourse.drivingRangeMode);
+
             // Clamp hit speed
-            if (velocityMagnitude > golfBall.BallMaxSpeed)
+            if (shouldClampSpeed && velocityMagnitude > golfBall.BallMaxSpeed)
             {
                 velocityMagnitude = golfBall.BallMaxSpeed;
                 Utils.Log(this, $"Ball hit velocity was clamped to {velocityMagnitude}");
