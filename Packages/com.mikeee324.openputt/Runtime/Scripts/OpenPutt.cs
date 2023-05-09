@@ -109,7 +109,7 @@ namespace mikeee324.OpenPutt
                 {
                     if (course == null || course.drivingRangeMode)
                         continue;
-                    score += course.maxTimeMillis;
+                    score += course.maxTime;
                 }
                 return score;
             }
@@ -140,7 +140,7 @@ namespace mikeee324.OpenPutt
                 {
                     if (course == null || course.drivingRangeMode)
                         continue;
-                    score += course.parTimeMillis;
+                    score += course.parTime;
                 }
                 return score;
             }

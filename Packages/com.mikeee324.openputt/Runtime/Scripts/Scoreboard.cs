@@ -62,6 +62,8 @@ namespace mikeee324.OpenPutt
         public UnityEngine.UI.Image ballColorPreview;
 
         #region Dev Mode Stuff
+        public TextMeshProUGUI devModeLastClubHitSpeed;
+        public TextMeshProUGUI devModeBallSpeed;
         public Slider devModeClubWaitSlider;
         public Slider devModeClubBackstepSlider;
         public Slider devModeClubVelSmoothSlider;
@@ -69,6 +71,7 @@ namespace mikeee324.OpenPutt
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
         public Slider devModeBallADragSlider;
+        public Slider devModeBallMaxSpeedSlider;
         public TextMeshProUGUI devModeClubWaitValueLabel;
         public TextMeshProUGUI devModeClubBackstepValueLabel;
         public TextMeshProUGUI devModeClubVelSmoothValueLabel;
@@ -76,6 +79,7 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
+        public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
         public UnityEngine.UI.Image devModeExperimentalClubCollider;
         public Dropdown devModeColliderVelTypeDropdown;
         #endregion
@@ -167,6 +171,14 @@ namespace mikeee324.OpenPutt
                         manager.requestedScoreboardView = value;
                 }
                 _currentScoreboardView = value;
+
+                if (_currentScoreboardView == ScoreboardView.Scoreboard)
+                {
+                    if (topRowPanel.transform.childCount > 0)
+                        topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                    if (parRowPanel.transform.childCount > 0)
+                        parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                }
 
                 UpdateTabColours();
             }
@@ -669,6 +681,9 @@ namespace mikeee324.OpenPutt
             devModeBallDragSlider.value = playerManager.golfBall.BallDrag;
             devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
 
+            devModeBallMaxSpeedSlider.value = playerManager.golfBall.BallMaxSpeed;
+            devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
+
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
 
@@ -832,6 +847,27 @@ namespace mikeee324.OpenPutt
 
             player.golfBall.BallDrag = devModeBallDragSlider.value;
             devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+        }
+
+        public void OnBallMaxSpeedReset()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallMaxSpeed = player.golfBall.DefaultBallMaxSpeed;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnBallMaxSpeedChanged()
+        {
+            PlayerManager player = manager.openPutt.LocalPlayerManager;
+
+            if (player == null) return;
+
+            player.golfBall.BallMaxSpeed = devModeBallMaxSpeedSlider.value;
+            devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
         }
         #endregion
 

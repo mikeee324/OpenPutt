@@ -77,16 +77,6 @@ public class DrivingRangeDisplay : OpenPuttEventListener
             this.enabled = false;
     }
 
-    public override void OnHoleInOne(CourseManager course, CourseHole hole)
-    {
-
-    }
-
-    public override void OnBallEnterHole(CourseManager course, CourseHole hole)
-    {
-
-    }
-
     public override void OnLocalPlayerBallHit()
     {
         highestScoreSoFar = 0;
@@ -100,5 +90,25 @@ public class DrivingRangeDisplay : OpenPuttEventListener
         {
             MonitoringDistance = true;
         }
+    }
+
+    public override void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole)
+    {
+
+    }
+
+    public override void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole)
+    {
+
+    }
+
+    public override void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole)
+    {
+
+    }
+
+    public override void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole)
+    {
+
     }
 }

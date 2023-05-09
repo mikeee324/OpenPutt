@@ -1,10 +1,6 @@
-﻿
-using System.Collections.Concurrent;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
-using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
@@ -75,8 +71,6 @@ namespace mikeee324.OpenPutt
         public int parTime = 120;
         [Tooltip("The maximum amount of seconds a player can have on this hole (Default is 5 mins)")]
         public int maxTime = 300;
-        public int parTimeMillis => parTime * 1000;
-        public int maxTimeMillis => maxTime * 1000;
         [Tooltip("The players score on this hole will be how far they hit the ball in meters from the start pad")]
         public bool drivingRangeMode = false;
         [Tooltip("Overrides the global replayable courses setting")]
@@ -111,7 +105,11 @@ namespace mikeee324.OpenPutt
             if (golfBall != null && Networking.LocalPlayer.IsOwner(golfBall.gameObject))
             {
                 if (golfBall.BallIsMoving && !golfBall.pickedUpByPlayer)
+                {
+                    hole.localPlayerBallEnteredEvent = true;
+                    hole.localPlayerHoleInOneEvent = true;
                     golfBall.playerManager.OnCourseFinished(this, hole, CourseState.Completed);
+                }
             }
         }
 

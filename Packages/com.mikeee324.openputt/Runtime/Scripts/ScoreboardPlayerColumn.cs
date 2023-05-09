@@ -152,9 +152,12 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 if (courseState == CourseState.Playing)
                     timeOnThisCourse = Networking.GetServerTimeInMilliseconds() - timeOnThisCourse;
 
-                SetText(TimeSpan.FromMilliseconds(timeOnThisCourse).ToString(@"m\:ss"));
-                playerIsAbovePar = timeOnThisCourse > (course.parTimeMillis);
-                playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < (course.parTimeMillis);
+                // Change scale to seconds
+                timeOnThisCourse = timeOnThisCourse * 0.001f;
+
+                SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
+                playerIsAbovePar = timeOnThisCourse > course.parTime;
+                playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < course.parTime;
             }
             else
             {

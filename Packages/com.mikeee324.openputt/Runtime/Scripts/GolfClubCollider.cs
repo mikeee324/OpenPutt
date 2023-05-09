@@ -49,8 +49,10 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private float[] lastPositionTimes = new float[16];
         private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
-
-        public Vector3 golfClubHeadColliderMaxSize = new Vector3(2, 1.2f, 4);
+        /// <summary>
+        /// Scales the club collider based on its speed, x=height,y=width,z=thickness
+        /// </summary>
+        public Vector3 golfClubHeadColliderMaxSize = new Vector3(3, 1.2f, 4);
         /// <summary>
         /// Prevents collisions with the ball from ocurring as soon as the player arms the club
         /// </summary>
@@ -64,6 +66,8 @@ namespace mikeee324.OpenPutt
 
         private Vector3 FrameVelocity { get; set; }
         private Vector3 FrameVelocitySmoothed { get; set; }
+        private Vector3 FrameVelocitySmoothedForScaling { get; set; }
+        public float LastKnownHitVelocity { get; private set; }
 
         void Start()
         {
@@ -101,7 +105,7 @@ namespace mikeee324.OpenPutt
         {
             if (golfClubHeadCollider != null && putterTarget != null)
             {
-                float speed = FrameVelocitySmoothed.magnitude;
+                float speed = FrameVelocitySmoothedForScaling.magnitude;
                 if (overrideSpeed != -1f)
                     speed = overrideSpeed;
                 if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
@@ -180,6 +184,7 @@ namespace mikeee324.OpenPutt
             {
                 FrameVelocity = currFrameVelocity;
                 FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
+                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
             }
 
             // If it looks like a proper move
@@ -273,14 +278,21 @@ namespace mikeee324.OpenPutt
             if (smoothedHitDirection)
                 directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
 
-            // Put the direction and magnitude back together
-            Vector3 velocity = directionOfTravel * velocityMagnitude;
-
             // Scale the velocity back up a bit
-            velocity *= hitForceMultiplier.Evaluate(velocity.magnitude);
+            velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);
 
             // Apply the players final hit force multiplier
-            velocity *= golfClub.forceMultiplier;
+            velocityMagnitude *= golfClub.forceMultiplier;
+
+            // Clamp hit speed
+            if (velocityMagnitude > golfBall.BallMaxSpeed)
+            {
+                velocityMagnitude = golfBall.BallMaxSpeed;
+                Utils.Log(this, $"Ball hit velocity was clamped to {velocityMagnitude}");
+            }
+
+            // Put the direction and magnitude back together
+            Vector3 velocity = directionOfTravel * velocityMagnitude;
 
             // OpenPutt is null and we can find it
             if (openPutt == null && golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
@@ -300,7 +312,9 @@ namespace mikeee324.OpenPutt
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
 
-            Utils.Log(this, $"Ball has been hit! ClubHeadVelocity({velocityMagnitude}) NewBallVelocity({velocity.magnitude}) DirectionOfTravel({directionOfTravel})");
+            Utils.Log(this, $"Ball has been hit! NewBallVelocity({velocity.magnitude}) DirectionOfTravel({directionOfTravel})");
+
+            LastKnownHitVelocity = velocity.magnitude;
 
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
@@ -315,6 +329,10 @@ namespace mikeee324.OpenPutt
 
         private void ResetPositionBuffers()
         {
+            FrameVelocity = Vector3.zero;
+            FrameVelocitySmoothed = Vector3.zero;
+            FrameVelocitySmoothedForScaling = Vector3.zero;
+
             for (int i = 0; i < lastPositions.Length; i++)
             {
                 lastPositions[i] = this.transform.position;
@@ -324,6 +342,10 @@ namespace mikeee324.OpenPutt
 
         public void MoveToClubWithoutVelocity()
         {
+            FrameVelocity = Vector3.zero;
+            FrameVelocitySmoothed = Vector3.zero;
+            FrameVelocitySmoothedForScaling = Vector3.zero;
+
             if (myRigidbody != null && putterTarget != null)
             {
                 myRigidbody.position = putterTarget.position;

@@ -4,8 +4,6 @@ using VRC.SDKBase;
 using Cyan.PlayerObjectPool;
 using VRC.SDK3.Components;
 using System;
-using UnityEngine.UIElements;
-using Varneon.VUdon.ArrayExtensions;
 using JetBrains.Annotations;
 
 namespace mikeee324.OpenPutt
@@ -129,7 +127,7 @@ namespace mikeee324.OpenPutt
         /// Total number of milliseconds the player took to complete the courses
         /// </summary>
         [UdonSynced]
-        public int PlayerTotalTime  = 999999;
+        public int PlayerTotalTime = 999999;
 
         /// <summary>
         /// Check if the player has started at least 1 course in the world. Useful for checking if the player is actually playing the game or not.
@@ -207,7 +205,7 @@ namespace mikeee324.OpenPutt
                             courseStates[i] = courseScores[i] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped;
                             Utils.Log(this, $"Skipped course {i} with score of {courseScores[i]} OldState={oldState} NewState={courseStates[i]}");
                             courseScores[i] = openPutt.courses[i].maxScore;
-                            courseTimes[i] = openPutt.courses[i].maxTimeMillis;
+                            courseTimes[i] = openPutt.courses[i].maxTime;
                         }
                     }
                 }
@@ -368,7 +366,7 @@ namespace mikeee324.OpenPutt
             {
                 // If the player skipped this course - assign the max score for this course
                 courseScores[course.holeNumber] = course.maxScore;
-                courseTimes[course.holeNumber] = course.maxTimeMillis;
+                courseTimes[course.holeNumber] = course.maxTime;
             }
             else
             {
@@ -376,8 +374,9 @@ namespace mikeee324.OpenPutt
                 courseTimes[course.holeNumber] = Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber];
             }
 
-            if (courseTimes[course.holeNumber] > course.maxTimeMillis)
-                courseTimes[course.holeNumber] = course.maxTimeMillis;
+            int timeOnCourse = Mathf.RoundToInt(courseTimes[course.holeNumber] * 0.001f);
+            if (timeOnCourse > course.maxTime)
+                courseTimes[course.holeNumber] = course.maxTime * 1000;
 
             Utils.Log(this, $"Course({course.holeNumber}) was {courseStates[course.holeNumber].GetString()} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}ms to do this.");
 

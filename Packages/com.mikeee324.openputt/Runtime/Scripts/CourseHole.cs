@@ -14,6 +14,9 @@ namespace mikeee324.OpenPutt
         [Tooltip("The number that will be added onto the players score when the players ball enters this hole")]
         public int holeScoreAddition = 0;
 
+        [HideInInspector] public bool localPlayerBallEnteredEvent = false;
+        [HideInInspector] public bool localPlayerHoleInOneEvent = false;
+
         private void OnTriggerEnter(Collider other)
         {
             if (courseManager != null)
@@ -26,8 +29,19 @@ namespace mikeee324.OpenPutt
         {
             if (courseManager != null && courseManager.openPutt != null)
             {
-                foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                    eventListener.OnBallEnterHole(courseManager, this);
+                if (localPlayerHoleInOneEvent)
+                {
+                    localPlayerHoleInOneEvent = false;
+                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                        eventListener.OnLocalPlayerBallEnterHole(courseManager, this);
+                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player finished course");
+                }
+                else
+                {
+                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                        eventListener.OnRemotePlayerBallEnterHole(courseManager, this);
+                    Utils.Log(this, $"Course{courseManager.holeNumber} - Remote Player finished course");
+                }
             }
         }
 
@@ -35,8 +49,19 @@ namespace mikeee324.OpenPutt
         {
             if (courseManager != null && courseManager.openPutt != null && courseManager.openPutt.SFXController != null)
             {
-                foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                    eventListener.OnHoleInOne(courseManager, this);
+                if (localPlayerHoleInOneEvent)
+                {
+                    localPlayerHoleInOneEvent = false;
+                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                        eventListener.OnLocalPlayerHoleInOne(courseManager, this);
+                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
+                }
+                else
+                {
+                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                        eventListener.OnRemotePlayerHoleInOne(courseManager, this);
+                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
+                }
             }
         }
     }

@@ -608,7 +608,16 @@ MonoBehaviour:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0.9
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 3
+      value: 1
       inSlope: 0
       outSlope: 0
       tangentMode: 136
@@ -617,16 +626,7 @@ MonoBehaviour:
       outWeight: 0.33333334
     - serializedVersion: 3
       time: 10
-      value: 1.3
-      inSlope: 0.055
-      outSlope: 0.055
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 20
-      value: 2
+      value: 1.5
       inSlope: 0
       outSlope: 0
       tangentMode: 136
@@ -641,7 +641,7 @@ MonoBehaviour:
   multiFrameAverageMaxBacksteps: 3
   singleFrameSmoothFactor: 0.5
   smoothedHitDirection: 1
-  golfClubHeadColliderMaxSize: {x: 2, y: 1.2, z: 4}
+  golfClubHeadColliderMaxSize: {x: 3, y: 1.2, z: 4}
 --- !u!114 &4926412383994304880
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -956,6 +956,7 @@ MonoBehaviour:
   enableBigShaft: 0
   offMaterial: {fileID: 2100000, guid: 35601b7126028534987ec2e953613b72, type: 2}
   onMaterial: {fileID: 2100000, guid: 8c78efbc5c751294c894eb00a3ab1b36, type: 2}
+  heldByPlayer: 0
 --- !u!114 &4926412383973621142
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1322,7 +1323,7 @@ MonoBehaviour:
   allowBallPickupWhenNotPlaying: 1
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
-  maxBallSpeed: 8
+  maxBallSpeed: 10
   minBallSpeed: 0.04
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 30

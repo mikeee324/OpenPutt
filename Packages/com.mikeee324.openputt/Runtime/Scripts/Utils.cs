@@ -65,6 +65,7 @@ namespace mikeee324.OpenPutt
             Debug.LogWarning($"[{context.gameObject.name} (<color={tagColor}>{context.GetUdonTypeName()}</color>)] {message}", context.gameObject);
 #endif
         }
+
         public static void LogError(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
             if (context == null)

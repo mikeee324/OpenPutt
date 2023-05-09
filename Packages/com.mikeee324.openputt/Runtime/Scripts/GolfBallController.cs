@@ -40,8 +40,8 @@ namespace mikeee324.OpenPutt
         [Header("Ball Physics")]
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
-        [Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
-        public float maxBallSpeed = 15f;
+        [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
+        private float maxBallSpeed = 10f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
         public float minBallSpeed = 0.015f;
         [Range(0f, 1f), Tooltip("Defines how long the ball can keep rolling for when it goes below the minimum speed")]
@@ -191,6 +191,11 @@ namespace mikeee324.OpenPutt
             get => ballRigidbody.drag;
             set => ballRigidbody.drag = value;
         }
+        public float BallMaxSpeed
+        {
+            get => maxBallSpeed;
+            set => maxBallSpeed = value;
+        }
         public float BallAngularDrag
         {
             get => ballRigidbody.angularDrag;
@@ -200,6 +205,8 @@ namespace mikeee324.OpenPutt
         public float DefaultBallFriction { get; private set; }
         public float DefaultBallDrag { get; private set; }
         public float DefaultBallAngularDrag { get; private set; }
+        public float DefaultBallMaxSpeed { get; private set; }
+        public float BallCurrentSpeed => ballRigidbody != null ? ballRigidbody.velocity.magnitude : 0;
         #endregion
 
         #region Internal Vars
@@ -261,6 +268,8 @@ namespace mikeee324.OpenPutt
                 DefaultBallDrag = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
             }
+
+            DefaultBallMaxSpeed = maxBallSpeed;
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
@@ -437,7 +446,9 @@ namespace mikeee324.OpenPutt
             numberOfPickedUpFrames = 0;
             numberOfStillPickedUpFrames = 0;
             pickedUpByPlayer = true;
-            playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = true;
+
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = true;
 
             BallIsMoving = false;
 
@@ -451,7 +462,8 @@ namespace mikeee324.OpenPutt
         public override void OnDrop()
         {
             pickedUpByPlayer = false;
-            playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = false;
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = false;
 
             if (startLine.StartDropAnimation(this.transform.position))
             {
@@ -559,10 +571,6 @@ namespace mikeee324.OpenPutt
             // if (withVelocity == Vector3.zero || speed < minBallSpeed)
             if (withVelocity == Vector3.zero)
                 return;
-
-            // Clamp hit velocity
-            if (speed > maxBallSpeed)
-                withVelocity = withVelocity.normalized * maxBallSpeed;
 
             ClearPhysicsState();
 

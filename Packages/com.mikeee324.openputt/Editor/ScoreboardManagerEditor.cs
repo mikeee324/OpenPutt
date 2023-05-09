@@ -1,5 +1,6 @@
 ﻿#if UNITY_EDITOR
 using mikeee324.OpenPutt;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -66,8 +67,10 @@ public class ScoreboardManagerEditor : Editor
 
         if (GUILayout.Button("Setup Scoreboards"))
         {
-            ScoreboardBuildProcessor.BuildScoreboards(manager, showProgressBar: true);
-            ScoreboardBuildProcessor.BuildStaticScoreboards(manager, showProgressBar: true);
+            List<Scoreboard> scoreboards = new List<Scoreboard>();
+            scoreboards.AddRange(manager.scoreboards);
+            scoreboards.AddRange(manager.staticScoreboards);
+            ScoreboardBuildProcessor.BuildScoreboards(manager, scoreboards, showProgressBar: true);
         }
 
         // Show default inspector property editor

@@ -305,7 +305,8 @@ namespace mikeee324.OpenPutt
 
             this.enabled = true;
             heldByPlayer = true;
-            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
 
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
@@ -327,7 +328,8 @@ namespace mikeee324.OpenPutt
             this.enabled = false;
 
             heldByPlayer = false;
-            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
 
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
@@ -351,7 +353,8 @@ namespace mikeee324.OpenPutt
             this.enabled = true;
 
             heldByPlayer = true;
-            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
 
             RefreshState();
         }
@@ -364,7 +367,8 @@ namespace mikeee324.OpenPutt
             RightUseButtonDown = false;
 
             heldByPlayer = false;
-            playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
+                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
 
             RefreshState();
         }
