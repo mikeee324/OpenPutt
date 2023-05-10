@@ -171,15 +171,6 @@ namespace mikeee324.OpenPutt
                         manager.requestedScoreboardView = value;
                 }
                 _currentScoreboardView = value;
-
-                if (_currentScoreboardView == ScoreboardView.Scoreboard)
-                {
-                    if (topRowPanel.transform.childCount > 0)
-                        topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
-                    if (parRowPanel.transform.childCount > 0)
-                        parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
-                }
-
                 UpdateTabColours();
             }
         }

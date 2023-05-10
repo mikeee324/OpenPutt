@@ -122,11 +122,39 @@ namespace mikeee324.OpenPutt
                 Vector3 maxSize = new Vector3(minSize.x * golfClubHeadColliderMaxSize.x, minSize.y * golfClubHeadColliderMaxSize.y, minSize.z * golfClubHeadColliderMaxSize.z);
 
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, speed);
+
+                
             }
         }
 
+       /* - SweepTest stuff - Maybe useful for hard hits?
+        void Update()
+        {
+            if (myRigidbody.SweepTest(transform.forward, out RaycastHit hit, .3f))
+            {
+                // We only care if this collided with the local players ball
+                if (hit.collider == null || hit.collider.gameObject != golfBall.gameObject)
+                    return;
+
+                // Wait for at least 1 frame after being enabled before registering a real collision
+                if (clubInsideBallCheck)
+                {
+                    Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
+                    return;
+                }
+
+                Utils.Log(this, "SweepTest triggered a hit!");
+
+                framesSinceHit = 0;
+            }
+        }
+       */
         private void FixedUpdate()
         {
+            if (golfClub.ClubIsArmed)
+            {
+                golfBall.Wakeup();
+            }
 
             if (clubInsideBallCheck)
             {
@@ -164,18 +192,12 @@ namespace mikeee324.OpenPutt
             // Attach this collider to the end of the club
             if (putterTarget != null && myRigidbody != null)
             {
-                myRigidbody.MovePosition(putterTarget.position);
-
-                /*  if (smoothedHitDirection)
-                  {
-                      Vector3 directionOfTravel = currentPos - lastPositions[3];
-                      if (directionOfTravel.magnitude > 0.005f)
-                          myRigidbody.MoveRotation(Quaternion.LookRotation(directionOfTravel, Vector3.up));
-                  }
-                  else
-                  {*/
-                myRigidbody.MoveRotation(putterTarget.rotation);
-                // }
+                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.deltaTime);
+                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.deltaTime);
+                myRigidbody.MovePosition(newPos);
+                myRigidbody.MoveRotation(newRot);
+                // myRigidbody.MovePosition(putterTarget.position);
+                // myRigidbody.MoveRotation(putterTarget.rotation);
             }
 
             // Log last known velocity if it's not totally 0
@@ -192,9 +214,9 @@ namespace mikeee324.OpenPutt
             {
                 // Push current position onto buffers
                 lastPositions = lastPositions.Push(currentPos);
-                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
+                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
                 for (int i = 1; i < lastPositions.Length; i++)
-                    lastPositionTimes[i] += Time.fixedDeltaTime;
+                    lastPositionTimes[i] += Time.deltaTime;
             }
 
             // If the ball has been hit

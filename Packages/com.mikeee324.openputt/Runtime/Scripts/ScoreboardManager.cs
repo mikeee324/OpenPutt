@@ -80,6 +80,7 @@ namespace mikeee324.OpenPutt
             {
                 if (value != _speedGolfMode)
                 {
+                    RequestRefreshForRow(-2, true);
                     CheckPlayerListForChanges(forceUpdate: true);
                 }
                 _speedGolfMode = value;
@@ -349,9 +350,22 @@ namespace mikeee324.OpenPutt
             int rowIDToUpdate = progressiveRowUpdateQueue[0];
 
             // Update the row for this player if we found one
-            if (CurrentPlayerList != null && rowIDToUpdate >= 0 && rowIDToUpdate < scoreboard.scoreboardRows.Length)
+            if (CurrentPlayerList != null)
             {
-                scoreboard.scoreboardRows[rowIDToUpdate].Refresh(rowIDToUpdate < CurrentPlayerList.Length ? CurrentPlayerList[rowIDToUpdate] : null);
+                if (rowIDToUpdate == -1)
+                {
+                    if (scoreboard.topRowPanel.transform.childCount > 0)
+                        scoreboard.topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                }
+                else if (rowIDToUpdate == -2)
+                {
+                    if (scoreboard.parRowPanel.transform.childCount > 0)
+                        scoreboard.parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                }
+                else if (rowIDToUpdate >= 0 && rowIDToUpdate < scoreboard.scoreboardRows.Length)
+                {
+                    scoreboard.scoreboardRows[rowIDToUpdate].Refresh(rowIDToUpdate < CurrentPlayerList.Length ? CurrentPlayerList[rowIDToUpdate] : null);
+                }
             }
 
             // Loop again next frame to process the queue until it's empty
