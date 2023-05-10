@@ -428,7 +428,7 @@ namespace mikeee324.OpenPutt
             this.transform.position = position.transform.position;
             respawnPosition = position.transform.position;
 
-            BallIsMoving = false;
+            //  BallIsMoving = false;
 
             if (playerManager != null)
                 playerManager.OnCourseStarted(courseThatIsBeingStarted);
@@ -468,9 +468,6 @@ namespace mikeee324.OpenPutt
             if (startLine.StartDropAnimation(this.transform.position))
             {
                 Utils.Log(this, "Player dropped ball near a start pad.. moving to to the start of a course");
-
-                // Make sure physics are off for ball
-                BallIsMoving = false; // TODO: This was true before - check if this is ok
             }
             else
             {
@@ -829,6 +826,11 @@ namespace mikeee324.OpenPutt
         private Vector3 ProjectOnContactPlane(Vector3 vector)
         {
             return vector - contactNormal * Vector3.Dot(vector, contactNormal);
+        }
+
+        public void Wakeup()
+        {
+            ballRigidbody.WakeUp();
         }
 
         /// <summary>

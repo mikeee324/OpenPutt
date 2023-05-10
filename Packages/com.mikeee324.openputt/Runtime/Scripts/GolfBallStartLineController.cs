@@ -106,10 +106,9 @@ namespace mikeee324.OpenPutt
         public void ResetDropAnimation()
         {
             lerpToStartTime = -1f;
-            lerpStartPosition = Vector3.zero;
-            lerpStopPosition = Vector3.zero;
             closestBallStart = null;
             courseThatIsBeingStarted = null;
+            closestBallStart = null;
         }
 
         /// <summary>
@@ -202,7 +201,8 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    golfBall.transform.position = lerpStopPosition;
+
+                    golfBall.transform.position = closestBallStart.transform.position;
                     golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
 
                     ResetDropAnimation();
