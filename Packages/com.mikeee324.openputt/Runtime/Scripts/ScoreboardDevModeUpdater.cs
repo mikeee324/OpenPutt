@@ -24,7 +24,7 @@ namespace mikeee324.OpenPutt
             if (localPlayerManager == null)
                 return;
 
-            scoreboard.devModeLastClubHitSpeed.text = string.Format("{0:F2}", localPlayerManager.golfClubHead.LastKnownHitVelocity);
+            scoreboard.devModeLastClubHitSpeed.text = string.Format("{0:F2} {1}", localPlayerManager.golfClubHead.LastKnownHitVelocity, localPlayerManager.golfClubHead.LastKnownHitType);
             scoreboard.devModeBallSpeed.text = string.Format("{0:F2}", localPlayerManager.golfBall.BallCurrentSpeed);
         }
     }
