@@ -186,119 +186,48 @@ namespace mikeee324.OpenPutt
 
             bool sendSync = openPutt != null && openPutt.playerSyncType == PlayerSyncType.All;
 
-            // Update the state of all courses
-            for (int i = 0; i < openPutt.courses.Length; i++)
+            // Set score on current course
+            switch (courseStates[currentCourse.holeNumber])
             {
-                if (i < currentCourse.holeNumber)
-                {
-                    // If this course is before the current one
-                    if ((int)courseStates[i] < (int)CourseState.Completed) // Cast to int because vrc update make the enum comparison (3 < 2) == true (HOW?!)
+                case CourseState.Skipped:
+                case CourseState.NotStarted:
+                    courseStates[currentCourse.holeNumber] = CourseState.Playing;
+                    if (!currentCourse.drivingRangeMode)
+                        courseScores[currentCourse.holeNumber] = 1;
+                    courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                    break;
+                case CourseState.Completed:
+                case CourseState.PlayedAndSkipped:
+                    if (openPutt != null && (openPutt.replayableCourses || currentCourse.courseIsAlwaysReplayable))
                     {
-                        if (openPutt.courses[i].drivingRangeMode)
-                        {
-                            courseStates[i] = CourseState.Completed;
-                        }
-                        else
-                        {
-                            CourseState oldState = courseStates[i];
-                            // And it isn't completed yet, skip it
-                            courseStates[i] = courseScores[i] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped;
-                            Utils.Log(this, $"Skipped course {i} with score of {courseScores[i]} OldState={oldState} NewState={courseStates[i]}");
-                            courseScores[i] = openPutt.courses[i].maxScore;
-                            courseTimes[i] = openPutt.courses[i].maxTime;
-                        }
+                        courseStates[currentCourse.holeNumber] = CourseState.Playing;
+                        if (!currentCourse.drivingRangeMode)
+                            courseScores[currentCourse.holeNumber] = 1;
+                        courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
                     }
-                }
-                else if (i > currentCourse.holeNumber)
-                {
-                    // If this course is after the current hole
-                    if ((int)courseStates[i] < (int)CourseState.Completed) // Cast to int because vrc update make the enum comparison (3 < 2) == true (HOW?!)
+                    break;
+                case CourseState.Playing:
+                    if (!currentCourse.drivingRangeMode)
                     {
-                        if (openPutt.courses[i].drivingRangeMode)
-                        {
-                            if (courseScores[i] > 0)
-                                courseStates[i] = CourseState.Completed;
-                            else
-                                courseStates[i] = CourseState.NotStarted;
-                        }
+                        if (courseScores[currentCourse.holeNumber] < currentCourse.maxScore)
+                            courseScores[currentCourse.holeNumber] += 1;
                         else
+                            courseScores[currentCourse.holeNumber] = currentCourse.maxScore;
+
+                        if (courseScores[currentCourse.holeNumber] == currentCourse.maxScore)
                         {
-                            // And it isn't completed yet, reset it
-                            courseScores[i] = 0;
-                            courseTimes[i] = 0;
-                            courseStates[i] = CourseState.NotStarted;
-                        }
-                    }
-                }
-                else
-                {
-                    CourseManager course = openPutt.courses[i];
-                    switch (courseStates[i])
-                    {
-                        case CourseState.NotStarted:
-                            if (!currentCourse.drivingRangeMode)
-                                courseScores[currentCourse.holeNumber] = 1;
-                            courseTimes[i] = Networking.GetServerTimeInMilliseconds();
-                            courseStates[i] = CourseState.Playing;
-
-                            // Can we tell others straight away about starting a new course?
-                            if (sendSync = openPutt != null && openPutt.playerSyncType < PlayerSyncType.FinishOnly)
-                                sendSync = true;
-
-                            Utils.Log(this, $"Player just started Hole {currentCourse.holeNumber}. Score is {courseStates[i]}");
-                            break;
-                        case CourseState.Playing:
-                            if (currentCourse.drivingRangeMode)
-                            {
-                                courseScores[i] = 0;
-                            }
-                            else
-                            {
-                                if (courseScores[i] < course.maxScore)
-                                    courseScores[i]++;
-                                else
-                                    courseScores[i] = course.maxScore;
-                            }
-
-                            if (courseScores[i] == course.maxScore && openPutt != null && openPutt.SFXController != null)
+                            // Play max score reached sound
+                            if (openPutt != null && openPutt.SFXController != null)
                                 openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.transform.position);
 
-                            Utils.Log(this, $"Hit ball - Current score is {courseScores[course.holeNumber]}/{course.maxScore} on course {course.holeNumber}.");
-                            break;
-                        case CourseState.Completed:
-                        case CourseState.PlayedAndSkipped:
-                            if (openPutt != null && (openPutt.replayableCourses || currentCourse.courseIsAlwaysReplayable))
-                            {
-                                // Players are allowed to restart completed courses
-                                if (!currentCourse.drivingRangeMode)
-                                    courseScores[currentCourse.holeNumber] = 1;
-                                courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
-                                courseStates[currentCourse.holeNumber] = CourseState.Playing;
-
-                                // Can we tell others straight away about starting a new course?
-                                if (sendSync = openPutt != null && openPutt.playerSyncType < PlayerSyncType.FinishOnly)
-                                    sendSync = true;
-
-                                Utils.Log(this, $"Restarted hole - Current score is {courseScores[currentCourse.holeNumber]}/{course.maxScore} on course {currentCourse.holeNumber}.");
-                            }
-                            break;
-                        case CourseState.Skipped:
-                            // Players can start a course they haven't touched yet.. just in case they walked past some
-                            if (!currentCourse.drivingRangeMode)
-                                courseScores[currentCourse.holeNumber] = 1;
-                            courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
-                            courseStates[currentCourse.holeNumber] = CourseState.Playing;
-
-                            // Can we tell others straight away about starting a new course?
-                            if (sendSync = openPutt != null && openPutt.playerSyncType < PlayerSyncType.FinishOnly)
-                                sendSync = true;
-
-                            Utils.Log(this, $"Restarted a skipped hole - Current score is {courseScores[currentCourse.holeNumber]}/{course.maxScore} on course {currentCourse.holeNumber}.");
-                            break;
+                            // Prevents the sound from being heard again
+                            courseStates[currentCourse.holeNumber] = CourseState.Completed;
+                        }
                     }
-                }
+                    break;
             }
 
+            // Update the state of all courses
             UpdateTotals();
 
             // Update local scoreboards
@@ -371,14 +300,10 @@ namespace mikeee324.OpenPutt
             else
             {
                 // Calculate the amount of time player spent on this course
-                courseTimes[course.holeNumber] = Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber];
+                courseTimes[course.holeNumber] = Mathf.CeilToInt((Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber]) * 0.001f);
             }
 
-            int timeOnCourse = Mathf.RoundToInt(courseTimes[course.holeNumber] * 0.001f);
-            if (timeOnCourse > course.maxTime)
-                courseTimes[course.holeNumber] = course.maxTime * 1000;
-
-            Utils.Log(this, $"Course({course.holeNumber}) was {courseStates[course.holeNumber].GetString()} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}ms to do this.");
+            Utils.Log(this, $"Course({course.holeNumber}) was {courseStates[course.holeNumber].GetString()} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}s to do this.");
 
             // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
@@ -679,28 +604,52 @@ namespace mikeee324.OpenPutt
             }
             UpdateTotals();
         }
+
+        /// <summary>
+        /// Updates the players total score/time properties and fixes any incorrect course states
+        /// </summary>
         public void UpdateTotals()
         {
+            if (openPutt == null)
+                return;
+
             if (PlayerHasStartedPlaying)
             {
-                if (openPutt == null)
-                    return;
                 int score = 0;
                 int totalTime = 0;
 
                 for (int i = 0; i < courseScores.Length; i++)
                 {
+                    // We don't count driving range scores
                     if (openPutt.courses[i] != null && openPutt.courses[i].drivingRangeMode)
                         continue;
 
-                    score += courseScores[i];
+                    UpdateCourseState(openPutt.courses[i]);
 
-                    if (courseStates[i] != CourseState.Playing)
+                    switch (courseStates[i])
                     {
-                        totalTime += courseTimes[i];
-                        // Not counting courses that are in progress for now (but this is how you'd do it!)
-                        //  totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
+                        case CourseState.NotStarted:
+                            totalTime += courseTimes[i];
+                            break;
+                        case CourseState.Playing:
+                            // Not counting courses that are in progress for now (but this is how you'd do it!)
+                            // UpdateTotals would have to be run regularly for this to work though (can cause lag)
+                            //  totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
+                            break;
+                        case CourseState.Completed:
+                            totalTime += courseTimes[i];
+                            break;
+                        case CourseState.PlayedAndSkipped:
+                        case CourseState.Skipped:
+                            // Make sure scores are maxed out for skipped courses
+                            courseScores[i] = openPutt.courses[i].maxScore;
+                            courseTimes[i] = openPutt.courses[i].maxTime;
+
+                            totalTime += courseTimes[i];
+                            break;
                     }
+
+                    score += courseScores[i];
                 }
                 PlayerTotalScore = score;
                 PlayerTotalTime = totalTime;
@@ -709,6 +658,96 @@ namespace mikeee324.OpenPutt
             {
                 PlayerTotalScore = 999999;
                 PlayerTotalTime = 999999;
+            }
+        }
+
+        /// <summary>
+        /// Updates the current state of the course that is passed in. Does nothing if the course is the players current course as that should already be managed elsewhere.
+        /// </summary>
+        /// <param name="course">The course to update the state/scores on</param>
+        private void UpdateCourseState(CourseManager course)
+        {
+            if (openPutt == null)
+                return;
+
+            bool canPlayCoursesInAnyOrder = openPutt.coursesCanBePlayedInAnyOrder;
+
+            int currentCourseNumber = currentCourse == null ? -1 : currentCourse.holeNumber;
+            int courseNumber = course.holeNumber;
+
+            // We should already be tracking the current course state properly - so don't do anything here
+            if (courseNumber == currentCourseNumber)
+                return;
+
+            // Driving ranges don't do much
+            if (course.drivingRangeMode)
+            {
+                courseStates[course.holeNumber] = CourseState.NotStarted;
+                return;
+            }
+
+            CourseState oldCourseState = courseStates[courseNumber];
+
+            // If players can play courses in any order
+            if (canPlayCoursesInAnyOrder)
+            {
+                if (oldCourseState == CourseState.Playing)
+                {
+                    // Only mark any courses that the player is "Playing" as skipped
+                    courseStates[courseNumber] = CourseState.PlayedAndSkipped;
+                    Utils.Log(this, $"Skipped course {courseNumber} with score of {courseScores[courseNumber]} OldState={oldCourseState} NewState={courseStates[courseNumber]}");
+
+                    courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;
+                    courseTimes[courseNumber] = openPutt.courses[courseNumber].maxTime;
+                }
+                return;
+            }
+
+            if (courseNumber < currentCourseNumber)
+            {
+                // This course is before the current course in the list
+                switch (oldCourseState)
+                {
+                    case CourseState.NotStarted:
+                    case CourseState.Playing:
+                        courseStates[courseNumber] = courseScores[courseNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped;
+
+                        if (oldCourseState != courseStates[courseNumber])
+                            Utils.Log(this, $"Skipped course {courseNumber} with score of {courseScores[courseNumber]} OldState={oldCourseState} NewState={courseStates[courseNumber]}");
+
+                        courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;
+                        courseTimes[courseNumber] = openPutt.courses[courseNumber].maxTime;
+                        break;
+                    case CourseState.PlayedAndSkipped:
+                    case CourseState.Skipped:
+                        courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;
+                        courseTimes[courseNumber] = openPutt.courses[courseNumber].maxTime;
+                        break;
+                    case CourseState.Completed:
+                        break; // Don't touch completed courses
+                }
+            }
+            else
+            {
+                // This course is after the current course in the list
+                switch (oldCourseState)
+                {
+                    case CourseState.NotStarted:
+                    case CourseState.Playing:
+                        // And it isn't completed yet, reset it
+                        courseScores[courseNumber] = 0;
+                        courseTimes[courseNumber] = 0;
+                        courseStates[courseNumber] = CourseState.NotStarted;
+                        break;
+                    case CourseState.PlayedAndSkipped:
+                    case CourseState.Skipped:
+                        // Make sure the scores are at max because they skipped it
+                        courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;
+                        courseTimes[courseNumber] = openPutt.courses[courseNumber].maxTime;
+                        break;
+                    case CourseState.Completed:
+                        break; // Don't touch completed courses
+                }
             }
         }
 
