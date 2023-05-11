@@ -50,9 +50,10 @@ namespace mikeee324.OpenPutt
         private float[] lastPositionTimes = new float[16];
         private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
         /// <summary>
-        /// Scales the club collider based on its speed, x=height,y=width,z=thickness
+        /// Scales the club collider based on its speed, x=height,y=width,z=thickness<br/>
+        /// Currently just scaling height so people don't have to aim right at the floor
         /// </summary>
-        public Vector3 golfClubHeadColliderMaxSize = new Vector3(3, 1.2f, 4);
+        public Vector3 golfClubHeadColliderMaxSize = new Vector3(3, 1, 1);
         /// <summary>
         /// Prevents collisions with the ball from ocurring as soon as the player arms the club
         /// </summary>
@@ -68,9 +69,12 @@ namespace mikeee324.OpenPutt
         private Vector3 FrameVelocitySmoothed { get; set; }
         private Vector3 FrameVelocitySmoothedForScaling { get; set; }
         public float LastKnownHitVelocity { get; private set; }
+        public string LastKnownHitType { get; private set; }
+        private bool positionBufferWasJustReset = true;
 
         void Start()
         {
+            LastKnownHitType = string.Empty;
             ResetPositionBuffers();
 
             if (golfClubHeadCollider == null)
@@ -92,11 +96,9 @@ namespace mikeee324.OpenPutt
         public void OnClubArmed()
         {
             clubInsideBallCheck = true;
-            clubInsideBallCheckTimer = 0.1f;
+            clubInsideBallCheckTimer = 0.05f;
 
             MoveToClubWithoutVelocity();
-
-            ResetPositionBuffers();
 
             ResizeClubCollider();
         }
@@ -105,12 +107,12 @@ namespace mikeee324.OpenPutt
         {
             if (golfClubHeadCollider != null && putterTarget != null)
             {
-                float speed = FrameVelocitySmoothedForScaling.magnitude;
-                if (overrideSpeed != -1f)
-                    speed = overrideSpeed;
-                if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
-                    speed = 0f;
-                speed = easeInOut.Evaluate(speed / 10f);
+                  float speed = FrameVelocitySmoothedForScaling.magnitude;
+                  if (overrideSpeed != -1f)
+                      speed = overrideSpeed;
+                  if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
+                      speed = 0f;
+                  speed = easeInOut.Evaluate(speed / 10f);
 
                 if (easeInOut == null)
                     easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -122,33 +124,10 @@ namespace mikeee324.OpenPutt
                 Vector3 maxSize = new Vector3(minSize.x * golfClubHeadColliderMaxSize.x, minSize.y * golfClubHeadColliderMaxSize.y, minSize.z * golfClubHeadColliderMaxSize.z);
 
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, speed);
-
-                
             }
         }
 
-       /* - SweepTest stuff - Maybe useful for hard hits?
-        void Update()
-        {
-            if (myRigidbody.SweepTest(transform.forward, out RaycastHit hit, .3f))
-            {
-                // We only care if this collided with the local players ball
-                if (hit.collider == null || hit.collider.gameObject != golfBall.gameObject)
-                    return;
 
-                // Wait for at least 1 frame after being enabled before registering a real collision
-                if (clubInsideBallCheck)
-                {
-                    Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
-                    return;
-                }
-
-                Utils.Log(this, "SweepTest triggered a hit!");
-
-                framesSinceHit = 0;
-            }
-        }
-       */
         private void FixedUpdate()
         {
             if (golfClub.ClubIsArmed)
@@ -172,6 +151,8 @@ namespace mikeee324.OpenPutt
                         // Start counting time away from the ball
                         clubInsideBallCheckTimer -= Time.fixedDeltaTime;
 
+                        ResizeClubCollider(0);
+
                         // Wait a little before enabling collisions with the ball
                         if (clubInsideBallCheckTimer <= 0f)
                         {
@@ -180,7 +161,6 @@ namespace mikeee324.OpenPutt
                         }
                     }
                 }
-                ResizeClubCollider(0);
             }
             else
             {
@@ -202,21 +182,21 @@ namespace mikeee324.OpenPutt
 
             // Log last known velocity if it's not totally 0
             Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
-            if (currFrameVelocity != Vector3.zero)
+            if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
             {
                 FrameVelocity = currFrameVelocity;
                 FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
                 FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
             }
 
-            // If it looks like a proper move
-            if (currFrameVelocity.magnitude > 0.001f)
+            if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
             {
                 // Push current position onto buffers
                 lastPositions = lastPositions.Push(currentPos);
                 lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
                 for (int i = 1; i < lastPositions.Length; i++)
                     lastPositionTimes[i] += Time.deltaTime;
+                positionBufferWasJustReset = false;
             }
 
             // If the ball has been hit
@@ -228,10 +208,29 @@ namespace mikeee324.OpenPutt
                 if (framesSinceHit >= hitWaitFrames)
                     HandleBallHit();
             }
+
+            if (!positionBufferWasJustReset && !clubInsideBallCheck && framesSinceHit == -1)
+            {
+                // SweepTest hopefully helps with picking up collisions that we might have missed normally
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                {
+                    // We only care if this collided with the local players ball
+                    if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
+                    {
+                        Utils.Log(this, "SweepTest triggered a hit!");
+                        LastKnownHitType = "(Sweep)";
+                        framesSinceHit = 0;
+                    }
+                }
+            }
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            // Ignore extra hits to the ball until we have processed the first
+            if (framesSinceHit >= 0)
+                return;
+
             // We only care if this collided with the local players ball
             if (other.gameObject != golfBall.gameObject)
                 return;
@@ -242,7 +241,29 @@ namespace mikeee324.OpenPutt
                 Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
                 return;
             }
+            Utils.Log(this, "OnTriggerEnter triggered a hit!");
+            LastKnownHitType = "(Trigger)";
+            framesSinceHit = 0;
+        }
 
+        private void OnCollisionEnter(Collision collision)
+        {
+            // Ignore extra hits to the ball until we have processed the first
+            if (framesSinceHit >= 0)
+                return;
+
+            // We only care if this collided with the local players ball
+            if (collision == null || collision.rigidbody == null || collision.rigidbody.gameObject != golfBall.gameObject)
+                return;
+
+            // Wait for at least 1 frame after being enabled before registering a real collision
+            if (clubInsideBallCheck)
+            {
+                Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
+                return;
+            }
+            Utils.Log(this, "OnCollisionEnter triggered a hit!");
+            LastKnownHitType = "(Collision)";
             framesSinceHit = 0;
         }
 
@@ -256,10 +277,18 @@ namespace mikeee324.OpenPutt
                 case ClubColliderVelocityType.SingleFrame:
                     directionOfTravel = FrameVelocity.normalized;
                     velocityMagnitude = FrameVelocity.magnitude;
+
+                    // Use the smmothed collider direction if we are told to
+                    if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
+                        directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
                     break;
                 case ClubColliderVelocityType.SingleFrameSmoothed:
                     directionOfTravel = FrameVelocitySmoothed.normalized;
                     velocityMagnitude = FrameVelocitySmoothed.magnitude;
+
+                    // Use the smmothed collider direction if we are told to
+                    if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
+                        directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
                     break;
                 case ClubColliderVelocityType.MultiFrameAverage:
                     {
@@ -275,6 +304,10 @@ namespace mikeee324.OpenPutt
                             int maxBacksteps = Math.Min(multiFrameAverageMaxBacksteps, lastPositions.Length);
                             for (int currentBackstep = 1; currentBackstep < maxBacksteps; currentBackstep++)
                             {
+                                // Ignore any empty previous positions
+                                if (lastPositions[currentBackstep] == Vector3.zero)
+                                    continue;
+
                                 float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
                                 if (thisDistance > furthestDistance)
                                 {
@@ -289,16 +322,23 @@ namespace mikeee324.OpenPutt
                             }
                         }
 
+                        if (latestPos == Vector3.zero || oldestPos == Vector3.zero)
+                        {
+                            Utils.LogError(this, "Cannot handle ball hit as start/end pos was a Vector3.zero! Will wait 1 more frame..");
+                            framesSinceHit -= 1;
+                            return;
+                        }
+
                         Vector3 newVel = (latestPos - oldestPos) / timeTaken;
                         directionOfTravel = newVel.normalized;
                         velocityMagnitude = newVel.magnitude;
+
+                        // Don't really need this here? - Should already be averaged out - Use the smmothed collider direction if we are told to
+                        //if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
+                        //    directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
                         break;
                     }
             }
-
-            // Use the smmothed collider direction if we are told to
-            if (smoothedHitDirection)
-                directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
 
             // Scale the velocity back up a bit
             velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);
@@ -325,7 +365,7 @@ namespace mikeee324.OpenPutt
 
             // Mini golf usually works best when the ball stays on the floor initially
             if (openPutt.enableVerticalHits)
-                velocity.y = Mathf.Clamp(velocity.y, 0, 10f);
+                velocity.y = Mathf.Clamp(velocity.y, 0, golfBall.BallMaxSpeed);
             else
                 velocity.y = 0;
 
@@ -354,6 +394,8 @@ namespace mikeee324.OpenPutt
 
         private void ResetPositionBuffers()
         {
+            positionBufferWasJustReset = true;
+
             FrameVelocity = Vector3.zero;
             FrameVelocitySmoothed = Vector3.zero;
             FrameVelocitySmoothedForScaling = Vector3.zero;
@@ -367,10 +409,6 @@ namespace mikeee324.OpenPutt
 
         public void MoveToClubWithoutVelocity()
         {
-            FrameVelocity = Vector3.zero;
-            FrameVelocitySmoothed = Vector3.zero;
-            FrameVelocitySmoothedForScaling = Vector3.zero;
-
             if (myRigidbody != null && putterTarget != null)
             {
                 myRigidbody.position = putterTarget.position;
@@ -378,6 +416,8 @@ namespace mikeee324.OpenPutt
                 myRigidbody.velocity = Vector3.zero;
                 myRigidbody.angularVelocity = Vector3.zero;
             }
+
+            ResetPositionBuffers();
         }
     }
 }

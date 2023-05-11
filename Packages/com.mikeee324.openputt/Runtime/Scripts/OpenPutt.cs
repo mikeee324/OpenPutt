@@ -38,11 +38,13 @@ namespace mikeee324.OpenPutt
         #endregion
 
         #region Synced Settings
-        [Header("Synced Settings")]
+        [Header("Game Settings")]
         [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
         public bool replayableCourses = false;
-        [UdonSynced, Tooltip("Allows balls to travel on the Y axis when hit by a club (Experimental)")]
+        [UdonSynced, Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
         public bool enableVerticalHits = false;
+        [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
+        public bool coursesCanBePlayedInAnyOrder = false;
         #endregion
 
         #region Other Settings

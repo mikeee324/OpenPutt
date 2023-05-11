@@ -67,7 +67,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 else
                 {
                     int totalParTime = openPutt.TotalParTime;
-                    SetText(TimeSpan.FromMilliseconds(currentPlayerTime).ToString(@"m\:ss"));
+                    SetText(TimeSpan.FromSeconds(currentPlayerTime).ToString(@"m\:ss"));
                     playerIsAbovePar = currentPlayerTime > 0 && currentPlayerTime > totalParTime;
                     playerIsBelowPar = finishedAllCourses && currentPlayerTime > 0 && currentPlayerTime < totalParTime;
                 }
@@ -150,10 +150,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
                 // If the player is playing this course right now, then the stored value is the time when they started the course
                 if (courseState == CourseState.Playing)
-                    timeOnThisCourse = Networking.GetServerTimeInMilliseconds() - timeOnThisCourse;
-
-                // Change scale to seconds
-                timeOnThisCourse = timeOnThisCourse * 0.001f;
+                    timeOnThisCourse = (Networking.GetServerTimeInMilliseconds() - timeOnThisCourse) * .001f;
 
                 SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
                 playerIsAbovePar = timeOnThisCourse > course.parTime;
