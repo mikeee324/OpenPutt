@@ -271,8 +271,16 @@ namespace mikeee324.OpenPutt
 
         public void OnCourseStarted(CourseManager newCourse)
         {
+            if (newCourse == null)
+            {
+                Utils.LogError(this, $"Player tried to start a new course but it was null! Check that all CourseStartPositions have references to the correct CourseManager!");
+                return;
+            }
+
             bool canReplayCourses = openPutt != null && openPutt.replayableCourses;
-            if (courseStates[newCourse.holeNumber] == CourseState.Completed || courseStates[newCourse.holeNumber] == CourseState.PlayedAndSkipped)
+
+            CourseState newCourseOldState = courseStates[newCourse.holeNumber];
+            if (newCourseOldState == CourseState.Completed || newCourseOldState == CourseState.PlayedAndSkipped)
             {
                 if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
                 {
@@ -362,7 +370,7 @@ namespace mikeee324.OpenPutt
 
         public override void OnDeserialization()
         {
-            if (Owner == null)
+            if (Owner == null || Owner.displayName == null)
                 return;
 
             Utils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");

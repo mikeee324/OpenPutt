@@ -423,6 +423,12 @@ namespace mikeee324.OpenPutt
 
         public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
         {
+            if (courseThatIsBeingStarted == null)
+            {
+                Utils.LogError(position, $"Player tried to start a course but a CourseStartPosition({(position != null && position.name != null ? position.name : "null")}) is missing a reference to its CourseManager!");
+                return;
+            }
+
             startLine.SetEnabled(false);
 
             this.transform.position = position.transform.position;
@@ -467,7 +473,7 @@ namespace mikeee324.OpenPutt
 
             if (startLine.StartDropAnimation(this.transform.position))
             {
-                Utils.Log(this, "Player dropped ball near a start pad.. moving to to the start of a course");
+                Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
             }
             else
             {
