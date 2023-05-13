@@ -291,6 +291,7 @@ MonoBehaviour:
   ScoreboardPositionByScore: -1
   ScoreboardPositionByTime: -1
   scoreboardRowNeedsUpdating: 0
+  freezePlayerWhileClubIsArmed: 1
 --- !u!114 &4926412382919218395
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1118,7 +1119,7 @@ Rigidbody:
   m_GameObject: {fileID: 5232980627449674119}
   serializedVersion: 2
   m_Mass: 0.05
-  m_Drag: 0.3
+  m_Drag: 0.35
   m_AngularDrag: 0.5
   m_UseGravity: 0
   m_IsKinematic: 1
