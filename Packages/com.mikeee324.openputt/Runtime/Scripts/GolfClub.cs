@@ -1,5 +1,4 @@
 using UdonSharp;
-using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -72,9 +71,14 @@ namespace mikeee324.OpenPutt
                         if (overrideIsArmed)
                             value = true;
 
+                        // Toggles whether the player is frozen or not
+                        if (playerManager != null)
+                            playerManager.PlayerIsCurrentlyFrozen = value;
+
                         // Toggle the collider object
                         if (putter != null)
                         {
+                            // Enable the collider for the club
                             putter.gameObject.SetActive(value);
 
                             // Tell the collider that it was just switched back on
@@ -117,7 +121,7 @@ namespace mikeee324.OpenPutt
         private bool LeftUseButtonDown = false;
         private bool RightUseButtonDown = false;
         private bool clubColliderIsTempDisabled = false;
-        private 
+        private
 
         void Start()
         {
@@ -151,7 +155,7 @@ namespace mikeee324.OpenPutt
                 else if (!Networking.LocalPlayer.IsUserInVR() && RightUseButtonDown)
                     RescaleClub(false);
             }
-            
+
             if (shaftScale != shaftMesh.transform.localScale.z)
             {
                 float newShaftScale = shaftScale;

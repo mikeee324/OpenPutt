@@ -35,6 +35,7 @@ namespace mikeee324.OpenPutt
         [Header("Mounting Settings")]
         [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
+        public bool mountToPlayerPosition = false;
         public Vector3 mountingOffset = Vector3.zero;
         public KeyCode desktopInputKey = KeyCode.M;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
@@ -112,32 +113,43 @@ namespace mikeee324.OpenPutt
                 firstFrameCheck = true;
             }
 
-            // Get VR pickup status
-            VRCPickup.PickupHand currentHand = pickup != null ? pickup.currentHand : VRCPickup.PickupHand.None;
-            // If player is on Desktop - override this if they press the correct key
-            if (!userIsInVR)
+            VRCPickup.PickupHand currentHand = VRCPickup.PickupHand.None;
+            if (pickup != null)
             {
-                pickupHandLimit = VRCPickup.PickupHand.None;
-                currentHand = Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
-            }
+                // Get VR pickup status
+                currentHand = pickup != null ? pickup.currentHand : VRCPickup.PickupHand.None;
+                // If player is on Desktop - override this if they press the correct key
+                if (!userIsInVR)
+                {
+                    pickupHandLimit = VRCPickup.PickupHand.None;
+                    currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
+                }
 
-            // If it is limited to one hand only and player picked it up with the wrong hand
-            if (pickupHandLimit != VRCPickup.PickupHand.None && pickup != null && pickupHandLimit != currentHand)
-            {
-                // Drop this object
-                pickup.Drop();
-                currentHand = VRCPickup.PickupHand.None;
-            }
+                // If it is limited to one hand only and player picked it up with the wrong hand
+                if (pickupHandLimit != VRCPickup.PickupHand.None && pickup != null && pickupHandLimit != currentHand)
+                {
+                    // Drop this object
+                    pickup.Drop();
+                    currentHand = VRCPickup.PickupHand.None;
+                }
 
-            // Trigger event calls if this changed
-            heldInHand = currentHand;
+                // Trigger event calls if this changed
+                heldInHand = currentHand;
+            }
 
             // We either can't tell if it's being held or we know it's not being held
             if (currentHand == VRCPickup.PickupHand.None)
             {
-                // Just pin the body object to the bone
-                gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(mountingOffset);
-                gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(mountToBone);
+                if (mountToPlayerPosition)
+                {
+                    gameObject.transform.SetPositionAndRotation(Networking.LocalPlayer.GetPosition(), Networking.LocalPlayer.GetRotation());
+                }
+                else
+                {
+                    // Just pin the body object to the bone
+                    gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(mountingOffset);
+                    gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(mountToBone);
+                }
 
                 if (pickup != null)
                     pickup.pickupable = true;

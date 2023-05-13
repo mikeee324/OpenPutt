@@ -5,12 +5,19 @@ using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
+    /// <summary>
+    /// Different ways of tracking the vlocity of the club collider (Used for experimenting)
+    /// </summary>
     public enum ClubColliderVelocityType
     {
         SingleFrame = 0,
         SingleFrameSmoothed = 1,
         MultiFrameAverage = 2
     }
+
+    /// <summary>
+    /// This is a rigidbody that follows the club head around and actually triggers the ball to move on collision
+    /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-1)]
     public class GolfClubCollider : UdonSharpBehaviour
     {
@@ -55,11 +62,6 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public Vector3 golfClubHeadColliderMaxSize = new Vector3(3, 1, 1);
         /// <summary>
-        /// Prevents collisions with the ball from ocurring as soon as the player arms the club
-        /// </summary>
-        private bool clubInsideBallCheck = false;
-        private float clubInsideBallCheckTimer = 0f;
-        /// <summary>
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
@@ -71,6 +73,8 @@ namespace mikeee324.OpenPutt
         public float LastKnownHitVelocity { get; private set; }
         public string LastKnownHitType { get; private set; }
         private bool positionBufferWasJustReset = true;
+        private int framesSinceClubArmed = -1;
+        private bool clubIsTouchingBall = false;
 
         void Start()
         {
@@ -95,15 +99,18 @@ namespace mikeee324.OpenPutt
 
         public void OnClubArmed()
         {
-            clubInsideBallCheck = true;
-            clubInsideBallCheckTimer = 0.05f;
+            framesSinceClubArmed = 0;
 
             MoveToClubWithoutVelocity();
 
             ResizeClubCollider();
         }
 
-        private void ResizeClubCollider(float overrideSpeed = -1f, float overrideScale = -1f)
+        /// <summary>
+        /// Resizes the collider so that it is the same scale as the club head. Also allows for scaling the collider up while the collider is travelling fast to help pick up collisisons.<br/>
+        /// </summary>
+        /// <param name="overrideSpeed"></param>
+        private void ResizeClubCollider(float overrideSpeed = -1f)
         {
             if (golfClubHeadCollider != null && putterTarget != null)
             {
@@ -112,14 +119,13 @@ namespace mikeee324.OpenPutt
                       speed = overrideSpeed;
                   if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
                       speed = 0f;
-                  speed = easeInOut.Evaluate(speed / 10f);
 
                 if (easeInOut == null)
                     easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
+                speed = easeInOut.Evaluate(speed / 10f);
+
                 Vector3 minSize = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
-                if (overrideScale > 0f)
-                    minSize = golfClubHeadColliderSize * overrideScale;
 
                 Vector3 maxSize = new Vector3(minSize.x * golfClubHeadColliderMaxSize.x, minSize.y * golfClubHeadColliderMaxSize.y, minSize.z * golfClubHeadColliderMaxSize.z);
 
@@ -133,38 +139,7 @@ namespace mikeee324.OpenPutt
             if (golfClub.ClubIsArmed)
             {
                 golfBall.Wakeup();
-            }
-
-            if (clubInsideBallCheck)
-            {
-                if (golfClub != null && ballCollider != null && golfClubHeadCollider != null)
-                {
-                    if (golfClubHeadCollider.bounds.Intersects(ballCollider.bounds))
-                    {
-                        // While the collider is intersecting with the ball, keep timer reset
-                        clubInsideBallCheckTimer = 0.05f;
-                        //  if (golfClub != null)
-                        //   golfClub.DisableClubColliderFor(1f);
-                    }
-                    else
-                    {
-                        // Start counting time away from the ball
-                        clubInsideBallCheckTimer -= Time.fixedDeltaTime;
-
-                        ResizeClubCollider(0);
-
-                        // Wait a little before enabling collisions with the ball
-                        if (clubInsideBallCheckTimer <= 0f)
-                        {
-                            Utils.Log(this, "Club head does not appear to be intersecting with the ball - collisions can happen now!");
-                            clubInsideBallCheck = false;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                ResizeClubCollider();
+                framesSinceClubArmed += 1;
             }
 
             Vector3 currentPos = myRigidbody.position;
@@ -180,8 +155,9 @@ namespace mikeee324.OpenPutt
                 // myRigidbody.MoveRotation(putterTarget.rotation);
             }
 
-            // Log last known velocity if it's not totally 0
             Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
+
+            // Store velocity for this frame if it isn't all 0
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
             {
                 FrameVelocity = currFrameVelocity;
@@ -209,20 +185,28 @@ namespace mikeee324.OpenPutt
                     HandleBallHit();
             }
 
-            if (!positionBufferWasJustReset && !clubInsideBallCheck && framesSinceHit == -1)
+            if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
             {
-                // SweepTest hopefully helps with picking up collisions that we might have missed normally
+                // Perform a sweep test to see if we'll be hitting the ball in the next frame
                 if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
                 {
                     // We only care if this collided with the local players ball
                     if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
                     {
-                        Utils.Log(this, "SweepTest triggered a hit!");
+                        // Stops players from launching the ball by placing the club inside the ball and arming it
+                        if (framesSinceClubArmed < 2)
+                        {
+                            Utils.Log(this, "Player armed the club and instantly hit the ball (sweep).. ignoring this collision");
+                            return;
+                        }
+
                         LastKnownHitType = "(Sweep)";
                         framesSinceHit = 0;
                     }
                 }
             }
+            
+            ResizeClubCollider();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -235,15 +219,26 @@ namespace mikeee324.OpenPutt
             if (other.gameObject != golfBall.gameObject)
                 return;
 
-            // Wait for at least 1 frame after being enabled before registering a real collision
-            if (clubInsideBallCheck)
+            // Stops players from launching the ball by placing the club inside the ball and arming it
+            if (framesSinceClubArmed < 2)
             {
-                Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
+                Utils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
                 return;
             }
-            Utils.Log(this, "OnTriggerEnter triggered a hit!");
+
+            clubIsTouchingBall = true;
+
             LastKnownHitType = "(Trigger)";
             framesSinceHit = 0;
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.gameObject != golfBall.gameObject)
+                return;
+
+            clubIsTouchingBall = false;
+            Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
         }
 
         private void OnCollisionEnter(Collision collision)
@@ -256,15 +251,27 @@ namespace mikeee324.OpenPutt
             if (collision == null || collision.rigidbody == null || collision.rigidbody.gameObject != golfBall.gameObject)
                 return;
 
-            // Wait for at least 1 frame after being enabled before registering a real collision
-            if (clubInsideBallCheck)
+            // Stops players from launching the ball by placing the club inside the ball and arming it
+            if (framesSinceClubArmed < 2)
             {
-                Utils.Log(this, "Club head might be inside ball collider - ignoring this collision!");
+                Utils.Log(this, "Player armed the club and instantly hit the ball (collision).. ignoring this collision");
                 return;
             }
-            Utils.Log(this, "OnCollisionEnter triggered a hit!");
+
+            clubIsTouchingBall = true;
+
             LastKnownHitType = "(Collision)";
             framesSinceHit = 0;
+        }
+
+
+        private void OnCollisionExit(Collision collision)
+        {
+            if (collision == null || collision.rigidbody == null || collision.rigidbody.gameObject != golfBall.gameObject)
+                return;
+
+            clubIsTouchingBall = false;
+            Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
         }
 
         private void HandleBallHit()
@@ -383,10 +390,6 @@ namespace mikeee324.OpenPutt
 
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
-
-            // Disable club collision for a short while
-            clubInsideBallCheck = true;
-            clubInsideBallCheckTimer = 0f;
 
             // Consume the hit event
             framesSinceHit = -1;

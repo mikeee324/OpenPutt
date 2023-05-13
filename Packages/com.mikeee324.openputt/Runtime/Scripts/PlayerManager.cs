@@ -158,6 +158,26 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
+        /// Toggles whether the player is immobile or not. Only works if this PlayerManager belongs to the local player.
+        /// </summary>
+        public bool PlayerIsCurrentlyFrozen
+        {
+            get => _isImmobilized;
+            set
+            {
+                _isImmobilized = value;
+
+                if (!freezePlayerWhileClubIsArmed)
+                    _isImmobilized = false;
+
+                if (Owner != null && Owner.IsValid() && Owner.isLocal)
+                    Owner.Immobilize(value);
+                else
+                    _isImmobilized = false;
+            }
+        }
+        private bool _isImmobilized = false;
+        /// <summary>
         /// Used to rate-limit network sync for each PlayerManager
         /// </summary>
         private bool syncRequested = false;
@@ -178,6 +198,10 @@ namespace mikeee324.OpenPutt
         /// The ScoreboardManager will reset this to false when it has updated the row for this player
         /// </summary>
         public bool scoreboardRowNeedsUpdating = false;
+        /// <summary>
+        /// Traps the player in a station while the club is armed
+        /// </summary>
+        public bool freezePlayerWhileClubIsArmed = true;
 
         public void OnBallHit()
         {
@@ -497,6 +521,8 @@ namespace mikeee324.OpenPutt
                 Utils.Log(this, $"Owner is null!");
                 return;
             }
+
+            PlayerIsCurrentlyFrozen = false;
 
             bool localPlayerIsNowOwner = Owner == Networking.LocalPlayer;
 
