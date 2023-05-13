@@ -75,6 +75,7 @@ namespace mikeee324.OpenPutt
         private bool positionBufferWasJustReset = true;
         private int framesSinceClubArmed = -1;
         private bool clubIsTouchingBall = false;
+        private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
 
         void Start()
         {
@@ -103,7 +104,7 @@ namespace mikeee324.OpenPutt
 
             MoveToClubWithoutVelocity();
 
-            ResizeClubCollider();
+            ResizeClubCollider(0);
         }
 
         /// <summary>
@@ -155,58 +156,60 @@ namespace mikeee324.OpenPutt
                 // myRigidbody.MoveRotation(putterTarget.rotation);
             }
 
-            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
-
-            // Store velocity for this frame if it isn't all 0
-            if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
+            if (CanTrackHitsAndVel)
             {
-                FrameVelocity = currFrameVelocity;
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
-                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
-            }
+                Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
 
-            if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
-            {
-                // Push current position onto buffers
-                lastPositions = lastPositions.Push(currentPos);
-                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
-                for (int i = 1; i < lastPositions.Length; i++)
-                    lastPositionTimes[i] += Time.deltaTime;
-                positionBufferWasJustReset = false;
-            }
-
-            // If the ball has been hit
-            if (framesSinceHit != -1)
-            {
-                framesSinceHit += 1;
-
-                // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-                if (framesSinceHit >= hitWaitFrames)
-                    HandleBallHit();
-            }
-
-            if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
-            {
-                // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                // Store velocity for this frame if it isn't all 0
+                if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
                 {
-                    // We only care if this collided with the local players ball
-                    if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
-                    {
-                        // Stops players from launching the ball by placing the club inside the ball and arming it
-                        if (framesSinceClubArmed < 2)
-                        {
-                            Utils.Log(this, "Player armed the club and instantly hit the ball (sweep).. ignoring this collision");
-                            return;
-                        }
+                    FrameVelocity = currFrameVelocity;
+                    FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
+                    FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
+                }
 
-                        LastKnownHitType = "(Sweep)";
-                        framesSinceHit = 0;
+                if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
+                {
+                    // Push current position onto buffers
+                    lastPositions = lastPositions.Push(currentPos);
+                    lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
+                    for (int i = 1; i < lastPositions.Length; i++)
+                        lastPositionTimes[i] += Time.deltaTime;
+                    positionBufferWasJustReset = false;
+                }
+
+                // If the ball has been hit
+                if (framesSinceHit != -1)
+                {
+                    framesSinceHit += 1;
+
+                    // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
+                    if (framesSinceHit >= hitWaitFrames)
+                        HandleBallHit();
+                }
+
+                if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
+                {
+                    // Perform a sweep test to see if we'll be hitting the ball in the next frame
+                    if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                    {
+                        // We only care if this collided with the local players ball
+                        if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
+                        {
+                            LastKnownHitType = "(Sweep)";
+                            framesSinceHit = 0;
+                        }
                     }
                 }
+
+                ResizeClubCollider();
             }
-            
-            ResizeClubCollider();
+            else
+            {
+                MoveToClubWithoutVelocity();
+
+                ResizeClubCollider(0);
+            }
         }
 
         private void OnTriggerEnter(Collider other)
@@ -220,7 +223,7 @@ namespace mikeee324.OpenPutt
                 return;
 
             // Stops players from launching the ball by placing the club inside the ball and arming it
-            if (framesSinceClubArmed < 2)
+            if (!CanTrackHitsAndVel)
             {
                 Utils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
                 return;
@@ -252,7 +255,7 @@ namespace mikeee324.OpenPutt
                 return;
 
             // Stops players from launching the ball by placing the club inside the ball and arming it
-            if (framesSinceClubArmed < 2)
+            if (!CanTrackHitsAndVel)
             {
                 Utils.Log(this, "Player armed the club and instantly hit the ball (collision).. ignoring this collision");
                 return;

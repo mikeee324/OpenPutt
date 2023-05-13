@@ -367,9 +367,7 @@ namespace mikeee324.OpenPutt
 
             Utils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");
 
-            UpdateTotals();
-
-            if (openPutt != null && openPutt.scoreboardManager != null)
+            if (openPutt != null)
                 openPutt.OnPlayerUpdate(this);
         }
 

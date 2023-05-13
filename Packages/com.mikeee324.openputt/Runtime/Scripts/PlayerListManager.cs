@@ -96,17 +96,17 @@ namespace mikeee324.OpenPutt
             {
                 // Check if this is where we should place this player in the score list
                 int thisScore = TempPlayersSortedByScore[i].PlayerTotalScore;
-                if (thisScore > newPlayerScore)
-                    scorePos = i;
-                else if (thisScore == newPlayerScore && TempPlayersSortedByScore[i].PlayerID > newPlayerID)
-                    scorePos = i;
+                if (newPlayerScore > thisScore)
+                    scorePos = i + 1;
+                else if (thisScore == newPlayerScore && TempPlayersSortedByScore[i].PlayerID < newPlayerID)
+                    scorePos = i + 1;
 
                 // Check if this is where we should place this player in the timer list
                 int thisTime = TempPlayersSortedByTime[i].PlayerTotalTime;
-                if (thisTime > newPlayerTime)
-                    timePos = i;
-                else if (thisTime == newPlayerTime && TempPlayersSortedByTime[i].PlayerID > newPlayerID)
-                    timePos = i;
+                if (newPlayerTime > thisTime)
+                    timePos = i + 1;
+                else if (thisTime == newPlayerTime && TempPlayersSortedByTime[i].PlayerID < newPlayerID)
+                    timePos = i + 1;
             }
 
             TempPlayersSortedByScore = TempPlayersSortedByScore.Insert(scorePos, playerManager);
