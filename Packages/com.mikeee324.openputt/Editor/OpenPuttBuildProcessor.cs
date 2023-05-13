@@ -30,6 +30,8 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         SetupOpenPutt();
 
         PopulateBallStartLineRendererReferences();
+
+        CheckReferences();
     }
 
     private void SetupOpenPutt()
@@ -37,7 +39,7 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         if (openPutt.objectAssigner == null)
             openPutt.objectAssigner = GameObject.FindObjectOfType<CyanPlayerObjectAssigner>();
 
-        if (openPutt.objectPool == null) 
+        if (openPutt.objectPool == null)
             openPutt.objectPool = GameObject.FindObjectOfType<CyanPlayerObjectPool>();
 
         // Populate all the player managers
@@ -86,6 +88,34 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
             ballLineRenderers[i].knownStartPositions = courseStartPositions;
             ballLineRenderers[i].knownStartColliders = courseStartColliders;
         }
+    }
+
+    private void CheckReferences()
+    {
+        bool missingStuff = false;
+
+        CourseStartPosition[] startPositions = GameObject.FindObjectsOfType<CourseStartPosition>();
+        foreach (CourseStartPosition startPosition in startPositions)
+        {
+            if (startPosition.courseManager == null)
+            {
+                missingStuff = true;
+                Utils.LogError(startPosition, GetGameObjectPath(startPosition.gameObject) + " - Missing CourseManager Reference!");
+            }
+        }
+
+        if (missingStuff)
+            throw new BuildFailedException("Build failed! Please check logs to check for things that need fixing.");
+    }
+    public static string GetGameObjectPath(GameObject obj)
+    {
+        string path = "/" + obj.name;
+        while (obj.transform.parent != null)
+        {
+            obj = obj.transform.parent.gameObject;
+            path = "/" + obj.name + path;
+        }
+        return path;
     }
 }
 #endif
