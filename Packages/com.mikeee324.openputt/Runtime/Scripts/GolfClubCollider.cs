@@ -18,7 +18,7 @@ namespace mikeee324.OpenPutt
     /// <summary>
     /// This is a rigidbody that follows the club head around and actually triggers the ball to move on collision
     /// </summary>
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-1)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(55)]
     public class GolfClubCollider : UdonSharpBehaviour
     {
         [Tooltip("Reference to OpenPutt to skip a few steps")]
@@ -49,12 +49,12 @@ namespace mikeee324.OpenPutt
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
         /// </summary>
-        private Vector3[] lastPositions = new Vector3[16];
+        public Vector3[] lastPositions = new Vector3[16];
         /// <summary>
         /// Tracks how much time it has been since we recorded each position in the lastPositions array<br/>
         /// MUST be the same length as lastPositions
         /// </summary>
-        private float[] lastPositionTimes = new float[16];
+        public float[] lastPositionTimes = new float[16];
         private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
         /// <summary>
         /// Scales the club collider based on its speed, x=height,y=width,z=thickness<br/>
@@ -75,7 +75,7 @@ namespace mikeee324.OpenPutt
         private bool positionBufferWasJustReset = true;
         private int framesSinceClubArmed = -1;
         private bool clubIsTouchingBall = false;
-        private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
+        private bool CanTrackHitsAndVel => framesSinceClubArmed > 2;
 
         /// <summary>
         /// Performs a bit of smoothing while following the club head - off for now because i'm not sure if it's needed
@@ -85,7 +85,8 @@ namespace mikeee324.OpenPutt
         void Start()
         {
             LastKnownHitType = string.Empty;
-            ResetPositionBuffers();
+
+            MoveToClubWithoutVelocity();
 
             if (golfClubHeadCollider == null)
                 golfClubHeadCollider = GetComponent<BoxCollider>();
@@ -101,6 +102,16 @@ namespace mikeee324.OpenPutt
                 hitForceMultiplier.AddKey(0, 1);
                 hitForceMultiplier.AddKey(10, 2);
             }
+        }
+
+        private void OnEnable()
+        {
+            MoveToClubWithoutVelocity();
+        }
+
+        private void OnDisable()
+        {
+            MoveToClubWithoutVelocity();
         }
 
         public void OnClubArmed()
@@ -142,6 +153,9 @@ namespace mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
+            if (!gameObject.activeSelf)
+                return;
+
             if (golfClub.ClubIsArmed)
             {
                 golfBall.Wakeup();
@@ -164,8 +178,8 @@ namespace mikeee324.OpenPutt
                 if (smoothFollowClubHead)
                 {
                     // Try to follow the club with a bit of smoothing
-                    Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.deltaTime);
-                    Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.deltaTime);
+                    Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.fixedDeltaTime);
+                    Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.fixedDeltaTime);
                     myRigidbody.MovePosition(newPos);
                     myRigidbody.MoveRotation(newRot);
                 }
@@ -177,7 +191,7 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
+            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.fixedDeltaTime;
 
             // Store velocity for this frame if it isn't all 0
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
@@ -191,9 +205,9 @@ namespace mikeee324.OpenPutt
             {
                 // Push current position onto buffers
                 lastPositions = lastPositions.Push(currentPos);
-                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
+                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
                 for (int i = 1; i < lastPositions.Length; i++)
-                    lastPositionTimes[i] += Time.deltaTime;
+                    lastPositionTimes[i] += Time.fixedDeltaTime;
                 positionBufferWasJustReset = false;
             }
 
@@ -210,7 +224,7 @@ namespace mikeee324.OpenPutt
             if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
             {
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.fixedDeltaTime))
                 {
                     // We only care if this collided with the local players ball
                     if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
@@ -328,7 +342,7 @@ namespace mikeee324.OpenPutt
                             {
                                 // Ignore any empty previous positions
                                 if (lastPositions[currentBackstep] == Vector3.zero)
-                                    continue;
+                                    break;
 
                                 float thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
                                 if (thisDistance > furthestDistance)
@@ -420,8 +434,8 @@ namespace mikeee324.OpenPutt
 
             for (int i = 0; i < lastPositions.Length; i++)
             {
-                lastPositions[i] = this.transform.position;
-                lastPositionTimes[i] = 0f;
+                lastPositions[i] = Vector3.zero;
+                lastPositionTimes[i] = 99;
             }
         }
 

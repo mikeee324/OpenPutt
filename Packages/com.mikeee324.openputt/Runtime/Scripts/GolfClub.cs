@@ -6,6 +6,7 @@ using VRC.Udon.Common;
 
 namespace mikeee324.OpenPutt
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
         public PlayerManager playerManager;
@@ -143,7 +144,7 @@ namespace mikeee324.OpenPutt
             this.enabled = false;
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
