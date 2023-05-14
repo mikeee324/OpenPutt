@@ -77,6 +77,11 @@ namespace mikeee324.OpenPutt
         private bool clubIsTouchingBall = false;
         private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
 
+        /// <summary>
+        /// Performs a bit of smoothing while following the club head - off for now because i'm not sure if it's needed
+        /// </summary>
+        private bool smoothFollowClubHead = false;
+
         void Start()
         {
             LastKnownHitType = string.Empty;
@@ -115,11 +120,11 @@ namespace mikeee324.OpenPutt
         {
             if (golfClubHeadCollider != null && putterTarget != null)
             {
-                  float speed = FrameVelocitySmoothedForScaling.magnitude;
-                  if (overrideSpeed != -1f)
-                      speed = overrideSpeed;
-                  if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
-                      speed = 0f;
+                float speed = FrameVelocitySmoothedForScaling.magnitude;
+                if (overrideSpeed != -1f)
+                    speed = overrideSpeed;
+                if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
+                    speed = 0f;
 
                 if (easeInOut == null)
                     easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -143,73 +148,80 @@ namespace mikeee324.OpenPutt
                 framesSinceClubArmed += 1;
             }
 
-            Vector3 currentPos = myRigidbody.position;
-
-            // Attach this collider to the end of the club
-            if (putterTarget != null && myRigidbody != null)
+            if (!CanTrackHitsAndVel)
             {
-                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.deltaTime);
-                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.deltaTime);
-                myRigidbody.MovePosition(newPos);
-                myRigidbody.MoveRotation(newRot);
-                // myRigidbody.MovePosition(putterTarget.position);
-                // myRigidbody.MoveRotation(putterTarget.rotation);
-            }
-
-            if (CanTrackHitsAndVel)
-            {
-                Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
-
-                // Store velocity for this frame if it isn't all 0
-                if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
-                {
-                    FrameVelocity = currFrameVelocity;
-                    FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
-                    FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
-                }
-
-                if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
-                {
-                    // Push current position onto buffers
-                    lastPositions = lastPositions.Push(currentPos);
-                    lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
-                    for (int i = 1; i < lastPositions.Length; i++)
-                        lastPositionTimes[i] += Time.deltaTime;
-                    positionBufferWasJustReset = false;
-                }
-
-                // If the ball has been hit
-                if (framesSinceHit != -1)
-                {
-                    framesSinceHit += 1;
-
-                    // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-                    if (framesSinceHit >= hitWaitFrames)
-                        HandleBallHit();
-                }
-
-                if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
-                {
-                    // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                    if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
-                    {
-                        // We only care if this collided with the local players ball
-                        if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
-                        {
-                            LastKnownHitType = "(Sweep)";
-                            framesSinceHit = 0;
-                        }
-                    }
-                }
-
-                ResizeClubCollider();
-            }
-            else
-            {
-                MoveToClubWithoutVelocity();
+                MoveToClubWithoutVelocity(resetBuffers: false);
 
                 ResizeClubCollider(0);
+
+                return;
             }
+
+            Vector3 currentPos = myRigidbody.position;
+
+            if (putterTarget != null && myRigidbody != null)
+            {
+                if (smoothFollowClubHead)
+                {
+                    // Try to follow the club with a bit of smoothing
+                    Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.deltaTime);
+                    Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.deltaTime);
+                    myRigidbody.MovePosition(newPos);
+                    myRigidbody.MoveRotation(newRot);
+                }
+                else
+                {
+                    // Just use normal movepositon
+                    myRigidbody.MovePosition(putterTarget.position);
+                    myRigidbody.MoveRotation(putterTarget.rotation);
+                }
+            }
+
+            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
+
+            // Store velocity for this frame if it isn't all 0
+            if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
+            {
+                FrameVelocity = currFrameVelocity;
+                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
+                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
+            }
+
+            if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
+            {
+                // Push current position onto buffers
+                lastPositions = lastPositions.Push(currentPos);
+                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
+                for (int i = 1; i < lastPositions.Length; i++)
+                    lastPositionTimes[i] += Time.deltaTime;
+                positionBufferWasJustReset = false;
+            }
+
+            // If the ball has been hit
+            if (framesSinceHit != -1)
+            {
+                framesSinceHit += 1;
+
+                // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
+                if (framesSinceHit >= hitWaitFrames)
+                    HandleBallHit();
+            }
+
+            if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
+            {
+                // Perform a sweep test to see if we'll be hitting the ball in the next frame
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                {
+                    // We only care if this collided with the local players ball
+                    if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
+                    {
+                        LastKnownHitType = "(Sweep)";
+                        framesSinceHit = 0;
+                    }
+                }
+            }
+
+            ResizeClubCollider();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -413,7 +425,7 @@ namespace mikeee324.OpenPutt
             }
         }
 
-        public void MoveToClubWithoutVelocity()
+        public void MoveToClubWithoutVelocity(bool resetBuffers = true)
         {
             if (myRigidbody != null && putterTarget != null)
             {
@@ -423,7 +435,8 @@ namespace mikeee324.OpenPutt
                 myRigidbody.angularVelocity = Vector3.zero;
             }
 
-            ResetPositionBuffers();
+            if (resetBuffers)
+                ResetPositionBuffers();
         }
     }
 }

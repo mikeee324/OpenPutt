@@ -71,6 +71,24 @@ namespace mikeee324.OpenPutt
 
         #region Internal Vars
         /// <summary>
+        /// Determines whether or not the local player currently has access to the dev mode tab
+        /// </summary>
+        public bool LocalPlayerCanAccessDevMode
+        {
+            get
+            {
+                if (openPutt.enableDevModeForAll)
+                    return true;
+
+                string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+
+                if (localPlayerName != null && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+                    return true;
+
+                return false;
+            }
+        }
+        /// <summary>
         /// Whether or not the scoreboard is showing course times instead of scores
         /// </summary>
         public bool SpeedGolfMode
@@ -182,10 +200,21 @@ namespace mikeee324.OpenPutt
                 currentVisibleScoreboardID += 1;
             }
 
+            bool devModeEnabled = LocalPlayerCanAccessDevMode;
+
+            // Kick player out of dev mode if they don't have access
+            if (!devModeEnabled && requestedScoreboardView == ScoreboardView.DevMode)
+                requestedScoreboardView = ScoreboardView.Scoreboard;
+
             // Swap all scoreboard views to be the same
             if (requestedScoreboardView != ScoreboardView.Settings && requestedScoreboardView != ScoreboardView.DevMode)
             {
                 foreach (Scoreboard scoreboard in scoreboards)
+                {
+                    if (scoreboard.HasInitializedUI)
+                        scoreboard.CurrentScoreboardView = requestedScoreboardView;
+                }
+                foreach (Scoreboard scoreboard in staticScoreboards)
                 {
                     if (scoreboard.HasInitializedUI)
                         scoreboard.CurrentScoreboardView = requestedScoreboardView;
