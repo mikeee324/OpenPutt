@@ -638,11 +638,45 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  hitWaitFrames: 2
-  velocityCalculationType: 2
+  hitWaitFrames: 1
+  velocityCalculationType: 1
   multiFrameAverageMaxBacksteps: 3
-  singleFrameSmoothFactor: 0.5
-  smoothedHitDirection: 1
+  singleFrameSmoothFactor: 0.9
+  smoothedHitDirection: 0
+  lastPositions:
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  lastPositionTimes:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
   golfClubHeadColliderMaxSize: {x: 3, y: 1.2, z: 4}
 --- !u!114 &4926412383994304880
 MonoBehaviour:
@@ -954,7 +988,6 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   forceMultiplier: 1
-  overrideIsArmed: 0
   enableBigShaft: 0
   offMaterial: {fileID: 2100000, guid: 35601b7126028534987ec2e953613b72, type: 2}
   onMaterial: {fileID: 2100000, guid: 8c78efbc5c751294c894eb00a3ab1b36, type: 2}
@@ -1326,7 +1359,7 @@ MonoBehaviour:
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
   maxBallSpeed: 15
-  minBallSpeed: 0.04
+  minBallSpeed: 0.03
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 30
   groundSnappingMaxGroundAngle: 90

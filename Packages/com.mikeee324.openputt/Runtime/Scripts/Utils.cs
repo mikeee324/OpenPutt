@@ -158,8 +158,8 @@ namespace mikeee324.OpenPutt
 
     public static class Extensions
     {
-        public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(behaviour.gameObject);
-        public static bool IsPointWithin(this Collider collider, Vector3 point) =>  (collider.ClosestPoint(point) - point).sqrMagnitude < Mathf.Epsilon * Mathf.Epsilon;
+        public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
+        public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
 
         [RecursiveMethod]
         public static ScoreboardPositioner[] SortByDistance(this ScoreboardPositioner[] array, Vector3 position, int leftIndex = 0, int rightIndex = -1)

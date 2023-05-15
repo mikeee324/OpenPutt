@@ -43,7 +43,7 @@ namespace mikeee324.OpenPutt
         [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         private float maxBallSpeed = 10f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
-        public float minBallSpeed = 0.015f;
+        public float minBallSpeed = 0.03f;
         [Range(0f, 1f), Tooltip("Defines how long the ball can keep rolling for when it goes below the minimum speed")]
         public float minBallSpeedMaxTime = 1f;
         [Tooltip("How long a ball can roll before being stopped automatically (in seconds)")]
@@ -568,6 +568,13 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
+            if (!playerIsPlayingACourse)
+            {
+                // Tell the club to disarm for a second
+                if (playerManager != null && playerManager.golfClub != null)
+                    playerManager.golfClub.DisableClubColliderFor();
+            }
+
             float speed = withVelocity.magnitude;
 
             // If ball wasn't hit hard enough ignore this hit
@@ -589,7 +596,13 @@ namespace mikeee324.OpenPutt
             // Vibrate the controller to give feedback to the player
             VRCPickup.PickupHand currentHand = club.CurrentHand;
             if (currentHand != VRC_Pickup.PickupHand.None)
+            {
+#if UNITY_ANDROID
+                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, .4f, 1f);
+#else
                 Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, 1f, 1f);
+#endif
+            }
 
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
                 playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(this.transform.position, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);

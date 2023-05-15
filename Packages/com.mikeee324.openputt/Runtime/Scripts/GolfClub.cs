@@ -58,20 +58,11 @@ namespace mikeee324.OpenPutt
             get => _clubArmed;
             set
             {
-                if (overrideIsArmed)
-                    value = true;
-
                 // If the state of the club has changed
                 if (ClubIsArmed != value)
                 {
                     if (this.LocalPlayerOwnsThisObject())
                     {
-                        if (clubColliderIsTempDisabled)
-                            value = false;
-
-                        if (overrideIsArmed)
-                            value = true;
-
                         // Toggles whether the player is frozen or not
                         if (playerManager != null)
                             playerManager.PlayerIsCurrentlyFrozen = value;
@@ -89,7 +80,6 @@ namespace mikeee324.OpenPutt
                     }
                     else
                     {
-                        // Toggle the collider object
                         if (putter != null)
                             putter.gameObject.SetActive(false);
                     }
@@ -104,8 +94,6 @@ namespace mikeee324.OpenPutt
                 _clubArmed = value;
             }
         }
-        [Tooltip("Forces the club to be armed - useful for testing")]
-        public bool overrideIsArmed = false;
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft = false;
         [Tooltip("Which material to use on the club when it is not armed")]
@@ -194,6 +182,7 @@ namespace mikeee324.OpenPutt
             if (!clubColliderIsTempDisabled)
             {
                 clubColliderIsTempDisabled = true;
+                RefreshState();
                 SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
             }
         }
@@ -201,6 +190,7 @@ namespace mikeee324.OpenPutt
         public void EnableClubCollider()
         {
             clubColliderIsTempDisabled = false;
+            RefreshState();
         }
 
         public void RefreshState()
@@ -217,6 +207,9 @@ namespace mikeee324.OpenPutt
                     newArmedState = LeftUseButtonDown;
                 else if (CurrentHand == VRC_Pickup.PickupHand.Right)
                     newArmedState = RightUseButtonDown;
+
+                if (clubColliderIsTempDisabled)
+                    newArmedState = false;
 
                 // If player has armed the club - check if we need to disable it
                 if (newArmedState)

@@ -172,6 +172,7 @@ namespace mikeee324.OpenPutt
                     if (manager != null)
                         manager.requestedScoreboardView = value;
                 }
+
                 _currentScoreboardView = value;
                 UpdateTabColours();
             }

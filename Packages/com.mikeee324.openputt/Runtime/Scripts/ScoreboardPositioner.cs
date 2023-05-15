@@ -19,6 +19,7 @@ namespace mikeee324.OpenPutt
         [Header("References")]
         public ScoreboardManager manager = null;
         public Canvas backgroundCanvas = null;
+        public Transform nearbyCenterTransform = null;
 
         [Space, Header("Settings")]
         public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
@@ -38,7 +39,7 @@ namespace mikeee324.OpenPutt
         {
             bool isNowActive = false;
 
-            float scoreboardDistance = Vector3.Distance(playerPosition, this.transform.position);
+            float scoreboardDistance = Vector3.Distance(playerPosition, nearbyCenterTransform != null ? nearbyCenterTransform.position : transform.position);
             bool playerIsNearby = scoreboardDistance < this.nearbyMaxRadius;
 
             switch (this.scoreboardVisiblility)
@@ -68,6 +69,23 @@ namespace mikeee324.OpenPutt
             }
 
             return isNowActive;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            switch (this.scoreboardVisiblility)
+            {
+                case ScoreboardVisibility.AlwaysVisible:
+                case ScoreboardVisibility.Hidden:
+                    break;
+                case ScoreboardVisibility.NearbyOnly:
+                case ScoreboardVisibility.NearbyAndCourseFinished:
+                    if (nearbyCenterTransform != null)
+                        Gizmos.DrawWireSphere(nearbyCenterTransform.position, nearbyMaxRadius);
+                    else
+                        Gizmos.DrawWireSphere(transform.position, nearbyMaxRadius);
+                    break;
+            }
         }
     }
 }

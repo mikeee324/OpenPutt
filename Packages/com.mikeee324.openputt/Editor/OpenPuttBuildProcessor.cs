@@ -97,7 +97,7 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         CourseStartPosition[] startPositions = GameObject.FindObjectsOfType<CourseStartPosition>();
         foreach (CourseStartPosition startPosition in startPositions)
         {
-            if (startPosition.courseManager == null)
+            if (startPosition.gameObject.activeInHierarchy && startPosition.courseManager == null)
             {
                 missingStuff = true;
                 Utils.LogError(startPosition, GetGameObjectPath(startPosition.gameObject) + " - Missing CourseManager Reference!");
@@ -107,13 +107,19 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         if (missingStuff)
             throw new BuildFailedException("Build failed! Please check logs to check for things that need fixing.");
     }
+
+    /// <summary>
+    /// Spits out the full path of a GameObject in the scene
+    /// </summary>
+    /// <param name="obj">The GameObject to get the full path for</param>
+    /// <returns> The full path of the GameObject</returns>
     public static string GetGameObjectPath(GameObject obj)
     {
         string path = "/" + obj.name;
         while (obj.transform.parent != null)
         {
             obj = obj.transform.parent.gameObject;
-            path = "/" + obj.name + path;
+            path = string.Format("/{0}{1}", obj.name, path);
         }
         return path;
     }

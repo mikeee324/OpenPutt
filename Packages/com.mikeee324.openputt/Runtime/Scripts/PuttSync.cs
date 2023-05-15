@@ -6,7 +6,7 @@ using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(999)]
     public class PuttSync : UdonSharpBehaviour
     {
         #region Public Settings

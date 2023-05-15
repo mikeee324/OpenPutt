@@ -16,7 +16,8 @@ namespace mikeee324.OpenPutt
     }
 
     /// <summary>
-    /// This is a rigidbody that follows the club head around and actually triggers the ball to move on collision
+    /// This is a rigidbody that follows the club head around and actually triggers the ball to move on collision<br/>
+    /// This script must run after the main GolfClub script in order to function correctly. (Hence the DefaultExecutionOrder)
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(55)]
     public class GolfClubCollider : UdonSharpBehaviour
@@ -38,7 +39,7 @@ namespace mikeee324.OpenPutt
         [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
         public int hitWaitFrames = 3;
         [Tooltip("Debug stuff: Used for trying various ways of getting a velocity for the ball after a hit")]
-        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.MultiFrameAverage;
+        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrameSmoothed;
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;
         [Range(0f, 1f), Tooltip("How quickly the velocity smoothing will react to changes")]
@@ -156,6 +157,12 @@ namespace mikeee324.OpenPutt
             if (!gameObject.activeSelf)
                 return;
 
+            if (myRigidbody == null)
+            {
+                this.enabled = false;
+                return;
+            }
+
             if (golfClub.ClubIsArmed)
             {
                 golfBall.Wakeup();
@@ -173,7 +180,7 @@ namespace mikeee324.OpenPutt
 
             Vector3 currentPos = myRigidbody.position;
 
-            if (putterTarget != null && myRigidbody != null)
+            if (putterTarget != null)
             {
                 if (smoothFollowClubHead)
                 {
@@ -315,16 +322,20 @@ namespace mikeee324.OpenPutt
                     velocityMagnitude = FrameVelocity.magnitude;
 
                     // Use the smmothed collider direction if we are told to
-                    if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
-                        directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
+                    if (smoothedHitDirection)
+                        for (int i = 0; i < 3; i++)
+                            if (lastPositions[i] != Vector3.zero)
+                                directionOfTravel = (lastPositions[0] - lastPositions[i]).normalized;
                     break;
                 case ClubColliderVelocityType.SingleFrameSmoothed:
                     directionOfTravel = FrameVelocitySmoothed.normalized;
                     velocityMagnitude = FrameVelocitySmoothed.magnitude;
 
                     // Use the smmothed collider direction if we are told to
-                    if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
-                        directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
+                    if (smoothedHitDirection)
+                        for (int i = 0; i < 3; i++)
+                            if (lastPositions[i] != Vector3.zero)
+                                directionOfTravel = (lastPositions[0] - lastPositions[i]).normalized;
                     break;
                 case ClubColliderVelocityType.MultiFrameAverage:
                     {
@@ -412,6 +423,9 @@ namespace mikeee324.OpenPutt
                 velocity.x = 0;
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
+
+            if (velocity.magnitude < golfBall.minBallSpeed)
+                return;
 
             Utils.Log(this, $"Ball has been hit! NewBallVelocity({velocity.magnitude}) DirectionOfTravel({directionOfTravel})");
 
