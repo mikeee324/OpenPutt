@@ -256,7 +256,13 @@ namespace mikeee324.OpenPutt
 
                 // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
                 if (framesSinceHit >= hitWaitFrames)
+                {
+                    // Consume the hit event
+                    framesSinceHit = -1;
+
+                    // Send the velocity to the ball
                     HandleBallHit();
+                }
             }
 
             if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
@@ -464,9 +470,6 @@ namespace mikeee324.OpenPutt
 
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
-
-            // Consume the hit event
-            framesSinceHit = -1;
         }
 
         private void ResetPositionBuffers()
