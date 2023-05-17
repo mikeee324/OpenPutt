@@ -331,12 +331,18 @@ namespace mikeee324.OpenPutt
                 if (i < newList.Length)
                     thisRowNewPlayer = newList[i];
 
-                // If this row has no player and hasn't changed - we don't need to check any more rows as the rest should be the same
+                // If this row has no player and hasn't changed - we don't need to update this row
                 if (thisRowPlayer == null && thisRowNewPlayer == null)
-                    break;
+                    continue;
 
                 // Check if an update is being force (for when player toggles between timer/normal mode)
-                bool requestRefresh = forceUpdate;
+                if (forceUpdate)
+                {
+                    rowsToUpdate = rowsToUpdate.Add(i);
+                    continue;
+                }
+
+                bool requestRefresh = false;
 
                 // Check if player in this row has changed
                 if (!requestRefresh)

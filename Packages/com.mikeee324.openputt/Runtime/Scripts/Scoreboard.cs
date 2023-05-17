@@ -645,13 +645,15 @@ namespace mikeee324.OpenPutt
                 {
                     if (pm.golfClub.pickup != null)
                         pm.golfClub.pickup.Drop();
-                    pm.golfClub.transform.localPosition = Vector3.zero;
+                    if (pm.golfClub.puttSync != null)
+                        pm.golfClub.puttSync.Respawn();
                 }
                 if (pm.golfBall != null)
                 {
                     if (pm.golfBall.GetComponent<VRCPickup>() != null)
                         pm.golfBall.GetComponent<VRCPickup>().Drop();
-                    pm.golfBall.transform.localPosition = Vector3.zero;
+                    if (pm.golfClub.puttSync != null)
+                        pm.golfClub.puttSync.Respawn();
                     pm.golfBall.BallIsMoving = false;
                 }
                 pm.RequestSync();
