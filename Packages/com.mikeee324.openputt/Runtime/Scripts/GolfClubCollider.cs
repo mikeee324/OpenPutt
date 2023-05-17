@@ -22,6 +22,7 @@ namespace mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(55)]
     public class GolfClubCollider : UdonSharpBehaviour
     {
+        [Header("References")]
         [Tooltip("Reference to OpenPutt to skip a few steps")]
         public OpenPutt openPutt;
         [Tooltip("Which golf club is this collider attached to?")]
@@ -29,59 +30,83 @@ namespace mikeee324.OpenPutt
         [Tooltip("Which golf ball can this collider interact with?")]
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
-        public Transform putterTarget;
+        public BoxCollider putterTarget;
         [SerializeField]
         private SphereCollider ballCollider = null;
         [SerializeField]
         private Rigidbody myRigidbody = null;
         public BoxCollider golfClubHeadCollider;
-        public AnimationCurve hitForceMultiplier;
+
+        [Header("Club Head References / Settings")]
+        [Tooltip("Use this to rotate this collider to the match the club head collider (if it's the same already leave as 0,0,0")]
+        public Vector3 referenceClubHeadColliderRotationOffset = new Vector3(0, -90, 0);
+        [Range(5f, 20f), Tooltip("How fast the club head needs to be travelling to reach the MaxSpeedScale below")]
+        public float maxSpeedForScaling = 10f;
+        /// <summary>
+        /// Scales the club collider based on its speed, x=height,y=width,z=thickness<br/>
+        /// Currently just scaling height so people don't have to aim right at the floor
+        /// </summary>
+        [Tooltip("How much the collider can be scaled up depending on its current velocity")]
+        public Vector3 maxSpeedScale = new Vector3(3, 1, 1);
+
+        [Header("Settings")]
         [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
         public int hitWaitFrames = 3;
+        public AnimationCurve hitForceMultiplier;
+
+        [Header("Velocity / Direction Tracking Settings")]
         [Tooltip("Debug stuff: Used for trying various ways of getting a velocity for the ball after a hit")]
         public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrameSmoothed;
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;
         [Range(0f, 1f), Tooltip("How quickly the velocity smoothing will react to changes")]
-        public float singleFrameSmoothFactor = 0.5f;
+        public float singleFrameSmoothFactor = 0.8f;
         [Tooltip("Smooths out the direction that the ball will travel over multiple frames")]
         public bool smoothedHitDirection = false;
+        /// <summary>
+        /// Performs a bit of smoothing while following the club head - off for now because i'm not sure if it's needed
+        /// </summary>
+        [SerializeField, Tooltip("Should this collider smoothly follow the club head or snap to it each frame (Might help with tracking very fast hits)")]
+        private bool smoothFollowClubHead = true; // Maybe helps with fast hit detection
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
         /// </summary>
-        public Vector3[] lastPositions = new Vector3[16];
+        private Vector3[] lastPositions = new Vector3[16];
         /// <summary>
         /// Tracks how much time it has been since we recorded each position in the lastPositions array<br/>
         /// MUST be the same length as lastPositions
         /// </summary>
-        public float[] lastPositionTimes = new float[16];
-        private Vector3 golfClubHeadColliderSize = new Vector3(0.0846f, 0.0892f, 0.022f);
-        /// <summary>
-        /// Scales the club collider based on its speed, x=height,y=width,z=thickness<br/>
-        /// Currently just scaling height so people don't have to aim right at the floor
-        /// </summary>
-        public Vector3 golfClubHeadColliderMaxSize = new Vector3(3, 1, 1);
+        private float[] lastPositionTimes = new float[16];
         /// <summary>
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
         private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
-
+        /// <summary>
+        /// Tracks the last frames velocity absolutely (filtering out Vector3.zero and small moves)
+        /// </summary>
         private Vector3 FrameVelocity { get; set; }
+        /// <summary>
+        /// Tracks the last frames velocity with some smoothing (filtering out Vector3.zero and small moves)
+        /// </summary>
         private Vector3 FrameVelocitySmoothed { get; set; }
+        /// <summary>
+        /// Tracks the velocity with extra smoothing and is used for scaling this collider up and down (filtering out Vector3.zero and small moves)
+        /// </summary>
         private Vector3 FrameVelocitySmoothedForScaling { get; set; }
+        /// <summary>
+        /// Logs the velocity magnitude of the last ball hit
+        /// </summary>
         public float LastKnownHitVelocity { get; private set; }
+        /// <summary>
+        /// Logs kind of collision occured that trigger a ball hit (trigger,sweep,collision)
+        /// </summary>
         public string LastKnownHitType { get; private set; }
         private bool positionBufferWasJustReset = true;
         private int framesSinceClubArmed = -1;
         private bool clubIsTouchingBall = false;
-        private bool CanTrackHitsAndVel => framesSinceClubArmed > 2;
-
-        /// <summary>
-        /// Performs a bit of smoothing while following the club head - off for now because i'm not sure if it's needed
-        /// </summary>
-        private bool smoothFollowClubHead = false;
+        private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
 
         void Start()
         {
@@ -130,23 +155,30 @@ namespace mikeee324.OpenPutt
         /// <param name="overrideSpeed"></param>
         private void ResizeClubCollider(float overrideSpeed = -1f)
         {
-            if (golfClubHeadCollider != null && putterTarget != null)
+            if (golfClubHeadCollider != null)
             {
                 float speed = FrameVelocitySmoothedForScaling.magnitude;
                 if (overrideSpeed != -1f)
                     speed = overrideSpeed;
+
+                if (framesSinceHit >= 0)
+                    speed = 0f;
+
                 if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
                     speed = 0f;
 
                 if (easeInOut == null)
                     easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
-                speed = easeInOut.Evaluate(speed / 10f);
+                if (maxSpeedForScaling <= 0f)
+                    maxSpeedForScaling = 10f;
 
-                Vector3 minSize = golfClubHeadColliderSize * putterTarget.transform.parent.parent.localScale.x;
+                speed = easeInOut.Evaluate(speed / maxSpeedForScaling);
 
-                Vector3 maxSize = new Vector3(minSize.x * golfClubHeadColliderMaxSize.x, minSize.y * golfClubHeadColliderMaxSize.y, minSize.z * golfClubHeadColliderMaxSize.z);
+                Vector3 minSize = Vector3.Scale(putterTarget.size, putterTarget.transform.lossyScale);
+                Vector3 maxSize = Vector3.Scale(minSize, maxSpeedScale);
 
+                golfClubHeadCollider.center = putterTarget.center;
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, speed);
             }
         }
@@ -157,11 +189,13 @@ namespace mikeee324.OpenPutt
             if (!gameObject.activeSelf)
                 return;
 
-            if (myRigidbody == null)
+            if (myRigidbody == null || putterTarget == null)
             {
                 this.enabled = false;
                 return;
             }
+
+            myRigidbody.WakeUp();
 
             if (golfClub.ClubIsArmed)
             {
@@ -178,24 +212,21 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Vector3 currentPos = myRigidbody.position;
+            Vector3 currentPos = putterTarget.transform.position;// myRigidbody.position;
 
-            if (putterTarget != null)
+            if (smoothFollowClubHead && !positionBufferWasJustReset)
             {
-                if (smoothFollowClubHead)
-                {
-                    // Try to follow the club with a bit of smoothing
-                    Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.position, 200f * Time.fixedDeltaTime);
-                    Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.rotation, 200f * Time.fixedDeltaTime);
-                    myRigidbody.MovePosition(newPos);
-                    myRigidbody.MoveRotation(newRot);
-                }
-                else
-                {
-                    // Just use normal movepositon
-                    myRigidbody.MovePosition(putterTarget.position);
-                    myRigidbody.MoveRotation(putterTarget.rotation);
-                }
+                // Try to follow the club with a bit of smoothing
+                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.transform.position, 200f * Time.fixedDeltaTime);
+                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.fixedDeltaTime);
+                myRigidbody.MovePosition(newPos);
+                myRigidbody.MoveRotation(newRot);
+            }
+            else
+            {
+                // Just use normal movepositon
+                myRigidbody.MovePosition(putterTarget.transform.position);
+                myRigidbody.MoveRotation(putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
             }
 
             Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.fixedDeltaTime;
@@ -204,8 +235,8 @@ namespace mikeee324.OpenPutt
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
             {
                 FrameVelocity = currFrameVelocity;
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, 0.8f);
-                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 0.2f);
+                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, singleFrameSmoothFactor);
+                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 1f);
             }
 
             if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
@@ -248,7 +279,7 @@ namespace mikeee324.OpenPutt
         private void OnTriggerEnter(Collider other)
         {
             // Ignore extra hits to the ball until we have processed the first
-            if (framesSinceHit >= 0)
+            if (framesSinceHit >= 0 || positionBufferWasJustReset)
                 return;
 
             // We only care if this collided with the local players ball
@@ -280,7 +311,7 @@ namespace mikeee324.OpenPutt
         private void OnCollisionEnter(Collision collision)
         {
             // Ignore extra hits to the ball until we have processed the first
-            if (framesSinceHit >= 0)
+            if (framesSinceHit >= 0 || positionBufferWasJustReset)
                 return;
 
             // We only care if this collided with the local players ball
@@ -427,7 +458,7 @@ namespace mikeee324.OpenPutt
             if (velocity.magnitude < golfBall.minBallSpeed)
                 return;
 
-            Utils.Log(this, $"Ball has been hit! NewBallVelocity({velocity.magnitude}) DirectionOfTravel({directionOfTravel})");
+            Utils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
 
             LastKnownHitVelocity = velocity.magnitude;
 
@@ -457,8 +488,8 @@ namespace mikeee324.OpenPutt
         {
             if (myRigidbody != null && putterTarget != null)
             {
-                myRigidbody.position = putterTarget.position;
-                myRigidbody.rotation = putterTarget.rotation;
+                myRigidbody.position = putterTarget.transform.position;
+                myRigidbody.rotation = putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
                 myRigidbody.velocity = Vector3.zero;
                 myRigidbody.angularVelocity = Vector3.zero;
             }
