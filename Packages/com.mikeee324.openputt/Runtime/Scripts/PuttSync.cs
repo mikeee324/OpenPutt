@@ -56,11 +56,11 @@ namespace mikeee324.OpenPutt
         [UdonSynced]
         private Quaternion syncRotation;
         /// <summary>
-        /// The respawn position for this object
+        /// The respawn position for this object in world space
         /// </summary>
-        private Vector3 originalPosition;
+        public Vector3 originalPosition;
         /// <summary>
-        /// The respawn rotation for this object
+        /// The respawn rotation for this object in world space
         /// </summary>
         private Quaternion originalRotation;
         [UdonSynced]
@@ -106,11 +106,11 @@ namespace mikeee324.OpenPutt
             if (objectRB == null)
                 objectRB = GetComponent<Rigidbody>();
 
-            originalPosition = this.transform.localPosition;
-            originalRotation = this.transform.localRotation;
+            originalPosition = transform.position;
+            originalRotation = transform.rotation;
 
-            syncPosition = this.transform.localPosition;
-            syncRotation = this.transform.localRotation;
+            syncPosition = transform.localPosition;
+            syncRotation = transform.localRotation;
 
             if (fastSyncIntervalCurve == null || fastSyncIntervalCurve.length == 0)
             {
@@ -449,10 +449,10 @@ namespace mikeee324.OpenPutt
                 objectRB.angularVelocity = Vector3.zero;
             }
 
-            this.transform.localPosition = originalPosition;
-            this.transform.localRotation = originalRotation;
+            transform.position = originalPosition;
+            transform.rotation = originalRotation;
 
-            if (returnListener != null)
+            if (returnListener != null && remoteReturnFunction != null && remoteReturnFunction.Length > 0)
                 returnListener.SendCustomEvent(remoteReturnFunction);
 
             RequestFastSync();
@@ -484,8 +484,8 @@ namespace mikeee324.OpenPutt
                 return;
 
 
-            originalPosition = this.transform.InverseTransformPoint(position);
-            originalRotation = Quaternion.Inverse(transform.rotation) * rotation;
+            originalPosition = position;
+            originalRotation = rotation;
 
             RequestFastSync();
         }

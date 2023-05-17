@@ -93,6 +93,13 @@ namespace mikeee324.OpenPutt
                 {
                     golfClub.gameObject.SetActive(value);
                     golfClub.UpdateClubState();
+
+                    if (!value)
+                    {
+                        golfClub.RescaleClub(true);
+                        if (golfClub.puttSync != null)
+                            golfClub.puttSync.Respawn();
+                    }
                 }
                 _clubVisible = value;
             }
@@ -555,13 +562,19 @@ namespace mikeee324.OpenPutt
 
             if (golfClub != null)
             {
-                golfClub.transform.position = Vector3.zero;
+                if (golfClub.puttSync != null)
+                    golfClub.puttSync.Respawn();
+                else
+                    golfClub.transform.position = new Vector3(0, -90, 0);
                 golfClub.RescaleClub(true);
-                golfClub.UpdateClubState(localPlayerIsNowOwner);
+                golfClub.UpdateClubState();
             }
             if (golfBall != null)
             {
-                golfBall.transform.position = Vector3.zero;
+                if (golfBall.puttSync != null)
+                    golfBall.puttSync.Respawn();
+                else
+                    golfBall.transform.position = new Vector3(0, -90, 0);
                 golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
 
