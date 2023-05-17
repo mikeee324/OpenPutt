@@ -438,6 +438,8 @@ namespace mikeee324.OpenPutt
 
             if (playerManager != null)
                 playerManager.OnCourseStarted(courseThatIsBeingStarted);
+
+            UpdateBallState(this.LocalPlayerOwnsThisObject());
         }
 
         public override void OnPickup()
@@ -480,7 +482,12 @@ namespace mikeee324.OpenPutt
                 // Player did not drop ball on a start pad and are currently playing a course
                 if (playerManager != null && playerManager.openPutt != null && playerManager.CurrentCourse != null)
                 {
-                    if (respawnPosition != null)
+                    if (playerManager.CurrentCourse.drivingRangeMode)
+                    {
+                        Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
+                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                    }
+                    else if (respawnPosition != null)
                     {
                         Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
@@ -496,9 +503,11 @@ namespace mikeee324.OpenPutt
                         pickedUpByPlayer = false;
                         return;
                     }
-
-                    // We don't know where to put the ball - skip the current course
-                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                    else
+                    {
+                        // We don't know where to put the ball - skip the current course
+                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                    }
                 }
 
                 // Allows the ball to drop to the floor when you drop it
@@ -890,15 +899,23 @@ namespace mikeee324.OpenPutt
                     {
                         newPickupState = allowBallPickup;
 
-                        if (allowBallPickupWhenNotPlaying)
-                            newPickupState = playerManager != null && playerManager.CurrentCourse == null;
+                        if (playerManager != null)
+                        {
+                            if (allowBallPickupWhenNotPlaying)
+                            {
+                                newPickupState = playerManager.CurrentCourse == null;
+
+                                if (!newPickupState && playerManager.CurrentCourse != null && playerManager.courseScores[playerManager.CurrentCourse.holeNumber] == 0)
+                                    newPickupState = true; // Should let players pick the ball up from the start pad
+                            }
+                        }
                     }
 
                     pickup.pickupable = newPickupState;
                 }
 
                 if (puttSync != null)
-                    puttSync.SetSpawnPosition(Vector3.zero, Quaternion.identity);
+                    puttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
             }
             else
             {

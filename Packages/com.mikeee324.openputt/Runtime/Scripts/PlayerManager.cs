@@ -146,8 +146,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Contains a reference to the players current course that they are playing on (returns null if they aren't playing any)
         /// </summary>
-        public CourseManager CurrentCourse => currentCourse;
-        private CourseManager currentCourse;
+        public CourseManager CurrentCourse { get; private set; }
         public bool IsInLeftHandedMode
         {
             get => openPutt != null && openPutt.leftShoulderPickup != null && openPutt.leftShoulderPickup.ObjectToAttach != null && openPutt.leftShoulderPickup.ObjectToAttach == golfClub.gameObject;
@@ -205,47 +204,52 @@ namespace mikeee324.OpenPutt
 
         public void OnBallHit()
         {
-            if (currentCourse == null || courseStates.Length != openPutt.courses.Length)
+            if (CurrentCourse == null || courseStates.Length != openPutt.courses.Length)
                 return;
 
             bool sendSync = openPutt != null && openPutt.playerSyncType == PlayerSyncType.All;
 
             // Set score on current course
-            switch (courseStates[currentCourse.holeNumber])
+            switch (courseStates[CurrentCourse.holeNumber])
             {
                 case CourseState.Skipped:
                 case CourseState.NotStarted:
-                    courseStates[currentCourse.holeNumber] = CourseState.Playing;
-                    if (!currentCourse.drivingRangeMode)
-                        courseScores[currentCourse.holeNumber] = 1;
-                    courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                    courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
+                    if (!CurrentCourse.drivingRangeMode)
+                        courseScores[CurrentCourse.holeNumber] = 1;
+                    courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
-                    if (openPutt != null && (openPutt.replayableCourses || currentCourse.courseIsAlwaysReplayable))
+                    if (openPutt != null && (openPutt.replayableCourses || CurrentCourse.courseIsAlwaysReplayable))
                     {
-                        courseStates[currentCourse.holeNumber] = CourseState.Playing;
-                        if (!currentCourse.drivingRangeMode)
-                            courseScores[currentCourse.holeNumber] = 1;
-                        courseTimes[currentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                        courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
+                        if (!CurrentCourse.drivingRangeMode)
+                            courseScores[CurrentCourse.holeNumber] = 1;
+                        courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                    }
+                    else
+                    {
+                        Utils.Log(this, $"Player tried to restart course {CurrentCourse.holeNumber}. They have already completed or skipped it though. (OnBallHit)");
+                        CurrentCourse = null;
                     }
                     break;
                 case CourseState.Playing:
-                    if (!currentCourse.drivingRangeMode)
+                    if (!CurrentCourse.drivingRangeMode)
                     {
-                        if (courseScores[currentCourse.holeNumber] < currentCourse.maxScore)
-                            courseScores[currentCourse.holeNumber] += 1;
+                        if (courseScores[CurrentCourse.holeNumber] < CurrentCourse.maxScore)
+                            courseScores[CurrentCourse.holeNumber] += 1;
                         else
-                            courseScores[currentCourse.holeNumber] = currentCourse.maxScore;
+                            courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
 
-                        if (courseScores[currentCourse.holeNumber] == currentCourse.maxScore)
+                        if (courseScores[CurrentCourse.holeNumber] == CurrentCourse.maxScore)
                         {
                             // Play max score reached sound
                             if (openPutt != null && openPutt.SFXController != null)
                                 openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.transform.position);
 
                             // Prevents the sound from being heard again
-                            courseStates[currentCourse.holeNumber] = CourseState.Completed;
+                            courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
                         }
                     }
                     break;
@@ -285,31 +289,32 @@ namespace mikeee324.OpenPutt
                 if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
                 {
                     Utils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
+                    CurrentCourse = null;
                     return;
                 }
             }
 
-            Utils.Log(this, $"Starting course number {newCourse.holeNumber}. Current course({(currentCourse != null ? currentCourse.holeNumber : -1)}) will be closed");
+            Utils.Log(this, $"Starting course number {newCourse.holeNumber}. Current course({(CurrentCourse != null ? CurrentCourse.holeNumber : -1)}) will be closed");
 
             // If the player is already on a hole say they skipped it
-            if (currentCourse != null && currentCourse.holeNumber != newCourse.holeNumber)
+            if (CurrentCourse != null && CurrentCourse.holeNumber != newCourse.holeNumber)
             {
-                OnCourseFinished(currentCourse, null, courseScores[currentCourse.holeNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped);
+                OnCourseFinished(CurrentCourse, null, courseScores[CurrentCourse.holeNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped);
             }
 
-            currentCourse = newCourse;
+            CurrentCourse = newCourse;
         }
 
         public void OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
         {
             // Player either isn't playing a course already or they put the ball in the wrong hole - ignore event
-            if (course == null || currentCourse != course)
+            if (course == null || CurrentCourse != course)
             {
-                Utils.Log(this, $"Course {course.holeNumber} was finished. {(course == null ? "Course is null" : "")} {(currentCourse != course ? "Wrong course!" : "")}");
+                Utils.Log(this, $"Course {course.holeNumber} was finished. {(course == null ? "Course is null" : "")} {(CurrentCourse != course ? "Wrong course!" : "")}");
                 return;
             }
 
-            currentCourse = null;
+            CurrentCourse = null;
 
             // Add on any extra points to the players score that this particular hole has
             if (hole != null)
@@ -624,7 +629,7 @@ namespace mikeee324.OpenPutt
         {
             // Reset score tracking
             isPlaying = true;
-            currentCourse = null;
+            CurrentCourse = null;
             courseScores = new int[openPutt != null ? openPutt.courses.Length : 0];
             courseTimes = new int[openPutt != null ? openPutt.courses.Length : 0];
             courseStates = new CourseState[openPutt != null ? openPutt.courses.Length : 0];
@@ -704,11 +709,11 @@ namespace mikeee324.OpenPutt
 
             bool canPlayCoursesInAnyOrder = openPutt.coursesCanBePlayedInAnyOrder;
 
-            int currentCourseNumber = currentCourse == null ? -1 : currentCourse.holeNumber;
+            int CurrentCourseNumber = CurrentCourse == null ? -1 : CurrentCourse.holeNumber;
             int courseNumber = course.holeNumber;
 
             // We should already be tracking the current course state properly - so don't do anything here
-            if (courseNumber == currentCourseNumber)
+            if (courseNumber == CurrentCourseNumber)
                 return;
 
             // Driving ranges don't do much
@@ -735,7 +740,7 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            if (courseNumber < currentCourseNumber)
+            if (courseNumber < CurrentCourseNumber)
             {
                 // This course is before the current course in the list
                 switch (oldCourseState)
@@ -786,7 +791,7 @@ namespace mikeee324.OpenPutt
         public bool IsOnTopOfCurrentCourse(Vector3 position, float maxDistance = 0.1f)
         {
             // If we aren't playing a course the ball can be wherever
-            if (currentCourse == null || golfBall.floorMaterial == null || golfBall.floorMaterial.name == null)
+            if (CurrentCourse == null || golfBall.floorMaterial == null || golfBall.floorMaterial.name == null)
                 return false;
 
             // Check what is underneath the ball
@@ -796,7 +801,7 @@ namespace mikeee324.OpenPutt
                 // Collider col = hit.collider;
                 // bool rightKindOfFloor = col != null && col.material != null && col.material.name != null && col.material.name.StartsWith(golfBall.floorMaterial.name);
 
-                foreach (GameObject mesh in currentCourse.floorObjects)
+                foreach (GameObject mesh in CurrentCourse.floorObjects)
                 {
                     // Does this floor belong to the course the player is currently playing?
                     if (mesh.gameObject == hit.collider.gameObject)

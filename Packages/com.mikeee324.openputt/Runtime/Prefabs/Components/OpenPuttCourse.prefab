@@ -70,7 +70,6 @@ MonoBehaviour:
   - {fileID: 3701567014287913227}
   - {fileID: 4338855631693165917}
   - {fileID: 4593536865289753961}
-  ballSpawnColliders: []
   holes:
   - {fileID: 6202910581709162212}
   floorObjects:
@@ -160,6 +159,8 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 6202910581709162217}
   courseManager: {fileID: 6202910580894832666}
   holeScoreAddition: 0
+  localPlayerBallEnteredEvent: 0
+  localPlayerHoleInOneEvent: 0
 --- !u!114 &6202910581709162217
 MonoBehaviour:
   m_ObjectHideFlags: 0
