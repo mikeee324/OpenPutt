@@ -6,6 +6,7 @@ using VRC.Udon.Common;
 
 namespace mikeee324.OpenPutt
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
         public PlayerManager playerManager;
@@ -57,20 +58,11 @@ namespace mikeee324.OpenPutt
             get => _clubArmed;
             set
             {
-                if (overrideIsArmed)
-                    value = true;
-
                 // If the state of the club has changed
                 if (ClubIsArmed != value)
                 {
                     if (this.LocalPlayerOwnsThisObject())
                     {
-                        if (clubColliderIsTempDisabled)
-                            value = false;
-
-                        if (overrideIsArmed)
-                            value = true;
-
                         // Toggles whether the player is frozen or not
                         if (playerManager != null)
                             playerManager.PlayerIsCurrentlyFrozen = value;
@@ -88,7 +80,6 @@ namespace mikeee324.OpenPutt
                     }
                     else
                     {
-                        // Toggle the collider object
                         if (putter != null)
                             putter.gameObject.SetActive(false);
                     }
@@ -103,8 +94,6 @@ namespace mikeee324.OpenPutt
                 _clubArmed = value;
             }
         }
-        [Tooltip("Forces the club to be armed - useful for testing")]
-        public bool overrideIsArmed = false;
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft = false;
         [Tooltip("Which material to use on the club when it is not armed")]
@@ -121,9 +110,8 @@ namespace mikeee324.OpenPutt
         private bool LeftUseButtonDown = false;
         private bool RightUseButtonDown = false;
         private bool clubColliderIsTempDisabled = false;
-        private
 
-        void Start()
+        private void Start()
         {
             // Make sure everything we need is on the same layer
             shaftMesh.gameObject.layer = this.gameObject.layer;
@@ -136,6 +124,14 @@ namespace mikeee324.OpenPutt
 
             if (puttSync == null)
                 puttSync = GetComponent<PuttSync>();
+            shaftScale = 1;
+
+            shaftMesh.transform.localScale = new Vector3(1, 1, 1);
+            handleMesh.transform.localScale = new Vector3(1, 1, 1);
+            headMesh.transform.localScale = new Vector3(1, 1, 1);
+
+            shaftDefaultSize = shaftMesh.bounds.size.y;
+            headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
 
             // Update the collider states
             RefreshState();
@@ -143,7 +139,7 @@ namespace mikeee324.OpenPutt
             this.enabled = false;
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
@@ -193,6 +189,7 @@ namespace mikeee324.OpenPutt
             if (!clubColliderIsTempDisabled)
             {
                 clubColliderIsTempDisabled = true;
+                RefreshState();
                 SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
             }
         }
@@ -200,6 +197,7 @@ namespace mikeee324.OpenPutt
         public void EnableClubCollider()
         {
             clubColliderIsTempDisabled = false;
+            RefreshState();
         }
 
         public void RefreshState()
@@ -216,6 +214,9 @@ namespace mikeee324.OpenPutt
                     newArmedState = LeftUseButtonDown;
                 else if (CurrentHand == VRC_Pickup.PickupHand.Right)
                     newArmedState = RightUseButtonDown;
+
+                if (clubColliderIsTempDisabled)
+                    newArmedState = false;
 
                 // If player has armed the club - check if we need to disable it
                 if (newArmedState)
@@ -242,21 +243,19 @@ namespace mikeee324.OpenPutt
             }
         }
 
-        public void UpdateClubState(bool isNewOwner = false)
+        public void UpdateClubState()
         {
-            VRCPickup pickup = GetComponent<VRCPickup>();
             if (pickup != null)
-                pickup.pickupable = Networking.IsOwner(Networking.LocalPlayer, gameObject) && CurrentHandFromBodyMount == VRCPickup.PickupHand.None;
+                pickup.pickupable = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRCPickup.PickupHand.None;
 
-            if (!isNewOwner)
-                isNewOwner = Networking.IsOwner(Networking.LocalPlayer, gameObject);
+            if (puttSync != null)
+                puttSync.SetSpawnPosition(new Vector3(0, -2, 0), Quaternion.identity);
+        }
 
-            if (isNewOwner)
-            {
-                PuttSync puttSync = GetComponent<PuttSync>();
-                if (puttSync != null)
-                    puttSync.SetSpawnPosition(Vector3.zero, Quaternion.identity);
-            }
+        public void OnRespawn()
+        {
+            // if (shaftScale > 10f)
+            //    RescaleClub(true);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
@@ -272,18 +271,18 @@ namespace mikeee324.OpenPutt
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
         public void RescaleClub(bool resetToDefault)
         {
-            float oldShaftScale = shaftScale;
-
             if (resetToDefault)
             {
                 // Reset all mesh scaling and work out actual default bounds
                 shaftScale = 1;
 
                 shaftMesh.transform.localScale = new Vector3(1, 1, 1);
-                shaftDefaultSize = shaftMesh.bounds.size.y;
-
                 handleMesh.transform.localScale = new Vector3(1, 1, 1);
                 headMesh.transform.localScale = new Vector3(1, 1, 1);
+
+                if (shaftDefaultSize == -1)
+                    shaftDefaultSize = shaftMesh.bounds.size.y * shaftMesh.transform.lossyScale.y;
+
                 headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
             }
             else
@@ -291,8 +290,7 @@ namespace mikeee324.OpenPutt
                 float maxSize = Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsUserInVR() ? 3f : 6f;
                 Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
                 if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask))
-                    //if (Physics.SphereCast(shaftMesh.transform.position, 0.03f, raycastDir, out RaycastHit hit, 100f, resizeLayerMask))
-                    shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.y) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                    shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
             }
 
             if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())

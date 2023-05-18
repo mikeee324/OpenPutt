@@ -43,7 +43,7 @@ namespace mikeee324.OpenPutt
         [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         private float maxBallSpeed = 10f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
-        public float minBallSpeed = 0.015f;
+        public float minBallSpeed = 0.03f;
         [Range(0f, 1f), Tooltip("Defines how long the ball can keep rolling for when it goes below the minimum speed")]
         public float minBallSpeedMaxTime = 1f;
         [Tooltip("How long a ball can roll before being stopped automatically (in seconds)")]
@@ -423,6 +423,12 @@ namespace mikeee324.OpenPutt
 
         public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
         {
+            if (courseThatIsBeingStarted == null)
+            {
+                Utils.LogError(position, $"Player tried to start a course but a CourseStartPosition({(position != null && position.name != null ? position.name : "null")}) is missing a reference to its CourseManager!");
+                return;
+            }
+
             startLine.SetEnabled(false);
 
             this.transform.position = position.transform.position;
@@ -432,6 +438,8 @@ namespace mikeee324.OpenPutt
 
             if (playerManager != null)
                 playerManager.OnCourseStarted(courseThatIsBeingStarted);
+
+            UpdateBallState(this.LocalPlayerOwnsThisObject());
         }
 
         public override void OnPickup()
@@ -467,14 +475,19 @@ namespace mikeee324.OpenPutt
 
             if (startLine.StartDropAnimation(this.transform.position))
             {
-                Utils.Log(this, "Player dropped ball near a start pad.. moving to to the start of a course");
+                Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
             }
             else
             {
                 // Player did not drop ball on a start pad and are currently playing a course
                 if (playerManager != null && playerManager.openPutt != null && playerManager.CurrentCourse != null)
                 {
-                    if (respawnPosition != null)
+                    if (playerManager.CurrentCourse.drivingRangeMode)
+                    {
+                        Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
+                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                    }
+                    else if (respawnPosition != null)
                     {
                         Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
@@ -490,9 +503,11 @@ namespace mikeee324.OpenPutt
                         pickedUpByPlayer = false;
                         return;
                     }
-
-                    // We don't know where to put the ball - skip the current course
-                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                    else
+                    {
+                        // We don't know where to put the ball - skip the current course
+                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                    }
                 }
 
                 // Allows the ball to drop to the floor when you drop it
@@ -562,6 +577,13 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
+            if (!playerIsPlayingACourse)
+            {
+                // Tell the club to disarm for a second
+                if (playerManager != null && playerManager.golfClub != null)
+                    playerManager.golfClub.DisableClubColliderFor();
+            }
+
             float speed = withVelocity.magnitude;
 
             // If ball wasn't hit hard enough ignore this hit
@@ -583,7 +605,13 @@ namespace mikeee324.OpenPutt
             // Vibrate the controller to give feedback to the player
             VRCPickup.PickupHand currentHand = club.CurrentHand;
             if (currentHand != VRC_Pickup.PickupHand.None)
+            {
+#if UNITY_ANDROID
+                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, .4f, 1f);
+#else
                 Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, 1f, 1f);
+#endif
+            }
 
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
                 playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(this.transform.position, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
@@ -871,15 +899,23 @@ namespace mikeee324.OpenPutt
                     {
                         newPickupState = allowBallPickup;
 
-                        if (allowBallPickupWhenNotPlaying)
-                            newPickupState = playerManager != null && playerManager.CurrentCourse == null;
+                        if (playerManager != null)
+                        {
+                            if (allowBallPickupWhenNotPlaying)
+                            {
+                                newPickupState = playerManager.CurrentCourse == null;
+
+                                if (!newPickupState && playerManager.CurrentCourse != null && playerManager.courseScores[playerManager.CurrentCourse.holeNumber] == 0)
+                                    newPickupState = true; // Should let players pick the ball up from the start pad
+                            }
+                        }
                     }
 
                     pickup.pickupable = newPickupState;
                 }
 
                 if (puttSync != null)
-                    puttSync.SetSpawnPosition(Vector3.zero, Quaternion.identity);
+                    puttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
             }
             else
             {

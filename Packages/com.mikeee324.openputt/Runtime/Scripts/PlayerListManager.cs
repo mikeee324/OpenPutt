@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.UIElements;
 using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
@@ -149,17 +150,41 @@ namespace mikeee324.OpenPutt
             {
                 bool requestRefresh = false;
 
-                PlayerManager oldPlayer = sp < PlayersSortedByScore.Length ? (ScoreboardManager.SpeedGolfMode ? PlayersSortedByTime[sp] : PlayersSortedByScore[sp]) : null;
-                PlayerManager newPlayer = sp < TempPlayersSortedByScore.Length ? (ScoreboardManager.SpeedGolfMode ? TempPlayersSortedByTime[sp] : TempPlayersSortedByScore[sp]) : null;
+                PlayerManager oldPlayerByScore = sp < PlayersSortedByScore.Length ? PlayersSortedByScore[sp] : null;
+                PlayerManager newPlayerByScore = sp < TempPlayersSortedByScore.Length ? TempPlayersSortedByScore[sp] : null;
+
+                PlayerManager oldPlayerByTime = sp < PlayersSortedByTime.Length ? PlayersSortedByTime[sp] : null;
+                PlayerManager newPlayerByTime = sp < TempPlayersSortedByTime.Length ? TempPlayersSortedByTime[sp] : null;
 
                 if (!requestRefresh)
-                    requestRefresh = oldPlayer != newPlayer;
+                {
+                    if (ScoreboardManager.SpeedGolfMode)
+                        requestRefresh = oldPlayerByTime != newPlayerByTime;
+                    else
+                        requestRefresh = oldPlayerByScore != newPlayerByScore;
+                }
 
-                if (!requestRefresh && newPlayer != null)
-                    requestRefresh = newPlayer.scoreboardRowNeedsUpdating;
+                if (!requestRefresh)
+                {
+                    if (ScoreboardManager.SpeedGolfMode)
+                        requestRefresh = newPlayerByTime != null && newPlayerByTime.scoreboardRowNeedsUpdating;
+                    else
+                        requestRefresh = newPlayerByScore != null && newPlayerByScore.scoreboardRowNeedsUpdating;
+                }
 
-                TempPlayersSortedByScore[sp].ScoreboardPositionByScore = sp;
-                TempPlayersSortedByTime[sp].ScoreboardPositionByTime = sp;
+                if (TempPlayersSortedByScore[sp].ScoreboardPositionByScore != sp)
+                {
+                    TempPlayersSortedByScore[sp].ScoreboardPositionByScore = sp;
+                    if (!ScoreboardManager.SpeedGolfMode)
+                        requestRefresh = true;
+                }
+
+                if (TempPlayersSortedByTime[sp].ScoreboardPositionByTime != sp)
+                {
+                    TempPlayersSortedByTime[sp].ScoreboardPositionByTime = sp;
+                    if (ScoreboardManager.SpeedGolfMode)
+                        requestRefresh = true;
+                }
 
                 if (requestRefresh)
                     ScoreboardManager.RequestRefreshForRow(sp);

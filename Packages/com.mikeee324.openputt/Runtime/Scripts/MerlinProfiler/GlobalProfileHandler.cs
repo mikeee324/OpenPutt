@@ -62,7 +62,8 @@ public class GlobalProfileHandler : UdonSharpBehaviour
 #if AVERAGE_OUTPUT
         if (_measuredTimeFrameCount >= MEASURE_FRAME_AMOUNT)
         {
-            _timeText.text = $"Udon: {(_measuredTimeTotal / _measuredTimeFrameCount):F4}ms\nFrametime: {(_measuredFrametimeTotal / _measuredTimeFrameCount):F4}ms";
+            float frameTime = _measuredFrametimeTotal / _measuredTimeFrameCount;
+            _timeText.text = $"Udon: {(_measuredTimeTotal / _measuredTimeFrameCount):F4}ms\nFrametime: {(frameTime):F4}ms ({(1000 / frameTime):F0}fps)";
             _measuredTimeTotal = 0f;
             _measuredFrametimeTotal = 0f;
             _measuredTimeFrameCount = 0;

@@ -1,15 +1,10 @@
 ﻿
 using System;
 using System.Diagnostics;
-using Cyan.PlayerObjectPool;
-using TMPro;
 using UdonSharp;
 using UnityEngine;
-using UnityEngine.SocialPlatforms.Impl;
-using UnityEngine.UI;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
-using VRC.Udon;
 
 namespace mikeee324.OpenPutt
 {
@@ -37,11 +32,17 @@ namespace mikeee324.OpenPutt
 
         public Scoreboard[] scoreboards;
         public Scoreboard[] staticScoreboards;
+        /// <summary>
+        /// Used to avoid having to build a joined array of scoreboards+staticScoreboards after start
+        /// </summary>
+        private Scoreboard[] allScoreboards;
         public ScoreboardPositioner[] scoreboardPositions;
 
         [Space, Header("Settings")]
-        [Range(1f, 5f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
+        [Range(1f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
         public float maxRefreshInterval = 1f;
+        [Range(1f, 5f), Tooltip("Amount of time in seconds between scoreboard position updates")]
+        public float scoreboardPositionUpdateInterval = 1f;
         [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]
         public int numberOfPlayersToDisplay = 12;
         [Tooltip("This should stay enabled unless you're debugging the scoreboard player lists")]
@@ -70,6 +71,24 @@ namespace mikeee324.OpenPutt
         public GameObject colPrefab;
 
         #region Internal Vars
+        /// <summary>
+        /// Determines whether or not the local player currently has access to the dev mode tab
+        /// </summary>
+        public bool LocalPlayerCanAccessDevMode
+        {
+            get
+            {
+                if (openPutt.enableDevModeForAll)
+                    return true;
+
+                string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+
+                if (localPlayerName != null && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+                    return true;
+
+                return false;
+            }
+        }
         /// <summary>
         /// Whether or not the scoreboard is showing course times instead of scores
         /// </summary>
@@ -115,13 +134,24 @@ namespace mikeee324.OpenPutt
             foreach (Scoreboard scoreboard in scoreboards)
                 scoreboard.manager = this;
 
-            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), maxRefreshInterval);
+            foreach (Scoreboard scoreboard in staticScoreboards)
+                scoreboard.manager = this;
+
+            allScoreboards = scoreboards.AddRange(staticScoreboards);
+
+            // Update positions of all scoreboards a bit quicker at startup
+            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), .5f);
         }
 
+        /// <summary>
+        /// Syncs up all the scoreboards so they are displaying the same thing<br/>
+        /// Might need to be expanded to sync up scroll positions on larger lists later.<br/>
+        /// This can take 1+ms to perform so don't call this too often. (Might need to split this up into separate frames so it's less laggy)
+        /// </summary>
         public void UpdateScoreboardVisibility()
         {
             // Schedule the next update before anything else
-            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), maxRefreshInterval);
+            SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), scoreboardPositionUpdateInterval);
 
             // Don't do anything if we can't find the local player
             if (!Utils.LocalPlayerIsValid())
@@ -132,24 +162,65 @@ namespace mikeee324.OpenPutt
             {
                 bool queueBigRefresh = true;
                 foreach (Scoreboard scoreboard in scoreboards)
+                {
                     if (!scoreboard.HasInitializedUI)
+                    {
                         queueBigRefresh = false;
+                        break;
+                    }
+                }
 
                 if (queueBigRefresh)
                 {
                     allScoreboardsInitialised = true;
                     CheckPlayerListForChanges();
                 }
+                else
+                {
+                    return;
+                }
             }
+
+            bool devModeEnabled = LocalPlayerCanAccessDevMode;
+
+            if (!devModeEnabled && requestedScoreboardView == ScoreboardView.DevMode)
+                requestedScoreboardView = ScoreboardView.Scoreboard;
+
+            for (int i = 0; i < allScoreboards.Length; i++)
+            {
+                if (i < scoreboards.Length)
+                {
+                    // Hide all managed scoreboards far down away from player (They will be moved to the correct position furhter down if they are visible)
+                    allScoreboards[i].transform.SetPositionAndRotation(new Vector3(0, -100, 0), Quaternion.identity);
+                    allScoreboards[i].transform.localScale = Vector3.zero;
+                }
+
+                // Sync up the current tab the player is looking at
+                switch (requestedScoreboardView)
+                {
+                    case ScoreboardView.Settings:
+                    case ScoreboardView.DevMode:
+                        break;
+                    default:
+                        // Kick player out of dev mode if they don't have access anymore
+                        if (!devModeEnabled && allScoreboards[i].CurrentScoreboardView == ScoreboardView.DevMode)
+                            allScoreboards[i].CurrentScoreboardView = ScoreboardView.Scoreboard;
+
+                        allScoreboards[i].CurrentScoreboardView = requestedScoreboardView;
+                        break;
+                }
+            }
+
             int currentVisibleScoreboardID = 0;
 
             Vector3 localPlayerPos = Networking.LocalPlayer.GetPosition();
-            ScoreboardPositioner[] scoreboardPositionsByDistance = this.scoreboardPositions.SortByDistance(localPlayerPos);
 
-            foreach (ScoreboardPositioner position in scoreboardPositionsByDistance)
+            for (int i = 0; i < scoreboardPositions.Length; i++)
             {
+                ScoreboardPositioner position = scoreboardPositions[i];
                 bool isVisibleHere = position.ShouldBeVisible(localPlayerPos);
 
+                // We ran out of scoreboards in the pool so just show the positioner canvases if needed
                 if (currentVisibleScoreboardID >= scoreboards.Length)
                     isVisibleHere = false;
 
@@ -166,29 +237,10 @@ namespace mikeee324.OpenPutt
                     // Make it so we use the next scoreboard in the list next loop
                     currentVisibleScoreboardID += 1;
                 }
-                else
+                else if (position.CanvasWasEnabledAtStart)
                 {
                     // Re-enable the background if it was on by default
-                    if (position.CanvasWasEnabledAtStart)
-                        position.backgroundCanvas.enabled = true;
-                }
-            }
-
-            while (currentVisibleScoreboardID < scoreboards.Length)
-            {
-                // Hide the scoreboard far down
-                scoreboards[currentVisibleScoreboardID].transform.position = new Vector3(0, -100, 0);
-
-                currentVisibleScoreboardID += 1;
-            }
-
-            // Swap all scoreboard views to be the same
-            if (requestedScoreboardView != ScoreboardView.Settings && requestedScoreboardView != ScoreboardView.DevMode)
-            {
-                foreach (Scoreboard scoreboard in scoreboards)
-                {
-                    if (scoreboard.HasInitializedUI)
-                        scoreboard.CurrentScoreboardView = requestedScoreboardView;
+                    position.backgroundCanvas.enabled = true;
                 }
             }
         }
@@ -279,12 +331,18 @@ namespace mikeee324.OpenPutt
                 if (i < newList.Length)
                     thisRowNewPlayer = newList[i];
 
-                // If this row has no player and hasn't changed - we don't need to check any more rows as the rest should be the same
+                // If this row has no player and hasn't changed - we don't need to update this row
                 if (thisRowPlayer == null && thisRowNewPlayer == null)
-                    break;
+                    continue;
 
                 // Check if an update is being force (for when player toggles between timer/normal mode)
-                bool requestRefresh = forceUpdate;
+                if (forceUpdate)
+                {
+                    rowsToUpdate = rowsToUpdate.Add(i);
+                    continue;
+                }
+
+                bool requestRefresh = false;
 
                 // Check if player in this row has changed
                 if (!requestRefresh)
@@ -370,7 +428,7 @@ namespace mikeee324.OpenPutt
 
             // Loop again next frame to process the queue until it's empty
             //SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
-            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.1f);
+            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.05f);
         }
 
         /// <summary>

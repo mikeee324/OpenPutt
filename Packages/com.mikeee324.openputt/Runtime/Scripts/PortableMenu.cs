@@ -92,8 +92,9 @@ public class PortableMenu : UdonSharpBehaviour
             }
             if (originalHandDistance != -1f && leftUseButtonDown && rightUseButtonDown)
             {
-                Vector3 leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftHand);
-                Vector3 rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightHand);
+                // Maybe this crashes if an avatar doesn't have finger bones? - No idea
+                Vector3 leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
+                Vector3 rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
                 float currentDistance = Vector3.Distance(leftHand, rightHand);
 
                 bool newIsVisible = false;

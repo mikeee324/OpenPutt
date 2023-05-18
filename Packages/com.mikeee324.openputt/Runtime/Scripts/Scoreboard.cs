@@ -3,6 +3,7 @@ using TMPro;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 
@@ -80,7 +81,8 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
         public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
-        public UnityEngine.UI.Image devModeExperimentalClubCollider;
+        public UnityEngine.UI.Image devModeExperimentalClubColliderCheckbox;
+        public UnityEngine.UI.Image devModeForAllCheckbox;
         public Dropdown devModeColliderVelTypeDropdown;
         #endregion
 
@@ -170,6 +172,7 @@ namespace mikeee324.OpenPutt
                     if (manager != null)
                         manager.requestedScoreboardView = value;
                 }
+
                 _currentScoreboardView = value;
                 UpdateTabColours();
             }
@@ -526,6 +529,23 @@ namespace mikeee324.OpenPutt
             RefreshSettingsMenu();
         }
 
+        public void OnToggleDevModeForAll()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.devModePlayerWhitelist == null)
+                return;
+
+            string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+
+            if (localPlayerName != null && manager.openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+            {
+                Utils.SetOwner(Networking.LocalPlayer, manager.openPutt.gameObject);
+                manager.openPutt.enableDevModeForAll = !manager.openPutt.enableDevModeForAll;
+                manager.openPutt.RequestSerialization();
+            }
+
+            RefreshDevModeMenu();
+        }
+
         public void OnToggleExperimental()
         {
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
@@ -534,7 +554,7 @@ namespace mikeee324.OpenPutt
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.putter.smoothedHitDirection = !playerManager.golfClub.putter.smoothedHitDirection;
 
-            RefreshSettingsMenu();
+            RefreshDevModeMenu();
         }
 
         public void OnToggleCourseReplays()
@@ -625,13 +645,15 @@ namespace mikeee324.OpenPutt
                 {
                     if (pm.golfClub.pickup != null)
                         pm.golfClub.pickup.Drop();
-                    pm.golfClub.transform.localPosition = Vector3.zero;
+                    if (pm.golfClub.puttSync != null)
+                        pm.golfClub.puttSync.Respawn();
                 }
                 if (pm.golfBall != null)
                 {
                     if (pm.golfBall.GetComponent<VRCPickup>() != null)
                         pm.golfBall.GetComponent<VRCPickup>().Drop();
-                    pm.golfBall.transform.localPosition = Vector3.zero;
+                    if (pm.golfClub.puttSync != null)
+                        pm.golfClub.puttSync.Respawn();
                     pm.golfBall.BallIsMoving = false;
                 }
                 pm.RequestSync();
@@ -690,7 +712,8 @@ namespace mikeee324.OpenPutt
             devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
-            devModeExperimentalClubCollider.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
+            devModeExperimentalClubColliderCheckbox.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
+            devModeForAllCheckbox.material = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
         }
 
         public void OnBallWeightReset()
@@ -910,6 +933,10 @@ namespace mikeee324.OpenPutt
                 colorBlock.normalColor = newSettingsCol;
                 settingsTabBackground.colors = colorBlock;
             }
+
+            bool devModeEnabled = manager.LocalPlayerCanAccessDevMode;
+            devModeTabBackground.gameObject.SetActive(devModeEnabled);
+
             if (devModeTabBackground.colors.normalColor != newDevModeCol)
             {
                 ColorBlock colorBlock = devModeTabBackground.colors;

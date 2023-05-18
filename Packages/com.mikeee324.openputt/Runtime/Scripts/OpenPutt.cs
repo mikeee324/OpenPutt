@@ -37,7 +37,7 @@ namespace mikeee324.OpenPutt
         public OpenPuttEventListener[] eventListeners;
         #endregion
 
-        #region Synced Settings
+        #region Game Settings
         [Header("Game Settings")]
         [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
         public bool replayableCourses = false;
@@ -45,12 +45,16 @@ namespace mikeee324.OpenPutt
         public bool enableVerticalHits = false;
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
         public bool coursesCanBePlayedInAnyOrder = false;
+        [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
+        public bool enableDevModeForAll = false;
         #endregion
 
         #region Other Settings
         [Header("Other Settings")]
         [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
         public int ballRenderQueueBase = 2000;
+        [Tooltip("A list of players that can access the dev mode tab by default")]
+        public string[] devModePlayerWhitelist = new string[] { "mikeee324" };
         #endregion
 
         #region API
