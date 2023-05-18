@@ -1,8 +1,12 @@
-# OpenPutt
+![OpenPutt Banner](https://github.com/mikeee324/OpenPutt/blob/dev/Website/banner.png?raw=true)  
+  
+OpenPutt is a golf game prefab for VRChat. This is still in development so things might act weird or be broken.  
+If you have suggestions or can help me fix things please let me know!  
+  
+The aim for this prefab is to make it easier to make golf game worlds so more people make them!  
+Lets play some golf!  
 
-This is a very early test version of OpenPutt.  
-Most of the systems are working, the main issues right now are physics based. If anybody has ideas on how to solve these please let me know!
-
+   
 # Dependencies (Install these first!!!)
 - UdonSharp 1.1.7 (Use VCC!)
 - CyanLasers Player Object Pool - https://cyanlaser.github.io/CyanPlayerObjectPool/
