@@ -698,6 +698,7 @@ MonoBehaviour:
   scoreboardPositions:
   - {fileID: 5617172035666717316}
   maxRefreshInterval: 1
+  scoreboardPositionUpdateInterval: 1
   numberOfPlayersToDisplay: 12
   hideInactivePlayers: 1
   nameBackground1: {r: 0.23137255, g: 0.25882354, b: 0.32156864, a: 1}
@@ -1630,7 +1631,10 @@ MonoBehaviour:
   replayableCourses: 0
   enableVerticalHits: 0
   coursesCanBePlayedInAnyOrder: 0
+  enableDevModeForAll: 0
   ballRenderQueueBase: -1
+  devModePlayerWhitelist:
+  - mikeee324
   playerSyncType: 0
   LocalPlayerManager: {fileID: 0}
   allPlayerManagers: []
@@ -1826,7 +1830,7 @@ AudioSource:
   Priority: 200
   DopplerLevel: 1
   MinDistance: 1
-  MaxDistance: 25
+  MaxDistance: 35
   Pan2D: 0
   rolloffMode: 1
   BypassEffects: 0
@@ -1914,7 +1918,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Gain: 10
-  Far: 25
+  Far: 35
   Near: 1
   VolumetricRadius: 0
   EnableSpatialization: 1

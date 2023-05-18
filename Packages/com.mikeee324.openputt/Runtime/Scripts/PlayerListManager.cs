@@ -187,7 +187,7 @@ namespace mikeee324.OpenPutt
                 }
 
                 if (requestRefresh)
-                    ScoreboardManager.RequestRefreshForRow(sp, true);
+                    ScoreboardManager.RequestRefreshForRow(sp);
             }
 
             PlayersSortedByScore = TempPlayersSortedByScore;

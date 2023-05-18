@@ -428,7 +428,7 @@ namespace mikeee324.OpenPutt
 
             // Loop again next frame to process the queue until it's empty
             //SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
-            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.1f);
+            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.05f);
         }
 
         /// <summary>

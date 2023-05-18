@@ -461,8 +461,8 @@ namespace mikeee324.OpenPutt
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
 
-            if (velocity.magnitude < golfBall.minBallSpeed)
-                return;
+            //if (velocity.magnitude < golfBall.minBallSpeed)
+            //    return;
 
             Utils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
 
