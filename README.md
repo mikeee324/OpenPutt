@@ -56,7 +56,7 @@ There will be more docs on everything at some point (like how to set up the mesh
 
 # Worlds
 A list of worlds where you can see this in action (If you make one let me know!)
-- ![Junkyard Golf - mikeee324](https://vrchat.com/home/launch?worldId=wrld_d62918a1-9172-40cd-93a9-5d8546dad6cf)
+- [Junkyard Golf - mikeee324](https://vrchat.com/home/world/wrld_d62918a1-9172-40cd-93a9-5d8546dad6cf)
 
 # Patreon Thing
 If you feel the need to support me you can do so here: https://patreon.com/mikeee324  
