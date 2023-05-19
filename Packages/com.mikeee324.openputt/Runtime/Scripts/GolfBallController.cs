@@ -548,7 +548,7 @@ namespace mikeee324.OpenPutt
             playerManager.RequestSync();
         }
 
-        public void RespawnBall(bool playErrorNoise = false)
+        public void RespawnBall()
         {
             Vector3 respawnPos = respawnPosition;
 
@@ -556,9 +556,14 @@ namespace mikeee324.OpenPutt
 
             ballRigidbody.MovePosition(respawnPos);
             respawnPosition = respawnPos;
+        }
+
+        public void _RespawnBallWithErrorNoise()
+        {
+            RespawnBall();
 
             // Play the reset noise
-            if (playErrorNoise && playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
+            if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
                 playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
         }
 
@@ -854,6 +859,11 @@ namespace mikeee324.OpenPutt
         private Vector3 ProjectOnContactPlane(Vector3 vector)
         {
             return vector - contactNormal * Vector3.Dot(vector, contactNormal);
+        }
+
+        public void OnRespawn()
+        {
+            SendCustomEventDelayedFrames(nameof(RespawnBall), 2);
         }
 
         public void Wakeup()
