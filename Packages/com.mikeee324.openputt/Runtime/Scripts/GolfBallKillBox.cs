@@ -16,7 +16,7 @@ namespace mikeee324.OpenPutt
             GolfBallController golfBall = collision.gameObject.GetComponent<GolfBallController>();
             if (golfBall != null)
             {
-                golfBall.RespawnBall(true);
+                golfBall._RespawnBallWithErrorNoise();
             }
         }
 
@@ -25,7 +25,7 @@ namespace mikeee324.OpenPutt
             GolfBallController golfBall = other.gameObject.GetComponent<GolfBallController>();
             if (golfBall != null)
             {
-                golfBall.RespawnBall(true);
+                golfBall._RespawnBallWithErrorNoise();
             }
         }
     }
