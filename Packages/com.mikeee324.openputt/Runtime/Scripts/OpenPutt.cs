@@ -29,6 +29,7 @@ namespace mikeee324.OpenPutt
         [Header("Local Player Objects")]
         public BodyMountedObject leftShoulderPickup;
         public BodyMountedObject rightShoulderPickup;
+        public BodyMountedObject footCollider;
         public PortableMenu portableScoreboard;
         public SFXController SFXController;
         public AudioSource[] BGMAudioSources;

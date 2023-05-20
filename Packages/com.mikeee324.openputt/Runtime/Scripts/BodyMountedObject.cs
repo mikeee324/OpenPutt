@@ -12,6 +12,7 @@ namespace mikeee324.OpenPutt
     {
         #region Public Settings
         [Header("Object Settings")]
+        public Rigidbody rb;
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
         public GameObject ObjectToAttach
@@ -104,7 +105,7 @@ namespace mikeee324.OpenPutt
 
         public override void PostLateUpdate()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || objectToAttach == null)
+            if (!Utilities.IsValid(Networking.LocalPlayer))
                 return;
 
             if (!firstFrameCheck)
@@ -160,14 +161,18 @@ namespace mikeee324.OpenPutt
             if (pickup != null)
                 pickup.pickupable = false;
 
-            objectToAttach.transform.position = gameObject.transform.position;
+            if (objectToAttach != null)
+                objectToAttach.transform.position = gameObject.transform.position;
+
             if (userIsInVR)
             {
-                objectToAttach.transform.rotation = gameObject.transform.rotation;
+                if (objectToAttach != null)
+                    objectToAttach.transform.rotation = gameObject.transform.rotation;
             }
             else
             {
-                objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
+                if (objectToAttach != null)
+                    objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
                 gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
                 gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
             }
@@ -186,18 +191,25 @@ namespace mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
-            // Store the velocity of the RigidBody so we can apply it to the object when the player lets go
-            Rigidbody rigidbody = GetComponent<Rigidbody>();
+            if (rb == null)
+                rb = GetComponent<Rigidbody>();
 
-            if (rigidbody.isKinematic)
-                lastFrameVelocity = (rigidbody.position - lastFramePosition) / Time.deltaTime;
+            if (rb == null)
+            {
+                lastFrameVelocity = (transform.position - lastFramePosition) / Time.deltaTime;
+                lastFramePosition = transform.position;
+                return;
+            }
+
+            if (rb.isKinematic)
+                lastFrameVelocity = (rb.position - lastFramePosition) / Time.deltaTime;
             else
-                lastFrameVelocity = rigidbody.velocity;
+                lastFrameVelocity = rb.velocity;
 
-            lastFramePosition = rigidbody.position;
+            lastFramePosition = rb.position;
 
-            rigidbody.velocity = Vector3.zero;
-            rigidbody.angularVelocity = Vector3.zero;
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
     }
 }

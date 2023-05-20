@@ -83,7 +83,9 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
         public UnityEngine.UI.Image devModeExperimentalClubColliderCheckbox;
         public UnityEngine.UI.Image devModeForAllCheckbox;
+        public UnityEngine.UI.Image footColliderCheckbox;
         public Dropdown devModeColliderVelTypeDropdown;
+        public Transform devModeSettingsBox;
         #endregion
 
         public UnityEngine.UI.Image verticalHitsCheckbox;
@@ -171,6 +173,9 @@ namespace mikeee324.OpenPutt
 
                     if (manager != null)
                         manager.requestedScoreboardView = value;
+
+                    if (manager.devModeTaps < 30 && value != ScoreboardView.Settings)
+                        manager.devModeTaps = 0;
                 }
 
                 _currentScoreboardView = value;
@@ -546,6 +551,21 @@ namespace mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnToggleFootCollider()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.footCollider == null)
+                return;
+
+            manager.openPutt.footCollider.gameObject.SetActive(!manager.openPutt.footCollider.gameObject.activeSelf);
+
+            if (manager.openPutt.footCollider.gameObject.activeSelf)
+                manager.openPutt.LocalPlayerManager.golfClubHead.targetOverride = manager.openPutt.footCollider.transform;
+            else
+                manager.openPutt.LocalPlayerManager.golfClubHead.targetOverride = null;
+
+            RefreshDevModeMenu();
+        }
+
         public void OnToggleExperimental()
         {
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
@@ -576,6 +596,7 @@ namespace mikeee324.OpenPutt
         {
             if (manager != null)
             {
+                manager.devModeTaps++;
                 manager.requestedScoreboardView = ScoreboardView.Settings;
                 manager.OnPlayerOpenSettings(this);
             }
@@ -714,6 +735,7 @@ namespace mikeee324.OpenPutt
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
             devModeExperimentalClubColliderCheckbox.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
             devModeForAllCheckbox.material = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
+            footColliderCheckbox.material = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
         }
 
         public void OnBallWeightReset()
@@ -934,8 +956,10 @@ namespace mikeee324.OpenPutt
                 settingsTabBackground.colors = colorBlock;
             }
 
-            bool devModeEnabled = manager.LocalPlayerCanAccessDevMode;
+            bool devModeEnabled = manager.LocalPlayerCanAccessDevMode || manager.LocalPlayerCanAccessToolbox;
             devModeTabBackground.gameObject.SetActive(devModeEnabled);
+
+            devModeSettingsBox.gameObject.SetActive(manager.LocalPlayerCanAccessDevMode);
 
             if (devModeTabBackground.colors.normalColor != newDevModeCol)
             {

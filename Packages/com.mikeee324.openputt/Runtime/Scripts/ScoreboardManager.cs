@@ -39,8 +39,8 @@ namespace mikeee324.OpenPutt
         public ScoreboardPositioner[] scoreboardPositions;
 
         [Space, Header("Settings")]
-        [Range(1f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
-        public float maxRefreshInterval = 1f;
+        [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
+        public float maxRefreshInterval = .1f;
         [Range(1f, 5f), Tooltip("Amount of time in seconds between scoreboard position updates")]
         public float scoreboardPositionUpdateInterval = 1f;
         [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]
@@ -90,6 +90,27 @@ namespace mikeee324.OpenPutt
             }
         }
         /// <summary>
+        /// Determines whether or not the local player currently has access to the dev mode tab
+        /// </summary>
+        public bool LocalPlayerCanAccessToolbox
+        {
+            get
+            {
+                if (openPutt.enableDevModeForAll)
+                    return true;
+
+                string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+
+                if (localPlayerName != null && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+                    return true;
+
+                if (devModeTaps >= 30)
+                    return true;
+
+                return false;
+            }
+        }
+        /// <summary>
         /// Whether or not the scoreboard is showing course times instead of scores
         /// </summary>
         public bool SpeedGolfMode
@@ -118,6 +139,8 @@ namespace mikeee324.OpenPutt
         private int progressiveUpdateCurrentScoreboardID = 0;
         private int[] progressiveRowUpdateQueue = new int[0];
         private bool allScoreboardsInitialised = false;
+        [HideInInspector]
+        public int devModeTaps = 0;
         #endregion
 
         void Start()
@@ -181,7 +204,7 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            bool devModeEnabled = LocalPlayerCanAccessDevMode;
+            bool devModeEnabled = LocalPlayerCanAccessDevMode || LocalPlayerCanAccessToolbox;
 
             if (!devModeEnabled && requestedScoreboardView == ScoreboardView.DevMode)
                 requestedScoreboardView = ScoreboardView.Scoreboard;
