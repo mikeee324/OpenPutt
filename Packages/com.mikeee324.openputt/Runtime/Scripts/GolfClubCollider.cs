@@ -31,6 +31,8 @@ namespace mikeee324.OpenPutt
         public GolfBallController golfBall;
         [Tooltip("A reference point on the club that this collider should try to stay attached to")]
         public BoxCollider putterTarget;
+        [Tooltip("Can be used for funny things like attaching the collider to a separate object (The size of the collider will stay the same as the club head though)")]
+        public Transform targetOverride;
         [SerializeField]
         private SphereCollider ballCollider = null;
         [SerializeField]
@@ -107,6 +109,24 @@ namespace mikeee324.OpenPutt
         private int framesSinceClubArmed = -1;
         private bool clubIsTouchingBall = false;
         private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
+        private Vector3 CurrentPositionTarget
+        {
+            get
+            {
+                if (targetOverride != null && targetOverride.gameObject.activeSelf)
+                    return targetOverride.position;
+                return putterTarget.transform.position;
+            }
+        }
+        private Quaternion CurrentRotationTarget
+        {
+            get
+            {
+                if (targetOverride != null && targetOverride.gameObject.activeSelf)
+                    return targetOverride.rotation;
+                return putterTarget.transform.rotation;
+            }
+        }
 
         void Start()
         {
@@ -175,10 +195,13 @@ namespace mikeee324.OpenPutt
 
                 speed = easeInOut.Evaluate(speed / maxSpeedForScaling);
 
-                Vector3 minSize = Vector3.Scale(putterTarget.size, putterTarget.transform.lossyScale);
+                Vector3 colliderSize = targetOverride == null ? putterTarget.size : new Vector3(.05f, .3f,.1f);
+                Vector3 colldierCenter = targetOverride == null ? putterTarget.center : Vector3.zero;
+
+                Vector3 minSize = Vector3.Scale(colliderSize, putterTarget.transform.lossyScale);
                 Vector3 maxSize = Vector3.Scale(minSize, maxSpeedScale);
 
-                golfClubHeadCollider.center = putterTarget.center;
+                golfClubHeadCollider.center = colldierCenter;
                 golfClubHeadCollider.size = Vector3.Lerp(minSize, maxSize, speed);
             }
         }
@@ -212,21 +235,21 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Vector3 currentPos = putterTarget.transform.position;// myRigidbody.position;
+            Vector3 currentPos = CurrentPositionTarget;// myRigidbody.position;
 
             if (smoothFollowClubHead && !positionBufferWasJustReset)
             {
                 // Try to follow the club with a bit of smoothing
-                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, putterTarget.transform.position, 200f * Time.fixedDeltaTime);
-                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.fixedDeltaTime);
+                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, CurrentPositionTarget, 200f * Time.fixedDeltaTime);
+                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.fixedDeltaTime);
                 myRigidbody.MovePosition(newPos);
                 myRigidbody.MoveRotation(newRot);
             }
             else
             {
                 // Just use normal movepositon
-                myRigidbody.MovePosition(putterTarget.transform.position);
-                myRigidbody.MoveRotation(putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
+                myRigidbody.MovePosition(CurrentPositionTarget);
+                myRigidbody.MoveRotation(CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
             }
 
             Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.fixedDeltaTime;
@@ -491,8 +514,8 @@ namespace mikeee324.OpenPutt
         {
             if (myRigidbody != null && putterTarget != null)
             {
-                myRigidbody.position = putterTarget.transform.position;
-                myRigidbody.rotation = putterTarget.transform.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
+                myRigidbody.position = CurrentPositionTarget;
+                myRigidbody.rotation = CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
                 myRigidbody.velocity = Vector3.zero;
                 myRigidbody.angularVelocity = Vector3.zero;
             }
