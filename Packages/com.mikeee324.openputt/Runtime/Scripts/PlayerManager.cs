@@ -171,13 +171,19 @@ namespace mikeee324.OpenPutt
             get => _isImmobilized;
             set
             {
+                bool ownerIsValid = Owner != null && Owner.IsValid();
+
                 _isImmobilized = value;
 
                 if (!freezePlayerWhileClubIsArmed)
                     _isImmobilized = false;
 
-                if (Owner != null && Owner.IsValid() && Owner.isLocal)
-                    Owner.Immobilize(value);
+                // Don't freeze desktop players (they can just not press any keys to not move anyway)
+                if (ownerIsValid && !Owner.IsUserInVR())
+                    _isImmobilized = false;
+
+                if (Owner.isLocal)
+                    Owner.Immobilize(_isImmobilized);
                 else
                     _isImmobilized = false;
             }
@@ -208,6 +214,8 @@ namespace mikeee324.OpenPutt
         /// Traps the player in a station while the club is armed
         /// </summary>
         public bool freezePlayerWhileClubIsArmed = true;
+        [HideInInspector]
+        public bool ownerIsInVR = false;
 
         public void OnBallHit()
         {
@@ -237,7 +245,8 @@ namespace mikeee324.OpenPutt
                     }
                     else
                     {
-                        Utils.Log(this, $"Player tried to restart course {CurrentCourse.holeNumber}. They have already completed or skipped it though. (OnBallHit)");
+                        if (openPutt.debugMode)
+                            Utils.Log(this, $"Player tried to restart course {CurrentCourse.holeNumber}. They have already completed or skipped it though. (OnBallHit)");
                         CurrentCourse = null;
                     }
                     break;
@@ -284,7 +293,8 @@ namespace mikeee324.OpenPutt
         {
             if (newCourse == null)
             {
-                Utils.LogError(this, $"Player tried to start a new course but it was null! Check that all CourseStartPositions have references to the correct CourseManager!");
+                if (openPutt.debugMode)
+                    Utils.LogError(this, $"Player tried to start a new course but it was null! Check that all CourseStartPositions have references to the correct CourseManager!");
                 return;
             }
 
@@ -295,13 +305,15 @@ namespace mikeee324.OpenPutt
             {
                 if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
                 {
-                    Utils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
+                    if (openPutt.debugMode)
+                        Utils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
                     CurrentCourse = null;
                     return;
                 }
             }
 
-            Utils.Log(this, $"Starting course number {newCourse.holeNumber}. Current course({(CurrentCourse != null ? CurrentCourse.holeNumber : -1)}) will be closed");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"Starting course number {newCourse.holeNumber}. Current course({(CurrentCourse != null ? CurrentCourse.holeNumber : -1)}) will be closed");
 
             // If the player is already on a hole say they skipped it
             if (CurrentCourse != null && CurrentCourse.holeNumber != newCourse.holeNumber)
@@ -317,7 +329,8 @@ namespace mikeee324.OpenPutt
             // Player either isn't playing a course already or they put the ball in the wrong hole - ignore event
             if (course == null || CurrentCourse != course)
             {
-                Utils.Log(this, $"Course {course.holeNumber} was finished. {(course == null ? "Course is null" : "")} {(CurrentCourse != course ? "Wrong course!" : "")}");
+                if (openPutt.debugMode)
+                    Utils.Log(this, $"Course {course.holeNumber} was finished. {(course == null ? "Course is null" : "")} {(CurrentCourse != course ? "Wrong course!" : "")}");
                 return;
             }
 
@@ -347,7 +360,8 @@ namespace mikeee324.OpenPutt
                 courseTimes[course.holeNumber] = Mathf.CeilToInt((Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber]) * 0.001f);
             }
 
-            Utils.Log(this, $"Course({course.holeNumber}) was {courseStates[course.holeNumber].GetString()} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}s to do this.");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"Course({course.holeNumber}) was {courseStates[course.holeNumber].GetString()} and is now {(newCourseState == CourseState.Completed ? "Completed" : "Skipped")}! Current score is {courseScores[course.holeNumber]}. Player took {courseTimes[course.holeNumber]}s to do this.");
 
             // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
@@ -385,7 +399,8 @@ namespace mikeee324.OpenPutt
             if (Owner == null || Owner.displayName == null)
                 return;
 
-            Utils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");
 
             if (openPutt != null)
                 openPutt.OnPlayerUpdate(this);
@@ -493,7 +508,8 @@ namespace mikeee324.OpenPutt
 
                     if (ballNotOnCourseCounter > ballOffCourseRespawnTime)
                     {
-                        Utils.Log(this, "Ball has been off its course for too long");
+                        if (openPutt.debugMode)
+                            Utils.Log(this, "Ball has been off its course for too long");
                         ballNotOnCourseCounter = 0;
                         golfBall.BallIsMoving = false;
                     }
@@ -536,7 +552,8 @@ namespace mikeee324.OpenPutt
         {
             if (Owner == null || Owner.displayName == null)
             {
-                Utils.Log(this, $"Owner is null!");
+                if (openPutt.debugMode)
+                    Utils.Log(this, $"Owner is null!");
                 return;
             }
 
@@ -547,9 +564,11 @@ namespace mikeee324.OpenPutt
             if (localPlayerIsNowOwner)
             {
                 openPutt.LocalPlayerManager = this;
+                ownerIsInVR = Owner.IsUserInVR();
             }
 
-            Utils.Log(this, $"{Owner.displayName}({(localPlayerIsNowOwner ? "me" : "not me")}) now owns this object!");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"{Owner.displayName}({(localPlayerIsNowOwner ? "me" : "not me")}) now owns this object!");
 
             // Initialise ball color
             if (_ballColor == Color.black)
@@ -635,7 +654,8 @@ namespace mikeee324.OpenPutt
 
             RequestSerialization();
 
-            Utils.Log(this, $"PlayerManager has been cleaned up");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"PlayerManager has been cleaned up");
         }
 
         public void ResetPlayerScores()
@@ -745,7 +765,8 @@ namespace mikeee324.OpenPutt
                 {
                     // Only mark any courses that the player is "Playing" as skipped
                     courseStates[courseNumber] = CourseState.PlayedAndSkipped;
-                    Utils.Log(this, $"Skipped course {courseNumber} with score of {courseScores[courseNumber]} OldState={oldCourseState} NewState={courseStates[courseNumber]}");
+                    if (openPutt.debugMode)
+                        Utils.Log(this, $"Skipped course {courseNumber} with score of {courseScores[courseNumber]} OldState={oldCourseState} NewState={courseStates[courseNumber]}");
 
                     courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;
                     courseTimes[courseNumber] = openPutt.courses[courseNumber].maxTime;
@@ -762,7 +783,7 @@ namespace mikeee324.OpenPutt
                     case CourseState.Playing:
                         courseStates[courseNumber] = courseScores[courseNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped;
 
-                        if (oldCourseState != courseStates[courseNumber])
+                        if (oldCourseState != courseStates[courseNumber] && openPutt.debugMode)
                             Utils.Log(this, $"Skipped course {courseNumber} with score of {courseScores[courseNumber]} OldState={oldCourseState} NewState={courseStates[courseNumber]}");
 
                         courseScores[courseNumber] = openPutt.courses[courseNumber].maxScore;

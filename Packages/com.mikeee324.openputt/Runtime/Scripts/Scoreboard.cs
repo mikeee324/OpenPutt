@@ -455,10 +455,8 @@ namespace mikeee324.OpenPutt
 
         public void OnTogglePlayerManager()
         {
-            Utils.Log(this, "Player manager toggle");
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
                 return;
-            Utils.Log(this, "Player manager toggle2");
 
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.isPlaying = !playerManager.isPlaying;
@@ -683,7 +681,8 @@ namespace mikeee324.OpenPutt
 
                 pm.openPutt.OnPlayerUpdate(pm);
 
-                Utils.Log(this, "Player reset their scores");
+                if (manager.openPutt.debugMode)
+                    Utils.Log(this, "Player reset their scores");
             }
 
             OnResetCancel();

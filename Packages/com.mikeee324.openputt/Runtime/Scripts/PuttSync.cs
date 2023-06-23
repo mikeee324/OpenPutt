@@ -115,10 +115,10 @@ namespace mikeee324.OpenPutt
             if (fastSyncIntervalCurve == null || fastSyncIntervalCurve.length == 0)
             {
                 fastSyncIntervalCurve = new AnimationCurve();
-                fastSyncIntervalCurve.AddKey(0f, 0.05f);
+                fastSyncIntervalCurve.AddKey(0f, 0.03f);
                 fastSyncIntervalCurve.AddKey(20f, 0.05f);
                 fastSyncIntervalCurve.AddKey(40f, 0.1f);
-                fastSyncIntervalCurve.AddKey(82f, 0.15f);
+                fastSyncIntervalCurve.AddKey(82f, 0.3f);
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());

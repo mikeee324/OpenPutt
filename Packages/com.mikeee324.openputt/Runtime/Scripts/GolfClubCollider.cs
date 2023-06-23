@@ -240,8 +240,8 @@ namespace mikeee324.OpenPutt
             if (smoothFollowClubHead && !positionBufferWasJustReset)
             {
                 // Try to follow the club with a bit of smoothing
-                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, CurrentPositionTarget, 200f * Time.fixedDeltaTime);
-                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.fixedDeltaTime);
+                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, CurrentPositionTarget, 200f * Time.deltaTime);
+                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.deltaTime);
                 myRigidbody.MovePosition(newPos);
                 myRigidbody.MoveRotation(newRot);
             }
@@ -252,7 +252,7 @@ namespace mikeee324.OpenPutt
                 myRigidbody.MoveRotation(CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
             }
 
-            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.fixedDeltaTime;
+            Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
 
             // Store velocity for this frame if it isn't all 0
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
@@ -266,9 +266,9 @@ namespace mikeee324.OpenPutt
             {
                 // Push current position onto buffers
                 lastPositions = lastPositions.Push(currentPos);
-                lastPositionTimes = lastPositionTimes.Push(Time.fixedDeltaTime);
+                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
                 for (int i = 1; i < lastPositions.Length; i++)
-                    lastPositionTimes[i] += Time.fixedDeltaTime;
+                    lastPositionTimes[i] += Time.deltaTime;
                 positionBufferWasJustReset = false;
             }
 
@@ -291,7 +291,7 @@ namespace mikeee324.OpenPutt
             if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
             {
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.fixedDeltaTime))
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
                 {
                     // We only care if this collided with the local players ball
                     if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
@@ -318,7 +318,8 @@ namespace mikeee324.OpenPutt
             // Stops players from launching the ball by placing the club inside the ball and arming it
             if (!CanTrackHitsAndVel)
             {
-                Utils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
+                if (golfClub.playerManager.openPutt.debugMode)
+                    Utils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
                 return;
             }
 
@@ -334,7 +335,8 @@ namespace mikeee324.OpenPutt
                 return;
 
             clubIsTouchingBall = false;
-            Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
+            if (golfClub.playerManager.openPutt.debugMode)
+                Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
         }
 
         private void OnCollisionEnter(Collision collision)
@@ -350,7 +352,8 @@ namespace mikeee324.OpenPutt
             // Stops players from launching the ball by placing the club inside the ball and arming it
             if (!CanTrackHitsAndVel)
             {
-                Utils.Log(this, "Player armed the club and instantly hit the ball (collision).. ignoring this collision");
+                if (golfClub.playerManager.openPutt.debugMode)
+                    Utils.Log(this, "Player armed the club and instantly hit the ball (collision).. ignoring this collision");
                 return;
             }
 
@@ -367,7 +370,8 @@ namespace mikeee324.OpenPutt
                 return;
 
             clubIsTouchingBall = false;
-            Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
+            if (golfClub.playerManager.openPutt.debugMode)
+                Utils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
         }
 
         private void HandleBallHit()
@@ -431,7 +435,8 @@ namespace mikeee324.OpenPutt
 
                         if (latestPos == Vector3.zero || oldestPos == Vector3.zero)
                         {
-                            Utils.LogError(this, "Cannot handle ball hit as start/end pos was a Vector3.zero! Will wait 1 more frame..");
+                            if (golfClub.playerManager.openPutt.debugMode)
+                                Utils.LogError(this, "Cannot handle ball hit as start/end pos was a Vector3.zero! Will wait 1 more frame..");
                             framesSinceHit -= 1;
                             return;
                         }
@@ -460,7 +465,8 @@ namespace mikeee324.OpenPutt
             if (shouldClampSpeed && velocityMagnitude > golfBall.BallMaxSpeed)
             {
                 velocityMagnitude = golfBall.BallMaxSpeed;
-                Utils.Log(this, $"Ball hit velocity was clamped to {velocityMagnitude}");
+                if (golfClub.playerManager.openPutt.debugMode)
+                    Utils.Log(this, $"Ball hit velocity was clamped to {velocityMagnitude}");
             }
 
             // Put the direction and magnitude back together
@@ -487,7 +493,8 @@ namespace mikeee324.OpenPutt
             //if (velocity.magnitude < golfBall.minBallSpeed)
             //    return;
 
-            Utils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
+            if (golfClub.playerManager.openPutt.debugMode)
+                Utils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
 
             LastKnownHitVelocity = velocity.magnitude;
 

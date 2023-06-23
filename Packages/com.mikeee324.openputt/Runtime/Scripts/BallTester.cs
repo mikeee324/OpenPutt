@@ -71,13 +71,12 @@ namespace mikeee324.OpenPutt
             if (ballController != null && ballController.enabled)
                 ballController.requestedBallVelocity = currentVelocity;
             else
-                GetComponent<Rigidbody>().AddForce(currentVelocity, ForceMode.Impulse);
+                ballController.OnBallHit(currentVelocity);
         }
 
 
         public void RespawnBall()
         {
-            GetComponent<Rigidbody>().velocity = Vector3.zero;
             ballController.BallIsMoving = false;
             transform.position = originalPosition;
         }

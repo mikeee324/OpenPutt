@@ -1,6 +1,7 @@
 ﻿using Cyan.PlayerObjectPool;
 using UdonSharp;
 using UnityEngine;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -56,6 +57,8 @@ namespace mikeee324.OpenPutt
         public int ballRenderQueueBase = 2000;
         [Tooltip("A list of players that can access the dev mode tab by default")]
         public string[] devModePlayerWhitelist = new string[] { "mikeee324" };
+        [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
+        public bool debugMode = false;
         #endregion
 
         #region API
@@ -156,6 +159,12 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
+
+#if UNITY_EDITOR
+            //Force debug mode on in editor
+            debugMode = true;
+#endif
+
             if (objectPool == null || objectAssigner == null || courses.Length == 0)
             {
                 Utils.LogError(this, "Missing some references! Please check everything is assigned correctly in the inspector. Disabling OpenPutt..");
@@ -214,7 +223,12 @@ namespace mikeee324.OpenPutt
             playerManager.openPutt = this;
 
             if (player.isLocal)
+            {
                 LocalPlayerManager = playerManager;
+
+                if (!debugMode)
+                    debugMode = devModePlayerWhitelist.Contains(player.displayName);
+            }
         }
 
         public override void _OnPlayerUnassigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
