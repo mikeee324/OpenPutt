@@ -96,9 +96,15 @@ namespace mikeee324.OpenPutt
                     droppedByPlayer = false;
                 }
 
-                // Reset timers
-                timeNotMoving = 0f;
-                timeMoving = 0f;
+                if (resetBallTimers)
+                {
+                    timeNotMoving = 0f;
+                    timeMoving = 0f;
+                }
+                else
+                {
+                    resetBallTimers = true;
+                }
 
                 ClearPhysicsState();
                 UpdateBallState(localPlayerIsOwner);
@@ -240,6 +246,7 @@ namespace mikeee324.OpenPutt
 
         private Vector3 lastGroundContactNormal = Vector3.up;
         int stepsSinceLastGrounded;
+        private bool resetBallTimers = true;
         #endregion
 
         void Start()
@@ -401,6 +408,8 @@ namespace mikeee324.OpenPutt
                             }
                             else
                             {
+                                // Prevent timers from being reset
+                                resetBallTimers = false;
                                 // Don't stop the ball from moving (people hate it stopping on slopes)
                                 BallIsMoving = true;
 
