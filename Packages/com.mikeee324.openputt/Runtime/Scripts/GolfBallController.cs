@@ -141,7 +141,8 @@ namespace mikeee324.OpenPutt
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
                                 respawnPosition = this.transform.position;
-                                Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                if (playerManager.openPutt.debugMode)
+                                    Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
                             }
                         }
                         else if (respawnPosition != Vector3.zero)
@@ -163,6 +164,7 @@ namespace mikeee324.OpenPutt
                     lastFrameVelocity = Vector3.zero;
                 }
 
+                //if (playerManager.openPutt.debugMode)
                 //Utils.Log(this, $"BallWasMoving({ballWasMoving}) BallMoving({_ballMoving}) RespawnAuto({respawnAutomatically}) BallValidPos({ballIsInValidPosition}) PickedUp({pickedUpByPlayer}) RespawnPos({respawnPosition})");
             }
             get => _ballMoving;
@@ -293,6 +295,7 @@ namespace mikeee324.OpenPutt
         public int numberOfPickedUpFrames = 0;
         public int numberOfStillPickedUpFrames = 0;
 
+
         private void FixedUpdate()
         {
             if (pickedUpByPlayer)
@@ -306,7 +309,7 @@ namespace mikeee324.OpenPutt
                 else
                 {
                     Vector3 newFrameVelocity = (ballRigidbody.position - lastHeldFramePosition) / Time.deltaTime;
-                    if (newFrameVelocity.magnitude > 0.05f)
+                    if (newFrameVelocity.magnitude > 0.01f)
                     {
                         numberOfStillPickedUpFrames = 0;
                         lastHeldFrameVelocity = newFrameVelocity;
@@ -315,7 +318,7 @@ namespace mikeee324.OpenPutt
                     {
                         numberOfStillPickedUpFrames++;
 
-                        if (numberOfStillPickedUpFrames >= 10)
+                        if (!playerManager.ownerIsInVR || numberOfStillPickedUpFrames >= 5)
                         {
                             lastHeldFrameVelocity = Vector3.zero;
                         }
@@ -343,6 +346,10 @@ namespace mikeee324.OpenPutt
 
             if (BallIsMoving)
             {
+                // If the rigidbody fell asleep - Try applying the velocity we logged from the last frame to keep it moving (this should also wake it back up)
+                if (ballRigidbody.IsSleeping() && lastFrameVelocity != Vector3.zero)
+                    ballRigidbody.velocity = lastFrameVelocity;
+
                 // If the ball has been hit
                 if (requestedBallVelocity != Vector3.zero)
                 {
@@ -366,39 +373,50 @@ namespace mikeee324.OpenPutt
                     ClearPhysicsState();
                 }
 
-                timeMoving += Time.fixedDeltaTime;
+                timeMoving += Time.deltaTime;
 
-                // Has the ball been rolling for too long?
-                if (timeMoving > maxBallRollingTime)
+                // If the ball is moving super slowly - count it as "not moving" and increment the timer
+                if (ballRigidbody.velocity.magnitude < minBallSpeed)
+                    timeNotMoving += Time.deltaTime;
+                else
+                    timeNotMoving = 0;
+
+                bool ballRollingForTooLong = timeMoving > maxBallRollingTime;
+                bool ballRollingTooSlowForTooLong = timeNotMoving >= minBallSpeedMaxTime;
+
+                if (ballRollingForTooLong || ballRollingTooSlowForTooLong)
                 {
-                    bool keepBallMoving = false;
                     if (Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask))
                     {
                         // If the ball is currently rolling down a slope
                         if (hit.normal.y < 1f)
                         {
-                            // Don't stop the ball from moving (people hate it stopping on slopes)
-                            keepBallMoving = true;
+                            // If we have been stuck on this slope for too long force ball stop so player can hit it
+                            if (timeNotMoving > minBallSpeedMaxTime * 2f)
+                            {
+                                BallIsMoving = false;
+
+                                if (playerManager.openPutt.debugMode)
+                                    Utils.Log(this, "Ball is on a slope and appears to be stuck here - allow player to hit it again");
+                            }
+                            else
+                            {
+                                // Don't stop the ball from moving (people hate it stopping on slopes)
+                                BallIsMoving = true;
+
+                                if (playerManager.openPutt.debugMode)
+                                    Utils.Log(this, "Ball would have stopped but it is on a slope - keep moving until we reach a flat surface");
+                            }
+                        }
+                        else
+                        {
+                            BallIsMoving = false;
                         }
                     }
-                    BallIsMoving = keepBallMoving;
-                }
-                else if (ballRigidbody.velocity.magnitude < minBallSpeed)
-                {
-                    // If the ball is moving super slowly - count it as "not moving"
-                    timeNotMoving += Time.deltaTime;
-
-                    // If the ball "hasn't moved" for this amount of time
-                    if (timeNotMoving >= minBallSpeedMaxTime)
+                    else
                     {
-                        //Utils.Log(this, "Ball not moving");
-                        BallIsMoving = false; // Stop it
+                        BallIsMoving = false;
                     }
-                }
-                else
-                {
-                    // Ball has sped up reset not moving timer
-                    timeNotMoving = 0f;
                 }
             }
             else
@@ -475,7 +493,8 @@ namespace mikeee324.OpenPutt
 
             if (startLine.StartDropAnimation(this.transform.position))
             {
-                Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
+                if (playerManager.openPutt.debugMode)
+                    Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
             }
             else
             {
@@ -484,12 +503,14 @@ namespace mikeee324.OpenPutt
                 {
                     if (playerManager.CurrentCourse.drivingRangeMode)
                     {
-                        Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
+                        if (playerManager.openPutt.debugMode)
+                            Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                         playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                     }
                     else if (respawnPosition != null)
                     {
-                        Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
+                        if (playerManager.openPutt.debugMode)
+                            Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
                         BallIsMoving = false;
 
@@ -710,7 +731,8 @@ namespace mikeee324.OpenPutt
             // Checks if the collision was from "below" and ignores it
             if (collisionNormal.y > wallBounceHeightIgnoreAmount)
             {
-                Utils.Log(this, "Ignored wall bounce because it was below me!");
+                if (playerManager.openPutt.debugMode)
+                    Utils.Log(this, "Ignored wall bounce because it was below me!");
                 return;
             }
 
@@ -884,6 +906,8 @@ namespace mikeee324.OpenPutt
                 {
                     ballCollider.enabled = true;
                     ballCollider.isTrigger = false;
+
+                    ballCollider.contactOffset = 0.001f;
                 }
 
                 if (ballRigidbody != null)
@@ -934,6 +958,8 @@ namespace mikeee324.OpenPutt
                 {
                     ballCollider.enabled = false;
                     ballCollider.isTrigger = true;
+
+                    ballCollider.contactOffset = 0.01f;
                 }
 
                 // Disable rigidbody movement because it's not needed for non-local players

@@ -34,13 +34,15 @@ namespace mikeee324.OpenPutt
                     localPlayerHoleInOneEvent = false;
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnLocalPlayerBallEnterHole(courseManager, this);
-                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player finished course");
+                    if (courseManager.openPutt.debugMode)
+                        Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player finished course");
                 }
                 else
                 {
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnRemotePlayerBallEnterHole(courseManager, this);
-                    Utils.Log(this, $"Course{courseManager.holeNumber} - Remote Player finished course");
+                    if (courseManager.openPutt.debugMode)
+                        Utils.Log(this, $"Course{courseManager.holeNumber} - Remote Player finished course");
                 }
             }
         }
@@ -54,13 +56,15 @@ namespace mikeee324.OpenPutt
                     localPlayerHoleInOneEvent = false;
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnLocalPlayerHoleInOne(courseManager, this);
-                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
+                    if (courseManager.openPutt.debugMode)
+                        Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
                 }
                 else
                 {
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnRemotePlayerHoleInOne(courseManager, this);
-                    Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
+                    if (courseManager.openPutt.debugMode)
+                        Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
                 }
             }
         }

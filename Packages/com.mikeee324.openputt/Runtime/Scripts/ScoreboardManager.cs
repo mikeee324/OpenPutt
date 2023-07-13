@@ -384,7 +384,8 @@ namespace mikeee324.OpenPutt
             RequestRefreshForRows(rowsToUpdate, true);
 
             stopwatch.Stop();
-            Utils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
         }
 
         public void ProgressiveScoreboardRowUpdate()
@@ -488,7 +489,8 @@ namespace mikeee324.OpenPutt
             if (allPlayers.Length <= numberOfPlayersToDisplay)
             {
                 stopwatch.Stop();
-                Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Can fit all players inside available rows. No array slicing required.");
+                if (openPutt.debugMode)
+                    Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Can fit all players inside available rows. No array slicing required.");
                 return allPlayers;
             }
 
@@ -515,7 +517,8 @@ namespace mikeee324.OpenPutt
 
             stopwatch.Stop();
 
-            Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Could not fit all players inside available rows. Array slicing was required. Returning {allPlayers.Length} players for the scoreboards.");
+            if (openPutt.debugMode)
+                Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Could not fit all players inside available rows. Array slicing was required. Returning {allPlayers.Length} players for the scoreboards.");
 
             return allPlayers;
         }
