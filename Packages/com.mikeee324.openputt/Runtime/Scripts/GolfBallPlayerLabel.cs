@@ -141,7 +141,7 @@ namespace mikeee324.OpenPutt
             }
 
             // Vary the time between each check to try and stop them all happening at once
-            SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .15f));
+            SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .2f));
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -12,10 +11,13 @@ namespace mikeee324.OpenPutt
         #region Public Settings
         [Header("Sync Settings")]
         [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
-        public float fastSyncTimeout = 0.5f;
+        public float fastSyncTimeout = 0.25f;
 
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve fastSyncIntervalCurve;
+
+        [Tooltip("This defines how often this often will be updated for remote players (in seconds) based on how far away they are from this GameObject. You can leave this empty and a default curve will be applied when the game loads")]
+        public AnimationCurve remoteUpdateDistanceCurve;
 
         [Tooltip("Experimental - Reduces network traffic by syncing")]
         public bool disableSyncWhileHeld = true;
@@ -97,6 +99,9 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private bool extraDataChanged = false;
         private bool firstEnable = true;
+
+        private VRCPlayerApi localPlayer;
+        private float lastKnownDistanceUpdateValue = 0f;
         #endregion
 
         void Start()
@@ -116,9 +121,18 @@ namespace mikeee324.OpenPutt
             {
                 fastSyncIntervalCurve = new AnimationCurve();
                 fastSyncIntervalCurve.AddKey(0f, 0.03f);
-                fastSyncIntervalCurve.AddKey(20f, 0.05f);
-                fastSyncIntervalCurve.AddKey(40f, 0.1f);
-                fastSyncIntervalCurve.AddKey(82f, 0.3f);
+                fastSyncIntervalCurve.AddKey(10f, 0.03f);
+                fastSyncIntervalCurve.AddKey(20f, 0.1f);
+                fastSyncIntervalCurve.AddKey(82f, 1f);
+            }
+
+            if (remoteUpdateDistanceCurve == null || remoteUpdateDistanceCurve.length == 0)
+            {
+                remoteUpdateDistanceCurve = new AnimationCurve();
+                remoteUpdateDistanceCurve.AddKey(0f, 0);
+                remoteUpdateDistanceCurve.AddKey(30f, 0);
+                remoteUpdateDistanceCurve.AddKey(100f, 1f);
+                remoteUpdateDistanceCurve.AddKey(200f, 5f);
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
@@ -205,6 +219,9 @@ namespace mikeee324.OpenPutt
                 // Attach this object to the players hand if they are currently holding it
                 if (disableSyncWhileHeld && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
                 {
+                    if (localPlayer != null)
+                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.position, localPlayer.GetPosition()));
+
                     // Get the world space position/rotation of the hand that is holding this object
                     HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
@@ -218,28 +235,36 @@ namespace mikeee324.OpenPutt
 
                     Vector3 newPos = handPosition + transform.TransformDirection(syncPosition);
                     Quaternion newOffsetRot = handRotation * syncRotation;
-                    if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
-                        newPos = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
 
-                    if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
+                    if (lastKnownDistanceUpdateValue == 0f)
                     {
-                        float lerpProgress = 1.0f - Mathf.Pow(0.000001f, Time.deltaTime);
-                        newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, lerpProgress);
+                        if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
+                            newPos = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
+
+                        if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
+                        {
+                            float lerpProgress = 1.0f - Mathf.Pow(0.000001f, Time.deltaTime);
+                            newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, lerpProgress);
+                        }
                     }
 
                     transform.SetPositionAndRotation(newPos, newOffsetRot);
 
                     // Run this for the next frame too
-                    SendCustomEventDelayedFrames(nameof(HandleRemoteUpdate), 0);
+                    SendCustomEventDelayedSeconds(nameof(HandleRemoteUpdate), lastKnownDistanceUpdateValue);
 
                     return;
                 }
                 else if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Angle(transform.localRotation, syncRotation) > 0.01f)
                 {
+                    if (localPlayer != null)
+                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.position, localPlayer.GetPosition()));
+
                     Vector3 newPosition = syncPosition;
                     Quaternion newRotation = syncRotation;
 
-                    if (!isFirstSync && hasSynced)
+                    // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)
+                    if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue == 0f)
                     {
                         // Try to smooth out the lerps
                         float lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
@@ -254,7 +279,7 @@ namespace mikeee324.OpenPutt
                     transform.localRotation = newRotation;
 
                     // Run this for the next frame too
-                    SendCustomEventDelayedFrames(nameof(HandleRemoteUpdate), 0);
+                    SendCustomEventDelayedSeconds(nameof(HandleRemoteUpdate), lastKnownDistanceUpdateValue);
 
                     return;
                 }
@@ -273,6 +298,10 @@ namespace mikeee324.OpenPutt
             if (!isHandlingRemoteUpdates)
             {
                 isHandlingRemoteUpdates = true;
+
+                if (localPlayer == null && Utils.LocalPlayerIsValid())
+                    localPlayer = Networking.LocalPlayer;
+
                 HandleRemoteUpdate();
             }
 
