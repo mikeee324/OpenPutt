@@ -6,6 +6,11 @@ If you have suggestions or can help me fix things please let me know!
 The aim for this prefab is to make it easier to make golf game worlds so more people make them!  
 Lets play some golf!  
 
+# Quick Notes
+- Recommended Max Players - **32**
+    - The prefab technically supports up to 82 players, but you shouldn't try it with that many players
+        - Large amounts of players cause Very Low FPS and/or Network Timeouts (for some people anyway not all)
+        - This issue might get fixed later, but it's not a priority of mine as it works for the kind of player counts you see in normal lobbies
    
 # Dependencies (Install these first!!!)
 - UdonSharp 1.1.8+ (Use VCC!)
