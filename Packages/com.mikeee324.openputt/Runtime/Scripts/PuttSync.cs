@@ -219,9 +219,6 @@ namespace mikeee324.OpenPutt
                 // Attach this object to the players hand if they are currently holding it
                 if (disableSyncWhileHeld && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
                 {
-                    if (localPlayer != null)
-                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.position, localPlayer.GetPosition()));
-
                     // Get the world space position/rotation of the hand that is holding this object
                     HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
@@ -233,13 +230,16 @@ namespace mikeee324.OpenPutt
 
                     Vector3 oldPos = transform.position;
 
-                    Vector3 newPos = handPosition + transform.TransformDirection(syncPosition);
+                    Vector3 newPosition = handPosition + transform.TransformDirection(syncPosition);
                     Quaternion newOffsetRot = handRotation * syncRotation;
+
+                    if (localPlayer != null)
+                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(newPosition, localPlayer.GetPosition()));
 
                     if (lastKnownDistanceUpdateValue == 0f)
                     {
                         if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
-                            newPos = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
+                            newPosition = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
 
                         if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
                         {
@@ -248,7 +248,7 @@ namespace mikeee324.OpenPutt
                         }
                     }
 
-                    transform.SetPositionAndRotation(newPos, newOffsetRot);
+                    transform.SetPositionAndRotation(newPosition, newOffsetRot);
 
                     // Run this for the next frame too
                     SendCustomEventDelayedSeconds(nameof(HandleRemoteUpdate), lastKnownDistanceUpdateValue);
@@ -257,11 +257,11 @@ namespace mikeee324.OpenPutt
                 }
                 else if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Angle(transform.localRotation, syncRotation) > 0.01f)
                 {
-                    if (localPlayer != null)
-                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.position, localPlayer.GetPosition()));
-
                     Vector3 newPosition = syncPosition;
                     Quaternion newRotation = syncRotation;
+
+                    if (localPlayer != null)
+                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(newPosition, localPlayer.GetPosition()));
 
                     // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)
                     if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue == 0f)
