@@ -17,6 +17,7 @@ namespace mikeee324.OpenPutt
         public GolfBallPlayerLabel playerLabel;
         public GolfClubCollider golfClubHead;
         public OpenPutt openPutt;
+        public GameObject desktopCamera;
 
         [Header("Game Settings")]
         [UdonSynced]
@@ -163,6 +164,7 @@ namespace mikeee324.OpenPutt
                 openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
             }
         }
+        public bool canFreezeDesktopPlayers = false;
         /// <summary>
         /// Toggles whether the player is immobile or not. Only works if this PlayerManager belongs to the local player.
         /// </summary>
@@ -179,7 +181,7 @@ namespace mikeee324.OpenPutt
                     _isImmobilized = false;
 
                 // Don't freeze desktop players (they can just not press any keys to not move anyway)
-                if (ownerIsValid && !Owner.IsUserInVR())
+                if (ownerIsValid && !canFreezeDesktopPlayers && !Owner.IsUserInVR())
                     _isImmobilized = false;
 
                 if (Owner.isLocal)
