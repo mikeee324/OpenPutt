@@ -157,6 +157,7 @@ namespace mikeee324.OpenPutt
         private bool _isAimingShot = false;
         private float _currentShotSpeed = 0f;
         private float _lastShotSpeed = 0f;
+        private bool _playerIsAimingOnController = true;
         #endregion
 
 
@@ -253,7 +254,7 @@ namespace mikeee324.OpenPutt
                             // LT is down
                             IsPlayerAiming = true;
 
-                            Utils.Log(this, $@"1-{Input.GetAxis("Joy1 Axis 1")} 2-{Input.GetAxis("Joy1 Axis 2")} 7-{Input.GetAxis("Joy1 Axis 7")} 8-{Input.GetAxis("Joy1 Axis 8")} 9-{Input.GetAxis("Joy1 Axis 9")} 10-{Input.GetAxis("Joy1 Axis 10")}");
+                            //Utils.Log(this, $@"1-{Input.GetAxis("Joy1 Axis 1")} 2-{Input.GetAxis("Joy1 Axis 2")} 7-{Input.GetAxis("Joy1 Axis 7")} 8-{Input.GetAxis("Joy1 Axis 8")} 9-{Input.GetAxis("Joy1 Axis 9")} 10-{Input.GetAxis("Joy1 Axis 10")}");
                             _currentShotSpeed = CurrentMaxSpeed * ControllerUtils.RightTrigger();
                         }
                         else
@@ -301,7 +302,16 @@ namespace mikeee324.OpenPutt
                 IsBallCamEnabled = !IsBallCamEnabled;
             }
 
-            IsPlayerAiming = ControllerUtils.LeftTrigger() > 0;
+            if (ControllerUtils.LeftTrigger() > 0.5f)
+            {
+                IsPlayerAiming = true;
+                _playerIsAimingOnController = true;
+            }
+            else if (_playerIsAimingOnController)
+            {
+                IsPlayerAiming = false;
+                _playerIsAimingOnController = false;
+            }
         }
 
         private void UpdateUI(float speedNormalised, bool noSmooth = false)
@@ -355,7 +365,8 @@ namespace mikeee324.OpenPutt
         {
             if (args.eventType == UdonInputEventType.BUTTON)
             {
-                if (ControllerUtils.LeftTrigger() == 0)
+                Utils.Log(this, $"{ControllerUtils.LeftTrigger()} {value}");
+                if (ControllerUtils.LeftTrigger() <= 0.5f)
                     IsPlayerAiming = value;
             }
         }
