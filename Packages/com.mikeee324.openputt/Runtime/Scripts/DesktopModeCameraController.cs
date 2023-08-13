@@ -85,6 +85,14 @@ namespace mikeee324.OpenPutt
                 float h = cameraXSpeed * Input.GetAxis("Mouse X");
                 float v = cameraYSpeed * Input.GetAxis("Mouse Y");
 
+                // Controller inputs override keyboard
+                float controllerX = ControllerUtils.LookHorizontal();
+                float controllerY = -ControllerUtils.LookVertical();
+                if (controllerX != 0)
+                    h = 1f * controllerX;
+                if (controllerY != 0)
+                    v = .1f * controllerY;
+
                 currentXAngle += h;
                 currentCameraHeight -= v;
                 currentCameraHeight = Mathf.Clamp(currentCameraHeight, minHeight, 3f);

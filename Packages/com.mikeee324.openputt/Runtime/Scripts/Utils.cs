@@ -155,6 +155,13 @@ namespace mikeee324.OpenPutt
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
         public static float GetUnixTimestamp() => (float)(System.DateTime.UtcNow - new System.DateTime(2023, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
     }
+    public static class ControllerUtils
+    {
+        public static float LookHorizontal() => Input.GetAxis("Joy1 Axis 3");
+        public static float LookVertical() => Input.GetAxis("Joy1 Axis 6");
+        public static float LeftTrigger() => Input.GetAxis("Joy1 Axis 4");
+        public static float RightTrigger() => Input.GetAxis("Joy1 Axis 5");
+    }
 
     public static class Extensions
     {

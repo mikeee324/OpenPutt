@@ -247,9 +247,26 @@ namespace mikeee324.OpenPutt
                 {
                     if (IsPlayerAiming)
                     {
-                        // Update shot speed based on player input
-                        float moveVal = Input.GetAxis("Mouse Y");
-                        _currentShotSpeed = Mathf.Clamp(_currentShotSpeed -= moveVal * .5f, 0, CurrentMaxSpeed);
+
+                        if (ControllerUtils.LeftTrigger() > 0)
+                        {
+                            // LT is down
+                            IsPlayerAiming = true;
+
+                            Utils.Log(this, $@"1-{Input.GetAxis("Joy1 Axis 1")} 2-{Input.GetAxis("Joy1 Axis 2")} 7-{Input.GetAxis("Joy1 Axis 7")} 8-{Input.GetAxis("Joy1 Axis 8")} 9-{Input.GetAxis("Joy1 Axis 9")} 10-{Input.GetAxis("Joy1 Axis 10")}");
+                            _currentShotSpeed = CurrentMaxSpeed * ControllerUtils.RightTrigger();
+                        }
+                        else
+                        {
+                            // Update shot speed based on player input
+                            float moveVal = Input.GetAxis("Mouse ScrollWheel") * 10f;
+                            if (moveVal == 0.0f)
+                                moveVal = Input.GetAxis("Mouse Y") * .5f;
+
+                            _currentShotSpeed = Mathf.Clamp(_currentShotSpeed -= moveVal, 0, CurrentMaxSpeed);
+                        }
+
+
 
                         float speedNormalised = CurrentShotSpeedNormalised;
 
@@ -279,10 +296,12 @@ namespace mikeee324.OpenPutt
                 IsBallCamEnabled = false;
             }
 
-            if (Input.GetKeyDown(desktopCameraKey))
+            if (Input.GetKeyDown(desktopCameraKey) || Input.GetKeyDown(KeyCode.Joystick1Button4))
             {
                 IsBallCamEnabled = !IsBallCamEnabled;
             }
+
+            IsPlayerAiming = ControllerUtils.LeftTrigger() > 0;
         }
 
         private void UpdateUI(float speedNormalised, bool noSmooth = false)
@@ -336,7 +355,8 @@ namespace mikeee324.OpenPutt
         {
             if (args.eventType == UdonInputEventType.BUTTON)
             {
-                IsPlayerAiming = value;
+                if (ControllerUtils.LeftTrigger() == 0)
+                    IsPlayerAiming = value;
             }
         }
 
