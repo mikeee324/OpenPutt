@@ -69,7 +69,11 @@ namespace mikeee324.OpenPutt
         /// Performs a bit of smoothing while following the club head - off for now because i'm not sure if it's needed
         /// </summary>
         [SerializeField, Tooltip("Should this collider smoothly follow the club head or snap to it each frame (Might help with tracking very fast hits)")]
-        private bool smoothFollowClubHead = true; // Maybe helps with fast hit detection
+        public bool smoothFollowClubHead = true; // Maybe helps with fast hit detection
+        [Range(0, 0.99f), Tooltip("Controls how strong the Smooth Follow Clubhead option is. (Not entirely sure what the correct value is yet - 1 has bad results at low fps though)")]
+        public float followStrength = .6f;
+        [Range(0, 0.99f), Tooltip("Controls how strong the rotation of the Smooth Follow Clubhead option is. (Not entirely sure what the correct value is yet)")]
+        public float followRotationStrength = 0.99f;
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
@@ -195,7 +199,7 @@ namespace mikeee324.OpenPutt
 
                 speed = easeInOut.Evaluate(speed / maxSpeedForScaling);
 
-                Vector3 colliderSize = targetOverride == null ? putterTarget.size : new Vector3(.05f, .3f,.1f);
+                Vector3 colliderSize = targetOverride == null ? putterTarget.size : new Vector3(.05f, .3f, .1f);
                 Vector3 colldierCenter = targetOverride == null ? putterTarget.center : Vector3.zero;
 
                 Vector3 minSize = Vector3.Scale(colliderSize, putterTarget.transform.lossyScale);
@@ -235,24 +239,46 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            Vector3 currentPos = CurrentPositionTarget;// myRigidbody.position;
-
             if (smoothFollowClubHead && !positionBufferWasJustReset)
             {
-                // Try to follow the club with a bit of smoothing
-                Vector3 newPos = Vector3.MoveTowards(myRigidbody.position, CurrentPositionTarget, 200f * Time.deltaTime);
-                Quaternion newRot = Quaternion.RotateTowards(myRigidbody.rotation, CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset), 200f * Time.deltaTime);
-                myRigidbody.MovePosition(newPos);
-                myRigidbody.MoveRotation(newRot);
+                // Smooth follow uses Rigidbody.velocity and angularVelocity to follow the target instead of MovePosition/MoveRotation
+                // This seems to allow the physics engine to register collisions better and we get less spurious velocities of 0 while the object is moving
+                // https://gist.github.com/MattRix/bd0ba767f75906b7f86cb8214a60972e
+
+                // For this to work we need a non-kinematic rigidbody with 0 drag
+                if (myRigidbody.isKinematic)
+                    myRigidbody.isKinematic = false;
+
+                // Work out velocity needed to reach the target position
+                Vector3 deltaPos = CurrentPositionTarget - myRigidbody.position;
+                Vector3 newVel = 1f / Time.deltaTime * deltaPos * Mathf.Pow(followStrength, 90f * Time.deltaTime);
+                if (newVel.magnitude > 0f)
+                    myRigidbody.velocity = newVel;
+
+                // Work out the angularVelocity needed to reach the same rotation as the target
+                Quaternion deltaRot = CurrentRotationTarget * Quaternion.Inverse(transform.rotation);
+                deltaRot.ToAngleAxis(out float angle, out Vector3 axis);
+                if (angle > 180.0f) 
+                    angle -= 360.0f;
+                if (angle != 0) 
+                    myRigidbody.angularVelocity = (1f / Time.fixedDeltaTime * angle * axis * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
             }
             else
             {
-                // Just use normal movepositon
+                // Seems to work best when the RigidBody is kinematic
+                if (!myRigidbody.isKinematic)
+                    myRigidbody.isKinematic = true;
+
+                // Just use MovePosition/MoveRotation
                 myRigidbody.MovePosition(CurrentPositionTarget);
                 myRigidbody.MoveRotation(CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
             }
 
+            Vector3 currentPos = myRigidbody.position;
             Vector3 currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
+
+            //if (golfClub.playerManager == null|| golfClub.playerManager.openPutt == null || golfClub.playerManager.openPutt || golfClub.playerManager.openPutt.debugMode)
+            //    Utils.Log("Vel", $"CurrentFrameVel: {currFrameVelocity.magnitude} RB.vel: {myRigidbody.velocity.magnitude} LastGoodFrameVel: {FrameVelocity.magnitude}");
 
             // Store velocity for this frame if it isn't all 0
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)

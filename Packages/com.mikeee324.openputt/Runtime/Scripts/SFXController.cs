@@ -105,7 +105,7 @@ namespace mikeee324.OpenPutt
             if (holeInOneSounds.Length > 0)
             {
                 if (isRemote)
-                    PlayRemoteSoundAtPosition(holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, maxRange: 30f, canInterrupt: false);
+                    PlayRemoteSoundAtPosition(holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, maxRange: 100f, canInterrupt: false);
                 else
                     PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, canInterrupt: false);
             }

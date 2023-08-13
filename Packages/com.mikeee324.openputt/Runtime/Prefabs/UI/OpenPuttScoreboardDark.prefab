@@ -6762,26 +6762,28 @@ MonoBehaviour:
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 5614136399917363269}
   manager: {fileID: 0}
+  scoreboardRows: []
+  rectTransform: {fileID: 0}
   myCanvas: {fileID: 5614136399917363267}
   scoreboardHeader: {fileID: 5614136399877551507}
-  settingsPanelHeader: {fileID: 905823908690966428}
   settingsPanel: {fileID: 1075905794482739172}
-  infoPanelHeader: {fileID: 5259600838684972621}
   infoPanel: {fileID: 1515767286793125935}
+  devModelPanel: {fileID: 0}
   parRowPanel: {fileID: 2477002540971460736}
   topRowPanel: {fileID: 4581703336729868973}
   parRowCanvas: {fileID: 4848223571607997366}
   topRowCanvas: {fileID: 7700330423943046271}
+  scoreboardCanvas: {fileID: 0}
   playerListCanvas: {fileID: 8999332702110290878}
   rowPrefab: {fileID: 6854239977690447805, guid: a91348cdfcf1d7d408f064c6bb7235e1,
     type: 3}
   columnPrefab: {fileID: 2486962986696755445, guid: 79eb9f8154b16f944919181b56d6cc3f,
     type: 3}
-  raycaster: {fileID: 2264371436754714040}
-  scoreboardTabBackground: {fileID: 943787871236303721}
-  scoreboardTimerTabBackground: {fileID: 5137790913267391747}
-  infoTabBackground: {fileID: 6135166699330762822}
-  settingsTabBackground: {fileID: 791549645818968392}
+  scoreboardTabBackground: {fileID: 0}
+  scoreboardTimerTabBackground: {fileID: 0}
+  infoTabBackground: {fileID: 0}
+  settingsTabBackground: {fileID: 0}
+  devModeTabBackground: {fileID: 0}
   scoreboardBackground: {fileID: 3583509326715068146}
   clubPowerSlider: {fileID: 8324230771501270159}
   clubPowerValueLabel: {fileID: 2800754930553744055}
@@ -6795,20 +6797,39 @@ MonoBehaviour:
   ballGColorSlider: {fileID: 6617215077309672476}
   ballBColorSlider: {fileID: 1694078017386746599}
   ballColorPreview: {fileID: 677056014256818610}
+  devModeLastClubHitSpeed: {fileID: 0}
+  devModeBallSpeed: {fileID: 0}
+  devModeClubWaitSlider: {fileID: 0}
+  devModeClubBackstepSlider: {fileID: 0}
+  devModeClubVelSmoothSlider: {fileID: 0}
+  devModeBallWeightSlider: {fileID: 0}
+  devModeBallFrictionSlider: {fileID: 0}
+  devModeBallDragSlider: {fileID: 0}
+  devModeBallADragSlider: {fileID: 0}
+  devModeBallMaxSpeedSlider: {fileID: 0}
+  devModeClubWaitValueLabel: {fileID: 0}
+  devModeClubBackstepValueLabel: {fileID: 0}
+  devModeClubVelSmoothValueLabel: {fileID: 0}
+  devModeBallWeightValueLabel: {fileID: 0}
+  devModeBallFrictionValueLabel: {fileID: 0}
+  devModeBallDragValueLabel: {fileID: 0}
+  devModeBallADragValueLabel: {fileID: 0}
+  devModeBallMaxSpeedValueLabel: {fileID: 0}
+  devModeExperimentalClubColliderCheckbox: {fileID: 0}
+  devModeForAllCheckbox: {fileID: 0}
+  footColliderCheckbox: {fileID: 0}
+  devModeColliderVelTypeDropdown: {fileID: 0}
+  devModeSettingsBox: {fileID: 0}
   verticalHitsCheckbox: {fileID: 6658955557769224624}
   isPlayingCheckbox: {fileID: 1690625801661840944}
   leftHandModeCheckbox: {fileID: 7381632723544916825}
   enableBigShaftCheckbox: {fileID: 8296540336996578951}
   courseReplaysCheckbox: {fileID: 2265883123744900169}
-  showAllPlayersCheckbox: {fileID: 5466575179448744085}
   checkboxOn: {fileID: 2100000, guid: 414c9fc71a4cc194f897c4a17343c166, type: 2}
   checkboxOff: {fileID: 2100000, guid: 67ca0d394412a554c9b002d40389c5b6, type: 2}
   resetButton: {fileID: 6536857741717073534}
   resetConfirmButton: {fileID: 8592048556608093218}
   resetCancelButton: {fileID: 6243376634208335045}
-  scoreboardVisiblility: 2
-  nearbyMaxRadius: 20
-  attachedToCourse: -1
   nameColumnWidth: 0.35
   totalColumnWidth: 0.2
   columnPadding: 0.005
@@ -6835,7 +6856,7 @@ MonoBehaviour:
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
   _syncMethod: 1
-  serializedProgramAsset: {fileID: 11400000, guid: af97f85e578d66b4296f1c4adf2d0b34,
+  serializedProgramAsset: {fileID: 11400000, guid: df46fda87af88b840b177a3c1df5f24b,
     type: 2}
   programSource: {fileID: 11400000, guid: 44110a407b374764d859fa94f331b629, type: 2}
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF

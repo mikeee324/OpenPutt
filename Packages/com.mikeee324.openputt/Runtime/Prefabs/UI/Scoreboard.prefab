@@ -1650,7 +1650,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: -0.186, y: -0.465}
+  m_AnchoredPosition: {x: -0.302, y: -0.291}
   m_SizeDelta: {x: 0.07999998, y: 0.08}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &3822460223445138661
@@ -2999,7 +2999,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Smooth Hit Direction
+  m_text: Smooth Club Collider
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
   m_sharedMaterial: {fileID: 2164040, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
@@ -17029,9 +17029,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 0.3902832, y: 0}
-  m_SizeDelta: {x: 0.6, y: 0.05}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0.090283304, y: -0.000000029802322}
+  m_SizeDelta: {x: 0.67, y: 0.05}
+  m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &7182509612670806136
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -17059,7 +17059,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Big "Shaft"
+  m_text: Increase Golf Club Size Limits (100m)
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
   m_sharedMaterial: {fileID: 2164040, guid: 5302535af1044152a457ed104f1f4b91, type: 2}
@@ -18199,7 +18199,7 @@ GameObject:
   - component: {fileID: 1131890922840274985}
   - component: {fileID: 1226122299580961493}
   m_Layer: 17
-  m_Name: SmoothHitDirection
+  m_Name: SmoothFollowCollider
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -20937,17 +20937,19 @@ MonoBehaviour:
     Hit the ball - Pull the trigger on the same hand that you're holding the club
     in and it should turn red\n\t- Resize the club - Point your club at the floor
     and pull triggers on both hands</size>\n\n<b><u>Desktop Controls</u></b>\n<size=0.05>-
-    B - Fetch your ball\n- M - Fetch your club\n- Left Mouse Button - Arm your club</size>\n\n<b><u>Settings
-    (Available on all scoreboards)</u></b>\n<size=0.05>Spectator Mode - Disables
-    shoulder pickups for club+ball\nLeft Hand Mode - Swaps which side your club+ball
-    are on\nBig \"Shaft\" - Allows the club to resize up to 100m long\nShow All Players
-    - Enables scrolling through all players on scoreboards (May cause lag - so it's
-    off by default)</size>\n\n<b><u>How to play</u></b>\n<size=0.05>1. Grab your
-    ball and drop it near the start pad of a course\n2. Play golf???\n3. Profit</size>\n\n<b><u>Scoreboard
-    Info</u></b>\nThere are 4 tabs that you can swap between at the top right of
-    all scoreboards.\n<size=0.05>      - Settings - Credits+Instructions - Timer
-    Scoreboard - Normal Scoreboard -\n<b>The scoreboard will be shown automatically
-    when you complete your first course.</b></size>"
+    B (Fetch your ball) - M (Fetch your club) - Left Mouse Button (Arm your club)\n-
+    Q - Golf Ball Cam (Experimental)\n\tHold \"Left Click\" to start aiming in the
+    direction of the camera\n    \tMove mouse backward/forward to adjust speed\n\tLet
+    go of \"Left Click\" to hit the ball</size>\n\n<b><u>Settings (Available on all
+    scoreboards)</u></b>\n<size=0.05>Spectator Mode - Disables shoulder pickups for
+    club+ball\nLeft Hand Mode - Swaps which side your club+ball are on\nBig \"Shaft\"
+    - Allows the club to resize up to 100m long\nShow All Players - Enables scrolling
+    through all players on scoreboards (May cause lag - so it's off by default)</size>\n\n<b><u>How
+    to play</u></b>\n<size=0.05>1. Grab your ball and drop it near the start pad
+    of a course\n2. Play golf???\n3. Profit</size>\n\n<b><u>Scoreboard Info</u></b>\nThere
+    are 4 tabs that you can swap between at the top right of all scoreboards.\n<size=0.05>     
+    - Settings - Credits+Instructions - Timer Scoreboard - Normal Scoreboard -\n<b>The
+    scoreboard will be shown automatically when you complete your first course.</b></size>"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 6f38bdc2a423216499bd33b711e5052e, type: 2}
   m_sharedMaterial: {fileID: -124922234474188667, guid: 6f38bdc2a423216499bd33b711e5052e,

@@ -155,11 +155,36 @@ namespace mikeee324.OpenPutt
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
         public static float GetUnixTimestamp() => (float)(System.DateTime.UtcNow - new System.DateTime(2023, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
     }
+    public static class ControllerUtils
+    {
+        public static float LookHorizontal() => Input.GetAxis("Joy1 Axis 3");
+        public static float LookVertical() => Input.GetAxis("Joy1 Axis 6");
+        public static float LeftTrigger() => Input.GetAxis("Joy1 Axis 4");
+        public static float RightTrigger() => Input.GetAxis("Joy1 Axis 5");
+    }
 
     public static class Extensions
     {
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
         public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+
+        public static Vector2 xz(this Vector3 vv)
+        {
+            return new Vector2(vv.x, vv.z);
+        }
+
+        public static Vector3 RemoveHeight(this Vector3 vv)
+        {
+            return new Vector3(vv.x, 0, vv.z);
+        }
+
+        public static Vector3 GetDirectionTowards(this Vector3 start, Vector3 end, bool ignoreHeight)
+        {
+            if (ignoreHeight)
+                return (end.RemoveHeight() - start.RemoveHeight()).normalized;
+            else
+                return (end - start).normalized;
+        }
 
         [RecursiveMethod]
         public static ScoreboardPositioner[] SortByDistance(this ScoreboardPositioner[] array, Vector3 position, int leftIndex = 0, int rightIndex = -1)

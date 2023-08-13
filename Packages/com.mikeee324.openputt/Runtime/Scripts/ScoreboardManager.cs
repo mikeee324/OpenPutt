@@ -40,7 +40,7 @@ namespace mikeee324.OpenPutt
 
         [Space, Header("Settings")]
         [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
-        public float maxRefreshInterval = .1f;
+        public float maxRefreshInterval = .25f;
         [Range(1f, 5f), Tooltip("Amount of time in seconds between scoreboard position updates")]
         public float scoreboardPositionUpdateInterval = 1f;
         [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]

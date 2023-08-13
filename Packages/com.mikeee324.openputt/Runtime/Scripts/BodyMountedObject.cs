@@ -39,6 +39,7 @@ namespace mikeee324.OpenPutt
         public bool mountToPlayerPosition = false;
         public Vector3 mountingOffset = Vector3.zero;
         public KeyCode desktopInputKey = KeyCode.M;
+        public KeyCode controllerInputKey = KeyCode.None;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
         public bool applyVelocityAfterDrop = false;
         #endregion
@@ -124,6 +125,8 @@ namespace mikeee324.OpenPutt
                 {
                     pickupHandLimit = VRCPickup.PickupHand.None;
                     currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
+                    if (controllerInputKey != KeyCode.None && Input.GetKey(controllerInputKey))
+                        currentHand = VRC_Pickup.PickupHand.Right;
                 }
 
                 // If it is limited to one hand only and player picked it up with the wrong hand

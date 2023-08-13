@@ -12,6 +12,8 @@ namespace mikeee324.OpenPutt
         #region Public Settings
         public PlayerManager playerManager;
         public GameObject attachToObject;
+        [Tooltip("What GameObject this label should look towards. If empty it will look towards the local player.")]
+        public GameObject lookAtTarget;
         public TextMeshProUGUI localPlayerLabel;
         public TextMeshProUGUI remotePlayerLabel;
         public Canvas canvas;
@@ -63,7 +65,9 @@ namespace mikeee324.OpenPutt
             if (!canvas.enabled || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
                 return;
 
-            transform.LookAt(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head));
+            Vector3 lookAtTarget = this.lookAtTarget != null ? this.lookAtTarget.transform.position : Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+
+            transform.LookAt(lookAtTarget);
 
             UpdatePosition();
 
@@ -71,7 +75,7 @@ namespace mikeee324.OpenPutt
             if (attachToObject != null && currentLabel != null)
             {
                 // Lerp label properties based on player distance to ball
-                float distance = Vector3.Distance(transform.position, Networking.LocalPlayer.GetPosition());
+                float distance = Vector3.Distance(transform.position, lookAtTarget);
                 float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
 
                 Vector3 newScale = new Vector3(visiblityVal, visiblityVal, 1);
@@ -123,7 +127,8 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            float distance = Vector3.Distance(attachToObject.transform.position, Networking.LocalPlayer.GetPosition());
+            Vector3 lookAtTarget = this.lookAtTarget != null ? this.lookAtTarget.transform.position : Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+            float distance = Vector3.Distance(attachToObject.transform.position, lookAtTarget);
             float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
             bool newActiveState = visiblityVal > 0.1f;
 
@@ -141,7 +146,7 @@ namespace mikeee324.OpenPutt
             }
 
             // Vary the time between each check to try and stop them all happening at once
-            SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .15f));
+            SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .2f));
         }
     }
 }
