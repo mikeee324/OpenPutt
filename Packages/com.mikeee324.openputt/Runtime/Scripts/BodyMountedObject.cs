@@ -42,6 +42,10 @@ namespace mikeee324.OpenPutt
         public KeyCode controllerInputKey = KeyCode.None;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
         public bool applyVelocityAfterDrop = false;
+        [HideInInspector]
+        public bool pickedUpAtLeastOnce = false;
+        [HideInInspector]
+        public bool forcePickedUp = false;
         #endregion
 
         #region Internal Vars
@@ -129,6 +133,9 @@ namespace mikeee324.OpenPutt
                         currentHand = VRC_Pickup.PickupHand.Right;
                 }
 
+                if (forcePickedUp)
+                    currentHand = VRC_Pickup.PickupHand.Right;
+
                 // If it is limited to one hand only and player picked it up with the wrong hand
                 if (pickupHandLimit != VRCPickup.PickupHand.None && pickup != null && pickupHandLimit != currentHand)
                 {
@@ -160,6 +167,9 @@ namespace mikeee324.OpenPutt
 
                 return;
             }
+
+            if (!pickedUpAtLeastOnce)
+                pickedUpAtLeastOnce = true;
 
             if (pickup != null)
                 pickup.pickupable = false;

@@ -76,7 +76,12 @@ namespace mikeee324.OpenPutt
             {
                 // Lerp label properties based on player distance to ball
                 float distance = Vector3.Distance(transform.position, lookAtTarget);
+
+                if (IsMyLabel && this.lookAtTarget != null)
+                    distance *= .2f;
+
                 float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
+
 
                 Vector3 newScale = new Vector3(visiblityVal, visiblityVal, 1);
                 Color newColor = Color.Lerp(labelHideColor, labelVisibleColor, visiblityVal);
