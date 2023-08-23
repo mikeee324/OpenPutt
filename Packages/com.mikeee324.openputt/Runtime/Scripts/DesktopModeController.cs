@@ -86,10 +86,10 @@ namespace mikeee324.OpenPutt
 
         public bool IsBallCamEnabled
         {
-            get => _desktopCamVisible;
+            get => desktopCamVisible;
             set
             {
-                _desktopCamVisible = value;
+                desktopCamVisible = value;
 
                 if (desktopCamera != null)
                     desktopCamera.gameObject.SetActive(value);
@@ -113,8 +113,8 @@ namespace mikeee324.OpenPutt
                 if (!value)
                 {
                     IsPlayerAiming = false;
-                    _playerIsAimingOnController = false;
-                    _playerIsAimingWithUI = false;
+                    playerIsAimingOnController = false;
+                    playerIsAimingWithUI = false;
                 }
             }
         }
@@ -134,69 +134,70 @@ namespace mikeee324.OpenPutt
                 return golfBall.BallMaxSpeed;
             }
         }
-        public float CurrentShotSpeed => _currentShotSpeed;
-        public float CurrentShotSpeedNormalised => _currentShotSpeed / CurrentMaxSpeed;
+        public float CurrentShotSpeed => currentShotSpeed;
+        public float CurrentShotSpeedNormalised => currentShotSpeed / CurrentMaxSpeed;
         public bool IsPlayerAiming
         {
-            get => _isAimingShot;
+            get => isAimingShot;
             set
             {
                 if (!IsBallCamEnabled)
                 {
-                    _isAimingShot = false;
+                    isAimingShot = false;
                     return;
                 }
 
-                if (_isAimingShot != value)
+                if (isAimingShot != value)
                 {
                     // Store the last shot speed
-                    if (!value && _currentShotSpeed > 0.1f)
-                        _lastShotSpeed = _currentShotSpeed;
+                    if (!value && currentShotSpeed > 0.1f)
+                        lastShotSpeed = currentShotSpeed;
 
                     // Toggle UI bits on mobile UI
-                    if (_currentPlatform == DevicePlatform.AndroidMobile)
+                    if (localPlayerPlatform == DevicePlatform.AndroidMobile)
                     {
                         mobileUIShootButtonText.SetActive(!value);
                         mobileUIShootPowerStuff.SetActive(value);
                     }
 
                     // If player stopped aiming and there is a speed, hit the ball with it
-                    if (!value && _currentShotSpeed > 0.1f)
+                    if (!value && currentShotSpeed > 0.1f)
                     {
                         Vector3 ballDirection = desktopCamera.transform.position.GetDirectionTowards(golfBall.transform.position, ignoreHeight: true);
                         if (!openPutt.enableVerticalHits)
                             ballDirection.y = 0;
 
-                        golfBall.OnBallHit(ballDirection * _currentShotSpeed);
+                        golfBall.OnBallHit(ballDirection * currentShotSpeed);
 
                         UpdateUI(CurrentShotSpeedNormalised, noSmooth: true);
                         UpdateBallLineRenderer(CurrentShotSpeedNormalised, noSmooth: true);
                     }
 
                     // Reset speed to 0
-                    _currentShotSpeed = 0;
+                    currentShotSpeed = 0;
                 }
-                _isAimingShot = value;
+                isAimingShot = value;
 
             }
         }
         #endregion
 
         #region Private Vars
-        private bool _desktopCamVisible = false;
-        private bool _isAimingShot = false;
-        private float _currentShotSpeed = 0f;
-        private float _lastShotSpeed = 0f;
-        private bool _playerIsAimingOnController = false;
-        private bool _playerIsAimingWithUI = false;
-        private bool _initialized = false;
-        private int _controllerCheckTotalTicks = 0;
-        private int _controllerCheckDS4Ticks = 0;
-        private bool _playerIsHoldingJump = false;
-        private bool _shotIsChargingUp = true;
+        private bool desktopCamVisible = false;
+        private bool isAimingShot = false;
+        private float currentShotSpeed = 0f;
+        private float lastShotSpeed = 0f;
+        private bool playerIsAimingOnController = false;
+        private bool playerIsAimingWithUI = false;
+        private bool initialized = false;
+        private int controllerCheckTotalTicks = 0;
+        private int controllerCheckDS4Ticks = 0;
+        private bool playerIsHoldingJump = false;
+        private bool shotIsChargingUp = true;
         private Vector3[] directionPoints = new Vector3[] { Vector3.zero, Vector3.zero, Vector3.zero, Vector3.zero };
         [HideInInspector]
-        public DevicePlatform _currentPlatform = DevicePlatform.Desktop;
+        public DevicePlatform localPlayerPlatform = DevicePlatform.Desktop;
+        private Collider[] _menuColliders = new Collider[1];
         #endregion
 
 
@@ -216,22 +217,19 @@ namespace mikeee324.OpenPutt
         {
             if (!Utils.LocalPlayerIsValid() || !gameObject.activeSelf) return;
 
-            Collider[] colliders = Physics.OverlapSphere(Networking.LocalPlayer.GetPosition(), 9999f, (1 << 19) | (1 << 20) | (1 << 21));
-
-            bool menuMightBeOpen = colliders.Length > 0;
+            int numberOfColliders = Physics.OverlapSphereNonAlloc(Networking.LocalPlayer.GetPosition(), 9999f, _menuColliders, (1 << 19) | (1 << 20) | (1 << 21));
+            bool menuMightBeOpen = numberOfColliders > 0;
 
             if (menuMightBeOpen)
             {
+                // If the menu is open and the ball cam is enabled, disable it (easy shortcut to leave the ball cam)
                 if (IsBallCamEnabled)
-                {
                     IsBallCamEnabled = false;
-                }
             }
 
-            if (_currentPlatform == DevicePlatform.AndroidMobile)
-            {
+            // Hide all mobile UI when the menus are open
+            if (localPlayerPlatform == DevicePlatform.AndroidMobile)
                 mobileUI.SetActive(!menuMightBeOpen);
-            }
 
             SendCustomEventDelayedSeconds(nameof(CheckIfMenuIsOpen), .25f);
         }
@@ -272,21 +270,21 @@ namespace mikeee324.OpenPutt
 
             desktopCameraController.target = golfBall.GetComponent<Rigidbody>();
 
-            _currentPlatform = Networking.LocalPlayer.GetPlatform();
+            localPlayerPlatform = Networking.LocalPlayer.GetPlatform();
 
             BodyMountedObject b = openPutt.rightShoulderPickup.ObjectToAttach == playerManager.golfBall.gameObject ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
-            if (b == null || (!b.pickedUpAtLeastOnce && _currentPlatform != DevicePlatform.AndroidMobile))
+            if (b == null || (!b.pickedUpAtLeastOnce && localPlayerPlatform != DevicePlatform.AndroidMobile))
             {
                 SendCustomEventDelayedSeconds(nameof(InitializeCamera), .25f);
                 return;
             }
 
             // Try and figure out if th e player has a controller plugged in, and maybe detect if xbox or ds4
-            _controllerCheckTotalTicks++;
-            if (_controllerCheckTotalTicks >= 30)
+            controllerCheckTotalTicks++;
+            if (controllerCheckTotalTicks >= 30)
             {
                 // We've used up all time to check controller
-                if (_controllerCheckDS4Ticks == _controllerCheckTotalTicks)
+                if (controllerCheckDS4Ticks == controllerCheckTotalTicks)
                     openPutt.playerControllerType = Controller.DS4; // If every frame we checked looks like a DS4 then they're probs using a DS4
                 else
                     openPutt.playerControllerType = Controller.Xbox; // Otherwise default to xbox
@@ -299,13 +297,13 @@ namespace mikeee324.OpenPutt
 
                 // If the xbox mode reads -1 and the ds4 reads near 0, log the tick as a valid DS4 tick
                 if (xboxLookHorizontal == -1 && ds4LookHorizontal.IsNearZero())
-                    _controllerCheckDS4Ticks++;
+                    controllerCheckDS4Ticks++;
 
                 SendCustomEventDelayedFrames(nameof(InitializeCamera), 0);
                 return;
             }
 
-            switch (_currentPlatform)
+            switch (localPlayerPlatform)
             {
                 case DevicePlatform.Desktop:
                     mobileUI.SetActive(false);
@@ -321,13 +319,13 @@ namespace mikeee324.OpenPutt
                     break;
             }
 
-            _initialized = true;
+            initialized = true;
         }
 
 
         private void LateUpdate()
         {
-            if (!_initialized)
+            if (!initialized)
                 return;
 
             CheckInputs();
@@ -367,13 +365,13 @@ namespace mikeee324.OpenPutt
 
                 if (CanAimBallNow)
                 {
-                    if (_playerIsHoldingJump || _playerIsAimingWithUI)
+                    if (playerIsHoldingJump || playerIsAimingWithUI)
                     {
                         float speedNormalised = CurrentShotSpeedNormalised;
                         if (speedNormalised <= 0 || speedNormalised >= 1)
-                            _shotIsChargingUp = !_shotIsChargingUp;
+                            shotIsChargingUp = !shotIsChargingUp;
 
-                        _currentShotSpeed = Mathf.MoveTowards(_currentShotSpeed, _shotIsChargingUp ? CurrentMaxSpeed : 0, 10 * Time.deltaTime);
+                        currentShotSpeed = Mathf.MoveTowards(currentShotSpeed, shotIsChargingUp ? CurrentMaxSpeed : 0, 10 * Time.deltaTime);
 
                         speedNormalised = CurrentShotSpeedNormalised;
                         UpdateUI(speedNormalised, noSmooth: true);
@@ -386,14 +384,14 @@ namespace mikeee324.OpenPutt
                             // LT is down
                             IsPlayerAiming = true;
 
-                            _currentShotSpeed = CurrentMaxSpeed * openPutt.playerControllerType.RightTrigger();
+                            currentShotSpeed = CurrentMaxSpeed * openPutt.playerControllerType.RightTrigger();
                         }
                         else
                         {
                             // Update shot speed based on player input
                             float moveVal = Input.GetAxis("Mouse Y") * .5f;
 
-                            _currentShotSpeed = Mathf.Clamp(_currentShotSpeed -= moveVal, 0, CurrentMaxSpeed);
+                            currentShotSpeed = Mathf.Clamp(currentShotSpeed -= moveVal, 0, CurrentMaxSpeed);
                         }
 
                         float speedNormalised = CurrentShotSpeedNormalised;
@@ -411,7 +409,7 @@ namespace mikeee324.OpenPutt
                 else
                 {
                     // Hide the line renderer
-                    UpdateUI(_lastShotSpeed / CurrentMaxSpeed, noSmooth: true);
+                    UpdateUI(lastShotSpeed / CurrentMaxSpeed, noSmooth: true);
                     UpdateBallLineRenderer(0, noSmooth: true);
                 }
             }
@@ -441,27 +439,27 @@ namespace mikeee324.OpenPutt
             if (openPutt.playerControllerType.LeftTrigger() > 0.5f)
             {
                 IsPlayerAiming = true;
-                _playerIsAimingOnController = true;
+                playerIsAimingOnController = true;
             }
-            else if (_playerIsAimingOnController)
+            else if (playerIsAimingOnController)
             {
                 IsPlayerAiming = false;
-                _playerIsAimingOnController = false;
+                playerIsAimingOnController = false;
             }
         }
 
         public override void InputJump(bool value, UdonInputEventArgs args)
         {
-            if (_currentPlatform == DevicePlatform.Desktop && args.eventType == UdonInputEventType.BUTTON)
+            if (localPlayerPlatform == DevicePlatform.Desktop && args.eventType == UdonInputEventType.BUTTON)
             {
-                _playerIsHoldingJump = value;
+                playerIsHoldingJump = value;
                 IsPlayerAiming = value;
             }
         }
 
         public override void InputUse(bool value, UdonInputEventArgs args)
         {
-            if (_currentPlatform == DevicePlatform.Desktop && args.eventType == UdonInputEventType.BUTTON)
+            if (localPlayerPlatform == DevicePlatform.Desktop && args.eventType == UdonInputEventType.BUTTON)
             {
                 if (openPutt.playerControllerType.LeftTrigger() <= 0.5f)
                     IsPlayerAiming = value;
@@ -559,13 +557,13 @@ namespace mikeee324.OpenPutt
 
         public void OnPlayerStartShot()
         {
-            _playerIsAimingWithUI = true;
+            playerIsAimingWithUI = true;
             IsPlayerAiming = true;
         }
 
         public void OnPlayerEndShot()
         {
-            _playerIsAimingWithUI = false;
+            playerIsAimingWithUI = false;
             IsPlayerAiming = false;
         }
 

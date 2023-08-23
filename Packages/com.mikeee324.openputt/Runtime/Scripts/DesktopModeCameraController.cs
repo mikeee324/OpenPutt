@@ -173,7 +173,7 @@ namespace mikeee324.OpenPutt
             if (Input.GetKey(KeyCode.LeftArrow))
                 currentKeyboardHorizontalDelta -= .8f;
 
-            if (desktopModeController._currentPlatform == DevicePlatform.AndroidMobile)
+            if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
             {
                 // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
                 currentVerticalDelta = -currentMoveVertical;
