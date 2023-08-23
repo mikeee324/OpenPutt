@@ -371,7 +371,11 @@ namespace mikeee324.OpenPutt
             if (newCourseState == CourseState.Completed && courseScores[course.holeNumber] == 1)
             {
                 if (hole != null)
+                {
+                    if (courseScores[course.holeNumber] <= 1)
+                        hole.localPlayerHoleInOneEvent = true;
                     hole.SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "OnHoleInOne");
+                }
             }
 
             if (openPutt != null && openPutt.scoreboardManager != null)
@@ -384,7 +388,10 @@ namespace mikeee324.OpenPutt
             if (newCourseState == CourseState.Completed)
             {
                 if (hole != null)
+                {
+                    hole.localPlayerBallEnteredEvent = true;
                     hole.SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "OnBallEntered");
+                }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync
                 RequestSync();
