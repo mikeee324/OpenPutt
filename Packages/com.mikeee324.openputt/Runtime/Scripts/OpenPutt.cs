@@ -2,6 +2,7 @@
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDK3.Data;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -13,6 +14,8 @@ namespace mikeee324.OpenPutt
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
         [Header("Internal References")]
+        [Tooltip("Used to find the current OpenPutt version")]
+        public TextAsset releaseJson;
         [Tooltip("This is a reference to Cyans Player Object Pool")]
         public CyanPlayerObjectPool objectPool;
         [Tooltip("This is a reference to Cyans Player Object Pool Assigner")]
@@ -66,6 +69,7 @@ namespace mikeee324.OpenPutt
         #endregion
 
         #region API
+        public string CurrentVersion { get; private set; } = "Unknown";
         public PlayerManager[] PlayersSortedByScore => playerListManager.PlayersSortedByScore;
         public PlayerManager[] PlayersSortedByTime => playerListManager.PlayersSortedByTime;
         public float maxRefreshInterval { get; private set; }
@@ -180,6 +184,21 @@ namespace mikeee324.OpenPutt
                 marker.ResetUI();
 
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+
+            // Try to find the current version number of OpenPutt
+            if (releaseJson != null && VRCJson.TryDeserializeFromJson(releaseJson.ToString(), out DataToken result))
+            {
+                if (result.TokenType == TokenType.DataDictionary)
+                {
+                    DataDictionary releaseData = result.DataDictionary;
+
+                    if (releaseData.ContainsKey("version"))
+                    {
+                        CurrentVersion = releaseData["version"].ToString();
+                        Utils.Log(this, $"Found OpenPutt version number! {CurrentVersion}");
+                    }
+                }
+            }
         }
 
         public override void OnDeserialization()

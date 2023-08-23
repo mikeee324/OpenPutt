@@ -46,6 +46,7 @@ namespace mikeee324.OpenPutt
         public Button infoTabBackground;
         public Button settingsTabBackground;
         public Button devModeTabBackground;
+        public TextMeshProUGUI creditsText;
 
         public UnityEngine.UI.Image scoreboardBackground;
 
@@ -230,6 +231,11 @@ namespace mikeee324.OpenPutt
                 Vector3 scoreboardScale = rectTransform.localScale;
                 if (scoreboardScale.z != 0.01f)
                     rectTransform.localScale = new Vector3(scoreboardScale.x, scoreboardScale.y, 0.01f);
+            }
+
+            if (creditsText != null)
+            {
+                creditsText.text = creditsText.text.Replace("{OpenPuttCurrVer}", manager.openPutt.CurrentVersion);
             }
 
             SendCustomEventDelayedSeconds(nameof(InitUI), 0.05f);
