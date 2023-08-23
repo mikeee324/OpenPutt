@@ -88,11 +88,15 @@ namespace mikeee324.OpenPutt
         public Transform devModeSettingsBox;
         #endregion
 
+        public GameObject desktopModeBox;
+
         public UnityEngine.UI.Image verticalHitsCheckbox;
         public UnityEngine.UI.Image isPlayingCheckbox;
         public UnityEngine.UI.Image leftHandModeCheckbox;
         public UnityEngine.UI.Image enableBigShaftCheckbox;
         public UnityEngine.UI.Image courseReplaysCheckbox;
+        public UnityEngine.UI.Image invertCameraXCheckbox;
+        public UnityEngine.UI.Image invertCameraYCheckbox;
         public Material checkboxOn;
         public Material checkboxOff;
         public Button resetButton;
@@ -149,6 +153,20 @@ namespace mikeee324.OpenPutt
                             devModelPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
+
+                            /*if (Utils.LocalPlayerIsValid())
+                            {
+                                switch (Networking.LocalPlayer.GetPlatform())
+                                {
+                                    case DevicePlatform.Desktop:
+                                    case DevicePlatform.AndroidMobile:
+                                        desktopModeBox.gameObject.SetActive(true);
+                                        break;
+                                    default:
+                                        desktopModeBox.gameObject.SetActive(false);
+                                        break;
+                                }
+                            }*/
 
                             RefreshSettingsMenu();
 
@@ -279,6 +297,10 @@ namespace mikeee324.OpenPutt
             isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
+
+            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+            invertCameraXCheckbox.material = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
+            invertCameraYCheckbox.material = cameraManager.invertCameraY ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -436,6 +458,30 @@ namespace mikeee324.OpenPutt
             playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
 
             RefreshDevModeMenu();
+        }
+
+        public void OnToggleInvertCameraX()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+
+            cameraManager.invertCameraX = !cameraManager.invertCameraX;
+
+            RefreshSettingsMenu();
+        }
+
+        public void OnToggleInvertCameraY()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+
+            cameraManager.invertCameraY = !cameraManager.invertCameraY;
+
+            RefreshSettingsMenu();
         }
 
         public void OnColliderVelocityTypeChanged()

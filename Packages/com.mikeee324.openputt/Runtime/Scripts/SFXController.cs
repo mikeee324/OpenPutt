@@ -55,64 +55,56 @@ namespace mikeee324.OpenPutt
 
         public void PlayBallHitSoundAtPosition(Vector3 position, float atVolume = 1f, bool isRemote = false)
         {
-            if (ballHitSounds.Length > 0)
-            {
-                localBallHitSource.volume = (atVolume * maxVolume);
-                if (isRemote)
-                    PlayRemoteSoundAtPosition(ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, maxRange: 2f, canInterrupt: true);
-                else
-                    PlayLocalSoundAtPosition(localBallHitSource, ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, canInterrupt: true);
-            }
+            if (ballHitSounds.Length == 0) return;
+
+            localBallHitSource.volume = (atVolume * maxVolume);
+            if (isRemote)
+                PlayRemoteSoundAtPosition(ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, maxRange: 2f, canInterrupt: true);
+            else
+                PlayLocalSoundAtPosition(localBallHitSource, ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, canInterrupt: true);
         }
 
         public void PlayBallHoleSoundAtPosition(int courseNumber, Vector3 position, bool isRemote = false)
         {
-            if (ballHitSounds.Length > 0)
-            {
-                int noiseToPlay = Random.Range(0, ballHoleSounds.Length);
-                if (!randomiseHoleSounds && courseNumber >= 0 && courseNumber < ballHoleSounds.Length)
-                    noiseToPlay = courseNumber;
-                if (isRemote)
-                    PlayRemoteSoundAtPosition(ballHoleSounds[noiseToPlay], at: position, maxRange: 5f, canInterrupt: true);
-                else
-                    PlayLocalSoundAtPosition(localBallEnteredHoleSource, ballHoleSounds[noiseToPlay], at: position, canInterrupt: true);
-            }
+            if (ballHitSounds.Length == 0) return;
+
+            int noiseToPlay = Random.Range(0, ballHoleSounds.Length);
+            if (!randomiseHoleSounds && courseNumber >= 0 && courseNumber < ballHoleSounds.Length)
+                noiseToPlay = courseNumber;
+            if (isRemote)
+                PlayRemoteSoundAtPosition(ballHoleSounds[noiseToPlay], at: position, maxRange: 5f, canInterrupt: true);
+            else
+                PlayLocalSoundAtPosition(localBallEnteredHoleSource, ballHoleSounds[noiseToPlay], at: position, canInterrupt: true);
         }
 
         public void PlayBallResetSoundAtPosition(Vector3 position, bool isRemote = false)
         {
-            if (ballHitSounds.Length > 0)
-            {
-                if (isRemote)
-                    return;
+            if (ballHitSounds.Length == 0 || isRemote) return;
 
-                PlayLocalSoundAtPosition(localBallHitSource, ballResetSounds[Random.Range(0, ballResetSounds.Length)], at: position, canInterrupt: false);
-            }
+            PlayLocalSoundAtPosition(localBallHitSource, ballResetSounds[Random.Range(0, ballResetSounds.Length)], at: position, canInterrupt: false);
         }
 
         public void PlayMaxScoreReachedSoundAtPosition(Vector3 position, bool isRemote = false)
         {
-            if (maxScoreReachSounds.Length > 0)
-            {
-                if (isRemote)
-                    return;
-                PlayLocalSoundAtPosition(localExtraSoundSource, maxScoreReachSounds[Random.Range(0, maxScoreReachSounds.Length)], at: position, canInterrupt: false);
-            }
+            if (maxScoreReachSounds.Length == 0 || isRemote) return;
+
+            PlayLocalSoundAtPosition(localExtraSoundSource, maxScoreReachSounds[Random.Range(0, maxScoreReachSounds.Length)], at: position, canInterrupt: false);
         }
 
         public void PlayHoleInOneSoundAtPosition(Vector3 position, bool isRemote = false)
         {
-            if (holeInOneSounds.Length > 0)
-            {
-                if (isRemote)
-                    PlayRemoteSoundAtPosition(holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, maxRange: 100f, canInterrupt: false);
-                else
-                    PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, canInterrupt: false);
-            }
+            if (holeInOneSounds.Length == 0) return;
+
+            if (isRemote)
+                PlayRemoteSoundAtPosition(holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, maxRange: 100f, canInterrupt: false);
+            else
+                PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, canInterrupt: false);
         }
 
         public void PlayLocalSoundAtPosition(AudioSource audioSource, AudioClip clip, Vector3 at, bool canInterrupt)
         {
+            if (audioSource == null) return;
+
             if (!usePlayOneShot && audioSource.isPlaying)
             {
                 if (canInterrupt)
@@ -121,26 +113,35 @@ namespace mikeee324.OpenPutt
                     return;
             }
 
-            if (audioSource != null && audioSource.enabled && !audioSource.isPlaying && Vector3.Distance(at, Networking.LocalPlayer.GetPosition()) < audioSource.maxDistance)
+            if (Vector3.Distance(at, Networking.LocalPlayer.GetPosition()) > audioSource.maxDistance)
             {
-                transform.position = at;
+                Utils.Log(this, $"Not playing local sound clip {clip.name} as it is too far away");
+                return;
+            }
 
-                // Limit volume to player settings
-                if (audioSource.volume > maxVolume)
-                    audioSource.volume = maxVolume;
+            if (!audioSource.enabled)
+            {
+                Utils.Log(this, $"Not playing local sound clip {clip.name} as the audio source is disabled");
+                return;
+            }
 
-                audioSource.volume = Mathf.Clamp(audioSource.volume, 0, 1);
-                audioSource.mute = maxVolume < 0.01f;
+            transform.position = at;
 
-                if (usePlayOneShot)
-                {
-                    audioSource.PlayOneShot(clip);
-                }
-                else
-                {
-                    audioSource.clip = clip;
-                    audioSource.Play();
-                }
+            // Limit volume to player settings
+            if (audioSource.volume > maxVolume)
+                audioSource.volume = maxVolume;
+
+            audioSource.volume = Mathf.Clamp(audioSource.volume, 0, 1);
+            audioSource.mute = maxVolume < 0.01f;
+
+            if (usePlayOneShot)
+            {
+                audioSource.PlayOneShot(clip);
+            }
+            else
+            {
+                audioSource.clip = clip;
+                audioSource.Play();
             }
         }
 
@@ -177,33 +178,49 @@ namespace mikeee324.OpenPutt
                         if (!audioSource.isPlaying)
                         {
                             remoteAudioSourceID = i;
-                            audioSource = remotePlayerAudioSources[remoteAudioSourceID];
+                            if (remotePlayerAudioSources[remoteAudioSourceID] != null)
+                                audioSource = remotePlayerAudioSources[remoteAudioSourceID];
                         }
                     }
                 }
             }
 
-            if (audioSource.enabled && !audioSource.isPlaying && Vector3.Distance(at, Networking.LocalPlayer.GetPosition()) < maxRange)
+            if (Vector3.Distance(at, Networking.LocalPlayer.GetPosition()) > maxRange)
             {
-                audioSource.maxDistance = maxRange;
-                transform.position = at;
+                Utils.Log(this, $"Not playing remote sound clip {clip.name} as it is too far away");
+                return;
+            }
 
-                // Limit volume to player settings
-                if (audioSource.volume > maxVolume)
-                    audioSource.volume = maxVolume;
+            if (audioSource == null)
+            {
+                Utils.Log(this, $"Not playing remote sound clip {clip.name} as the audio source is null");
+                return;
+            }
 
-                audioSource.volume = Mathf.Clamp(audioSource.volume, 0, 1);
-                audioSource.mute = maxVolume < 0.01f;
+            if (!audioSource.enabled)
+            {
+                Utils.Log(this, $"Not playing remote sound clip {clip.name} as the audio source is disabled");
+                return;
+            }
 
-                if (usePlayOneShot)
-                {
-                    audioSource.PlayOneShot(clip);
-                }
-                else
-                {
-                    audioSource.clip = clip;
-                    audioSource.Play();
-                }
+            audioSource.maxDistance = maxRange;
+            transform.position = at;
+
+            // Limit volume to player settings
+            if (audioSource.volume > maxVolume)
+                audioSource.volume = maxVolume;
+
+            audioSource.volume = Mathf.Clamp(audioSource.volume, 0, 1);
+            audioSource.mute = maxVolume < 0.01f;
+
+            if (usePlayOneShot)
+            {
+                audioSource.PlayOneShot(clip);
+            }
+            else
+            {
+                audioSource.clip = clip;
+                audioSource.Play();
             }
         }
     }

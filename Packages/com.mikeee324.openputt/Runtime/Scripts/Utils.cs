@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.Remoting.Messaging;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -155,18 +156,185 @@ namespace mikeee324.OpenPutt
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
         public static float GetUnixTimestamp() => (float)(System.DateTime.UtcNow - new System.DateTime(2023, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
     }
+    /* public static class ControllerUtils
+     {
+         // DS4 Inputs
+         //public static float LookHorizontal() => Input.GetAxis("Joy1 Axis 3");
+         //public static float LookVertical() => Input.GetAxis("Joy1 Axis 6");
+         //public static float LeftTrigger() => Input.GetAxis("Joy1 Axis 4");
+         //public static float RightTrigger() => Input.GetAxis("Joy1 Axis 5");
+         // Xbox Inputs
+         //public static float LookHorizontal() => Input.GetAxis("Joy1 Axis 4");
+         //public static float LookVertical() => Input.GetAxis("Joy1 Axis 5");
+         //public static float LeftTrigger() => Input.GetAxis("Joy1 Axis 9");
+         //public static float RightTrigger() => Input.GetAxis("Joy1 Axis 10");
+     }
+ */
+
+    /// <summary>
+    /// This is an attempt at trying to work with multiple controller types. <b>* It is NOT finished or fully tested either! *</b>
+    /// </summary>
+    public enum Controller
+    {
+        Xbox, DS4, None
+    }
+    public enum DevicePlatform
+    {
+        Desktop, PCVR, AndroidVR, AndroidMobile
+    }
+    // ^ This goes in your namespace. Not in your UdonSharpBehaviour class! ^
+
     public static class ControllerUtils
     {
-        public static float LookHorizontal() => Input.GetAxis("Joy1 Axis 3");
-        public static float LookVertical() => Input.GetAxis("Joy1 Axis 6");
-        public static float LeftTrigger() => Input.GetAxis("Joy1 Axis 4");
-        public static float RightTrigger() => Input.GetAxis("Joy1 Axis 5");
+        /// <summary>
+        /// Checks multiple joysticks (up to 4) for a value that's not near 0 and returns the first value it finds
+        /// </summary>
+        /// <param name="axis">The axis ID to find a value for</param>
+        /// <param name="deadzone">The deadzone for values to ignore</param>
+        /// <returns></returns>
+        private static float GetInputAxis(int axis, float deadzone = 0.1f)
+        {
+            float result;
+
+            result = Input.GetAxis($"Joy1 Axis {axis}");
+            if (result <= deadzone || result >= deadzone)
+                return result;
+
+            result = Input.GetAxis($"Joy2 Axis {axis}");
+            if (result <= deadzone || result >= deadzone)
+                return result;
+
+            result = Input.GetAxis($"Joy3 Axis {axis}");
+            if (result <= deadzone || result >= deadzone)
+                return result;
+
+            result = Input.GetAxis($"Joy4 Axis {axis}");
+            if (result <= deadzone || result >= deadzone)
+                return result;
+
+            return result;
+        }
+
+        public static float LookHorizontal(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(4);
+                case Controller.DS4:
+                    return GetInputAxis(3);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float LookVertical(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(5);
+                case Controller.DS4:
+                    return GetInputAxis(6);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float LeftTrigger(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(9);
+                case Controller.DS4:
+                    return GetInputAxis(4);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float RightTrigger(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(10);
+                case Controller.DS4:
+                    return GetInputAxis(5);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float DpadHorizontal(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(6);
+                case Controller.DS4:
+                    return GetInputAxis(7);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float DpadVertical(this Controller controller)
+        {
+            switch (controller)
+            {
+                case Controller.Xbox:
+                    return GetInputAxis(7);
+                case Controller.DS4:
+                    return GetInputAxis(8);
+                default:
+                    return 0;
+            }
+        }
+
+        public static float Jump(this Controller controller) => Input.GetAxis("Jump");
     }
 
     public static class Extensions
     {
+        public static bool IsNearZero(this float f, float deadzone = .05f) => f >= -deadzone && f <= deadzone;
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
         public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+
+        public static string GetName(this DevicePlatform platform)
+        {
+            switch (platform)
+            {
+                case DevicePlatform.AndroidVR:
+                    return "AndroidVR";
+                case DevicePlatform.AndroidMobile:
+                    return "AndroidMobile";
+                case DevicePlatform.PCVR:
+                    return "PCVR";
+                case DevicePlatform.Desktop:
+                default:
+                    return "Desktop";
+            }
+        }
+
+        /// <summary>
+        /// Returns the current platform for the local player only. Remote players will just return as Desktop as we don't have a way of telling this right now.
+        /// </summary>
+        /// <param name="player"></param>
+        /// <returns></returns>
+        public static DevicePlatform GetPlatform(this VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player) || !player.isLocal) return DevicePlatform.Desktop;
+
+#if UNITY_ANDROID
+            if (player.IsUserInVR()) return DevicePlatform.AndroidVR;
+            else return DevicePlatform.AndroidMobile;
+#else
+            if (player.IsUserInVR()) return DevicePlatform.PCVR;
+            else return DevicePlatform.Desktop;
+#endif
+        }
 
         public static Vector2 xz(this Vector3 vv)
         {
