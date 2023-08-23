@@ -14,8 +14,18 @@ namespace mikeee324.OpenPutt
         [Tooltip("The number that will be added onto the players score when the players ball enters this hole")]
         public int holeScoreAddition = 0;
 
-        [HideInInspector] public bool localPlayerBallEnteredEvent = false;
-        [HideInInspector] public bool localPlayerHoleInOneEvent = false;
+        /// <summary>
+        /// A quick workaround for being unable to send network event to 'Others'.<br/>
+        /// If the local player and a remote player putt a ball at the same time we set this to true for the local player so we play 2 sounds, one on a local audio source and another on a remot eaudio source (with less range)
+        /// </summary>
+        [HideInInspector] 
+        public bool localPlayerBallEnteredEvent = false;
+        /// <summary>
+        /// A quick workaround for being unable to send network event to 'Others'.<br/>
+        /// If the local player and a remote player putt a ball at the same time we set this to true for the local player so we play 2 sounds, one on a local audio source and another on a remot eaudio source (with less range)
+        /// </summary>
+        [HideInInspector] 
+        public bool localPlayerHoleInOneEvent = false;
 
         private void OnTriggerEnter(Collider other)
         {
@@ -29,9 +39,9 @@ namespace mikeee324.OpenPutt
         {
             if (courseManager != null && courseManager.openPutt != null)
             {
-                if (localPlayerHoleInOneEvent)
+                if (localPlayerBallEnteredEvent)
                 {
-                    localPlayerHoleInOneEvent = false;
+                    localPlayerBallEnteredEvent = false;
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnLocalPlayerBallEnterHole(courseManager, this);
                     if (courseManager.openPutt.debugMode)

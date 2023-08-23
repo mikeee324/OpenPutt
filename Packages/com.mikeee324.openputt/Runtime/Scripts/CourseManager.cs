@@ -106,8 +106,6 @@ namespace mikeee324.OpenPutt
             {
                 if (golfBall.BallIsMoving && !golfBall.pickedUpByPlayer)
                 {
-                    hole.localPlayerBallEnteredEvent = true;
-                    hole.localPlayerHoleInOneEvent = true;
                     golfBall.playerManager.OnCourseFinished(this, hole, CourseState.Completed);
                 }
             }
