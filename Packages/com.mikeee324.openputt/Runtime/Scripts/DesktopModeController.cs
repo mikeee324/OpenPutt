@@ -252,6 +252,19 @@ namespace mikeee324.OpenPutt
             SendCustomEventDelayedSeconds(nameof(CheckIfMenuIsOpen), .25f);
         }
 
+        public void CheckIfPlayerPickedUpBall()
+        {
+            BodyMountedObject ballObject = openPutt.leftShoulderPickup.ObjectToAttach == playerManager.golfBall.gameObject ? openPutt.leftShoulderPickup : openPutt.rightShoulderPickup;
+
+            if (ballObject.pickedUpAtLeastOnce)
+            {
+                mobileUICameraButton.SetActive(true);
+                return;
+            }
+
+            SendCustomEventDelayedSeconds(nameof(CheckIfPlayerPickedUpBall), .25f);
+        }
+
         public void InitializeCamera()
         {
             // Wait until the local player is valid
@@ -306,6 +319,8 @@ namespace mikeee324.OpenPutt
                 case DevicePlatform.AndroidMobile:
                     mobileUI.SetActive(true);
                     desktopUI.SetActive(false);
+
+                    SendCustomEventDelayedSeconds(nameof(CheckIfPlayerPickedUpBall), .25f);
                     break;
                 default:
                     desktopUI.SetActive(false);

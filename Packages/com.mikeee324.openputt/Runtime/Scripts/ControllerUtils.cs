@@ -282,11 +282,17 @@ namespace mikeee324.OpenPutt
 
         public static bool DpadUp(this Controller controller, int joystickID)
         {
+#if UNITY_ANDROID
+            return controller.DpadVertical(joystickID) < -.5f;
+#endif
             return controller.DpadVertical(joystickID) > .5f;
         }
 
         public static bool DpadDown(this Controller controller, int joystickID)
         {
+#if UNITY_ANDROID
+            return controller.DpadVertical(joystickID) > .5f;
+#endif
             return controller.DpadVertical(joystickID) < -.5f;
         }
 
