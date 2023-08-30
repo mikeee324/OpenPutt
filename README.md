@@ -33,14 +33,15 @@ This is included in the project for ease of use on my part
 
 # Scene Setup
 1. Drag in the OpenPutt prefab from Packages/OpenPutt/Prefabs
-
+   1. There is also a demo scene available in Packages/OpenPutt/Runtime/OpenPuttDemoScene
+   2. Make sure to make a copy of this in your Assets folder if you want to make changes!
 # Adding Courses
 1. Drag in a new OpenPuttCourse prefab into the Holes object of the OpenPutt prefab
 2. Move the start pad to where you want players to start the course
 3. Move the Hole box collider to the hole in your course
 4. Assign any floor meshes for that course to the CourseManager script at the root of the Course prefab (Allows OpenPutt to know if the ball is on the correct course or not)
-6. Add a par/max score to the same CourseManager script
-5. Add the Course prefab to the list of courses in the main OpenPutt script
+5. Add a par/max score to the same CourseManager script
+6. Add the Course prefab to the list of courses in the main OpenPutt script
 
 ```
 Note - Courses should have at least the floor as it's own mesh.

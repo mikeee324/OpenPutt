@@ -12,6 +12,7 @@ namespace mikeee324.OpenPutt
     {
         #region Public Settings
         [Header("Object Settings")]
+        public ControllerDetector controllerDetector;
         public Rigidbody rb;
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
@@ -39,7 +40,7 @@ namespace mikeee324.OpenPutt
         public bool mountToPlayerPosition = false;
         public Vector3 mountingOffset = Vector3.zero;
         public KeyCode desktopInputKey = KeyCode.M;
-        public KeyCode controllerInputKey = KeyCode.None;
+        public ControllerButtons controllerInputKey = ControllerButtons.None;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
         public bool applyVelocityAfterDrop = false;
         [HideInInspector]
@@ -129,8 +130,11 @@ namespace mikeee324.OpenPutt
                 {
                     pickupHandLimit = VRCPickup.PickupHand.None;
                     currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
-                    if (controllerInputKey != KeyCode.None && Input.GetKey(controllerInputKey))
-                        currentHand = VRC_Pickup.PickupHand.Right;
+                    if (controllerInputKey != ControllerButtons.None)
+                    {
+                        if (controllerDetector != null && controllerDetector.LastUsedJoystick.IsKeyPressed(controllerInputKey, controllerDetector.LastKnownJoystickID))
+                            currentHand = VRC_Pickup.PickupHand.Right;
+                    }
                 }
 
                 if (forcePickedUp)

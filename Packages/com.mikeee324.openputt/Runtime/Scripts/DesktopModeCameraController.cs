@@ -54,10 +54,7 @@ namespace mikeee324.OpenPutt
         public bool ShowPlayersInCamera
         {
             get => thisCam.cullingMask == defaultCullingMask;
-            set
-            {
-                thisCam.cullingMask = value ? defaultCullingMask : noPlayersCullingMask;
-            }
+            set => thisCam.cullingMask = value ? defaultCullingMask : noPlayersCullingMask;
         }
         /// <summary>
         /// Locks the Y axis mouse movement on the camera while lining up a shot

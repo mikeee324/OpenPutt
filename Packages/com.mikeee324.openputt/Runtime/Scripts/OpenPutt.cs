@@ -53,8 +53,6 @@ namespace mikeee324.OpenPutt
         public bool coursesCanBePlayedInAnyOrder = false;
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
         public bool enableDevModeForAll = false;
-        [HideInInspector]
-        public Controller playerControllerType = Controller.Xbox;
         #endregion
 
         #region Other Settings
