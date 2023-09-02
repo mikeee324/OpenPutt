@@ -11,10 +11,11 @@ namespace mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
+        public string CurrentVersion { get; } = "0.5.8";
+
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
         [Header("Internal References")]
-        public string CurrentVersion = "0.5.8"; // TODO: Populate this automatically later
         [Tooltip("This is a reference to Cyans Player Object Pool")]
         public CyanPlayerObjectPool objectPool;
         [Tooltip("This is a reference to Cyans Player Object Pool Assigner")]
