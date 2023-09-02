@@ -396,7 +396,7 @@ namespace mikeee324.OpenPutt
                     if (Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask))
                     {
                         // If the ball is currently rolling down a slope
-                        if (hit.normal.y < 1f)
+                        if (hit.normal.y < .99f)
                         {
                             // If we have been stuck on this slope for too long force ball stop so player can hit it
                             if (timeNotMoving > minBallSpeedMaxTime * 2f)
@@ -414,7 +414,7 @@ namespace mikeee324.OpenPutt
                                 BallIsMoving = true;
 
                                 if (playerManager.openPutt.debugMode)
-                                    Utils.Log(this, "Ball would have stopped but it is on a slope - keep moving until we reach a flat surface");
+                                    Utils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={hit.normal.y})");
                             }
                         }
                         else
