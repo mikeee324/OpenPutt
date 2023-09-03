@@ -129,7 +129,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
         }
     }
 
-    public bool ShouldBuildScoreboards(ScoreboardManager scoreboardManager, List<Scoreboard> allScoreboards)
+    public static bool ShouldBuildScoreboards(ScoreboardManager scoreboardManager, List<Scoreboard> allScoreboards)
     {
         int numberOfPlayersOnScoreboard = scoreboardManager.numberOfPlayersToDisplay;
         int numberOfColumnsOnScoreboard = scoreboardManager.NumberOfColumns;
