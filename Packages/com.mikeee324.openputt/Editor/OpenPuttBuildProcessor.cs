@@ -62,16 +62,6 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
             openPutt.courses[i].openPutt = openPutt;
         }
 
-        VRCSceneDescriptor sceneDescriptor = GameObject.FindObjectOfType<VRCSceneDescriptor>();
-        if (sceneDescriptor != null)
-        {
-            foreach (Scoreboard scoreboard in openPutt.scoreboardManager.scoreboards)
-                scoreboard.myCanvas.worldCamera = sceneDescriptor.ReferenceCamera.GetComponent<Camera>();
-
-            foreach (Scoreboard scoreboard in openPutt.scoreboardManager.staticScoreboards)
-                scoreboard.myCanvas.worldCamera = sceneDescriptor.ReferenceCamera.GetComponent<Camera>();
-        }
-
         Utils.Log(TAG, $"SetupOpenPutt - Setup {openPutt.courses.Length} courses");
     }
 
