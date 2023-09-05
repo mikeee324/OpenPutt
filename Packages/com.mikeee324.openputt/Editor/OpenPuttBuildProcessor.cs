@@ -6,6 +6,7 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDK3.Components;
 
 public class OpenPuttBuildProcessor : IProcessSceneWithReport
 {
