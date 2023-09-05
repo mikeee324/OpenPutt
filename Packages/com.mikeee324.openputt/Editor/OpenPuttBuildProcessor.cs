@@ -6,6 +6,7 @@ using UnityEditor.Build.Reporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDK3.Components;
 
 public class OpenPuttBuildProcessor : IProcessSceneWithReport
 {
@@ -59,6 +60,16 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         {
             openPutt.courses[i].holeNumber = i;
             openPutt.courses[i].openPutt = openPutt;
+        }
+
+        VRCSceneDescriptor sceneDescriptor = GameObject.FindObjectOfType<VRCSceneDescriptor>();
+        if (sceneDescriptor != null)
+        {
+            foreach (Scoreboard scoreboard in openPutt.scoreboardManager.scoreboards)
+                scoreboard.myCanvas.worldCamera = sceneDescriptor.ReferenceCamera.GetComponent<Camera>();
+
+            foreach (Scoreboard scoreboard in openPutt.scoreboardManager.staticScoreboards)
+                scoreboard.myCanvas.worldCamera = sceneDescriptor.ReferenceCamera.GetComponent<Camera>();
         }
 
         Utils.Log(TAG, $"SetupOpenPutt - Setup {openPutt.courses.Length} courses");
