@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -46803,6 +46803,21 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
         type: 3}
+      propertyPath: drawHoles
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: drawFloorMeshes
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: alwaysDisplayGizmos
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
       propertyPath: floorObjects.Array.size
       value: 2
       objectReference: {fileID: 0}
@@ -47192,19 +47207,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 2143695080}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1759823081
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1759823075}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 229740497, guid: 4ecd63eff847044b68db9453ce219299, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  contentType: 1
 --- !u!1 &1761026508 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 4926412383994304886, guid: f475c74e151ed7741aa70f32e655690c,
@@ -50364,6 +50366,26 @@ PrefabInstance:
         type: 3}
       propertyPath: parScore
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: drawHoles
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: drawBallSpawns
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: drawFloorMeshes
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
+        type: 3}
+      propertyPath: alwaysDisplayGizmos
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6202910580894832666, guid: 8d04c31d90b6bb549af6cbb0e573b141,
         type: 3}

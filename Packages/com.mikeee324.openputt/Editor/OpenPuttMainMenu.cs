@@ -1,10 +1,10 @@
 ﻿#if UNITY_EDITOR
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using UnityEditor.SceneManagement;
+using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
@@ -94,7 +94,7 @@ namespace mikeee324.OpenPutt
 
             CenteredLabel("Courses", 14);
             Label("This is a list of all of the courses in your world. These need to be listed in the order you want them to be played.", -1, default, true);
-            Label("Each course has a start pad and a collider for the hole, move these into position manually. You can also manually add start positions and extra hole colliders if needed. (Refer to the docs for help here)", -1, default, true);
+            Label("Each course has a start pad and a collider for the hole, move these into position manually.", -1, default, true);
 
             if (GUILayout.Button("+ Add New Course"))
             {
@@ -110,6 +110,35 @@ namespace mikeee324.OpenPutt
                 coursesProp.InsertArrayElementAtIndex(coursesProp.arraySize);
                 coursesProp.GetArrayElementAtIndex(coursesProp.arraySize - 1).objectReferenceValue = newCourse;
             }
+
+            // Remove any null course references
+            Object[] allCourses = new Object[0];
+            for (int i = 0; i < coursesProp.arraySize; i++)
+                if (coursesProp.GetArrayElementAtIndex(i).objectReferenceValue && !allCourses.Contains(coursesProp.GetArrayElementAtIndex(i).objectReferenceValue))
+                    allCourses = allCourses.Add(coursesProp.GetArrayElementAtIndex(i).objectReferenceValue);
+
+            if (allCourses.Length > 0 && coursesProp.arraySize != allCourses.Length)
+            {
+                coursesProp.ClearArray();
+                foreach (Object course in allCourses)
+                {
+                    coursesProp.InsertArrayElementAtIndex(coursesProp.arraySize);
+                    coursesProp.GetArrayElementAtIndex(coursesProp.arraySize - 1).objectReferenceValue = course;
+                }
+                serializedOpenPutt.ApplyModifiedProperties();
+            }
+
+
+            bool hasCourses = false;
+            for (int i = 0; i < coursesProp.arraySize; i++)
+                if (coursesProp.GetArrayElementAtIndex(i).objectReferenceValue)
+                    hasCourses = true;
+            if (!hasCourses)
+            {
+                CenteredLabel("You need to add at least 1 course!", 13, Color.red);
+                CenteredLabel("OpenPutt will not work until you add one!", 13, Color.red);
+            }
+
 
             EditorGUILayout.PropertyField(coursesProp, true);
 

@@ -87,10 +87,16 @@ namespace mikeee324.OpenPutt
         public GameObject[] holes;
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
-        [Header("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
-        public bool alwaysDisplayGizmos = true;
-        [Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
-        public float ballSpawnGizmoRadius = 0.0225f;
+        [SerializeField, Header("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
+        private bool alwaysDisplayGizmos = true;
+        [SerializeField, Tooltip("Draw gizmos for ball spawn positions")]
+        private bool drawBallSpawns = true;
+        [SerializeField, Tooltip("Draw gizmos for holes")]
+        private bool drawHoles = true;
+        [SerializeField, Tooltip("Draw a wireframe over meshes that are counted as a floor for this course")]
+        private bool drawFloorMeshes = true;
+        [SerializeField, Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
+        private float ballSpawnGizmoRadius = 0.0225f;
 
         private void Start()
         {
@@ -126,40 +132,76 @@ namespace mikeee324.OpenPutt
 
         private void DrawGizmos()
         {
-            Gizmos.color = Color.green;
-            foreach (CourseStartPosition ballSpawn in ballSpawns)
+            if (drawBallSpawns)
             {
-                if (ballSpawn == null) continue;
+                Gizmos.color = Color.green;
+                foreach (CourseStartPosition ballSpawn in ballSpawns)
+                {
+                    if (ballSpawn == null) continue;
 
-                Gizmos.DrawWireSphere(ballSpawn.transform.position, ballSpawnGizmoRadius);
+                    Gizmos.DrawWireSphere(ballSpawn.transform.position, ballSpawnGizmoRadius);
+                }
             }
 
-            Gizmos.color = Color.red;
-            foreach (GameObject hole in holes)
+            if (drawHoles)
             {
-                if (hole == null) continue;
+                Gizmos.color = Color.red;
+                foreach (GameObject hole in holes)
+                {
+                    if (hole == null) continue;
 
-                if (hole.GetComponent<BoxCollider>() != null)
-                {
-                    BoxCollider col = hole.GetComponent<BoxCollider>();
-                    Gizmos.DrawWireCube(hole.transform.TransformPoint(col.center), col.size);
+                    if (hole.GetComponent<BoxCollider>() != null)
+                    {
+                        BoxCollider col = hole.GetComponent<BoxCollider>();
+                        Gizmos.DrawWireCube(hole.transform.TransformPoint(col.center), col.size);
+                    }
+                    else if (hole.GetComponent<SphereCollider>() != null)
+                    {
+                        SphereCollider col = hole.GetComponent<SphereCollider>();
+                        Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
+                    }
+                    else if (hole.GetComponent<CapsuleCollider>() != null)
+                    {
+                        CapsuleCollider col = hole.GetComponent<CapsuleCollider>();
+                        Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
+                    }
+                    else if (hole.GetComponent<MeshCollider>() != null)
+                    {
+                        MeshCollider col = hole.GetComponent<MeshCollider>();
+                        Gizmos.DrawWireMesh(col.sharedMesh, -1, hole.transform.position, hole.transform.rotation, hole.transform.lossyScale);
+                    }
                 }
-                else if (hole.GetComponent<SphereCollider>() != null)
-                {
-                    SphereCollider col = hole.GetComponent<SphereCollider>();
-                    Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
-                }
-                else if (hole.GetComponent<CapsuleCollider>() != null)
-                {
-                    CapsuleCollider col = hole.GetComponent<CapsuleCollider>();
-                    Gizmos.DrawWireSphere(hole.transform.TransformPoint(col.center), col.radius);
-                }
-                else if (hole.GetComponent<MeshCollider>() != null)
-                {
-                    MeshCollider col = hole.GetComponent<MeshCollider>();
-                    Gizmos.DrawWireMesh(col.sharedMesh, -1, hole.transform.position, hole.transform.rotation, hole.transform.localScale);
-                }
+            }
 
+            if (drawFloorMeshes)
+            {
+                foreach (GameObject floor in floorObjects)
+                {
+                    if (floor == null) continue;
+
+                    Gizmos.color = Color.blue;
+                    if (floor.GetComponent<BoxCollider>() != null)
+                    {
+                        BoxCollider col = floor.GetComponent<BoxCollider>();
+                        Gizmos.DrawWireCube(floor.transform.TransformPoint(col.center), col.size);
+                    }
+                    else if (floor.GetComponent<SphereCollider>() != null)
+                    {
+                        SphereCollider col = floor.GetComponent<SphereCollider>();
+                        Gizmos.DrawWireSphere(floor.transform.TransformPoint(col.center), col.radius);
+                    }
+                    else if (floor.GetComponent<CapsuleCollider>() != null)
+                    {
+                        CapsuleCollider col = floor.GetComponent<CapsuleCollider>();
+                        Gizmos.DrawWireSphere(floor.transform.TransformPoint(col.center), col.radius);
+                    }
+                    else if (floor.GetComponent<MeshCollider>() != null)
+                    {
+                        MeshCollider col = floor.GetComponent<MeshCollider>();
+                        Gizmos.DrawWireMesh(col.sharedMesh, -1, floor.transform.position, floor.transform.rotation, floor.transform.lossyScale);
+
+                    }
+                }
             }
         }
     }
