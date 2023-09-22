@@ -846,6 +846,7 @@ namespace mikeee324.OpenPutt
 
                 foreach (GameObject mesh in CurrentCourse.floorObjects)
                 {
+                    if (mesh == null) continue;
                     // Does this floor belong to the course the player is currently playing?
                     if (mesh.gameObject == hit.collider.gameObject)
                     {
