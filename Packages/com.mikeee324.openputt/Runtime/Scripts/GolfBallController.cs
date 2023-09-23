@@ -162,10 +162,13 @@ namespace mikeee324.OpenPutt
                         }
                     }
 
-                    // Stop the ball moving
-                    ballRigidbody.velocity = Vector3.zero;
-                    ballRigidbody.angularVelocity = Vector3.zero;
-                    ballRigidbody.WakeUp();
+                    if (!ballRigidbody.isKinematic)
+                    {
+                        // Stop the ball moving
+                        ballRigidbody.velocity = Vector3.zero;
+                        ballRigidbody.angularVelocity = Vector3.zero;
+                        ballRigidbody.WakeUp();
+                    }
                     lastFramePosition = ballRigidbody.position;
                     lastFrameVelocity = Vector3.zero;
                 }
