@@ -8,7 +8,7 @@ using Varneon.VUdon.ArrayExtensions;
 
 namespace mikeee324.OpenPutt
 {
-    public class OpenPuttEditorWindow : EditorWindow
+    public class OpenPuttMainMenu : EditorWindow
     {
         GameObject openPuttPrefab = null;
         GameObject openPuttCoursePrefab = null;
@@ -19,7 +19,7 @@ namespace mikeee324.OpenPutt
         [MenuItem("OpenPutt/Open OpenPutt Setup Helper...")]
         public static void ShowWindow()
         {
-            var window = GetWindow(typeof(OpenPuttEditorWindow));
+            var window = GetWindow(typeof(OpenPuttMainMenu));
             window.titleContent.text = "OpenPutt Setup";
         }
 
