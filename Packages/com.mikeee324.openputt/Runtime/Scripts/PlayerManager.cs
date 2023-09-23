@@ -846,7 +846,11 @@ namespace mikeee324.OpenPutt
 
                 foreach (GameObject mesh in CurrentCourse.floorObjects)
                 {
-                    if (mesh == null) continue;
+                    if (mesh == null)
+                    {
+                        Utils.LogError(CurrentCourse, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
+                        continue;
+                    }
                     // Does this floor belong to the course the player is currently playing?
                     if (mesh.gameObject == hit.collider.gameObject)
                     {
