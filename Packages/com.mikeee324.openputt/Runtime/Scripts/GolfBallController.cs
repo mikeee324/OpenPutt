@@ -346,8 +346,11 @@ namespace mikeee324.OpenPutt
             // Freeze the ball position without going kinematic
             if (!BallIsMoving)
             {
-                ballRigidbody.velocity = Vector3.zero;
-                ballRigidbody.angularVelocity = Vector3.zero;
+                if (!ballRigidbody.isKinematic)
+                {
+                    ballRigidbody.velocity = Vector3.zero;
+                    ballRigidbody.angularVelocity = Vector3.zero;
+                }
                 ballRigidbody.WakeUp();
             }
 
@@ -474,8 +477,11 @@ namespace mikeee324.OpenPutt
 
         public override void OnPickup()
         {
-            ballRigidbody.velocity = Vector3.zero;
-            ballRigidbody.angularVelocity = Vector3.zero;
+            if (!ballRigidbody.isKinematic)
+            {
+                ballRigidbody.velocity = Vector3.zero;
+                ballRigidbody.angularVelocity = Vector3.zero;
+            }
             lastFramePosition = this.transform.position;
             lastFrameVelocity = Vector3.zero;
             lastHeldFramePosition = this.transform.position;
