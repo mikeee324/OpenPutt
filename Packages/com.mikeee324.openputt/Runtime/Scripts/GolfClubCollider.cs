@@ -258,9 +258,9 @@ namespace mikeee324.OpenPutt
                 // Work out the angularVelocity needed to reach the same rotation as the target
                 Quaternion deltaRot = CurrentRotationTarget * Quaternion.Inverse(transform.rotation);
                 deltaRot.ToAngleAxis(out float angle, out Vector3 axis);
-                if (angle > 180.0f) 
+                if (angle > 180.0f)
                     angle -= 360.0f;
-                if (angle != 0) 
+                if (angle != 0 && !myRigidbody.isKinematic)
                     myRigidbody.angularVelocity = (1f / Time.fixedDeltaTime * angle * axis * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
             }
             else
@@ -549,8 +549,11 @@ namespace mikeee324.OpenPutt
             {
                 myRigidbody.position = CurrentPositionTarget;
                 myRigidbody.rotation = CurrentRotationTarget * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
-                myRigidbody.velocity = Vector3.zero;
-                myRigidbody.angularVelocity = Vector3.zero;
+                if (!myRigidbody.isKinematic)
+                {
+                    myRigidbody.velocity = Vector3.zero;
+                    myRigidbody.angularVelocity = Vector3.zero;
+                }
             }
 
             if (resetBuffers)

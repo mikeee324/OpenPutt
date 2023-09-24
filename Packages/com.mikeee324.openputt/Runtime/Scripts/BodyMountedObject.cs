@@ -219,14 +219,18 @@ namespace mikeee324.OpenPutt
             }
 
             if (rb.isKinematic)
+            {
                 lastFrameVelocity = (rb.position - lastFramePosition) / Time.deltaTime;
+            }
             else
+            {
                 lastFrameVelocity = rb.velocity;
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
 
             lastFramePosition = rb.position;
 
-            rb.velocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
         }
     }
 }

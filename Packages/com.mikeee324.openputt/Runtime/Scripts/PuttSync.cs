@@ -19,6 +19,9 @@ namespace mikeee324.OpenPutt
         [Tooltip("This defines how often this often will be updated for remote players (in seconds) based on how far away they are from this GameObject. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve remoteUpdateDistanceCurve;
 
+        [Range(0.001f, 0.05f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
+        public float remoteUpdateSmoothTime = 0.02f;
+
         [Tooltip("Experimental - Reduces network traffic by syncing")]
         public bool disableSyncWhileHeld = true;
 
@@ -102,6 +105,7 @@ namespace mikeee324.OpenPutt
 
         private VRCPlayerApi localPlayer;
         private float lastKnownDistanceUpdateValue = 0f;
+        private Vector3 lastSyncVelocity = Vector3.zero;
         #endregion
 
         void Start()
@@ -219,6 +223,8 @@ namespace mikeee324.OpenPutt
                 // Attach this object to the players hand if they are currently holding it
                 if (disableSyncWhileHeld && currentOwnerHandInt != (int)VRCPickup.PickupHand.None)
                 {
+                    // TODO: This is a little bit jittery still - needs looking at eventually
+
                     // Get the world space position/rotation of the hand that is holding this object
                     HumanBodyBones currentTrackedBone = currentOwnerHand == VRCPickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
@@ -239,7 +245,7 @@ namespace mikeee324.OpenPutt
                     if (lastKnownDistanceUpdateValue == 0f)
                     {
                         if ((currentOwnerHandOffset - syncPosition).magnitude > 0.1f)
-                            newPosition = Vector3.Lerp(oldPos, handPosition + transform.TransformDirection(syncPosition), 1.0f - Mathf.Pow(0.000001f, Time.deltaTime));
+                            newPosition = Vector3.SmoothDamp(oldPos, newPosition, ref lastSyncVelocity, remoteUpdateSmoothTime);
 
                         if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
                         {
@@ -260,8 +266,15 @@ namespace mikeee324.OpenPutt
                     Vector3 newPosition = syncPosition;
                     Quaternion newRotation = syncRotation;
 
+                    Vector3 oldPos = transform.localPosition;
+
                     if (localPlayer != null)
-                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(newPosition, localPlayer.GetPosition()));
+                    {
+                        if (transform.parent == null)
+                            lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.TransformPoint(newPosition), localPlayer.GetPosition()));
+                        else
+                            lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.parent.TransformPoint(newPosition), localPlayer.GetPosition()));
+                    }
 
                     // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)
                     if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue == 0f)
@@ -270,7 +283,8 @@ namespace mikeee324.OpenPutt
                         float lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
 
                         // Lerp the object to it's current position
-                        newPosition = Vector3.Lerp(transform.localPosition, syncPosition, lerpProgress);
+                        newPosition = Vector3.SmoothDamp(transform.localPosition, syncPosition, ref lastSyncVelocity, remoteUpdateSmoothTime);
+
                         newRotation = Quaternion.Slerp(transform.localRotation, syncRotation, lerpProgress);
                     }
 
@@ -474,8 +488,11 @@ namespace mikeee324.OpenPutt
             if (objectRB != null)
             {
                 objectRB.Sleep();
-                objectRB.velocity = Vector3.zero;
-                objectRB.angularVelocity = Vector3.zero;
+                if (!objectRB.isKinematic)
+                {
+                    objectRB.velocity = Vector3.zero;
+                    objectRB.angularVelocity = Vector3.zero;
+                }
             }
 
             transform.position = originalPosition;
