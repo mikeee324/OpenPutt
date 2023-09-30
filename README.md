@@ -15,7 +15,7 @@ Lets play some golf!
 # Dependencies (Install these first!!!)
 - UdonSharp 1.1.8+ (Use VCC!)
 - CyanLasers Player Object Pool 1.1.2+ - https://cyanlaser.github.io/CyanPlayerObjectPool/
-- Varneons Array Extensions 0.3.0 - [Add To VCC](vcc://vpm/addRepo?url=https://vpm.varneon.com/repos/vudon.json) - [Github](https://github.com/Varneon/VUdon-ArrayExtensions/releases/tag/0.3.0)
+- Varneons Array Extensions 0.3.0 - ![Add To VCC](vcc://vpm/addRepo?url=https://vpm.varneon.com/repos/vudon.json) - [Github](https://github.com/Varneon/VUdon-ArrayExtensions/releases/tag/0.3.0)
 
 Also wanted to mention the Udon profiler from here - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5  
 This is included in the project for ease of use on my part  
