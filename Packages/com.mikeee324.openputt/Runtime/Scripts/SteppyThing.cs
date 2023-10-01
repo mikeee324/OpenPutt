@@ -43,7 +43,7 @@ namespace mikeee324.OpenPutt
                     Physics.IgnoreCollision(steps[i], steps[i + 1], true);
 
                 // Ignore ball holder collisions
-                if (i > 0)
+                if (i > 0 && stepBallHolders.Length > 0)
                     Physics.IgnoreCollision(steps[i], stepBallHolders[i - 1], true);
 
                 // Ignore other colliders like ground mesh etc
@@ -88,7 +88,8 @@ namespace mikeee324.OpenPutt
                         targetPos = stepRestLocations[i];
                     }
 
-                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+                    if (stepBallHolderNS.Length > i)
+                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
                 }
                 else if (i < steps.Length - 1)
                 {
@@ -104,7 +105,8 @@ namespace mikeee324.OpenPutt
                         targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
                     }
 
-                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+                    if (stepBallHolderNS.Length > i)
+                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
                 }
                 else
                 {
@@ -118,10 +120,11 @@ namespace mikeee324.OpenPutt
                         startPos = stepRestLocations[i];
                         targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
                     }
-                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+                    if (stepBallHolderNS.Length > i)
+                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
                 }
 
-                if (toggleBallHolderRenderers)
+                if (toggleBallHolderRenderers && stepBallHolderNS.Length > i)
                     stepBallHolders[i].GetComponent<MeshRenderer>().enabled = !stepBallHolders[i].isTrigger;
 
                 thisStep.position = Vector3.Lerp(startPos, targetPos, stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime));
