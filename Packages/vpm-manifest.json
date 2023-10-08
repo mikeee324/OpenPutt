@@ -9,9 +9,6 @@
     "com.vrchat.worlds": {
       "version": "^3.1.x"
     },
-    "com.vrchat.clientsim": {
-      "version": "^1.2.x"
-    },
     "com.vrchat.udonsharp": {
       "version": "^1.1.x"
     },
@@ -24,7 +21,7 @@
   },
   "locked": {
     "com.vrchat.base": {
-      "version": "3.3.0",
+      "version": "3.4.0",
       "dependencies": {}
     },
     "com.vrchat.core.vpm-resolver": {
@@ -32,15 +29,9 @@
       "dependencies": {}
     },
     "com.vrchat.worlds": {
-      "version": "3.3.0",
+      "version": "3.4.0",
       "dependencies": {
-        "com.vrchat.base": "3.3.0"
-      }
-    },
-    "com.vrchat.clientsim": {
-      "version": "1.2.7",
-      "dependencies": {
-        "com.vrchat.worlds": "^3.2.2"
+        "com.vrchat.base": "3.4.0"
       }
     },
     "com.vrchat.udonsharp": {
@@ -57,9 +48,9 @@
       }
     },
     "com.varneon.vudon.array-extensions": {
-      "version": "0.3.0",
+      "version": "0.3.1",
       "dependencies": {
-        "com.vrchat.udonsharp": "1.x.x"
+        "com.vrchat.worlds": ">=3.4.0 <4.0.0"
       }
     }
   }

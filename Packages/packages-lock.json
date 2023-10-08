@@ -11,11 +11,10 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
+        "com.vrchat.worlds": "^3.3.0",
         "com.unity.textmeshpro": "^2.1.x",
-        "com.vrchat.worlds": "^3.1.x",
-        "com.vrchat.udonsharp": "^1.1.x",
         "com.cyan.playerobjectpool": "^1.1.x",
-        "com.varneon.vudon.array-extensions": "0.3.0"
+        "com.varneon.vudon.array-extensions": "^0.3.x"
       }
     },
     "com.unity.burst": {
@@ -51,7 +50,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
-      "version": "2.0.18",
+      "version": "2.0.21",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -176,15 +175,6 @@
         "com.unity.nuget.newtonsoft-json": "3.0.2"
       }
     },
-    "com.vrchat.clientsim": {
-      "version": "file:com.vrchat.clientsim",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {
-        "com.unity.xr.oculus.standalone": "2.38.4",
-        "com.unity.inputsystem": "1.2.0"
-      }
-    },
     "com.vrchat.core.bootstrap": {
       "version": "file:com.vrchat.core.bootstrap",
       "depth": 0,
@@ -201,12 +191,6 @@
         "com.unity.nuget.newtonsoft-json": "3.0.2"
       }
     },
-    "com.vrchat.udonsharp": {
-      "version": "file:com.vrchat.udonsharp",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.vrchat.worlds": {
       "version": "file:com.vrchat.worlds",
       "depth": 0,
@@ -214,7 +198,9 @@
       "dependencies": {
         "com.unity.cinemachine": "2.8.0",
         "com.unity.postprocessing": "3.1.1",
-        "com.unity.textmeshpro": "2.1.6"
+        "com.unity.textmeshpro": "2.1.6",
+        "com.unity.xr.oculus.standalone": "2.38.4",
+        "com.unity.inputsystem": "1.2.0"
       }
     },
     "com.unity.modules.ai": {
