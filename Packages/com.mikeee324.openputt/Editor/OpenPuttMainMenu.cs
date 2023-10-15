@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Linq;
 using UnityEditor.SceneManagement;
 using Varneon.VUdon.ArrayExtensions;
+using UnityEditor.PackageManager.UI;
 
 namespace mikeee324.OpenPutt
 {
@@ -16,7 +17,7 @@ namespace mikeee324.OpenPutt
 
         Vector2 scrollPosition = Vector2.zero;
 
-        [MenuItem("OpenPutt/Open OpenPutt Setup Helper...")]
+        [MenuItem("OpenPutt/Open Setup Helper")]
         public static void ShowWindow()
         {
             var window = GetWindow(typeof(OpenPuttMainMenu));
@@ -203,6 +204,17 @@ namespace mikeee324.OpenPutt
                 serializedOpenPutt.UpdateIfRequiredOrScript();
                 EditorSceneManager.MarkSceneDirty(openPutt.gameObject.scene);
             }
+        }
+
+        [MenuItem("OpenPutt/Import Samples")]
+        public static void ImportSamples()
+        {
+            var assembly = typeof(OpenPuttMainMenu).Assembly;
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssembly(assembly);
+            foreach (Sample sample in Sample.FindByPackage(packageInfo.name, packageInfo.version))
+                sample.Import();
+
+            EditorUtility.DisplayDialog("Sample Import Finished", "The samples have been imported into your project.\r\nYou can find them in the Assets/Samples/OpenPutt folder.", "OK");
         }
     }
 }
