@@ -1,7 +1,7 @@
 {
   "name": "com.mikeee324.openputt",
   "displayName": "OpenPutt",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "unity": "2019.4",
   "description": "Golf System for VRChat Worlds",
   "vrchatVersion": "2022.1.1",
@@ -12,8 +12,8 @@
   },
   "vpmDependencies": {
     "com.vrchat.worlds": "^3.3.0",
-    "com.cyan.playerobjectpool": "^1.1.x",
-    "com.varneon.vudon.array-extensions": "^0.3.x"
+    "com.cyan.playerobjectpool": "^1.1.0",
+    "com.varneon.vudon.array-extensions": "^0.3.1"
   },
   "keywords": [
     "openputt",
@@ -21,16 +21,16 @@
     "game"
   ],
   "dependencies": {
-    "com.vrchat.worlds": "^3.3.0",
-    "com.unity.textmeshpro": "^2.1.x",
-    "com.cyan.playerobjectpool": "^1.1.x",
-    "com.varneon.vudon.array-extensions": "^0.3.x"
+    "com.vrchat.worlds": "3.4.0",
+    "com.unity.textmeshpro": "2.1.0",
+    "com.cyan.playerobjectpool": "1.1.2",
+    "com.varneon.vudon.array-extensions": "0.3.1"
   },
   "samples": [
     {
       "displayName": "OpenPutt Demo Scene",
       "description": "A demo scene with with some courses already set up.",
-      "path": "Samples/OpenPutt Demo Scene"
+      "path": "Samples/OpenPutt"
     }
   ]
 }
