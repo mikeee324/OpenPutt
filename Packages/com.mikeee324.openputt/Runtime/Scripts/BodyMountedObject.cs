@@ -1,4 +1,5 @@
 ﻿
+using System;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -39,6 +40,11 @@ namespace mikeee324.OpenPutt
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
         public bool mountToPlayerPosition = false;
         public Vector3 mountingOffset = Vector3.zero;
+        [Tooltip("Toggles scaling this offset based onthe local players height (allows you to move it further away from their head if they are taller)")]
+        public bool mountingOffsetHeightScaling = false;
+        public AnimationCurve mountingOffsetHeightScale = null;
+        [Tooltip("Allows the VRCPickup proximity to scale with the players height to hopefully make it easier to grab things")]
+        public float defaultPickupProximity = 0.2f;
         public KeyCode desktopInputKey = KeyCode.M;
         public ControllerButtons controllerInputKey = ControllerButtons.None;
         public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
@@ -99,6 +105,7 @@ namespace mikeee324.OpenPutt
         private Vector3 lastFrameVelocity = Vector3.zero;
         private bool firstFrameCheck = false;
         private bool userIsInVR = false;
+        private Vector3 currentOffset = Vector3.zero;
         #endregion
 
         void Start()
@@ -107,6 +114,17 @@ namespace mikeee324.OpenPutt
                 originalRotation = objectToAttach.transform.rotation;
             if (pickup == null)
                 pickup = GetComponent<VRCPickup>();
+            if (mountingOffsetHeightScale == null || mountingOffsetHeightScale.length == 0)
+            {
+                mountingOffsetHeightScale.AddKey(0f, 0.5f);
+                mountingOffsetHeightScale.AddKey(1.5f, 1f);
+                mountingOffsetHeightScale.AddKey(5f, 3f);
+                mountingOffsetHeightScale.AddKey(100f, 10f); // Not tested!
+            }
+
+            currentOffset = mountingOffset;
+
+            SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
         }
 
         public override void PostLateUpdate()
@@ -162,7 +180,7 @@ namespace mikeee324.OpenPutt
                 else
                 {
                     // Just pin the body object to the bone
-                    gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(mountingOffset);
+                    gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(currentOffset);
                     gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(mountToBone);
                 }
 
@@ -231,6 +249,39 @@ namespace mikeee324.OpenPutt
 
             lastFramePosition = rb.position;
 
+        }
+
+        public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)
+        {
+            if (!Utilities.IsValid(player) || !player.isLocal)
+                return;
+
+            UpdateObjectOffset();
+        }
+
+        /// <summary>
+        /// Allows for scaling the position offset based on the players height
+        /// </summary>
+        private void UpdateObjectOffset()
+        {
+            if (!mountingOffsetHeightScaling)
+            {
+                currentOffset = mountingOffset;
+                return;
+            }
+
+            if (!Utils.LocalPlayerIsValid())
+            {
+                SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
+                return;
+            }
+
+            float lastKnownPlayerHeight = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
+
+            float scaleFactor = mountingOffsetHeightScale.Evaluate(lastKnownPlayerHeight);
+
+            currentOffset = mountingOffset * scaleFactor;
+            pickup.proximity = 0.2f * scaleFactor;
         }
     }
 }

@@ -285,7 +285,7 @@ namespace mikeee324.OpenPutt
             {
                 FrameVelocity = currFrameVelocity;
                 FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, singleFrameSmoothFactor);
-                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, 1f);
+                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, .2f);
             }
 
             if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)

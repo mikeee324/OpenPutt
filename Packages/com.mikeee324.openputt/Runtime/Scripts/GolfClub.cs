@@ -139,8 +139,40 @@ namespace mikeee324.OpenPutt
             this.enabled = false;
         }
 
+
+        public override void PostLateUpdate()
+        {
+            bool isOwner = this.LocalPlayerOwnsThisObject();
+
+            if (isOwner)
+            {
+                // Player is rescaling club
+                if (LeftUseButtonDown && RightUseButtonDown)
+                    RescaleClub(false);
+                else if (!Networking.LocalPlayer.IsUserInVR() && RightUseButtonDown)
+                    RescaleClub(false);
+            }
+        }
+
+        RaycastHit[] ballCheckHits = new RaycastHit[10];
+
         private void FixedUpdate()
         {
+            int hits = Physics.SphereCastNonAlloc(shaftEndPostion.transform.position, 0.1f, shaftEndPostion.transform.forward, ballCheckHits, 100f);
+            if (hits > 0)
+            {
+                for (int i = 0; i < hits; i++)
+                {
+                    if (ballCheckHits[i].collider == null) continue;
+                    GolfBallController ball = ballCheckHits[i].collider.GetComponent<GolfBallController>();
+                    if (ball != null)
+                    {
+                        Utils.LogError("Help", "Found ball");
+                    }
+                }
+            }
+
+            // TODO: BoxCastNonAlloc to check if we hit a ball?
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
             if (isOwner)

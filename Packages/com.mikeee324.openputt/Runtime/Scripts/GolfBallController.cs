@@ -40,6 +40,8 @@ namespace mikeee324.OpenPutt
         [Header("Ball Physics")]
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
+        [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody")]
+        public float ballDrag = .02f;
         [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         private float maxBallSpeed = 10f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
@@ -147,7 +149,7 @@ namespace mikeee324.OpenPutt
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
                                 respawnPosition = this.transform.position;
-                                if (playerManager.openPutt.debugMode)
+                                if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                                     Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
                             }
                         }
@@ -173,7 +175,7 @@ namespace mikeee324.OpenPutt
                     lastFrameVelocity = Vector3.zero;
                 }
 
-                //if (playerManager.openPutt.debugMode)
+                //if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                 //Utils.Log(this, $"BallWasMoving({ballWasMoving}) BallMoving({_ballMoving}) RespawnAuto({respawnAutomatically}) BallValidPos({ballIsInValidPosition}) PickedUp({pickedUpByPlayer}) RespawnPos({respawnPosition})");
             }
             get => _ballMoving;
@@ -199,8 +201,8 @@ namespace mikeee324.OpenPutt
         }
         public float BallDrag
         {
-            get => ballRigidbody.drag;
-            set => ballRigidbody.drag = value;
+            get => ballDrag;
+            set => ballDrag = value;
         }
         public float BallMaxSpeed
         {
@@ -280,6 +282,10 @@ namespace mikeee324.OpenPutt
                 DefaultBallDrag = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
             }
+
+            if (ballRigidbody != null)
+                ballRigidbody.maxAngularVelocity = 100f;
+
 
             DefaultBallMaxSpeed = maxBallSpeed;
 
@@ -409,7 +415,7 @@ namespace mikeee324.OpenPutt
                             {
                                 BallIsMoving = false;
 
-                                if (playerManager.openPutt.debugMode)
+                                if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                                     Utils.Log(this, "Ball is on a slope and appears to be stuck here - allow player to hit it again");
                             }
                             else
@@ -419,7 +425,7 @@ namespace mikeee324.OpenPutt
                                 // Don't stop the ball from moving (people hate it stopping on slopes)
                                 BallIsMoving = true;
 
-                                if (playerManager.openPutt.debugMode)
+                                if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                                     Utils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={hit.normal.y})");
                             }
                         }
@@ -432,6 +438,10 @@ namespace mikeee324.OpenPutt
                     {
                         BallIsMoving = false;
                     }
+                }
+                else
+                {
+                    ballRigidbody.AddForce(-ballRigidbody.velocity.normalized * ballDrag);
                 }
             }
             else
@@ -511,7 +521,7 @@ namespace mikeee324.OpenPutt
 
             if (startLine.StartDropAnimation(this.transform.position))
             {
-                if (playerManager.openPutt.debugMode)
+                if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                     Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
             }
             else
@@ -521,13 +531,13 @@ namespace mikeee324.OpenPutt
                 {
                     if (playerManager.CurrentCourse.drivingRangeMode)
                     {
-                        if (playerManager.openPutt.debugMode)
+                        if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                             Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                         playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                     }
                     else if (respawnPosition != null)
                     {
-                        if (playerManager.openPutt.debugMode)
+                        if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                             Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
                         BallIsMoving = false;
@@ -749,7 +759,7 @@ namespace mikeee324.OpenPutt
             // Checks if the collision was from "below" and ignores it
             if (collisionNormal.y > wallBounceHeightIgnoreAmount)
             {
-                if (playerManager.openPutt.debugMode)
+                if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                     Utils.Log(this, "Ignored wall bounce because it was below me!");
                 return;
             }
