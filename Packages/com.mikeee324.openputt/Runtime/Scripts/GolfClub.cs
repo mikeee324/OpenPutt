@@ -167,12 +167,13 @@ namespace mikeee324.OpenPutt
                     GolfBallController ball = ballCheckHits[i].collider.GetComponent<GolfBallController>();
                     if (ball != null)
                     {
-                        Utils.LogError("Help", "Found ball");
+                        // TODO: Maybe a way of checking if ball was hit.. don't know (still missing a lot of hits)
                     }
                 }
             }
 
             // TODO: BoxCastNonAlloc to check if we hit a ball?
+
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
             if (isOwner)

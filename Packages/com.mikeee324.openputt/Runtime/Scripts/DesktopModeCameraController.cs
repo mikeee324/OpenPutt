@@ -199,10 +199,17 @@ namespace mikeee324.OpenPutt
             if (invertCameraY)
                 verticalDelta *= -1f;
 
+#if UNITY_EDITOR
+            // Player can always rotate camera horizontally
+            currentCameraX += (cameraXSpeed / 2) * horizontalDelta;
+            if (!LockCamera)
+                currentCameraY -= (cameraYSpeed / 2) * verticalDelta;
+#else
             // Player can always rotate camera horizontally
             currentCameraX += cameraXSpeed * horizontalDelta;
             if (!LockCamera)
                 currentCameraY -= cameraYSpeed * verticalDelta;
+#endif
 
             currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
 

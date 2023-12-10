@@ -5,6 +5,7 @@ using Cyan.PlayerObjectPool;
 using VRC.SDK3.Components;
 using System;
 using JetBrains.Annotations;
+using com.mikeee324.OpenPutt;
 
 namespace mikeee324.OpenPutt
 {
@@ -18,6 +19,7 @@ namespace mikeee324.OpenPutt
         public GolfClubCollider golfClubHead;
         public OpenPutt openPutt;
         public GameObject desktopCamera;
+        public GolfClubColliderVisualiser golfClubVisualiser;
 
         [Header("Game Settings")]
         [UdonSynced]

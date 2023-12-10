@@ -220,6 +220,14 @@ namespace mikeee324.OpenPutt
         public float DefaultBallAngularDrag { get; private set; }
         public float DefaultBallMaxSpeed { get; private set; }
         public float BallCurrentSpeed => ballRigidbody != null ? ballRigidbody.velocity.magnitude : 0;
+        public CollisionDetectionMode collisionType
+        {
+            get => ballRigidbody.collisionDetectionMode;
+            set
+            {
+                ballRigidbody.collisionDetectionMode = value;
+            }
+        }
         #endregion
 
         #region Internal Vars
