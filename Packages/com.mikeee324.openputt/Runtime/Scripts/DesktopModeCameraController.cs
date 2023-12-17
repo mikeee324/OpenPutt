@@ -99,8 +99,8 @@ namespace mikeee324.OpenPutt
 
             lastKnownRealDistance = distance;
 
-            transform.position = target.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (distance * Vector3.forward);
-            transform.LookAt(target.position);
+            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (distance * Vector3.forward);
+            transform.LookAt(target.transform.position);
         }
 
         /// <summary>
@@ -199,22 +199,25 @@ namespace mikeee324.OpenPutt
             if (invertCameraY)
                 verticalDelta *= -1f;
 
+            // Unity editor reports mouse movements higher so lower the speed to make it usable in editor
 #if UNITY_EDITOR
-            // Player can always rotate camera horizontally
-            currentCameraX += (cameraXSpeed / 2) * horizontalDelta;
-            if (!LockCamera)
-                currentCameraY -= (cameraYSpeed / 2) * verticalDelta;
+            float localSpeedModifier = 0.5f;
 #else
-            // Player can always rotate camera horizontally
-            currentCameraX += cameraXSpeed * horizontalDelta;
-            if (!LockCamera)
-                currentCameraY -= cameraYSpeed * verticalDelta;
+            float localSpeedModifier = 1;
 #endif
 
-            currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+            // Player can always rotate camera horizontally
+            currentCameraX += (cameraXSpeed * localSpeedModifier) * horizontalDelta;
+            if (!LockCamera)
+                currentCameraY -= (cameraYSpeed * localSpeedModifier) * verticalDelta;
 
-            transform.position = target.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
-            transform.LookAt(target.position);
+            currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+        }
+
+        public override void PostLateUpdate()
+        {
+            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
+            transform.LookAt(target.transform.position);
         }
     }
 }

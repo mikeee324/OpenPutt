@@ -17,12 +17,14 @@ namespace mikeee324.OpenPutt
         public Rigidbody rb;
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
+        private Rigidbody rbToAttach;
         public GameObject ObjectToAttach
         {
             get => objectToAttach;
             set
             {
                 objectToAttach = value;
+                rbToAttach = objectToAttach.GetComponent<Rigidbody>();
 
                 ActivateAndTakeOwnership();
             }
@@ -72,6 +74,7 @@ namespace mikeee324.OpenPutt
                     UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
                     foreach (UdonBehaviour listener in listeners)
                     {
+                        listener.SetProgramVariable("lastHeldFrameVelocity", lastFrameVelocity);
                         listener.SendCustomEvent(dropEventName);
                         listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
                     }
@@ -80,7 +83,7 @@ namespace mikeee324.OpenPutt
                     {
                         Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
                         if (rb != null)
-                            rb.AddForce(lastFrameVelocity * rb.mass, ForceMode.Impulse);
+                            rb.velocity = lastFrameVelocity;
                     }
                 }
                 if (_heldInHand == VRCPickup.PickupHand.None && value != VRCPickup.PickupHand.None)
@@ -187,8 +190,21 @@ namespace mikeee324.OpenPutt
                 if (pickup != null)
                     pickup.pickupable = true;
 
+                lastFramePosition = Vector3.zero;
+                lastFrameVelocity = Vector3.zero;
+
                 return;
             }
+
+            if (lastFramePosition == Vector3.zero)
+                lastFrameVelocity = Vector3.zero;
+            else
+                lastFrameVelocity = (transform.position - lastFramePosition) / Time.deltaTime;
+
+            if (lastFrameVelocity.magnitude > 15f)
+                lastFrameVelocity = lastFrameVelocity.normalized * 15f;
+
+            lastFramePosition = transform.position;
 
             if (!pickedUpAtLeastOnce)
                 pickedUpAtLeastOnce = true;
@@ -211,6 +227,12 @@ namespace mikeee324.OpenPutt
                 gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
                 gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
             }
+
+            if (rbToAttach != null)
+            {
+                rbToAttach.position = gameObject.transform.position;
+                rbToAttach.rotation = gameObject.transform.rotation;
+            }
         }
 
         private void ActivateAndTakeOwnership()
@@ -222,33 +244,6 @@ namespace mikeee324.OpenPutt
 
             if (!Networking.LocalPlayer.IsOwner(objectToAttach.gameObject))
                 Utils.SetOwner(Networking.LocalPlayer, objectToAttach.gameObject);
-        }
-
-        private void FixedUpdate()
-        {
-            if (rb == null)
-                rb = GetComponent<Rigidbody>();
-
-            if (rb == null)
-            {
-                lastFrameVelocity = (transform.position - lastFramePosition) / Time.deltaTime;
-                lastFramePosition = transform.position;
-                return;
-            }
-
-            if (rb.isKinematic)
-            {
-                lastFrameVelocity = (rb.position - lastFramePosition) / Time.deltaTime;
-            }
-            else
-            {
-                lastFrameVelocity = rb.velocity;
-                rb.velocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-            }
-
-            lastFramePosition = rb.position;
-
         }
 
         public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)

@@ -333,6 +333,23 @@ namespace mikeee324.OpenPutt
             ResizeClubCollider();
         }
 
+        public override void PostLateUpdate()
+        {
+            if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
+            {
+                // Perform a sweep test to see if we'll be hitting the ball in the next frame
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out RaycastHit hit, FrameVelocity.magnitude * Time.deltaTime))
+                {
+                    // We only care if this collided with the local players ball
+                    if (hit.collider != null && hit.collider.gameObject == golfBall.gameObject)
+                    {
+                        LastKnownHitType = "(Late Sweep)";
+                        framesSinceHit = 0;
+                    }
+                }
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             // Ignore extra hits to the ball until we have processed the first

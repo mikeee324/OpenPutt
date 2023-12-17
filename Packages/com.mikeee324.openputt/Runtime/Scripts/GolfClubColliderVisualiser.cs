@@ -19,7 +19,7 @@ namespace com.mikeee324.OpenPutt
 
         }
 
-        void FixedUpdate()
+        public override void PostLateUpdate()
         {
             if (follower.gameObject.activeInHierarchy)
             {

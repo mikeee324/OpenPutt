@@ -266,7 +266,7 @@ namespace mikeee324.OpenPutt
                         {
                             // Play max score reached sound
                             if (openPutt != null && openPutt.SFXController != null)
-                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.transform.position);
+                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.GetPosition());
 
                             // Prevents the sound from being heard again
                             courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
@@ -346,7 +346,7 @@ namespace mikeee324.OpenPutt
 
             if (course.drivingRangeMode)
             {
-                int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+                int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.GetPosition(), golfBall.respawnPosition));
                 // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
                 if (distance > courseScores[course.holeNumber])
                     courseScores[course.holeNumber] = distance;
@@ -460,7 +460,7 @@ namespace mikeee324.OpenPutt
                     openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
             }
 
-            bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.transform.position, 100f);
+            bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.GetPosition(), 100f);
 
             if (openPutt != null && openPutt.leftShoulderPickup != null)
             {
@@ -500,7 +500,7 @@ namespace mikeee324.OpenPutt
                         if (golfBall.OnGround)
                             ballNotOnCourseCounter++;
 
-                        int distance = (int)Math.Floor(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+                        int distance = (int)Math.Floor(Vector3.Distance(golfBall.GetPosition(), golfBall.respawnPosition));
                         if (distance > courseScores[CurrentCourse.holeNumber])
                         {
                             courseScores[CurrentCourse.holeNumber] = distance;
@@ -604,7 +604,7 @@ namespace mikeee324.OpenPutt
                 if (golfBall.puttSync != null)
                     golfBall.puttSync.Respawn();
                 else
-                    golfBall.transform.position = new Vector3(0, -90, 0);
+                    golfBall.SetPosition(new Vector3(0, -90, 0));
                 golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
 

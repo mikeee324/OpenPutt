@@ -545,16 +545,16 @@ namespace mikeee324.OpenPutt
             switch (val)
             {
                 case 0:
-                    playerManager.golfBall.collisionType = CollisionDetectionMode.Discrete;
+                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
                     break;
                 case 1:
-                    playerManager.golfBall.collisionType = CollisionDetectionMode.Continuous;
+                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
                     break;
                 case 2:
-                    playerManager.golfBall.collisionType = CollisionDetectionMode.ContinuousDynamic;
+                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
                     break;
                 case 3:
-                    playerManager.golfBall.collisionType = CollisionDetectionMode.ContinuousSpeculative;
+                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
                     break;
             }
 
@@ -567,23 +567,6 @@ namespace mikeee324.OpenPutt
                 return;
 
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
-            int val = devModeColliderVelTypeDropdown.value;
-
-            switch (val)
-            {
-                case 0:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.Discrete;
-                    break;
-                case 1:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.Continuous;
-                    break;
-                case 2:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.ContinuousDynamic;
-                    break;
-                case 3:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.ContinuousSpeculative;
-                    break;
-            }
 
             bool isActive = playerManager.golfClubVisualiser.gameObject.activeInHierarchy;
 
@@ -871,7 +854,7 @@ namespace mikeee324.OpenPutt
             devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
 
             devModeClubColliderTypeDropdown.value = (int)playerManager.golfClub.putter.collisionType;
-            devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.collisionType;
+            devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);

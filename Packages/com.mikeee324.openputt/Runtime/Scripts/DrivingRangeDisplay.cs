@@ -30,7 +30,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
         }
     }
 
-    private void LateUpdate()
+    public override void PostLateUpdate()
     {
         if (!this.enabled)
             return;
@@ -50,7 +50,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
                 MonitoringDistance = false;
             }
 
-            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.GetPosition(false), golfBall.respawnPosition));
             if (distance > highestScoreSoFar)
             {
                 highestScoreSoFar = distance;
