@@ -143,22 +143,6 @@ namespace mikeee324.OpenPutt
 
         public override void PostLateUpdate()
         {
-            int hits = Physics.SphereCastNonAlloc(shaftEndPostion.transform.position, 0.1f, shaftEndPostion.transform.forward, ballCheckHits, 100f);
-            if (hits > 0)
-            {
-                for (int i = 0; i < hits; i++)
-                {
-                    if (ballCheckHits[i].collider == null) continue;
-                    GolfBallController ball = ballCheckHits[i].collider.GetComponent<GolfBallController>();
-                    if (ball != null)
-                    {
-                        // TODO: Maybe a way of checking if ball was hit.. don't know (still missing a lot of hits)
-                    }
-                }
-            }
-
-            // TODO: BoxCastNonAlloc to check if we hit a ball?
-
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
             if (isOwner)
