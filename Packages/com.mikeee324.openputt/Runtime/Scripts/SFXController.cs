@@ -27,12 +27,35 @@ namespace mikeee324.OpenPutt
         [Tooltip("Toggles the use of PlayOneShot instead of Play on the AudioSource (Use carefully!)")]
         public bool usePlayOneShot = false;
 
-        [Header("Sounds")]
+        [Header("General Sounds")]
+        [Tooltip("List of sounds to play when the player hits the ball (randomised on each hit)")]
         public AudioClip[] ballHitSounds;
+        [Tooltip("List of sounds to play when the players ball gets reset (randomised)")]
         public AudioClip[] ballResetSounds;
+        [Tooltip("List of sounds to play when the player hits the max score for the current hole (randomised)")]
         public AudioClip[] maxScoreReachSounds;
+        [Tooltip("List of sounds to play when the players ball enters a hole (If randomise hole sounds is off, this list picks a sound from this list by using the course number)")]
         public AudioClip[] ballHoleSounds;
+
+        [Header("Score Related Sounds")]
+        [Tooltip("List of sounds to play when the playersgets a hole in one (randomised)")]
         public AudioClip[] holeInOneSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 4 or below par (randomised)"), ]
+        public AudioClip[] condorSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 3 below par (randomised)")]
+        public AudioClip[] albatrossSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 2 below par (randomised)")]
+        public AudioClip[] eagleSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 1 below par (randomised)")]
+        public AudioClip[] birdieSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score on par (randomised)")]
+        public AudioClip[] parSounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 1 above par (randomised)")]
+        public AudioClip[] bogeySounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 2 above par (randomised)")]
+        public AudioClip[] doubleBogeySounds;
+        [Tooltip("List of sounds to play when the player finishes a course with a score 3 above par (randomised)")]
+        public AudioClip[] tripleBogeySounds;
 
         private int remoteAudioSourceID = 0;
 
@@ -59,36 +82,37 @@ namespace mikeee324.OpenPutt
 
             localBallHitSource.volume = (atVolume * maxVolume);
             if (isRemote)
-                PlayRemoteSoundAtPosition(ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, maxRange: 2f, canInterrupt: true);
+                PlayRemoteSoundAtPosition(ballHitSounds.GetRandom(), at: position, maxRange: 2f, canInterrupt: true);
             else
-                PlayLocalSoundAtPosition(localBallHitSource, ballHitSounds[Random.Range(0, ballHitSounds.Length)], at: position, canInterrupt: true);
+                PlayLocalSoundAtPosition(localBallHitSource, ballHitSounds.GetRandom(), at: position, canInterrupt: true);
         }
 
         public void PlayBallHoleSoundAtPosition(int courseNumber, Vector3 position, bool isRemote = false)
         {
             if (ballHitSounds.Length == 0) return;
 
-            int noiseToPlay = Random.Range(0, ballHoleSounds.Length);
+            AudioClip noiseToPlay = ballHoleSounds.GetRandom();
             if (!randomiseHoleSounds && courseNumber >= 0 && courseNumber < ballHoleSounds.Length)
-                noiseToPlay = courseNumber;
+                noiseToPlay = ballHoleSounds[courseNumber];
+
             if (isRemote)
-                PlayRemoteSoundAtPosition(ballHoleSounds[noiseToPlay], at: position, maxRange: 5f, canInterrupt: true);
+                PlayRemoteSoundAtPosition(noiseToPlay, at: position, maxRange: 5f, canInterrupt: true);
             else
-                PlayLocalSoundAtPosition(localBallEnteredHoleSource, ballHoleSounds[noiseToPlay], at: position, canInterrupt: true);
+                PlayLocalSoundAtPosition(localBallEnteredHoleSource, noiseToPlay, at: position, canInterrupt: true);
         }
 
         public void PlayBallResetSoundAtPosition(Vector3 position, bool isRemote = false)
         {
             if (ballHitSounds.Length == 0 || isRemote) return;
 
-            PlayLocalSoundAtPosition(localBallHitSource, ballResetSounds[Random.Range(0, ballResetSounds.Length)], at: position, canInterrupt: false);
+            PlayLocalSoundAtPosition(localBallHitSource, ballResetSounds.GetRandom(), at: position, canInterrupt: false);
         }
 
         public void PlayMaxScoreReachedSoundAtPosition(Vector3 position, bool isRemote = false)
         {
             if (maxScoreReachSounds.Length == 0 || isRemote) return;
 
-            PlayLocalSoundAtPosition(localExtraSoundSource, maxScoreReachSounds[Random.Range(0, maxScoreReachSounds.Length)], at: position, canInterrupt: false);
+            PlayLocalSoundAtPosition(localExtraSoundSource, maxScoreReachSounds.GetRandom(), at: position, canInterrupt: false);
         }
 
         public void PlayHoleInOneSoundAtPosition(Vector3 position, bool isRemote = false)
@@ -96,9 +120,58 @@ namespace mikeee324.OpenPutt
             if (holeInOneSounds.Length == 0) return;
 
             if (isRemote)
-                PlayRemoteSoundAtPosition(holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, maxRange: 100f, canInterrupt: false);
+                PlayRemoteSoundAtPosition(holeInOneSounds.GetRandom(), at: position, maxRange: 100f, canInterrupt: false);
             else
-                PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds[Random.Range(0, holeInOneSounds.Length)], at: position, canInterrupt: false);
+                PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds.GetRandom(), at: position, canInterrupt: false);
+        }
+
+        public void PlayScoreSoundAtPosition(Vector3 position, int scoreRelativeToPar, bool isRemote = false)
+        {
+            if (holeInOneSounds.Length == 0) return;
+
+            AudioClip clipToPlay = null;
+
+            // Check special cases first
+            if (scoreRelativeToPar <= -4)
+            {
+                clipToPlay = condorSounds.GetRandom();
+            }
+            else
+            {
+                // Check static numbers
+                switch (scoreRelativeToPar)
+                {
+                    case -3:
+                        clipToPlay = albatrossSounds.GetRandom();
+                        break;
+                    case -2:
+                        clipToPlay = eagleSounds.GetRandom();
+                        break;
+                    case -1:
+                        clipToPlay = birdieSounds.GetRandom();
+                        break;
+                    case 0:
+                        clipToPlay = parSounds.GetRandom();
+                        break;
+                    case 1:
+                        clipToPlay = bogeySounds.GetRandom();
+                        break;
+                    case 2:
+                        clipToPlay = doubleBogeySounds.GetRandom();
+                        break;
+                    case 3:
+                        clipToPlay = tripleBogeySounds.GetRandom();
+                        break;
+                }
+            }
+
+            if (clipToPlay != null)
+            {
+                if (isRemote)
+                    PlayRemoteSoundAtPosition(clipToPlay, at: position, maxRange: 100f, canInterrupt: false);
+                else
+                    PlayLocalSoundAtPosition(localBallEnteredHoleSource, clipToPlay, at: position, canInterrupt: false);
+            }
         }
 
         public void PlayLocalSoundAtPosition(AudioSource audioSource, AudioClip clip, Vector3 at, bool canInterrupt)

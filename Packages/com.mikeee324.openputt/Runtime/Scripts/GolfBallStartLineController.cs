@@ -132,7 +132,7 @@ namespace mikeee324.OpenPutt
 
                 float closestDistance = -1f;
 
-                Vector3 golfBallPos = golfBall.GetPosition(false);
+                Vector3 golfBallPos = golfBall.CurrentPosition;
 
                 int hitColliders = Physics.OverlapSphereNonAlloc(golfBallPos, radius, localAreaColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
 

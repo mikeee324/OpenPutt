@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Runtime.Remoting.Messaging;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using Random = UnityEngine.Random;
 
 namespace mikeee324.OpenPutt
 {
@@ -159,15 +159,27 @@ namespace mikeee324.OpenPutt
 
     public static class Extensions
     {
+        /// <summary>
+        /// Checks if a float is within the deadzone near 0
+        /// </summary>
+        /// <param name="f"></param>
+        /// <param name="deadzone">The deadzone (Default: 0.05f)</param>
+        /// <returns></returns>
         public static bool IsNearZero(this float f, float deadzone = .05f) => Mathf.Abs(f) <= Mathf.Abs(deadzone);
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
         public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+        /// <summary>
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="array"></param>
+        /// <returns>A random entry from the array</returns>
+        public static T GetRandom<T>(this T[] array) => array[Random.Range(0, array.Length)];
 
-        public static Vector2 xz(this Vector3 vv)
-        {
-            return new Vector2(vv.x, vv.z);
-        }
-
+        /// <summary>
+        /// Strips the Y axis value from the Vector3 so distances can be compared on a flat plane
+        /// </summary>
+        /// <param name="vv"></param>
+        /// <returns></returns>
         public static Vector3 RemoveHeight(this Vector3 vv)
         {
             return new Vector3(vv.x, 0, vv.z);
@@ -177,8 +189,8 @@ namespace mikeee324.OpenPutt
         {
             if (ignoreHeight)
                 return (end.RemoveHeight() - start.RemoveHeight()).normalized;
-            else
-                return (end - start).normalized;
+
+            return (end - start).normalized;
         }
 
         [RecursiveMethod]
@@ -251,4 +263,5 @@ namespace mikeee324.OpenPutt
             return newArray;
         }
     }
+
 }

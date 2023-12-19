@@ -83,6 +83,12 @@ namespace mikeee324.OpenPutt
         [Tooltip("If the ball stops outside of a course, this is where it will respawn to in world space")]
         public Vector3 respawnPosition = Vector3.zero;
 
+        public Vector3 CurrentPosition
+        {
+            get => Time.inFixedTimeStep && ballRigidbody != null && !ballRigidbody.isKinematic ? ballRigidbody.position : transform.position;
+            set => ballRigidbody.position = value;
+        }
+
         public bool BallIsMoving
         {
             set
@@ -142,13 +148,13 @@ namespace mikeee324.OpenPutt
                     }
                     else if (respawnAutomatically)
                     {
-                        bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(GetPosition()));
+                        bool ballIsInValidPosition = playerManager != null && (playerManager.CurrentCourse == null || playerManager.IsOnTopOfCurrentCourse(CurrentPosition));
                         if (ballIsInValidPosition)
                         {
                             if (!pickedUpByPlayer)
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
-                                respawnPosition = GetPosition();
+                                respawnPosition = CurrentPosition;
                                 if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                                     Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
                             }
@@ -264,7 +270,7 @@ namespace mikeee324.OpenPutt
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
         private float currentGroundDynamicFriction = 0f;
         [HideInInspector]
-        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
+        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
         #endregion
 
         void Start()
@@ -407,7 +413,8 @@ namespace mikeee324.OpenPutt
                     ClearPhysicsState();
                 }
 
-                timeMoving += Time.deltaTime;
+                if (playerManager.CurrentCourse != null)
+                    timeMoving += Time.deltaTime;
 
                 // If the ball is moving super slowly - count it as "not moving" and increment the timer
                 if (ballRigidbody.velocity.magnitude < minBallSpeed)
@@ -484,7 +491,7 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private void UpdateAngularDrag()
         {
-            if (Physics.Raycast(GetPosition(), Vector3.down, out RaycastHit collision, ballCollider.radius, groundSnappingProbeMask))
+            if (Physics.Raycast(CurrentPosition, Vector3.down, out RaycastHit collision, ballCollider.radius, groundSnappingProbeMask))
             {
                 // Touching a floor probably
                 if (collision.collider != null && collision.collider.material != null)
@@ -533,9 +540,9 @@ namespace mikeee324.OpenPutt
                 ballRigidbody.velocity = Vector3.zero;
                 ballRigidbody.angularVelocity = Vector3.zero;
             }
-            lastFramePosition = GetPosition();
+            lastFramePosition = CurrentPosition;
             lastFrameVelocity = Vector3.zero;
-            lastHeldFramePosition = GetPosition();
+            lastHeldFramePosition = CurrentPosition;
             lastHeldFrameVelocity = Vector3.zero;
 
             numberOfPickedUpFrames = 0;
@@ -560,7 +567,7 @@ namespace mikeee324.OpenPutt
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.portableScoreboard != null)
                 playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = false;
 
-            if (startLine.StartDropAnimation(GetPosition()))
+            if (startLine.StartDropAnimation(CurrentPosition))
             {
                 if (playerManager.openPutt != null && playerManager.openPutt.debugMode)
                     Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
@@ -649,14 +656,6 @@ namespace mikeee324.OpenPutt
             respawnPosition = respawnPos;
         }
 
-        public Vector3 GetPosition(bool rigidBodyPos = true)
-        {
-            if (!rigidBodyPos) return transform.position;
-            if (ballRigidbody == null || ballRigidbody.isKinematic) return transform.position;
-
-            return ballRigidbody.position;
-        }
-
         public void SetPosition(Vector3 worldPos)
         {
             ballRigidbody.position = worldPos;
@@ -693,10 +692,6 @@ namespace mikeee324.OpenPutt
                     playerManager.golfClub.DisableClubColliderFor();
             }
 
-            float speed = withVelocity.magnitude;
-
-            // If ball wasn't hit hard enough ignore this hit
-            // if (withVelocity == Vector3.zero || speed < minBallSpeed)
             if (withVelocity == Vector3.zero)
                 return;
 
@@ -709,21 +704,25 @@ namespace mikeee324.OpenPutt
             requestedBallVelocity = withVelocity;
 
             if (playerManager != null)
-                playerManager.OnBallHit();
+                playerManager.OnBallHit(withVelocity.magnitude);
 
             // Vibrate the controller to give feedback to the player
             VRCPickup.PickupHand currentHand = club.CurrentHand;
             if (currentHand != VRC_Pickup.PickupHand.None)
             {
+                float velocity = withVelocity.magnitude;
+
+                // Half the amplitude for native quest (quest vibration is stronger)
 #if UNITY_ANDROID
-                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, .4f, 1f);
-#else
-                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.7f, 1f, 1f);
+                velocity *= 0.5f;
 #endif
+
+                float hapticAmplitude = 1f * Mathf.Clamp(velocity / maxBallSpeed, .5f, 1f);
+                Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.25f, hapticAmplitude, 230f);
             }
 
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
-                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(GetPosition(), (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
+                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
@@ -841,7 +840,7 @@ namespace mikeee324.OpenPutt
 
             // Play a hit sound because we bounced off something
             if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
-                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(GetPosition(), ballRigidbody.velocity.magnitude / 10f);
+                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
         }
 
         void ClearPhysicsState()
@@ -867,7 +866,7 @@ namespace mikeee324.OpenPutt
 
                 if (wasNotGrounded && OnGround && audioWhenBallHitsFloor)
                     if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.SFXController != null)
-                        playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(GetPosition(), (velocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
+                        playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (velocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
             }
             else
             {
@@ -1004,8 +1003,8 @@ namespace mikeee324.OpenPutt
                     ballRigidbody.detectCollisions = true;
 
                     // Set the appropriate collision detection mode
-                    //ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
-                    ballRigidbody.collisionDetectionMode = requestedCollisionMode;
+                    ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+                    //ballRigidbody.collisionDetectionMode = requestedCollisionMode;
                 }
 
                 // Only allow the local player to pick up their ball when it has stopped

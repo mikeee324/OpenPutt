@@ -455,7 +455,8 @@ MonoBehaviour:
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
   _syncMethod: 0
-  serializedProgramAsset: {fileID: 0}
+  serializedProgramAsset: {fileID: 11400000, guid: eb2d6483babe0ed4880f5f5bd65e45da,
+    type: 2}
   programSource: {fileID: 11400000, guid: 71b493d0f15e4e8428e2c97ddf7124ed, type: 2}
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
   publicVariablesUnityEngineObjects: []
@@ -492,8 +493,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 4887699219401956741}
-  - {fileID: 4887699219127935805}
   - {fileID: 4926412383994304883}
+  - {fileID: 4887699219127935805}
   - {fileID: 4926412383804392851}
   - {fileID: 8346166521169444118}
   - {fileID: 4842788200985999844}
@@ -884,8 +885,8 @@ MonoBehaviour:
   golfClubHeadCollider: {fileID: 4926412383994304882}
   referenceClubHeadColliderRotationOffset: {x: 0, y: 0, z: 0}
   maxSpeedForScaling: 10
-  maxSpeedScale: {x: 3, y: 2, z: 4}
-  hitWaitFrames: 1
+  maxSpeedScale: {x: 5, y: 3, z: 4}
+  hitWaitFrames: 0
   hitForceMultiplier:
     serializedVersion: 2
     m_Curve:
@@ -920,7 +921,7 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   velocityCalculationType: 0
-  collisionType: 2
+  collisionType: 3
   multiFrameAverageMaxBacksteps: 3
   singleFrameSmoothFactor: 0.99
   smoothedHitDirection: 0
@@ -1415,7 +1416,7 @@ MonoBehaviour:
   maxBallSpeed: 15
   minBallSpeed: 0.04
   minBallSpeedMaxTime: 1
-  maxBallRollingTime: 30
+  maxBallRollingTime: 60
   groundSnappingMaxGroundAngle: 90
   groundSnappingMinSpeed: 2
   groundSnappingMaxSpeed: 100

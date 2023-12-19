@@ -83,6 +83,7 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallADragValueLabel;
         public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
         public UnityEngine.UI.Image devModeExperimentalClubColliderCheckbox;
+        public UnityEngine.UI.Image devModeSmoothDirClubColliderCheckbox;
         public UnityEngine.UI.Image devModeForAllCheckbox;
         public UnityEngine.UI.Image footColliderCheckbox;
         public UnityEngine.UI.Image clubRendererCheckbox;
@@ -545,16 +546,16 @@ namespace mikeee324.OpenPutt
             switch (val)
             {
                 case 0:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
+                   // playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
                     break;
                 case 1:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
+                  //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
                     break;
                 case 2:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+                  //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
                     break;
                 case 3:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
+                    //playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
                     break;
             }
 
@@ -693,6 +694,17 @@ namespace mikeee324.OpenPutt
 
             PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
+
+            RefreshDevModeMenu();
+        }
+
+        public void OnToggleSmoothDir()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            playerManager.golfClub.putter.smoothedHitDirection = !playerManager.golfClub.putter.smoothedHitDirection;
 
             RefreshDevModeMenu();
         }
@@ -854,11 +866,12 @@ namespace mikeee324.OpenPutt
             devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
 
             devModeClubColliderTypeDropdown.value = (int)playerManager.golfClub.putter.collisionType;
-            devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
+           // devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
             devModeExperimentalClubColliderCheckbox.material = playerManager.golfClub.putter.smoothFollowClubHead ? checkboxOn : checkboxOff;
+            devModeSmoothDirClubColliderCheckbox.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
             devModeForAllCheckbox.material = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.material = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.material = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;

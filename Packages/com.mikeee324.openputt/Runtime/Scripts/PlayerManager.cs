@@ -221,7 +221,7 @@ namespace mikeee324.OpenPutt
         [HideInInspector]
         public bool ownerIsInVR = false;
 
-        public void OnBallHit()
+        public void OnBallHit(float speed)
         {
             if (CurrentCourse == null || courseStates.Length != openPutt.courses.Length)
                 return;
@@ -266,7 +266,7 @@ namespace mikeee324.OpenPutt
                         {
                             // Play max score reached sound
                             if (openPutt != null && openPutt.SFXController != null)
-                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.GetPosition());
+                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
 
                             // Prevents the sound from being heard again
                             courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
@@ -289,7 +289,7 @@ namespace mikeee324.OpenPutt
             if (openPutt != null)
             {
                 foreach (OpenPuttEventListener eventListener in openPutt.eventListeners)
-                    eventListener.OnLocalPlayerBallHit();
+                    eventListener.OnLocalPlayerBallHit(speed);
             }
         }
 
@@ -346,7 +346,7 @@ namespace mikeee324.OpenPutt
 
             if (course.drivingRangeMode)
             {
-                int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.GetPosition(), golfBall.respawnPosition));
+                int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
                 // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
                 if (distance > courseScores[course.holeNumber])
                     courseScores[course.holeNumber] = distance;
@@ -460,34 +460,14 @@ namespace mikeee324.OpenPutt
                     openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
             }
 
-            bool ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.GetPosition(), 100f);
-
-            if (openPutt != null && openPutt.leftShoulderPickup != null)
-            {
-                bool shouldEnablePickup = true;
-
-                // If the player is stood on their current course
-                if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 100f))
-                {
-                    // Disable the pickup
-                    shouldEnablePickup = false;
-
-                    // If the ball is not on the course though - enable the pickup (so they can reset the ball to the start if they wish)
-                    if (!ballIsOnCurrentCourse)
-                        shouldEnablePickup = true;
-                }
-
-                if (!isPlaying)
-                    shouldEnablePickup = false;
-                else if (golfBall.pickedUpByPlayer)
-                    shouldEnablePickup = true;
-
-                if (shouldEnablePickup != openPutt.leftShoulderPickup.gameObject.activeInHierarchy)
-                    openPutt.leftShoulderPickup.gameObject.SetActive(shouldEnablePickup);
-            }
+            bool ballIsOnCurrentCourse = false;
+            bool shouldEnableBallShoulderPickup = true;
+            bool shouldEnableClubShoulderPickup = isPlaying;
 
             if (CurrentCourse != null)
             {
+                ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.CurrentPosition, 100f);
+
                 // Live driving range updates (kinda)
                 if (CurrentCourse.drivingRangeMode)
                 {
@@ -500,14 +480,10 @@ namespace mikeee324.OpenPutt
                         if (golfBall.OnGround)
                             ballNotOnCourseCounter++;
 
-                        int distance = (int)Math.Floor(Vector3.Distance(golfBall.GetPosition(), golfBall.respawnPosition));
+                        // If the players new score is above the previous driving range score, then overwrite it
+                        int distance = (int)Math.Floor(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
                         if (distance > courseScores[CurrentCourse.holeNumber])
-                        {
                             courseScores[CurrentCourse.holeNumber] = distance;
-
-                            //if (openPutt != null && openPutt.scoreboardManager != null)
-                            //    openPutt.scoreboardManager.RequestPlayerListRefresh();
-                        }
                     }
                 }
 
@@ -529,13 +505,34 @@ namespace mikeee324.OpenPutt
                 {
                     ballNotOnCourseCounter = 0;
                 }
+
+                // Toggle pickup on/off based on where the player and ball currently are
+                // Player On + Ball On Current Course = Pickup Off (Helps prevent ball being reset to last pos by accidental pickups)
+                // Player On + Ball Off Current Course = Pickup On (Allows them to quickly reset ball to last valid pos if ball gets lost)
+                if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 5f))
+                    shouldEnableBallShoulderPickup = !ballIsOnCurrentCourse;
+            }
+
+            if (openPutt != null && openPutt.leftShoulderPickup != null)
+            {
+                if (!isPlaying)
+                    shouldEnableBallShoulderPickup = false;
+                else if (golfBall.pickedUpByPlayer)
+                    shouldEnableBallShoulderPickup = true;
+
+                // Toggle the shoulder pickups if needed
+                bool isLeftHanded = IsInLeftHandedMode;
+                GameObject ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup.gameObject : openPutt.leftShoulderPickup.gameObject;
+                GameObject clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup.gameObject : openPutt.rightShoulderPickup.gameObject;
+                if (shouldEnableBallShoulderPickup != ballShoulderPickup.activeInHierarchy)
+                    ballShoulderPickup.SetActive(shouldEnableBallShoulderPickup);
+                if (shouldEnableClubShoulderPickup != clubShoulderPickup.activeInHierarchy)
+                    clubShoulderPickup.SetActive(shouldEnableClubShoulderPickup);
             }
 
             // If the local player still owns this PlayerManager check for their location again in another second
             if (this.LocalPlayerOwnsThisObject())
-            {
                 SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
-            }
         }
 
         public override string ToString()

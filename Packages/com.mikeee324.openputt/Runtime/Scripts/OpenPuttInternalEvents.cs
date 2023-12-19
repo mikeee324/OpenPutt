@@ -7,33 +7,38 @@ namespace mikeee324.OpenPutt
     {
         public SFXController sfxController;
 
-        public override void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole)
-        {
-            if (sfxController != null && course != null && hole != null)
-                sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, true);
-        }
-
-        public override void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole)
-        {
-            if (sfxController != null && hole != null)
-                sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, true);
-        }
-
-        public override void OnLocalPlayerBallHit()
+        public override void OnLocalPlayerBallHit(float speed)
         {
 
         }
 
-        public override void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole)
-        {
-            if (sfxController != null && hole != null)
-                sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, false);
-        }
-
-        public override void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole)
+        public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
             if (sfxController != null && course != null && hole != null)
                 sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, false);
+
+            if (score == 1)
+            {
+                if (sfxController != null && hole != null)
+                    sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, false);
+            }
+            else
+            {
+                if (sfxController != null && hole != null)
+                    sfxController.PlayScoreSoundAtPosition(hole.transform.position, scoreRelativeToPar, false);
+            }
+        }
+
+        public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        {
+            if (sfxController != null && course != null && hole != null)
+                sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, true);
+
+            if (score == 1)
+            {
+                if (sfxController != null && hole != null)
+                    sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, true);
+            }
         }
     }
 }

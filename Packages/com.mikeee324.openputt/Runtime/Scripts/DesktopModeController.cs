@@ -586,28 +586,17 @@ namespace mikeee324.OpenPutt
             playerIsHoldingUIAimButton = false;
         }
 
-        public override void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole)
+        public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
-
-        }
-
-        public override void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole)
-        {
-
-        }
-
-        public override void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole)
-        {
-
-        }
-
-        public override void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole)
-        {
-            // Auto disable the camera after the local players ball enters a hole
             SendCustomEventDelayedSeconds(nameof(DisableCam), 2f);
         }
 
-        public override void OnLocalPlayerBallHit()
+        public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        {
+
+        }
+
+        public override void OnLocalPlayerBallHit(float speed)
         {
             SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
         }
