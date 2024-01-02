@@ -58,7 +58,7 @@ namespace mikeee324.OpenPutt
 
         [Header("Velocity / Direction Tracking Settings")]
         [Tooltip("Debug stuff: Used for trying various ways of getting a velocity for the ball after a hit")]
-        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrameSmoothed;
+        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrame;
         public CollisionDetectionMode collisionType = CollisionDetectionMode.Continuous;
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;

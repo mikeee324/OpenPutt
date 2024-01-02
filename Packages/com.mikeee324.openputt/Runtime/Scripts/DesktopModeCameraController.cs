@@ -203,7 +203,7 @@ namespace mikeee324.OpenPutt
 #if UNITY_EDITOR
             float localSpeedModifier = 0.5f;
 #else
-            float localSpeedModifier = 1;
+            float localSpeedModifier = 0.5f;
 #endif
 
             // Player can always rotate camera horizontally

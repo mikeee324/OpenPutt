@@ -22,18 +22,22 @@ namespace mikeee324.OpenPutt
         public Collider[] collidersToIgnore;
         private float stepCyclerTimer = 0f;
         private float stepStopTimer = 0f;
-        private Vector3[] stepRestLocations;
+        public Vector3[] stepRestLocations;
         private bool globalUpCycle = true;
 
         [UdonSynced]
         private bool _masterUpCycleState = false;
 
+        private Rigidbody[] stepRBs = null;
+
         void Start()
         {
+            stepRBs = new Rigidbody[steps.Length];
             stepRestLocations = new Vector3[steps.Length];
             for (int i = 0; i < steps.Length; i++)
             {
-                stepRestLocations[i] = steps[i].transform.position;
+                stepRBs[i] = steps[i].GetComponent<Rigidbody>();
+                stepRestLocations[i] = stepRBs[i].position;
 
                 MeshCollider collider = steps[i].GetComponent<MeshCollider>();
                 collider.isTrigger = false;
@@ -62,72 +66,43 @@ namespace mikeee324.OpenPutt
             stepStopTimer = 0f;
         }
 
-        private void LateUpdate()
+        private void FixedUpdate()
         {
             stepCyclerTimer += Time.deltaTime;
+
+            float cycleProgress = stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime);
 
             bool localStepCycle = globalUpCycle;
 
             for (int i = 0; i < steps.Length; i++)
             {
-                Transform thisStep = steps[i].transform;
-                Vector3 startPos;
-                Vector3 targetPos;
+                Vector3 startPos = stepRestLocations[i];
+                Vector3 targetPos = stepRestLocations[i];
 
-                if (i == 0)
+                if (localStepCycle)
                 {
-                    // First step
-                    if (localStepCycle)
-                    {
-                        startPos = stepRestLocations[i];
-                        targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
-                    }
-                    else
-                    {
-                        startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
-                        targetPos = stepRestLocations[i];
-                    }
-
-                    if (stepBallHolderNS.Length > i)
-                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
-                }
-                else if (i < steps.Length - 1)
-                {
-                    // Not the last step
-                    if (localStepCycle)
-                    {
+                    if (i > 0)
                         startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
-                        targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
-                    }
-                    else
-                    {
-                        startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
-                        targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
-                    }
 
-                    if (stepBallHolderNS.Length > i)
-                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+                    if (i < steps.Length - 1)
+                        targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
                 }
                 else
                 {
-                    if (localStepCycle)
-                    {
-                        startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
-                        targetPos = stepRestLocations[i];
-                    }
-                    else
-                    {
-                        startPos = stepRestLocations[i];
+                    if (i > 0)
                         targetPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i - 1].y, stepRestLocations[i].z);
-                    }
-                    if (stepBallHolderNS.Length > i)
-                        stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+
+                    if (i < steps.Length - 1)
+                        startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
                 }
+
+                if (stepBallHolderNS.Length > i)
+                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
 
                 if (toggleBallHolderRenderers && stepBallHolderNS.Length > i)
                     stepBallHolders[i].GetComponent<MeshRenderer>().enabled = !stepBallHolders[i].isTrigger;
 
-                thisStep.position = Vector3.Lerp(startPos, targetPos, stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime));
+                stepRBs[i].MovePosition(Vector3.Lerp(startPos, targetPos, cycleProgress));
 
                 localStepCycle = !localStepCycle;
             }

@@ -651,6 +651,9 @@ namespace mikeee324.OpenPutt
                     courseParValueLabel.text = $"{currentCourse.parScore}";
                     courseHitsValueLabel.text = $"{playerManager.courseScores[currentCourse.holeNumber]}";
                 }
+
+                if (currentCourse.drivingRangeMode)
+                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
             }
         }
     }

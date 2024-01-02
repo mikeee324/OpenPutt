@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using VRC.Udon.Common.Exceptions;
 
 namespace mikeee324.OpenPutt
 {
@@ -41,7 +42,9 @@ namespace mikeee324.OpenPutt
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody")]
-        public float ballDrag = .02f;
+        private float ballDrag = .02f;
+        [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
+        public bool enableAirResistance = true;
         [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
         private float maxBallSpeed = 10f;
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
@@ -330,7 +333,6 @@ namespace mikeee324.OpenPutt
         public int numberOfPickedUpFrames = 0;
         public int numberOfStillPickedUpFrames = 0;
 
-
         private void FixedUpdate()
         {
             if (pickedUpByPlayer)
@@ -394,14 +396,7 @@ namespace mikeee324.OpenPutt
                 if (requestedBallVelocity != Vector3.zero)
                 {
                     // Reset velocity of ball
-                    //ballRigidbody.velocity = Vector3.zero;
                     ballRigidbody.velocity = requestedBallVelocity;
-
-                    // Apply new force to ball
-                    //ballRigidbody.AddForce(requestedBallVelocity, ForceMode.Impulse);
-
-                    // Ball shouldn't be able to bounce off things faster than this hit for now
-                    //rb.maxDepenetrationVelocity = requestedBallVelocity.magnitude;
 
                     // Consume the hit event
                     requestedBallVelocity = Vector3.zero;
@@ -504,6 +499,7 @@ namespace mikeee324.OpenPutt
                 {
                     currentGroundDynamicFriction = DefaultBallAngularDrag;
                 }
+                ballRigidbody.drag = 0;
                 ballRigidbody.angularDrag = currentGroundDynamicFriction;
             }
         }
@@ -735,7 +731,7 @@ namespace mikeee324.OpenPutt
             // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
             if (!pickedUpByPlayer && collision != null && collision.rigidbody != null && collision.collider != null)
             {
-                if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+              //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
                     SetEnabled(true);
 
@@ -772,7 +768,9 @@ namespace mikeee324.OpenPutt
             // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
             if (!pickedUpByPlayer && collision != null && collision.rigidbody != null && collision.collider != null)
             {
-                if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+                // TODO: A static rigidbody may or may not help with ball collisions
+                // This if statement will confuse things though.. need to think of a better way (Steppy thing doesn't work properly with it)
+               // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
                     if (BallIsMoving)
                     {
@@ -872,7 +870,53 @@ namespace mikeee324.OpenPutt
             {
                 contactNormal = Vector3.up;
             }
+
+            ApplyAirResistance();
         }
+
+        /// <summary>
+        /// Supposed to make things slow down better than the built in linear drag - but I think I did something wrong as it either doesn't slow down to a stop or just launches the ball at a ridiculous speed
+        /// </summary>
+        private void ApplyQuadraticDrag()
+        {
+            Vector3 vel = -ballRigidbody.velocity;
+            float dragForceMagnitude = .1f * vel.sqrMagnitude;
+            Vector3 dragForceVector = dragForceMagnitude * vel.normalized;
+
+            ballRigidbody.AddForce(dragForceVector);
+        }
+
+        private void ApplyAirResistance()
+        {
+            if (!enableAirResistance)
+                return;
+
+            /*float coef = 0.47f;                        // drag coefficient of a golf ball
+            float objectArea = (float)(Math.PI * ballCollider.radius * ballCollider.radius);              // crossSectionalArea of sphere in [m^2]
+            float airDensity = 1.225f;                     // air density in [kg/m^3]
+            Vector3 vel = ballRigidbody.velocity;
+
+            vel.x = 0.5f * coef * objectArea * vel.x * vel.x * airDensity;
+            vel.y = 0.5f * coef * objectArea * vel.y * vel.y * airDensity;
+            vel.z = 0.5f * coef * objectArea * vel.z * vel.z * airDensity;
+
+            Utils.Log(this, $"{ballRigidbody.velocity} --- {-vel}");
+
+            ballRigidbody.AddForce(-vel);*/
+
+
+            // Old try to do this using the mass etc
+            var air_density = 1.225f;
+            //var drag_coeff = .47f;
+            var drag_coeff = .35f;
+            var ball_cross_section = Mathf.PI * ballCollider.radius * ballCollider.radius;
+            Vector3 drag_vel = ballRigidbody.velocity;
+            Vector3 drag_accel = 0.5f * air_density * ball_cross_section * drag_coeff * drag_vel.magnitude * drag_vel;
+            //Vector3 drag_accel = drag_vel * drag_vel.magnitude * 0.5f * air_density * drag_coeff * ball_cross_section / ballRigidbody.mass;
+
+            ballRigidbody.AddForce(-drag_accel);
+        }
+
 
         /// <summary>
         /// Tries to keep the ball from bouncing off edges on flat meshes (also works when ball is travelling up hills)

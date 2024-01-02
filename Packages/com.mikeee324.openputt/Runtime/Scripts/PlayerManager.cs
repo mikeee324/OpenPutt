@@ -468,6 +468,8 @@ namespace mikeee324.OpenPutt
             {
                 ballIsOnCurrentCourse = IsOnTopOfCurrentCourse(golfBall.CurrentPosition, 100f);
 
+                int maxTimeOffCourse = ballOffCourseRespawnTime;
+
                 // Live driving range updates (kinda)
                 if (CurrentCourse.drivingRangeMode)
                 {
@@ -485,6 +487,9 @@ namespace mikeee324.OpenPutt
                         if (distance > courseScores[CurrentCourse.holeNumber])
                             courseScores[CurrentCourse.holeNumber] = distance;
                     }
+
+                    // Increase max floor time for driving ranges
+                    maxTimeOffCourse *= 2;
                 }
 
                 // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
@@ -493,7 +498,7 @@ namespace mikeee324.OpenPutt
                 {
                     ballNotOnCourseCounter++;
 
-                    if (ballNotOnCourseCounter > ballOffCourseRespawnTime)
+                    if (ballNotOnCourseCounter > maxTimeOffCourse)
                     {
                         if (openPutt.debugMode)
                             Utils.Log(this, "Ball has been off its course for too long");
