@@ -30,7 +30,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
         }
     }
 
-    private void LateUpdate()
+    public override void PostLateUpdate()
     {
         if (!this.enabled)
             return;
@@ -50,7 +50,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
                 MonitoringDistance = false;
             }
 
-            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
+            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
             if (distance > highestScoreSoFar)
             {
                 highestScoreSoFar = distance;
@@ -77,7 +77,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
             this.enabled = false;
     }
 
-    public override void OnLocalPlayerBallHit()
+    public override void OnLocalPlayerBallHit(float speed)
     {
         highestScoreSoFar = 0;
 
@@ -92,22 +92,12 @@ public class DrivingRangeDisplay : OpenPuttEventListener
         }
     }
 
-    public override void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole)
+    public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
     {
 
     }
 
-    public override void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole)
-    {
-
-    }
-
-    public override void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole)
-    {
-
-    }
-
-    public override void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole)
+    public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
     {
 
     }

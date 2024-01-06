@@ -99,8 +99,8 @@ namespace mikeee324.OpenPutt
 
             lastKnownRealDistance = distance;
 
-            transform.position = target.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (distance * Vector3.forward);
-            transform.LookAt(target.position);
+            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (distance * Vector3.forward);
+            transform.LookAt(target.transform.position);
         }
 
         /// <summary>
@@ -199,15 +199,25 @@ namespace mikeee324.OpenPutt
             if (invertCameraY)
                 verticalDelta *= -1f;
 
+            // Unity editor reports mouse movements higher so lower the speed to make it usable in editor
+#if UNITY_EDITOR
+            float localSpeedModifier = 0.5f;
+#else
+            float localSpeedModifier = 0.5f;
+#endif
+
             // Player can always rotate camera horizontally
-            currentCameraX += cameraXSpeed * horizontalDelta;
+            currentCameraX += (cameraXSpeed * localSpeedModifier) * horizontalDelta;
             if (!LockCamera)
-                currentCameraY -= cameraYSpeed * verticalDelta;
+                currentCameraY -= (cameraYSpeed * localSpeedModifier) * verticalDelta;
 
             currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+        }
 
-            transform.position = target.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
-            transform.LookAt(target.position);
+        public override void PostLateUpdate()
+        {
+            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
+            transform.LookAt(target.transform.position);
         }
     }
 }

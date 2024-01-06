@@ -139,7 +139,9 @@ namespace mikeee324.OpenPutt
             this.enabled = false;
         }
 
-        private void FixedUpdate()
+        RaycastHit[] ballCheckHits = new RaycastHit[10];
+
+        public override void PostLateUpdate()
         {
             bool isOwner = this.LocalPlayerOwnsThisObject();
 
@@ -289,8 +291,20 @@ namespace mikeee324.OpenPutt
             {
                 float maxSize = Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsUserInVR() ? 3f : 6f;
                 Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
-                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask))
-                    shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                   if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                       shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+
+                   // TODO: This works better when the club is close, but the distance jitters a LOT the further away from the handle it goes
+           /*     if (Physics.BoxCast(shaftMesh.gameObject.transform.position, putter.golfClubHeadCollider.size * 0.5f, raycastDir, out RaycastHit h, putter.transform.rotation, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                {
+                    m_HitDetect = true;
+                    m_Hit = h;
+                    shaftScale = Mathf.Clamp((h.distance - (headMesh.bounds.size.z * .5f)) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                }
+                else
+                {
+                    m_HitDetect = false;
+                }*/
             }
 
             if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())

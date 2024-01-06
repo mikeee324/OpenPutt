@@ -18,13 +18,13 @@ namespace mikeee324.OpenPutt
         /// A quick workaround for being unable to send network event to 'Others'.<br/>
         /// If the local player and a remote player putt a ball at the same time we set this to true for the local player so we play 2 sounds, one on a local audio source and another on a remot eaudio source (with less range)
         /// </summary>
-        [HideInInspector] 
+        [HideInInspector]
         public bool localPlayerBallEnteredEvent = false;
         /// <summary>
         /// A quick workaround for being unable to send network event to 'Others'.<br/>
         /// If the local player and a remote player putt a ball at the same time we set this to true for the local player so we play 2 sounds, one on a local audio source and another on a remot eaudio source (with less range)
         /// </summary>
-        [HideInInspector] 
+        [HideInInspector]
         public bool localPlayerHoleInOneEvent = false;
 
         private void OnTriggerEnter(Collider other)
@@ -41,16 +41,19 @@ namespace mikeee324.OpenPutt
             {
                 if (localPlayerBallEnteredEvent)
                 {
+                    int localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
+                    int localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
+
                     localPlayerBallEnteredEvent = false;
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                        eventListener.OnLocalPlayerBallEnterHole(courseManager, this);
+                        eventListener.OnLocalPlayerFinishCourse(courseManager, this, localPlayerScore, localPlayerScoreRelative);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player finished course");
                 }
                 else
                 {
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                        eventListener.OnRemotePlayerBallEnterHole(courseManager, this);
+                        eventListener.OnRemotePlayerFinishCourse(courseManager, this, -1, -1);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Remote Player finished course");
                 }
@@ -64,15 +67,19 @@ namespace mikeee324.OpenPutt
                 if (localPlayerHoleInOneEvent)
                 {
                     localPlayerHoleInOneEvent = false;
+
+                    int localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
+                    int localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
+
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                        eventListener.OnLocalPlayerHoleInOne(courseManager, this);
+                        eventListener.OnLocalPlayerFinishCourse(courseManager, this, localPlayerScore, localPlayerScoreRelative);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
                 }
                 else
                 {
                     foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
-                        eventListener.OnRemotePlayerHoleInOne(courseManager, this);
+                        eventListener.OnRemotePlayerFinishCourse(courseManager, this, 1, 1 - courseManager.parScore);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
                 }

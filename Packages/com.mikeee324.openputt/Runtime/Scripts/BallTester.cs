@@ -20,9 +20,12 @@ namespace mikeee324.OpenPutt
         public bool autoSpeedIncreases = false;
         public Vector3 currentVelocity = Vector3.zero;
 
+        public OpenPutt openPutt = null;
+
         void Start()
         {
             originalPosition = this.transform.position;
+            ballController.playerManager.openPutt = this.openPutt;
         }
 
         void Update()

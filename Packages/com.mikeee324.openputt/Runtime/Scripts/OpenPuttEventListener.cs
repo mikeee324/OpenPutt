@@ -5,36 +5,27 @@ namespace mikeee324.OpenPutt
     public abstract class OpenPuttEventListener : UdonSharpBehaviour
     {
         /// <summary>
-        /// Called when a remote player gets a hole in one
+        /// Called when local player hits their ball
         /// </summary>
-        /// <param name="course">Which course the player got a hole in one on</param>
-        /// <param name="hole">The hole that the ball entered</param>
-        public abstract void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole);
-
-        /// <summary>
-        /// Called when a remote player ball drops into a course hole
-        /// </summary>
-        /// <param name="course">Which course the player was playing on</param>
-        /// <param name="hole">The hole that the ball entered</param>
-        public abstract void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole);
-
-        /// <summary>
-        /// Called when the local player gets a hole in one
-        /// </summary>
-        /// <param name="course">Which course the player got a hole in one on</param>
-        /// <param name="hole">The hole that the ball entered</param>
-        public abstract void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole);
+        /// <param name="speed">The velocity magnitude that was just applied to the ball</param>
+        public abstract void OnLocalPlayerBallHit(float speed);
 
         /// <summary>
         /// Called when the local player ball drops into a course hole
         /// </summary>
         /// <param name="course">Which course the player was playing on</param>
         /// <param name="hole">The hole that the ball entered</param>
-        public abstract void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole);
+        /// <param name="score">The abolsute score that the local player got on the course</param>
+        /// <param name="scoreRelativeToPar">The score relative to the par on this course</param>
+        public abstract void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar);
 
         /// <summary>
-        /// Called when local player hits their ball
+        /// Called when a remote player ball drops into a course hole
         /// </summary>
-        public abstract void OnLocalPlayerBallHit();
+        /// <param name="course">Which course the player was playing on</param>
+        /// <param name="hole">The hole that the ball entered</param>
+        /// <param name="score">Will only return 1 if it was a hole in one, -1 otherwise as we don't have an easy way of sending scores with events yet</param>
+        /// <param name="scoreRelativeToPar">Only works if the remote player got a hole in 1 for now</param>
+        public abstract void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar);
     }
 }

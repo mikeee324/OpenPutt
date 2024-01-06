@@ -270,10 +270,11 @@ namespace mikeee324.OpenPutt
 
                     if (localPlayer != null)
                     {
-                        if (transform.parent == null)
-                            lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.TransformPoint(newPosition), localPlayer.GetPosition()));
-                        else
-                            lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(Vector3.Distance(transform.parent.TransformPoint(newPosition), localPlayer.GetPosition()));
+                        Transform t = transform.parent == null ? transform : transform.parent.transform;
+
+                        float distance = Vector3.Distance(t.TransformPoint(newPosition), localPlayer.GetPosition());
+
+                        lastKnownDistanceUpdateValue = remoteUpdateDistanceCurve.Evaluate(distance);
                     }
 
                     // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)

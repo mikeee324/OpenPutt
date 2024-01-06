@@ -13,7 +13,7 @@ namespace mikeee324.OpenPutt
         Nothing, Mouse, Jump, Controller, UI
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(99)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(150)]
     public class DesktopModeController : OpenPuttEventListener
     {
         #region References
@@ -332,7 +332,7 @@ namespace mikeee324.OpenPutt
         }
 
 
-        private void LateUpdate()
+        public override void PostLateUpdate()
         {
             if (!initialized)
                 return;
@@ -516,7 +516,10 @@ namespace mikeee324.OpenPutt
                 Ray r = new Ray(origin: golfBall.transform.position, direction: ballDirection);
 
                 Vector3 endPoint;
-                if (Physics.Raycast(r, out RaycastHit endHit, distance, directionLineMask))
+
+                if (golfBall.BallIsMoving)
+                    endPoint = r.GetPoint(distance);
+                else if (Physics.Raycast(r, out RaycastHit endHit, distance, directionLineMask))
                     endPoint = endHit.point;
                 else
                     endPoint = r.GetPoint(distance);
@@ -549,8 +552,9 @@ namespace mikeee324.OpenPutt
 
             if (!ballObject.pickedUpAtLeastOnce)
             {
-                // Just to try and catch the player pressing the button too quick the first time
-                ballObject.ObjectToAttach.transform.position = Networking.LocalPlayer.GetPosition() + new Vector3(0, 1, 0);
+                GolfBallController golfBall = ballObject.ObjectToAttach.GetComponent<GolfBallController>();
+                if (golfBall != null)
+                    golfBall.SetPosition(Networking.LocalPlayer.GetPosition() + new Vector3(0, 1, 0));
 
                 ballObject.pickedUpAtLeastOnce = true;
             }
@@ -582,28 +586,17 @@ namespace mikeee324.OpenPutt
             playerIsHoldingUIAimButton = false;
         }
 
-        public override void OnRemotePlayerHoleInOne(CourseManager course, CourseHole hole)
+        public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
-
-        }
-
-        public override void OnRemotePlayerBallEnterHole(CourseManager course, CourseHole hole)
-        {
-
-        }
-
-        public override void OnLocalPlayerHoleInOne(CourseManager course, CourseHole hole)
-        {
-
-        }
-
-        public override void OnLocalPlayerBallEnterHole(CourseManager course, CourseHole hole)
-        {
-            // Auto disable the camera after the local players ball enters a hole
             SendCustomEventDelayedSeconds(nameof(DisableCam), 2f);
         }
 
-        public override void OnLocalPlayerBallHit()
+        public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        {
+
+        }
+
+        public override void OnLocalPlayerBallHit(float speed)
         {
             SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
         }
@@ -658,6 +651,9 @@ namespace mikeee324.OpenPutt
                     courseParValueLabel.text = $"{currentCourse.parScore}";
                     courseHitsValueLabel.text = $"{playerManager.courseScores[currentCourse.holeNumber]}";
                 }
+
+                if (currentCourse.drivingRangeMode)
+                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
             }
         }
     }

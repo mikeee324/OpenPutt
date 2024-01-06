@@ -2,6 +2,7 @@
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDKBase;
 
 namespace mikeee324.OpenPutt
 {
@@ -81,7 +82,7 @@ namespace mikeee324.OpenPutt
                 if (!localAreaCheckActive)
                 {
                     localAreaCheckActive = true;
-                    SendCustomEventDelayedSeconds(nameof(CheckLocalAreaForStartPositions), .25f);
+                    SendCustomEventDelayedSeconds(nameof(CheckLocalAreaForStartPositions), 0f);
                 }
             }
         }
@@ -108,7 +109,6 @@ namespace mikeee324.OpenPutt
             lerpToStartTime = -1f;
             closestBallStart = null;
             courseThatIsBeingStarted = null;
-            closestBallStart = null;
         }
 
         /// <summary>
@@ -122,14 +122,19 @@ namespace mikeee324.OpenPutt
                 if (maximumNoOfColliders != localAreaColliders.Length)
                     localAreaColliders = new Collider[maximumNoOfColliders];
 
+                float radius = 2f;
+                if (Utils.LocalPlayerIsValid())
+                    radius = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
+                radius = Mathf.Clamp(radius, 2f, 100f);
+
                 CourseStartPosition newSpawnPos = null;
                 CourseManager newCourse = null;
 
                 float closestDistance = -1f;
 
-                Vector3 golfBallPos = golfBall.transform.position;
+                Vector3 golfBallPos = golfBall.CurrentPosition;
 
-                int hitColliders = Physics.OverlapSphereNonAlloc(golfBallPos, 2f, localAreaColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
+                int hitColliders = Physics.OverlapSphereNonAlloc(golfBallPos, radius, localAreaColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
 
                 // Find the closest start point
                 if (hitColliders > 0)
@@ -196,13 +201,12 @@ namespace mikeee324.OpenPutt
 
                 if (lerpProgress < 1f)
                 {
-                    golfBall.transform.position = Vector3.Lerp(lerpStartPosition, lerpStopPosition, simpleEaseInOut.Evaluate(lerpProgress));
+                    golfBall.SetPosition(Vector3.Lerp(lerpStartPosition, lerpStopPosition, simpleEaseInOut.Evaluate(lerpProgress)));
                     lerpToStartTime += Time.deltaTime;
                 }
                 else
                 {
-
-                    golfBall.transform.position = closestBallStart.transform.position;
+                    golfBall.SetPosition(closestBallStart.transform.position);
                     golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
 
                     ResetDropAnimation();
