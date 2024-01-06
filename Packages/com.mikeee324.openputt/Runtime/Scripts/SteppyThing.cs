@@ -37,13 +37,16 @@ namespace mikeee324.OpenPutt
             for (int i = 0; i < steps.Length; i++)
             {
                 stepRBs[i] = steps[i].GetComponent<Rigidbody>();
-                stepRestLocations[i] = stepRBs[i].position;
+                if (steps[i].gameObject.activeInHierarchy)
+                    stepRestLocations[i] = stepRBs[i].position;
+                else
+                    stepRestLocations[i] = steps[i].transform.position;
 
                 MeshCollider collider = steps[i].GetComponent<MeshCollider>();
                 collider.isTrigger = false;
 
                 // Make Steps Ignore Collisions with neighbouring steps
-                if (i < steps.Length - 1)
+                if (i < steps.Length - 2)
                     Physics.IgnoreCollision(steps[i], steps[i + 1], true);
 
                 // Ignore ball holder collisions

@@ -486,7 +486,7 @@ namespace mikeee324.OpenPutt
         /// </summary>
         private void UpdateAngularDrag()
         {
-            if (Physics.Raycast(CurrentPosition, Vector3.down, out RaycastHit collision, ballCollider.radius, groundSnappingProbeMask))
+            if (Physics.Raycast(CurrentPosition, Vector3.down, out RaycastHit collision, ballCollider.radius * 1.5f, groundSnappingProbeMask))
             {
                 // Touching a floor probably
                 if (collision.collider != null && collision.collider.material != null)
