@@ -920,10 +920,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  velocityCalculationType: 0
+  velocityCalculationType: 1
   collisionType: 3
   multiFrameAverageMaxBacksteps: 3
-  singleFrameSmoothFactor: 1
+  singleFrameSmoothFactor: 0.5
   smoothedHitDirection: 1
   smoothFollowClubHead: 1
   followStrength: 0.9
@@ -1021,8 +1021,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1412,8 +1412,10 @@ MonoBehaviour:
   allowBallPickupWhenNotPlaying: 1
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
+  defaultBallDrag: 0.055
+  ballDragOverride: 0.055
   enableAirResistance: 1
-  maxBallSpeed: 20
+  maxBallSpeed: 15
   minBallSpeed: 0.04
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60
@@ -1432,9 +1434,9 @@ MonoBehaviour:
   _ballMoving: 0
   currentOwnerHideOverride: 0
   requestedBallVelocity: {x: 0, y: 0, z: 0}
+  groundContactCount: 0
+  steepContactCount: 0
   requestedCollisionMode: 3
-  numberOfPickedUpFrames: 0
-  numberOfStillPickedUpFrames: 0
 --- !u!114 &6795647789150147966
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1668,8 +1670,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

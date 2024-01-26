@@ -102,7 +102,7 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Tracks the last frames velocity with some smoothing (filtering out Vector3.zero and small moves)
         /// </summary>
-        private Vector3 FrameVelocitySmoothed { get; set; }
+        public Vector3 FrameVelocitySmoothed { get; private set; }
         /// <summary>
         /// Tracks the velocity with extra smoothing and is used for scaling this collider up and down (filtering out Vector3.zero and small moves)
         /// </summary>
@@ -418,6 +418,13 @@ namespace mikeee324.OpenPutt
 
         private void HandleBallHit()
         {
+            // OpenPutt is null and we can find it
+            if (openPutt == null && golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
+                openPutt = golfClub.playerManager.openPutt;
+
+            PlayerManager playerManager = golfClub.playerManager;
+            CourseManager currentCourse = playerManager.CurrentCourse;
+
             Vector3 directionOfTravel = Vector3.zero;
             float velocityMagnitude = 0f;
 
@@ -500,26 +507,24 @@ namespace mikeee324.OpenPutt
             // Apply the players final hit force multiplier
             velocityMagnitude *= golfClub.forceMultiplier;
 
+            bool currentCourseIsDrivingRange = currentCourse != null && currentCourse.drivingRangeMode;
+
             // Only clamp hit speed if they player is on a normal course
-            bool shouldClampSpeed = golfClub.playerManager == null || (golfClub.playerManager.CurrentCourse != null && !golfClub.playerManager.CurrentCourse.drivingRangeMode);
+            bool shouldClampSpeed = playerManager == null || !currentCourseIsDrivingRange;
 
             // Clamp hit speed
             if (shouldClampSpeed && velocityMagnitude > golfBall.BallMaxSpeed)
             {
                 velocityMagnitude = golfBall.BallMaxSpeed;
-                if (golfClub.playerManager.openPutt.debugMode)
+                if (openPutt.debugMode)
                     Utils.Log(this, $"Ball hit velocity was clamped to {velocityMagnitude}");
             }
 
             // Put the direction and magnitude back together
             Vector3 velocity = directionOfTravel * velocityMagnitude;
 
-            // OpenPutt is null and we can find it
-            if (openPutt == null && golfClub != null && golfClub.playerManager != null && golfClub.playerManager.openPutt != null)
-                openPutt = golfClub.playerManager.openPutt;
-
             // Mini golf usually works best when the ball stays on the floor initially
-            if (openPutt.enableVerticalHits)
+            if (openPutt.enableVerticalHits || currentCourseIsDrivingRange)
                 velocity.y = Mathf.Clamp(velocity.y, 0, golfBall.BallMaxSpeed);
             else
                 velocity.y = 0;
@@ -532,10 +537,11 @@ namespace mikeee324.OpenPutt
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
 
-            //if (velocity.magnitude < golfBall.minBallSpeed)
-            //    return;
+            // Clamp min velocity (we used to just return here, but maybe this is better than the ball not moving?)
+            if (velocity.magnitude < golfBall.minBallSpeed)
+                velocity = directionOfTravel * golfBall.minBallSpeed;
 
-            if (golfClub.playerManager.openPutt.debugMode)
+            if (openPutt.debugMode)
                 Utils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
 
             LastKnownHitVelocity = velocity.magnitude;

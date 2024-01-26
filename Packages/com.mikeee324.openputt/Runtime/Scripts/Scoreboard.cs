@@ -66,6 +66,7 @@ namespace mikeee324.OpenPutt
         #region Dev Mode Stuff
         public TextMeshProUGUI devModeLastClubHitSpeed;
         public TextMeshProUGUI devModeBallSpeed;
+        public TextMeshProUGUI devModeClubSpeed;
         public Slider devModeClubWaitSlider;
         public Slider devModeClubBackstepSlider;
         public Slider devModeClubVelSmoothSlider;
@@ -846,7 +847,7 @@ namespace mikeee324.OpenPutt
             devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
 
             devModeBallDragSlider.value = playerManager.golfBall.BallDrag;
-            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+            devModeBallDragValueLabel.text = String.Format("{0:F3}", devModeBallDragSlider.value);
 
             devModeBallMaxSpeedSlider.value = playerManager.golfBall.BallMaxSpeed;
             devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
@@ -957,7 +958,7 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfClub.putter.singleFrameSmoothFactor = Mathf.RoundToInt(devModeClubVelSmoothSlider.value);
+            player.golfClub.putter.singleFrameSmoothFactor = devModeClubVelSmoothSlider.value;
             devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
         }
 
@@ -1020,8 +1021,10 @@ namespace mikeee324.OpenPutt
 
             if (player == null) return;
 
-            player.golfBall.BallDrag = devModeBallDragSlider.value;
-            devModeBallDragValueLabel.text = String.Format("{0:F2}", devModeBallDragSlider.value);
+            var roundedVal = String.Format("{0:F3}", devModeBallDragSlider.value);
+
+            player.golfBall.BallDrag = float.Parse(roundedVal);
+            devModeBallDragValueLabel.text = roundedVal;
         }
 
         public void OnBallMaxSpeedReset()
