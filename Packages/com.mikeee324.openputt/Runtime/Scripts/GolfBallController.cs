@@ -1,6 +1,7 @@
 ﻿using System;
 using UdonSharp;
 using UnityEngine;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon.Common.Exceptions;
@@ -41,8 +42,10 @@ namespace mikeee324.OpenPutt
         [Header("Ball Physics")]
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
-        [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody")]
-        private float ballDrag = .02f;
+        [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody by default (Can be overriden by other scripts for sand pits and things)")]
+        public float defaultBallDrag = .02f;
+        [Range(0,1), Tooltip("The amount of drag to apply to the balls RigidBody (Overrides the default drag above)")]
+        public float ballDragOverride = 0f;
         [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
         public bool enableAirResistance = true;
         [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
@@ -136,6 +139,18 @@ namespace mikeee324.OpenPutt
 
                 if (ballWasMoving && !_ballMoving)
                 {
+                    if (playerManager.openPutt.debugMode)
+                    {
+                        // Ball stopped moving, output ball speed log for this hit to the log
+                        string sss = "";
+                        for (int i = 0; i < speedDataLogging.Length; i++)
+                            sss += speedDataLogging[i] + ",";
+                        Utils.LogError(this, "SpeedData:\r\n" + sss + "0");
+
+                        // Reset log
+                        speedDataLogging = new float[0];
+                    }
+
                     if (playerManager != null && playerManager.CurrentCourse != null && playerManager.CurrentCourse.drivingRangeMode)
                     {
                         CourseManager course = playerManager.CurrentCourse;
@@ -210,8 +225,8 @@ namespace mikeee324.OpenPutt
         }
         public float BallDrag
         {
-            get => ballDrag;
-            set => ballDrag = value;
+            get => ballDragOverride;
+            set => ballDragOverride = value;
         }
         public float BallMaxSpeed
         {
@@ -220,8 +235,7 @@ namespace mikeee324.OpenPutt
         }
         public float BallAngularDrag
         {
-            get => ballRigidbody.angularDrag;
-            set => ballRigidbody.angularDrag = value;
+            get; set;
         }
         public float DefaultBallWeight { get; private set; }
         public float DefaultBallFriction { get; private set; }
@@ -259,7 +273,7 @@ namespace mikeee324.OpenPutt
 
         Vector3 contactNormal, steepNormal;
 
-        int groundContactCount, steepContactCount;
+        public int groundContactCount, steepContactCount;
 
         public bool OnGround => groundContactCount > 0;
 
@@ -274,6 +288,11 @@ namespace mikeee324.OpenPutt
         private float currentGroundDynamicFriction = 0f;
         [HideInInspector]
         public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+
+        /// <summary>
+        /// Used to log ball speed after it gets hit, can be used to track down issues.. maybe
+        /// </summary>
+        private float[] speedDataLogging = new float[0];
         #endregion
 
         void Start()
@@ -308,7 +327,6 @@ namespace mikeee324.OpenPutt
             if (ballRigidbody != null)
                 ballRigidbody.maxAngularVelocity = 300f;
 
-
             DefaultBallMaxSpeed = maxBallSpeed;
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
@@ -330,11 +348,13 @@ namespace mikeee324.OpenPutt
             this.enabled = enabled;
         }
 
-        public int numberOfPickedUpFrames = 0;
-        public int numberOfStillPickedUpFrames = 0;
+        private int numberOfPickedUpFrames = 0;
+        private int numberOfStillPickedUpFrames = 0;
 
         private void FixedUpdate()
         {
+            ClearPhysicsState();
+
             if (pickedUpByPlayer)
             {
                 if (numberOfPickedUpFrames < 3)
@@ -370,8 +390,6 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            UpdateAngularDrag();
-
             // Freeze the ball position without going kinematic
             if (!BallIsMoving)
             {
@@ -388,6 +406,10 @@ namespace mikeee324.OpenPutt
 
             if (BallIsMoving)
             {
+                // If in debug mode, log current speed for this frame
+                if (playerManager.openPutt.debugMode)
+                    speedDataLogging = speedDataLogging.Add(ballRigidbody.velocity.magnitude);
+
                 // If the rigidbody fell asleep - Try applying the velocity we logged from the last frame to keep it moving (this should also wake it back up)
                 if (ballRigidbody.IsSleeping() && lastFrameVelocity != Vector3.zero)
                     ballRigidbody.velocity = lastFrameVelocity;
@@ -404,8 +426,6 @@ namespace mikeee324.OpenPutt
                 else
                 {
                     UpdatePhysicsState();
-
-                    ClearPhysicsState();
                 }
 
                 if (playerManager.CurrentCourse != null)
@@ -420,9 +440,11 @@ namespace mikeee324.OpenPutt
                 bool ballRollingForTooLong = timeMoving > maxBallRollingTime;
                 bool ballRollingTooSlowForTooLong = timeNotMoving >= minBallSpeedMaxTime;
 
+                bool onGround = Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask);
+
                 if (ballRollingForTooLong || ballRollingTooSlowForTooLong)
                 {
-                    if (Physics.Raycast(ballRigidbody.position, Vector3.down, out RaycastHit hit, groundSnappingProbeDistance, groundSnappingProbeMask))
+                    if (onGround)
                     {
                         // If the ball is currently rolling down a slope
                         if (hit.normal.y < .99f)
@@ -458,7 +480,28 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    //ballRigidbody.AddForce(-ballRigidbody.velocity.normalized * Mathf.Max(ballDrag, currentFrictionLevel));
+                    float velMagnitude = ballRigidbody.velocity.magnitude;
+                    // Apply drag force based on curve as long as the ball is rolling faster than the threshold and is grounded
+                    if (velMagnitude > 0.01f && onGround)
+                    {
+                        float currDrag = defaultBallDrag;
+
+                        if (ballDragOverride > 0f)
+                            currDrag = ballDragOverride;
+
+                        if (velMagnitude < 1f)
+                            currDrag *= Mathf.SmoothStep(0.1f, 1f, velMagnitude);
+
+                        ballRigidbody.AddForce(-ballRigidbody.velocity.normalized * currDrag);
+                    }
+
+                    // Fake ball roll base on speed
+                    Vector3 directionOfTravel = ballRigidbody.position - lastFramePosition;
+                    float angle = directionOfTravel.magnitude * 1f * (180f / Mathf.PI) / ballCollider.radius;
+                    Vector3 rotationAxis = Vector3.Cross(Vector3.up, directionOfTravel).normalized;
+                    transform.localRotation = Quaternion.Euler(rotationAxis * angle) * transform.localRotation;
+                    Quaternion worldRotation = transform.parent.rotation * transform.localRotation;
+                    ballRigidbody.rotation = worldRotation;
                 }
             }
             else
@@ -479,29 +522,6 @@ namespace mikeee324.OpenPutt
             bool sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (startLine != null && startLine.gameObject.activeSelf);
             if (puttSync != null && sendFastPositionSync)
                 puttSync.RequestFastSync();
-        }
-
-        /// <summary>
-        /// Raycasts down and sets the angular drag of the ball to the dynamicFriction value of the ground.. or the default if nothing is found
-        /// </summary>
-        private void UpdateAngularDrag()
-        {
-            if (Physics.Raycast(CurrentPosition, Vector3.down, out RaycastHit collision, ballCollider.radius * 1.5f, groundSnappingProbeMask))
-            {
-                // Touching a floor probably
-                if (collision.collider != null && collision.collider.material != null)
-                {
-                    currentGroundDynamicFriction = collision.collider.material.dynamicFriction;
-                    if (currentGroundDynamicFriction < 0)
-                        currentGroundDynamicFriction = 0;
-                }
-                else
-                {
-                    currentGroundDynamicFriction = DefaultBallAngularDrag;
-                }
-                ballRigidbody.drag = 0;
-                ballRigidbody.angularDrag = currentGroundDynamicFriction;
-            }
         }
 
         public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
@@ -731,7 +751,7 @@ namespace mikeee324.OpenPutt
             // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
             if (!pickedUpByPlayer && collision != null && collision.rigidbody != null && collision.collider != null)
             {
-              //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+                //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
                     SetEnabled(true);
 
@@ -770,7 +790,7 @@ namespace mikeee324.OpenPutt
             {
                 // TODO: A static rigidbody may or may not help with ball collisions
                 // This if statement will confuse things though.. need to think of a better way (Steppy thing doesn't work properly with it)
-               // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
+                // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
                     if (BallIsMoving)
                     {
@@ -1033,7 +1053,7 @@ namespace mikeee324.OpenPutt
                     ballCollider.enabled = true;
                     ballCollider.isTrigger = false;
 
-                    ballCollider.contactOffset = 0.001f;
+                    ballCollider.contactOffset = 0.0005f;
                 }
 
                 if (ballRigidbody != null)
@@ -1045,6 +1065,8 @@ namespace mikeee324.OpenPutt
                     ballRigidbody.useGravity = BallIsMoving;
                     ballRigidbody.isKinematic = false;
                     ballRigidbody.detectCollisions = true;
+                    ballRigidbody.drag = 0.05f;
+                    ballRigidbody.angularDrag = 0;
 
                     // Set the appropriate collision detection mode
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
