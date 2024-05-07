@@ -629,11 +629,11 @@ namespace mikeee324.OpenPutt
             else
             {
                 if (currentCourse.scoreboardLongName != null && currentCourse.scoreboardLongName.Length > 0)
-                    courseNameLabel.text = $"{currentCourse.scoreboardLongName} ({currentCourse.holeNumber})";
+                    courseNameLabel.text = $"{currentCourse.scoreboardLongName} ({currentCourse.holeNumber + 1})";
                 else if (currentCourse.scoreboardShortName != null && currentCourse.scoreboardShortName.Length > 0)
-                    courseNameLabel.text = $"{currentCourse.scoreboardShortName} ({currentCourse.holeNumber})";
+                    courseNameLabel.text = $"{currentCourse.scoreboardShortName} ({currentCourse.holeNumber + 1})";
                 else
-                    courseNameLabel.text = $"{currentCourse.holeNumber}";
+                    courseNameLabel.text = $"{currentCourse.holeNumber + 1}";
 
                 if (currentCourse.drivingRangeMode)
                 {
