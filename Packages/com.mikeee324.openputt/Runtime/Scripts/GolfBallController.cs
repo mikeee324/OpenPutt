@@ -142,10 +142,10 @@ namespace mikeee324.OpenPutt
                     if (playerManager.openPutt.debugMode)
                     {
                         // Ball stopped moving, output ball speed log for this hit to the log
-                        string sss = "";
+                        /*string sss = "";
                         for (int i = 0; i < speedDataLogging.Length; i++)
                             sss += speedDataLogging[i] + ",";
-                        Utils.LogError(this, "SpeedData:\r\n" + sss + "0");
+                        Utils.LogError(this, "SpeedData:\r\n" + sss + "0");*/
 
                         // Reset log
                         speedDataLogging = new float[0];

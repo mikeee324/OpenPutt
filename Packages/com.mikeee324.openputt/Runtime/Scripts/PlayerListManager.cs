@@ -66,14 +66,17 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            // Add the player back into the list but in their new position (Should also tell scoreboard manager to update the rows that have changed)
-            _AddPlayer(playerManager, out int scorePos, out int timePos);
-
-            if (openPutt.debugMode)
+            if (playerManager != null && playerManager.Owner != null)
             {
-                stopwatch.Stop();
-                Utils.Log(this, $"AddPlayer({stopwatch.Elapsed.TotalMilliseconds}ms) - Added {(playerManager.Owner != null ? playerManager.Owner.displayName : "NA")}({playerManager.PlayerID}) to lists. (S={scorePos}/T={timePos}) PC(S={TempPlayersSortedByScore.Length}/T={TempPlayersSortedByTime.Length})");
-                stopwatch.Restart();
+                // Add the player back into the list but in their new position (Should also tell scoreboard manager to update the rows that have changed)
+                _AddPlayer(playerManager, out int scorePos, out int timePos);
+
+                if (openPutt.debugMode)
+                {
+                    stopwatch.Stop();
+                    Utils.Log(this, $"AddPlayer({stopwatch.Elapsed.TotalMilliseconds}ms) - Added {(playerManager.Owner != null ? playerManager.Owner.displayName : "NA")}({playerManager.PlayerID}) to lists. (S={scorePos}/T={timePos}) PC(S={TempPlayersSortedByScore.Length}/T={TempPlayersSortedByTime.Length})");
+                    stopwatch.Restart();
+                }
             }
 
             // Run a full check on all rows and update player indexes
@@ -180,7 +183,7 @@ namespace mikeee324.OpenPutt
         private void _CheckForChanges()
         {
             // Update index positions on all PlayerManagers in the list
-            for (int sp = 0; sp < TempPlayersSortedByScore.Length; sp++)
+            for (int sp = 0; sp < openPutt.scoreboardManager.numberOfPlayersToDisplay; sp++)
             {
                 bool requestRefresh = false;
 
@@ -206,14 +209,14 @@ namespace mikeee324.OpenPutt
                         requestRefresh = newPlayerByScore != null && newPlayerByScore.scoreboardRowNeedsUpdating;
                 }
 
-                if (TempPlayersSortedByScore[sp].ScoreboardPositionByScore != sp)
+                if (sp < TempPlayersSortedByScore.Length && TempPlayersSortedByScore[sp].ScoreboardPositionByScore != sp)
                 {
                     TempPlayersSortedByScore[sp].ScoreboardPositionByScore = sp;
                     if (!ScoreboardManager.SpeedGolfMode)
                         requestRefresh = true;
                 }
 
-                if (TempPlayersSortedByTime[sp].ScoreboardPositionByTime != sp)
+                if (sp < TempPlayersSortedByTime.Length && TempPlayersSortedByTime[sp].ScoreboardPositionByTime != sp)
                 {
                     TempPlayersSortedByTime[sp].ScoreboardPositionByTime = sp;
                     if (ScoreboardManager.SpeedGolfMode)
