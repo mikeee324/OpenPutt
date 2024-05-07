@@ -358,7 +358,7 @@ namespace mikeee324.OpenPutt
                 if (thisRowPlayer == null && thisRowNewPlayer == null)
                     continue;
 
-                // Check if an update is being force (for when player toggles between timer/normal mode)
+                // Check if an update is being forced (for when player toggles between timer/normal mode)
                 if (forceUpdate)
                 {
                     rowsToUpdate = rowsToUpdate.Add(i);

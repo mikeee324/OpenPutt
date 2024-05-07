@@ -11,7 +11,7 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
-        "com.vrchat.worlds": "3.4.0",
+        "com.vrchat.worlds": "3.5.2",
         "com.unity.textmeshpro": "2.1.0",
         "com.cyan.playerobjectpool": "1.1.2",
         "com.varneon.vudon.array-extensions": "0.3.1"
@@ -147,8 +147,8 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.timeline": {
-      "version": "1.7.5",
-      "depth": 0,
+      "version": "1.7.6",
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.modules.director": "1.0.0",
@@ -213,8 +213,10 @@
         "com.unity.collections": "2.1.4",
         "com.unity.mathematics": "1.2.6",
         "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.timeline": "1.7.6",
         "com.unity.xr.management": "4.3.3",
-        "com.unity.xr.oculus": "4.0.0"
+        "com.unity.xr.oculus": "4.0.0",
+        "com.unity.postprocessing": "3.2.2"
       }
     },
     "com.vrchat.core.bootstrap": {
@@ -239,7 +241,6 @@
       "source": "embedded",
       "dependencies": {
         "com.unity.cinemachine": "2.9.7",
-        "com.unity.postprocessing": "3.2.2",
         "com.unity.textmeshpro": "3.0.6",
         "com.unity.inputsystem": "1.2.0"
       }
