@@ -415,6 +415,20 @@ namespace mikeee324.OpenPutt
 
             if (openPutt != null)
                 openPutt.OnPlayerUpdate(this);
+
+            // Check if the synced state of the club is different from what it actually is (Maybe fixes #49)
+            if (golfClub != null && ClubVisible != golfClub.gameObject.activeInHierarchy)
+            {
+                golfClub.gameObject.SetActive(ClubVisible);
+                golfClub.UpdateClubState();
+            }
+
+            // Check if the synced state of the club is different from what it actually is (Maybe fixes #49)
+            if (golfBall != null && BallVisible != golfBall.gameObject.activeInHierarchy)
+            {
+                golfBall.gameObject.SetActive(BallVisible);
+                golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
+            }
         }
 
         /// <summary>

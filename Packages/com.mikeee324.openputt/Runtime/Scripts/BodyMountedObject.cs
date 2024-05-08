@@ -71,19 +71,22 @@ namespace mikeee324.OpenPutt
                     // Object was just dropped by the player
                     ActivateAndTakeOwnership();
 
-                    UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
-                    foreach (UdonBehaviour listener in listeners)
+                    if (objectToAttach != null)
                     {
-                        listener.SetProgramVariable("lastHeldFrameVelocity", lastFrameVelocity);
-                        listener.SendCustomEvent(dropEventName);
-                        listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
-                    }
+                        UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
+                        foreach (UdonBehaviour listener in listeners)
+                        {
+                            listener.SetProgramVariable("lastHeldFrameVelocity", lastFrameVelocity);
+                            listener.SendCustomEvent(dropEventName);
+                            listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
+                        }
 
-                    if (applyVelocityAfterDrop)
-                    {
-                        Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
-                        if (rb != null)
-                            rb.velocity = lastFrameVelocity;
+                        if (applyVelocityAfterDrop)
+                        {
+                            Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
+                            if (rb != null)
+                                rb.velocity = lastFrameVelocity;
+                        }
                     }
                 }
                 if (_heldInHand == VRCPickup.PickupHand.None && value != VRCPickup.PickupHand.None)
@@ -91,11 +94,14 @@ namespace mikeee324.OpenPutt
                     _heldInHand = value;
                     // Object was just pickup up by the player
                     ActivateAndTakeOwnership();
-                    UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
-                    foreach (UdonBehaviour listener in listeners)
+                    if (objectToAttach != null)
                     {
-                        listener.SendCustomEvent(pickupEventName);
-                        listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
+                        UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
+                        foreach (UdonBehaviour listener in listeners)
+                        {
+                            listener.SendCustomEvent(pickupEventName);
+                            listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
+                        }
                     }
                 }
 
