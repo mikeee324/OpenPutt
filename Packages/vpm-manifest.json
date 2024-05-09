@@ -6,14 +6,11 @@
     "com.varneon.vudon.array-extensions": {
       "version": "^0.3.x"
     },
-    "com.vrchat.base": {
-      "version": "3.5.2"
-    },
     "com.vrchat.core.vpm-resolver": {
       "version": "0.1.28"
     },
     "com.vrchat.worlds": {
-      "version": "3.5.2"
+      "version": "3.6.0"
     }
   },
   "locked": {
@@ -30,19 +27,19 @@
         "com.vrchat.worlds": ">=3.4.0 <4.0.0"
       }
     },
-    "com.vrchat.base": {
-      "version": "3.5.2",
-      "dependencies": {}
-    },
     "com.vrchat.core.vpm-resolver": {
       "version": "0.1.28",
       "dependencies": {}
     },
     "com.vrchat.worlds": {
-      "version": "3.5.2",
+      "version": "3.6.0",
       "dependencies": {
-        "com.vrchat.base": "3.5.2"
+        "com.vrchat.base": "3.6.0"
       }
+    },
+    "com.vrchat.base": {
+      "version": "3.6.0",
+      "dependencies": {}
     }
   }
 }
