@@ -11,7 +11,7 @@ namespace mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
-        public string CurrentVersion { get; } = "0.7.3";
+        public string CurrentVersion { get; } = "0.7.4";
 
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
@@ -181,6 +181,8 @@ namespace mikeee324.OpenPutt
                 marker.ResetUI();
 
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+
+            Physics.bounceThreshold = 0.05f;
         }
 
         public override void OnDeserialization()
