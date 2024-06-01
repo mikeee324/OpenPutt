@@ -34,6 +34,7 @@ namespace mikeee324.OpenPutt
         public bool IsMyLabel { get; private set; }
         private Vector3 lastKnownScale = Vector3.zero;
         private Color lastKnownColor = Color.black;
+        private float alphaOverride = 1f;
         #endregion
 
         void Start()
@@ -60,6 +61,7 @@ namespace mikeee324.OpenPutt
 
             this.enabled = false;
         }
+
         public override void PostLateUpdate()
         {
             if (!canvas.enabled || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
@@ -82,22 +84,35 @@ namespace mikeee324.OpenPutt
 
                 float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
 
-
                 Vector3 newScale = new Vector3(visiblityVal, visiblityVal, 1);
                 Color newColor = Color.Lerp(labelHideColor, labelVisibleColor, visiblityVal);
+
+                if (playerManager != null && playerManager.golfClub != null)
+                {
+                    if (playerManager.golfClub.ClubIsArmed)
+                        alphaOverride -= .02f;
+                    else
+                        alphaOverride += .02f;
+
+                    alphaOverride = Mathf.Clamp01(alphaOverride);
+                }
+
+                if (alphaOverride < 1f)
+                {
+                    newColor.a = alphaOverride;
+                }
 
                 if (lastKnownScale != newScale)
                 {
                     canvas.transform.localScale = newScale;
-
                     lastKnownScale = newScale;
+                }
 
-                    if (lastKnownColor != newColor)
-                    {
-                        currentLabel.color = newColor;
-                        currentLabel.ForceMeshUpdate();
-                        lastKnownColor = newColor;
-                    }
+                if (lastKnownColor != newColor)
+                {
+                    currentLabel.color = newColor;
+                    currentLabel.ForceMeshUpdate();
+                    lastKnownColor = newColor;
                 }
             }
         }

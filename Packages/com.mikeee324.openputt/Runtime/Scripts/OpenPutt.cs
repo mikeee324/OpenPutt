@@ -61,7 +61,7 @@ namespace mikeee324.OpenPutt
         [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
         public int ballRenderQueueBase = 2000;
         [Tooltip("A list of players that can access the dev mode tab by default")]
-        public string[] devModePlayerWhitelist = new string[] { "mikeee324" };
+        public string[] devModePlayerWhitelist = new string[] { "mikeee324", "TummyTime" };
         [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
         public bool debugMode = false;
         #endregion
