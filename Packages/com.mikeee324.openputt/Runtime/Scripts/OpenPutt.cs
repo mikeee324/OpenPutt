@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Data;
+using VRC.SDK3.StringLoading;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -11,7 +12,7 @@ namespace mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
-        public string CurrentVersion { get; } = "0.7.6";
+        public string CurrentVersion { get; } = "0.7.7";
 
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
@@ -64,6 +65,7 @@ namespace mikeee324.OpenPutt
         public string[] devModePlayerWhitelist = new string[] { "mikeee324", "TummyTime" };
         [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
         public bool debugMode = false;
+        public VRCUrl versionURL;
         #endregion
 
         #region API
@@ -160,6 +162,8 @@ namespace mikeee324.OpenPutt
                 return score;
             }
         }
+        public string latestOpenPuttVer = "";
+        public string openPuttChangelog = "";
         #endregion
 
         void Start()
@@ -253,6 +257,23 @@ namespace mikeee324.OpenPutt
         public void OnPlayerUpdate(PlayerManager playerManager)
         {
             playerListManager.OnPlayerUpdate(playerManager);
+        }
+
+        public void CheckForUpdate()
+        {
+            VRCStringDownloader.LoadUrl(versionURL);
+        }
+
+        public override void OnStringLoadSuccess(IVRCStringDownload result)
+        {
+            this.openPuttChangelog = result.Result;
+            if (this.openPuttChangelog != null && this.openPuttChangelog.Length > 0 && this.openPuttChangelog.Contains("\n"))
+                this.latestOpenPuttVer = this.openPuttChangelog.Substring(0, this.openPuttChangelog.IndexOf("\n"));
+
+            if (this.latestOpenPuttVer == null)
+                this.latestOpenPuttVer = "";
+
+            this.latestOpenPuttVer = this.latestOpenPuttVer.Trim();
         }
     }
 }

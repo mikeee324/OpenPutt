@@ -14,7 +14,8 @@ namespace mikeee324.OpenPutt
         Scoreboard,
         Info,
         Settings,
-        DevMode
+        DevMode,
+        OpenPutt
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
@@ -33,6 +34,7 @@ namespace mikeee324.OpenPutt
         public Canvas settingsPanel;
         public Canvas infoPanel;
         public Canvas devModelPanel;
+        public Canvas openPuttPanel;
         public RectTransform parRowPanel;
         public RectTransform topRowPanel;
         public Canvas parRowCanvas;
@@ -46,7 +48,12 @@ namespace mikeee324.OpenPutt
         public Button infoTabBackground;
         public Button settingsTabBackground;
         public Button devModeTabBackground;
+        public Button openPuttTabBackground;
+        public RectTransform leftTabsPanel;
+        public RectTransform rightTabsPanel;
         public TextMeshProUGUI creditsText;
+        public TextMeshProUGUI updateAvailableLabel;
+        public TextMeshProUGUI changelogText;
 
         public UnityEngine.UI.Image scoreboardBackground;
 
@@ -137,18 +144,28 @@ namespace mikeee324.OpenPutt
                         case ScoreboardView.Scoreboard:
                             settingsPanel.gameObject.SetActive(false);
                             devModelPanel.gameObject.SetActive(false);
+                            openPuttPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = true;
                             break;
                         case ScoreboardView.Info:
                             settingsPanel.gameObject.SetActive(false);
                             devModelPanel.gameObject.SetActive(false);
+                            openPuttPanel.gameObject.SetActive(false);
                             infoPanel.enabled = true;
+                            scoreboardCanvas.enabled = false;
+                            break;
+                        case ScoreboardView.OpenPutt:
+                            settingsPanel.gameObject.SetActive(false);
+                            devModelPanel.gameObject.SetActive(false);
+                            openPuttPanel.gameObject.SetActive(true);
+                            infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
                             break;
                         case ScoreboardView.DevMode:
                             settingsPanel.gameObject.SetActive(false);
                             devModelPanel.gameObject.SetActive(true);
+                            openPuttPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
@@ -157,6 +174,7 @@ namespace mikeee324.OpenPutt
                         case ScoreboardView.Settings:
                             settingsPanel.gameObject.SetActive(true);
                             devModelPanel.gameObject.SetActive(false);
+                            openPuttPanel.gameObject.SetActive(false);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
@@ -547,13 +565,13 @@ namespace mikeee324.OpenPutt
             switch (val)
             {
                 case 0:
-                   // playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
+                    // playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
                     break;
                 case 1:
-                  //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
+                    //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
                     break;
                 case 2:
-                  //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+                    //  playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
                     break;
                 case 3:
                     //playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
@@ -755,6 +773,30 @@ namespace mikeee324.OpenPutt
             CurrentScoreboardView = ScoreboardView.Info;
         }
 
+
+        public void OnShowPrefabInfo()
+        {
+            if (manager != null)
+            {
+                manager.requestedScoreboardView = ScoreboardView.OpenPutt;
+
+                string latest = manager.openPutt.latestOpenPuttVer;
+                string current = manager.openPutt.CurrentVersion;
+
+                if (current.Length > 0 && latest.Length > 0)
+                {
+                    updateAvailableLabel.gameObject.SetActive(latest != current);
+                    updateAvailableLabel.text = $"Update Available!\nLatest version is {latest}\nVersion in this world is {current}";
+                }
+                else
+                {
+                    updateAvailableLabel.gameObject.SetActive(false);
+                }
+                changelogText.text = manager.openPutt.openPuttChangelog;
+            }
+            CurrentScoreboardView = ScoreboardView.OpenPutt;
+        }
+
         public void OnToggleTimerMode()
         {
             if (manager == null) return;
@@ -867,7 +909,7 @@ namespace mikeee324.OpenPutt
             devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
 
             devModeClubColliderTypeDropdown.value = (int)playerManager.golfClub.putter.collisionType;
-           // devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
+            // devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
@@ -1072,6 +1114,7 @@ namespace mikeee324.OpenPutt
             Color newInfoCol = _currentScoreboardView == ScoreboardView.Info ? selectedBackground : defaultBackground;
             Color newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? selectedBackground : defaultBackground;
             Color newDevModeCol = _currentScoreboardView == ScoreboardView.DevMode ? selectedBackground : defaultBackground;
+            Color newOpenPuttCol = _currentScoreboardView == ScoreboardView.OpenPutt ? selectedBackground : defaultBackground;
 
             if (scoreboardTabBackground.colors.normalColor != newScoreboardCol)
             {
@@ -1097,9 +1140,17 @@ namespace mikeee324.OpenPutt
                 colorBlock.normalColor = newSettingsCol;
                 settingsTabBackground.colors = colorBlock;
             }
+            if (openPuttTabBackground.colors.normalColor != newOpenPuttCol)
+            {
+                ColorBlock colorBlock = openPuttTabBackground.colors;
+                colorBlock.normalColor = newOpenPuttCol;
+                openPuttTabBackground.colors = colorBlock;
+            }
 
             bool devModeEnabled = manager.LocalPlayerCanAccessDevMode || manager.LocalPlayerCanAccessToolbox;
             devModeTabBackground.gameObject.SetActive(devModeEnabled);
+            
+            rightTabsPanel.sizeDelta = new Vector2(devModeEnabled ? 1.01f : .81f, rightTabsPanel.sizeDelta.y);
 
             devModeSettingsBox.gameObject.SetActive(manager.LocalPlayerCanAccessDevMode);
 
