@@ -34,6 +34,8 @@ namespace mikeee324.OpenPutt
         public bool IsMyLabel { get; private set; }
         private Vector3 lastKnownScale = Vector3.zero;
         private Color lastKnownColor = Color.black;
+        private float alphaOverride = 1f;
+        private GolfClub localPlayerClub;
         #endregion
 
         void Start()
@@ -60,10 +62,17 @@ namespace mikeee324.OpenPutt
 
             this.enabled = false;
         }
+
         public override void PostLateUpdate()
         {
             if (!canvas.enabled || Networking.LocalPlayer == null || !Networking.LocalPlayer.IsValid())
                 return;
+
+            if (localPlayerClub == null)
+            {
+                if (playerManager != null && playerManager.openPutt != null && playerManager.openPutt.LocalPlayerManager != null && playerManager.openPutt.LocalPlayerManager.golfClub != null)
+                    localPlayerClub = playerManager.openPutt.LocalPlayerManager.golfClub;
+            }
 
             Vector3 lookAtTarget = this.lookAtTarget != null ? this.lookAtTarget.transform.position : Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
 
@@ -77,27 +86,35 @@ namespace mikeee324.OpenPutt
                 // Lerp label properties based on player distance to ball
                 float distance = Vector3.Distance(transform.position, lookAtTarget);
 
-                if (IsMyLabel && this.lookAtTarget != null)
-                    distance *= .2f;
-
                 float visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
-
 
                 Vector3 newScale = new Vector3(visiblityVal, visiblityVal, 1);
                 Color newColor = Color.Lerp(labelHideColor, labelVisibleColor, visiblityVal);
 
+                if (localPlayerClub != null)
+                {
+                    if (localPlayerClub.ClubIsArmed)
+                        alphaOverride = Mathf.Clamp01(alphaOverride - .04f);
+                    else
+                        alphaOverride = Mathf.Clamp01(alphaOverride + .04f);
+                }
+
+                if (alphaOverride < newColor.a)
+                {
+                    newColor.a = alphaOverride;
+                }
+
                 if (lastKnownScale != newScale)
                 {
                     canvas.transform.localScale = newScale;
-
                     lastKnownScale = newScale;
+                }
 
-                    if (lastKnownColor != newColor)
-                    {
-                        currentLabel.color = newColor;
-                        currentLabel.ForceMeshUpdate();
-                        lastKnownColor = newColor;
-                    }
+                if (lastKnownColor != newColor)
+                {
+                    currentLabel.color = newColor;
+                    currentLabel.ForceMeshUpdate();
+                    lastKnownColor = newColor;
                 }
             }
         }
