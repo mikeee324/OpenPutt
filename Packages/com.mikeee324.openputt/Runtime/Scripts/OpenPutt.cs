@@ -2,17 +2,17 @@
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
-using VRC.SDK3.Data;
 using VRC.SDK3.StringLoading;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common.Interfaces;
 
 namespace mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
-        public string CurrentVersion { get; } = "0.7.7";
+        public string CurrentVersion { get; } = "0.7.8";
 
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
@@ -187,6 +187,8 @@ namespace mikeee324.OpenPutt
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
             Physics.bounceThreshold = 0.5f;
+
+            SendCustomEventDelayedSeconds(nameof(CheckForUpdate), 2f);
         }
 
         public override void OnDeserialization()
@@ -261,7 +263,7 @@ namespace mikeee324.OpenPutt
 
         public void CheckForUpdate()
         {
-            VRCStringDownloader.LoadUrl(versionURL);
+            VRCStringDownloader.LoadUrl(versionURL, (IUdonEventReceiver)this);
         }
 
         public override void OnStringLoadSuccess(IVRCStringDownload result)
