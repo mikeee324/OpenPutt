@@ -738,7 +738,8 @@ MonoBehaviour:
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
   _syncMethod: 2
-  serializedProgramAsset: {fileID: 0}
+  serializedProgramAsset: {fileID: 11400000, guid: b16fc28d5701b7641b6e8d79864b6d38,
+    type: 2}
   programSource: {fileID: 11400000, guid: e6e908292d929dc4a98b7ce9e7061049, type: 2}
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
   publicVariablesUnityEngineObjects: []
@@ -1096,7 +1097,7 @@ Transform:
   m_GameObject: {fileID: 5232980627449674119}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: -0, y: -95, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1385,6 +1386,7 @@ MonoBehaviour:
   allowBallPickupWhenNotPlaying: 1
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
+  canUpdatePuttSyncSpawn: 0
   defaultBallDrag: 0.055
   ballDragOverride: 0.055
   enableAirResistance: 1
@@ -1403,7 +1405,7 @@ MonoBehaviour:
   wallBounceDeflection: 0.1
   wallBounceHeightIgnoreAmount: 0.5
   respawnAutomatically: 1
-  respawnPosition: {x: 0, y: 0, z: 0}
+  respawnPosition: {x: 0, y: -99, z: 0}
   _ballMoving: 0
   currentOwnerHideOverride: 0
   requestedBallVelocity: {x: 0, y: 0, z: 0}
@@ -1528,7 +1530,8 @@ MonoBehaviour:
   autoRespawn: 1
   autoRespawnHeight: -100
   canManagePickupable: 0
-  originalPosition: {x: 0, y: -10, z: 0}
+  originalPosition: {x: 0, y: -99, z: 0}
+  grabOriginalPosOnStart: 0
 --- !u!114 &8981032278736210096
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1731,7 +1734,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: -95
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
@@ -2035,6 +2038,7 @@ MonoBehaviour:
   enableBigShaft: 0
   offMaterial: {fileID: 2100000, guid: 35601b7126028534987ec2e953613b72, type: 2}
   onMaterial: {fileID: 2100000, guid: 8c78efbc5c751294c894eb00a3ab1b36, type: 2}
+  canUpdatePuttSyncSpawn: 0
   heldByPlayer: 0
 --- !u!114 &4926412383973621142
 MonoBehaviour:
@@ -2180,7 +2184,8 @@ MonoBehaviour:
   autoRespawn: 1
   autoRespawnHeight: -100
   canManagePickupable: 0
-  originalPosition: {x: 0, y: -10, z: 0}
+  originalPosition: {x: 0, y: -99, z: 0}
+  grabOriginalPosOnStart: 0
 --- !u!23 &6025733114640705258 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: f32016ddb68bb9b45a58f63aba1f08a8,

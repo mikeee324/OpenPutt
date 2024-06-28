@@ -38,13 +38,14 @@ namespace mikeee324.OpenPutt
         public bool allowBallHitWhileMoving = false;
         [Tooltip("Should the ball hit noise be played if the ball falls onto a floor?")]
         public bool audioWhenBallHitsFloor = true;
+        public bool canUpdatePuttSyncSpawn = false;
         [Space]
         [Header("Ball Physics")]
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody by default (Can be overriden by other scripts for sand pits and things)")]
         public float defaultBallDrag = .02f;
-        [Range(0,1), Tooltip("The amount of drag to apply to the balls RigidBody (Overrides the default drag above)")]
+        [Range(0, 1), Tooltip("The amount of drag to apply to the balls RigidBody (Overrides the default drag above)")]
         public float ballDragOverride = 0f;
         [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
         public bool enableAirResistance = true;
@@ -1097,7 +1098,7 @@ namespace mikeee324.OpenPutt
                     pickup.pickupable = newPickupState;
                 }
 
-                if (puttSync != null)
+                if (puttSync != null && canUpdatePuttSyncSpawn)
                     puttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
             }
             else
