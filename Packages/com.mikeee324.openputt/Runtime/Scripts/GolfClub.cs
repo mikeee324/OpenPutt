@@ -100,6 +100,7 @@ namespace mikeee324.OpenPutt
         public Material offMaterial;
         [Tooltip("Which material to use on the club when it is armed")]
         public Material onMaterial;
+        public bool canUpdatePuttSyncSpawn = false;
 
         private float shaftDefaultSize = -1f;
 
@@ -250,7 +251,7 @@ namespace mikeee324.OpenPutt
             if (pickup != null)
                 pickup.pickupable = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRCPickup.PickupHand.None;
 
-            if (puttSync != null)
+            if (puttSync != null && canUpdatePuttSyncSpawn)
                 puttSync.SetSpawnPosition(new Vector3(0, -2, 0), Quaternion.identity);
         }
 

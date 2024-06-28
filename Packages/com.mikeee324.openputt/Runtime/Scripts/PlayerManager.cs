@@ -100,6 +100,7 @@ namespace mikeee324.OpenPutt
                     if (!value)
                     {
                         golfClub.RescaleClub(true);
+
                         if (golfClub.puttSync != null)
                             golfClub.puttSync.Respawn();
                     }
@@ -621,6 +622,10 @@ namespace mikeee324.OpenPutt
                     golfBall.puttSync.Respawn();
                 else
                     golfBall.SetPosition(new Vector3(0, -90, 0));
+
+                if (golfBall.puttSync != null)
+                    golfBall.respawnPosition = golfBall.puttSync.originalPosition;
+
                 golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
 

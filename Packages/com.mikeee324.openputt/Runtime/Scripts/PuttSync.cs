@@ -75,6 +75,7 @@ namespace mikeee324.OpenPutt
             get => (VRCPickup.PickupHand)currentOwnerHandInt;
             set => currentOwnerHandInt = (int)value;
         }
+        public bool grabOriginalPosOnStart = true;
         #endregion
 
         #region Internal Working Vars
@@ -115,8 +116,11 @@ namespace mikeee324.OpenPutt
             if (objectRB == null)
                 objectRB = GetComponent<Rigidbody>();
 
-            originalPosition = transform.position;
-            originalRotation = transform.rotation;
+            if (grabOriginalPosOnStart)
+            {
+                originalPosition = transform.position;
+                originalRotation = transform.rotation;
+            }
 
             syncPosition = transform.localPosition;
             syncRotation = transform.localRotation;
@@ -151,6 +155,9 @@ namespace mikeee324.OpenPutt
             if (autoRespawn && transform.position.y < autoRespawnHeight)
             {
                 // The master will respawn the object
+                if (originalPosition.y < autoRespawnHeight)
+                    originalPosition = new Vector3(originalPosition.x, autoRespawnHeight, originalPosition.z);
+
                 Respawn();
             }
 
@@ -486,6 +493,9 @@ namespace mikeee324.OpenPutt
             if (pickup != null)
                 pickup.Drop();
 
+            transform.position = originalPosition;
+            transform.rotation = originalRotation;
+
             if (objectRB != null)
             {
                 objectRB.Sleep();
@@ -493,11 +503,11 @@ namespace mikeee324.OpenPutt
                 {
                     objectRB.velocity = Vector3.zero;
                     objectRB.angularVelocity = Vector3.zero;
+
+                    objectRB.position = originalPosition;
+                    objectRB.rotation = originalRotation;
                 }
             }
-
-            transform.position = originalPosition;
-            transform.rotation = originalRotation;
 
             if (returnListener != null && remoteReturnFunction != null && remoteReturnFunction.Length > 0)
                 returnListener.SendCustomEvent(remoteReturnFunction);
