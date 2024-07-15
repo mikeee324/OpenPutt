@@ -17,6 +17,7 @@ namespace mikeee324.OpenPutt
         public PuttSync puttSync;
         public VRCPickup pickup;
         public GolfBallStartLineController startLine;
+        public MaterialPropertyBlock materialPropertyBlock;
 
         [Tooltip("Used to identify a wall collider and perform a bounce")]
         public PhysicMaterial wallMaterial;

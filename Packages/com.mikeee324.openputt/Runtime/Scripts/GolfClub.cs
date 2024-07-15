@@ -19,6 +19,9 @@ namespace mikeee324.OpenPutt
         public GameObject shaftEndPostion;
         public VRCPickup pickup;
 
+        public MaterialPropertyBlock headPB;
+        public MaterialPropertyBlock shaftPB;
+
         public LayerMask resizeLayerMask;
 
         public float forceMultiplier = 1f;
@@ -84,11 +87,22 @@ namespace mikeee324.OpenPutt
                             putter.gameObject.SetActive(false);
                     }
 
-                    // Toggle golf club mesh materials
-                    if (headMesh != null)
-                        headMesh.material = value ? onMaterial : offMaterial;
-                    if (shaftMesh != null)
-                        shaftMesh.material = value ? onMaterial : offMaterial;
+                    if (headPB == null)
+                        headPB = new MaterialPropertyBlock();
+                    headMesh.GetPropertyBlock(headPB);
+                    if (shaftPB == null)
+                        shaftPB = new MaterialPropertyBlock();
+                    shaftMesh.GetPropertyBlock(shaftPB);
+
+                    headPB.SetColor("_Color", value ? onColour : offColour);
+                    headPB.SetColor("_EmissionColor", value ? onEmission : offEmission);
+
+                    shaftPB.SetColor("_Color", value ? onColour : offColour);
+                    shaftPB.SetColor("_EmissionColor", value ? onEmission : offEmission);
+
+                    // Apply the MaterialPropertyBlock to the GameObject
+                    headMesh.SetPropertyBlock(headPB);
+                    shaftMesh.SetPropertyBlock(shaftPB);
                 }
 
                 _clubArmed = value;
@@ -96,10 +110,11 @@ namespace mikeee324.OpenPutt
         }
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft = false;
-        [Tooltip("Which material to use on the club when it is not armed")]
-        public Material offMaterial;
-        [Tooltip("Which material to use on the club when it is armed")]
-        public Material onMaterial;
+        public Color offColour = Color.white;
+        public Color onColour = Color.red;
+        public Color offEmission = Color.black;
+        public Color onEmission = Color.red;
+
         public bool canUpdatePuttSyncSpawn = false;
 
         private float shaftDefaultSize = -1f;
@@ -292,20 +307,20 @@ namespace mikeee324.OpenPutt
             {
                 float maxSize = Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsUserInVR() ? 3f : 6f;
                 Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
-                   if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                       shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                    shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
 
-                   // TODO: This works better when the club is close, but the distance jitters a LOT the further away from the handle it goes
-           /*     if (Physics.BoxCast(shaftMesh.gameObject.transform.position, putter.golfClubHeadCollider.size * 0.5f, raycastDir, out RaycastHit h, putter.transform.rotation, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                {
-                    m_HitDetect = true;
-                    m_Hit = h;
-                    shaftScale = Mathf.Clamp((h.distance - (headMesh.bounds.size.z * .5f)) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
-                }
-                else
-                {
-                    m_HitDetect = false;
-                }*/
+                // TODO: This works better when the club is close, but the distance jitters a LOT the further away from the handle it goes
+                /*     if (Physics.BoxCast(shaftMesh.gameObject.transform.position, putter.golfClubHeadCollider.size * 0.5f, raycastDir, out RaycastHit h, putter.transform.rotation, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                     {
+                         m_HitDetect = true;
+                         m_Hit = h;
+                         shaftScale = Mathf.Clamp((h.distance - (headMesh.bounds.size.z * .5f)) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                     }
+                     else
+                     {
+                         m_HitDetect = false;
+                     }*/
             }
 
             if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())

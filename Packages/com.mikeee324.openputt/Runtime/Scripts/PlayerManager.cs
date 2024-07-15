@@ -43,8 +43,18 @@ namespace mikeee324.OpenPutt
                 if (golfBall != null)
                 {
                     MeshRenderer renderer = golfBall.GetComponent<MeshRenderer>();
-                    renderer.material.color = _ballColor;
-                    renderer.material.SetColor("_EmissionColor", _ballColor);
+
+                    // Create a new MaterialPropertyBlock
+                    if (golfBall.materialPropertyBlock == null)
+                        golfBall.materialPropertyBlock = new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(golfBall.materialPropertyBlock);
+
+                    // Set a random color in the MaterialPropertyBlock
+                    golfBall.materialPropertyBlock.SetColor("_Color", _ballColor);
+                    golfBall.materialPropertyBlock.SetColor("_EmissionColor", _ballColor);
+
+                    // Apply the MaterialPropertyBlock to the GameObject
+                    renderer.SetPropertyBlock(golfBall.materialPropertyBlock);
 
                     TrailRenderer tr = golfBall.GetComponent<TrailRenderer>();
                     // A simple 2 color gradient with a fixed alpha of 1.0f.
@@ -58,23 +68,23 @@ namespace mikeee324.OpenPutt
                     tr.material.color = _ballColor;
 
                     // -- Set up render queues / zwrites so ball renders through walls and stuff
-                    bool localPlayerIsOwner = Networking.LocalPlayer != null && Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+                    //bool localPlayerIsOwner = Networking.LocalPlayer != null && Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsOwner(gameObject);
 
                     // If we aren't using the default 2000 render queue number
-                    int renderQueueBase = openPutt != null ? openPutt.ballRenderQueueBase : -1;
-                    if (renderQueueBase != -1)
-                    {
-                        // Take the base render queue number and make sure local players ball renders in front of remote player balls
-                        // Adjust ball render queue
-                        renderer.material.renderQueue = renderQueueBase + (localPlayerIsOwner ? 5 : 3);
-                        //renderer.material.SetInt("_ZWrite", 1);
-                        renderer.material.SetInt("_ZTest", 8);
+                    // int renderQueueBase = openPutt != null ? openPutt.ballRenderQueueBase : -1;
+                    // if (renderQueueBase != -1)
+                    // {
+                    // Take the base render queue number and make sure local players ball renders in front of remote player balls
+                    // Adjust ball render queue
+                    // renderer.material.renderQueue = renderQueueBase + (localPlayerIsOwner ? 5 : 3);
+                    // //renderer.material.SetInt("_ZWrite", 1);
+                    // renderer.material.SetInt("_ZTest", 8);
 
-                        // Adjust trail renderer render queue
-                        tr.material.renderQueue = renderQueueBase + (localPlayerIsOwner ? 4 : 2);
-                        //tr.material.SetInt("_ZWrite", 1);
-                        tr.material.SetInt("_ZTest", 8);
-                    }
+                    // // Adjust trail renderer render queue
+                    // tr.material.renderQueue = renderQueueBase + (localPlayerIsOwner ? 4 : 2);
+                    // //tr.material.SetInt("_ZWrite", 1);
+                    // tr.material.SetInt("_ZTest", 8);
+                    //}
                 }
             }
             get => _ballColor;
