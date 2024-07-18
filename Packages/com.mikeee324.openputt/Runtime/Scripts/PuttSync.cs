@@ -9,6 +9,7 @@ namespace mikeee324.OpenPutt
     public class PuttSync : UdonSharpBehaviour
     {
         #region Public Settings
+        [Header("Dynamic rigidbodies do not sync with PuttSync as it will currently stop syncing after a short while when you drop the object")]
         [Header("Sync Settings")]
         [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
         public float fastSyncTimeout = 0.25f;
@@ -151,6 +152,12 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void HandleSendSync()
         {
+            if (isHandlingRemoteUpdates)
+            {
+                fastSyncStopTime = -1;
+                return;
+            }
+
             // If the owner sees the object go underneath the respawn height
             if (autoRespawn && transform.position.y < autoRespawnHeight)
             {
@@ -194,7 +201,7 @@ namespace mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// This handles syncing the positions up and smoothing the mnotion for remote players
+        /// This handles syncing the positions up and smoothing the motion for remote players
         /// </summary>
         public void HandleRemoteUpdate()
         {
@@ -220,8 +227,10 @@ namespace mikeee324.OpenPutt
                 bool shouldDropPickup = false;
                 if (!newPickupState)
                     shouldDropPickup = true;
+                if (pickup.currentHand != VRCPickup.PickupHand.None)
+                    shouldDropPickup = true;
 
-                if (shouldDropPickup && pickup.currentHand != VRCPickup.PickupHand.None)
+                if (shouldDropPickup)
                     pickup.Drop();
             }
 
@@ -256,7 +265,7 @@ namespace mikeee324.OpenPutt
 
                         if (Quaternion.Angle(transform.rotation, syncRotation) > 1f)
                         {
-                            float lerpProgress = 1.0f - Mathf.Pow(0.000001f, Time.deltaTime);
+                            float lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
                             newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, lerpProgress);
                         }
                     }
@@ -400,12 +409,24 @@ namespace mikeee324.OpenPutt
 
                 Utils.SetOwner(Networking.LocalPlayer, gameObject);
 
+                currentOwnerHand = VRC_Pickup.PickupHand.None;
+
                 syncPosition = Vector3.zero;
                 syncRotation = Quaternion.identity;
 
                 // Keep a track of which hand the player is holding the pickup in
                 UpdatePickupCurrentHand();
+
+                SendCustomEventDelayedSeconds(nameof(UpdatePickupHandOffsets), .3f);
+
+                SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(ForceDrop));
             }
+        }
+
+        public void ForceDrop()
+        {
+            if (this.LocalPlayerOwnsThisObject()) return;
+            pickup.Drop();
         }
 
         public override void OnDrop()

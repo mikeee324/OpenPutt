@@ -119,7 +119,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 150}
   m_MaxSize: {x: 24288, y: 24288}
   vertical: 0
-  controlID: 148
+  controlID: 144
 --- !u!114 &6
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -310,7 +310,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 1
   m_Script: {fileID: 12006, guid: 0000000000000000e000000000000000, type: 0}
-  m_Name: InspectorWindow
+  m_Name: VRCSdkControlPanel
   m_EditorClassIdentifier: 
   m_Children: []
   m_Position:
@@ -319,14 +319,14 @@ MonoBehaviour:
     y: 0
     width: 607
     height: 1299
-  m_MinSize: {x: 276, y: 71}
-  m_MaxSize: {x: 4001, y: 4021}
-  m_ActualView: {fileID: 20}
+  m_MinSize: {x: 517, y: 621}
+  m_MaxSize: {x: 517, y: 2021}
+  m_ActualView: {fileID: 14}
   m_Panes:
   - {fileID: 20}
   - {fileID: 14}
-  m_Selected: 0
-  m_LastSelected: 1
+  m_Selected: 1
+  m_LastSelected: 0
 --- !u!114 &14
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -719,9 +719,9 @@ MonoBehaviour:
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: 1.5735207, y: -30.313866, z: 16.476387}
+    m_Target: {x: -37.557175, y: -21.271875, z: 85.90965}
     speed: 2
-    m_Value: {x: 1.5735207, y: -30.313866, z: 16.476387}
+    m_Value: {x: -37.557175, y: -21.271875, z: 85.90965}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -767,9 +767,9 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: -0.28414643, y: 0.036996625, z: -0.010950842, w: -0.95810187}
+    m_Target: {x: -0.12981799, y: 0.17708471, z: -0.023541182, w: -0.9754101}
     speed: 2
-    m_Value: {x: -0.28414643, y: 0.03699662, z: -0.010950841, w: -0.9581018}
+    m_Value: {x: -0.12981799, y: 0.1770847, z: -0.023541182, w: -0.9754101}
   m_Size:
     m_Target: 50.005
     speed: 2
@@ -1007,7 +1007,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Packages/com.mikeee324.openputt/Runtime/Prefabs
+    - Packages/com.mikeee324.openputt/Runtime/Scripts
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -1015,16 +1015,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Packages/com.mikeee324.openputt/Runtime/Prefabs
+  - Packages/com.mikeee324.openputt/Runtime/Scripts
   m_LastFoldersGridSize: 16
   m_LastProjectPath: D:\Users\Mike\Desktop\Unity\Prefabs\OpenPutt
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
-    scrollPos: {x: 0, y: 379}
-    m_SelectedIDs: 4cce0000
-    m_LastClickedID: 52812
-    m_ExpandedIDs: 000000001a5d000048ce00004ace00004cce000000ca9a3bffffff7f
+    scrollPos: {x: 0, y: 19}
+    m_SelectedIDs: 92ce0000
+    m_LastClickedID: 52882
+    m_ExpandedIDs: 000000001a5d000046ce000048ce00004ace00004cce000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -1052,7 +1052,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 000000001a5d000048ce00004ace00004cce0000
+    m_ExpandedIDs: 000000001a5d000046ce000048ce00004ace00004cce0000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
