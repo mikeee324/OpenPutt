@@ -2,6 +2,7 @@ using UdonSharp;
 using UnityEngine;
 using System;
 using Varneon.VUdon.ArrayExtensions;
+using com.mikeee324.OpenPutt;
 
 namespace mikeee324.OpenPutt
 {
@@ -38,6 +39,8 @@ namespace mikeee324.OpenPutt
         [SerializeField]
         private Rigidbody myRigidbody = null;
         public BoxCollider golfClubHeadCollider;
+
+        public GolfClubColliderVisualiser visual;
 
         [Header("Club Head References / Settings")]
         [Tooltip("Use this to rotate this collider to the match the club head collider (if it's the same already leave as 0,0,0")]
@@ -368,7 +371,19 @@ namespace mikeee324.OpenPutt
             clubIsTouchingBall = true;
 
             LastKnownHitType = "(Trigger)";
-            framesSinceHit = 0;
+
+            if (hitWaitFrames == 0)
+            {
+                // Consume the hit event
+                framesSinceHit = -1;
+
+                // Send the velocity to the ball
+                HandleBallHit();
+            }
+            else
+            {
+                framesSinceHit = 0;
+            }
         }
 
         private void OnTriggerExit(Collider other)
@@ -402,7 +417,19 @@ namespace mikeee324.OpenPutt
             clubIsTouchingBall = true;
 
             LastKnownHitType = "(Collision)";
-            framesSinceHit = 0;
+
+            if (hitWaitFrames == 0)
+            {
+                // Consume the hit event
+                framesSinceHit = -1;
+
+                // Send the velocity to the ball
+                HandleBallHit();
+            }
+            else
+            {
+                framesSinceHit = 0;
+            }
         }
 
 
@@ -548,6 +575,10 @@ namespace mikeee324.OpenPutt
 
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
+
+            if (visual != null) {
+                visual.OnBallHit(golfBall.transform.position, velocity);
+            }
         }
 
         private void ResetPositionBuffers()

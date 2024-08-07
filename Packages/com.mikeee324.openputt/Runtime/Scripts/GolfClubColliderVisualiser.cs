@@ -1,4 +1,3 @@
-
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -12,7 +11,7 @@ namespace com.mikeee324.OpenPutt
         public BoxCollider clubFollow;
         public Transform follower;
         public MeshRenderer meshRenderer;
-
+        public LineRenderer hitLine;
 
         void Start()
         {
@@ -36,6 +35,14 @@ namespace com.mikeee324.OpenPutt
                 if (meshRenderer.enabled)
                     meshRenderer.enabled = false;
             }
+        }
+
+        public void OnBallHit(Vector3 ballPos, Vector3 velocity)
+        {
+            hitLine.transform.position = ballPos;
+
+            hitLine.SetPosition(0, ballPos);
+            hitLine.SetPosition(1, ballPos + velocity.normalized);
         }
     }
 }
