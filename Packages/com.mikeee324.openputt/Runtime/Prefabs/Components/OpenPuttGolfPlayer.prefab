@@ -1042,6 +1042,49 @@ MonoBehaviour:
   smoothFollowClubHead: 1
   followStrength: 0.9
   followRotationStrength: 0.99
+  useClubHeadDirection: 1
+  clubHeadDirectionInfluence:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.83
+      inSlope: -0.10081852
+      outSlope: -0.10081852
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.35792488
+    - serializedVersion: 3
+      time: 1.1058177
+      value: 0.42297748
+      inSlope: -1.3648326
+      outSlope: -1.3648326
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.089660704
+    - serializedVersion: 3
+      time: 1.7907916
+      value: 0.060096156
+      inSlope: -0.061729163
+      outSlope: -0.061729163
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 5
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &4926412383994304880
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1135,8 +1178,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1659,7 +1702,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  remoteUpdateSmoothTime: 0.04
+  remoteUpdateSmoothTime: 0.05
   disableSyncWhileHeld: 1
   syncPositionAndRot: 1
   monitorPickupEvents: 1
@@ -1786,8 +1829,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1915,6 +1958,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -4157524182732408741, guid: f32016ddb68bb9b45a58f63aba1f08a8,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -914332758332951627, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}

@@ -20,10 +20,10 @@ namespace mikeee324.OpenPutt
         [Tooltip("This defines how often this often will be updated for remote players (in seconds) based on how far away they are from this GameObject. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve remoteUpdateDistanceCurve;
 
-        [Range(0.001f, 0.05f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
+        [Range(0.001f, 0.1f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
         public float remoteUpdateSmoothTime = 0.02f;
 
-        [Tooltip("Experimental - Reduces network traffic by syncing")]
+        [Tooltip("Reduces network traffic by only syncing which how the player is holding the object when this object is picked up or dropped")]
         public bool disableSyncWhileHeld = true;
 
         [Header("Pickup Settings")]

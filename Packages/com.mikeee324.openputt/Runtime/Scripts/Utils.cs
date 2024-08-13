@@ -262,6 +262,38 @@ namespace mikeee324.OpenPutt
 
             return newArray;
         }
+
+
+        public static Vector3 BiasedDirection(this Vector3 direction1, Vector3 direction2, float bias)
+        {
+            // Ensure vectors are normalized
+            if (direction1 == Vector3.zero || direction2 == Vector3.zero)
+            {
+                return Vector3.zero;
+            }
+
+            direction1.Normalize();
+            direction2.Normalize();
+
+            // Check if the vectors are nearly opposite
+            float dot = Vector3.Dot(direction1, direction2);
+            if (Mathf.Abs(dot + 1.0f) < 0.0001f)
+            {
+                // Handle nearly opposite vectors by returning one of them, based on the bias
+                return bias < 0.5f ? direction1 : direction2;
+            }
+
+            // Compute the biased direction vector
+            Vector3 biasedDirection = (direction1 * (1 - bias) + direction2 * bias);
+
+            // Ensure the result is a valid direction vector
+            if (biasedDirection == Vector3.zero)
+            {
+                return Vector3.zero;
+            }
+
+            return biasedDirection.normalized;
+        }
     }
 
 }

@@ -1,5 +1,6 @@
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.SocialPlatforms;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon.Common;
@@ -126,6 +127,7 @@ namespace mikeee324.OpenPutt
         private bool LeftUseButtonDown = false;
         private bool RightUseButtonDown = false;
         private bool clubColliderIsTempDisabled = false;
+        private bool localPlayerIsInVR = false;
 
         private void Start()
         {
@@ -149,13 +151,25 @@ namespace mikeee324.OpenPutt
             shaftDefaultSize = shaftMesh.bounds.size.y;
             headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
 
+            Debug.LogWarning($"{shaftMesh.bounds.size}");
+
             // Update the collider states
             RefreshState();
 
             this.enabled = false;
+
+            LocalPlayerCheck();
         }
 
-        RaycastHit[] ballCheckHits = new RaycastHit[10];
+        public void LocalPlayerCheck()
+        {
+            if (!Utilities.IsValid(Networking.LocalPlayer))
+            {
+                SendCustomEventDelayedSeconds(nameof(LocalPlayerCheck), 1);
+                return;
+            }
+            localPlayerIsInVR = Networking.LocalPlayer.IsUserInVR();
+        }
 
         public override void PostLateUpdate()
         {
@@ -305,22 +319,19 @@ namespace mikeee324.OpenPutt
             }
             else
             {
-                float maxSize = Networking.LocalPlayer.IsValid() && Networking.LocalPlayer.IsUserInVR() ? 3f : 6f;
-                Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
-                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                    shaftScale = Mathf.Clamp((hit.distance - headMesh.bounds.size.z) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
+                float minSize = .1f;
+                float maxSize = localPlayerIsInVR ? 3f : 6f;
 
-                // TODO: This works better when the club is close, but the distance jitters a LOT the further away from the handle it goes
-                /*     if (Physics.BoxCast(shaftMesh.gameObject.transform.position, putter.golfClubHeadCollider.size * 0.5f, raycastDir, out RaycastHit h, putter.transform.rotation, 100f, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                     {
-                         m_HitDetect = true;
-                         m_Hit = h;
-                         shaftScale = Mathf.Clamp((h.distance - (headMesh.bounds.size.z * .5f)) / shaftDefaultSize, 0.1f, enableBigShaft ? 100f : maxSize);
-                     }
-                     else
-                     {
-                         m_HitDetect = false;
-                     }*/
+                Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
+
+                // if (Physics.BoxCast(shaftMesh.gameObject.transform.position, boxExtents, raycastDir, out RaycastHit h, putter.transform.rotation, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                //     shaftScale = Mathf.Clamp((h.distance - headMesh.bounds.size.z) / shaftDefaultSize, minSize, maxSize);
+                // else 
+                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, enableBigShaft ? 100f : maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                {
+                    float shaftGirth = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
+                    shaftScale = Mathf.Clamp((hit.distance - (putter.putterTarget.size.z * shaftGirth)) / shaftDefaultSize, minSize, enableBigShaft ? 100f : maxSize);
+                }
             }
 
             if (puttSync != null && puttSync.LocalPlayerOwnsThisObject())

@@ -95,6 +95,7 @@ namespace mikeee324.OpenPutt
         public UnityEngine.UI.Image devModeForAllCheckbox;
         public UnityEngine.UI.Image footColliderCheckbox;
         public UnityEngine.UI.Image clubRendererCheckbox;
+        public UnityEngine.UI.Image clubHeadDirectionCheckbox;
         public Dropdown devModeColliderVelTypeDropdown;
         public Dropdown devModeClubColliderTypeDropdown;
         public Dropdown devModeBallColliderTypeDropdown;
@@ -595,6 +596,18 @@ namespace mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnToggleClubHeadDirection()
+        {
+            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+                return;
+
+            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+
+            playerManager.golfClubHead.useClubHeadDirection = !playerManager.golfClubHead.useClubHeadDirection;
+
+            RefreshDevModeMenu();
+        }
+
         public void OnTogglePlayerManager()
         {
             if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
@@ -918,6 +931,7 @@ namespace mikeee324.OpenPutt
             devModeForAllCheckbox.material = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.material = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.material = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
+            clubHeadDirectionCheckbox.material = playerManager.golfClubHead.useClubHeadDirection ? checkboxOn : checkboxOff;
         }
 
         public void OnBallWeightReset()

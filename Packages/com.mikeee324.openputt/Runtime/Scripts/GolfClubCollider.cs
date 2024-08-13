@@ -78,6 +78,9 @@ namespace mikeee324.OpenPutt
         public float followStrength = .6f;
         [Range(0, 0.99f), Tooltip("Controls how strong the rotation of the Smooth Follow Clubhead option is. (Not entirely sure what the correct value is yet)")]
         public float followRotationStrength = 0.99f;
+        [Tooltip("Makes the club head take the direction of the club head into account when computing a hit (Slower hits mean the face direction matters more)")]
+        public bool useClubHeadDirection = false;
+        public AnimationCurve clubHeadDirectionInfluence;
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
@@ -151,6 +154,13 @@ namespace mikeee324.OpenPutt
             {
                 hitForceMultiplier.AddKey(0, 1);
                 hitForceMultiplier.AddKey(10, 2);
+            }
+            if (clubHeadDirectionInfluence.length == 0)
+            {
+                clubHeadDirectionInfluence.AddKey(0f, .83f);
+                clubHeadDirectionInfluence.AddKey(5f, 0f);
+                clubHeadDirectionInfluence.AddKey(50f, 0f);
+                clubHeadDirectionInfluence.SmoothTangents(0, 0.5f);
             }
         }
 
@@ -458,24 +468,24 @@ namespace mikeee324.OpenPutt
             switch (velocityCalculationType)
             {
                 case ClubColliderVelocityType.SingleFrame:
-                    directionOfTravel = FrameVelocity.normalized;
+                    directionOfTravel = FrameVelocity;
                     velocityMagnitude = FrameVelocity.magnitude;
 
-                    // Use the smmothed collider direction if we are told to
+                    // Use the smoothed collider direction if we are told to
                     if (smoothedHitDirection)
                         for (int i = 0; i < 3; i++)
                             if (lastPositions[i] != Vector3.zero)
-                                directionOfTravel = (lastPositions[0] - lastPositions[i]).normalized;
+                                directionOfTravel = lastPositions[0] - lastPositions[i];
                     break;
                 case ClubColliderVelocityType.SingleFrameSmoothed:
-                    directionOfTravel = FrameVelocitySmoothed.normalized;
+                    directionOfTravel = FrameVelocitySmoothed;
                     velocityMagnitude = FrameVelocitySmoothed.magnitude;
 
-                    // Use the smmothed collider direction if we are told to
+                    // Use the smoothed collider direction if we are told to
                     if (smoothedHitDirection)
                         for (int i = 0; i < 3; i++)
                             if (lastPositions[i] != Vector3.zero)
-                                directionOfTravel = (lastPositions[0] - lastPositions[i]).normalized;
+                                directionOfTravel = lastPositions[0] - lastPositions[i];
                     break;
                 case ClubColliderVelocityType.MultiFrameAverage:
                     {
@@ -518,14 +528,38 @@ namespace mikeee324.OpenPutt
                         }
 
                         Vector3 newVel = (latestPos - oldestPos) / timeTaken;
-                        directionOfTravel = newVel.normalized;
+                        directionOfTravel = newVel;
                         velocityMagnitude = newVel.magnitude;
 
-                        // Don't really need this here? - Should already be averaged out - Use the smmothed collider direction if we are told to
+                        // Don't really need this here? - Should already be averaged out - Use the smoothed collider direction if we are told to
                         //if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
-                        //    directionOfTravel = (lastPositions[0] - lastPositions[3]).normalized;
+                        //    directionOfTravel = lastPositions[0] - lastPositions[3];
                         break;
                     }
+            }
+
+            bool currentCourseIsDrivingRange = currentCourse != null && currentCourse.drivingRangeMode;
+
+            // If we are currently disallowing hits to go vertical
+            if (!openPutt.enableVerticalHits && !currentCourseIsDrivingRange)
+                directionOfTravel.y = 0; // Flatten the direction vector
+
+            // Normalize the direction vector now it's been flattened (Apparently it has to be in this order as well!!)
+            directionOfTravel = directionOfTravel.normalized;
+
+            if (useClubHeadDirection)
+            {
+                Vector3 faceDirection = putterTarget.transform.right;
+                faceDirection = new Vector3(faceDirection.x, 0, faceDirection.z);
+
+                if (Vector3.Angle(-faceDirection, directionOfTravel) < Vector3.Angle(faceDirection, directionOfTravel))
+                    faceDirection = -faceDirection;
+                    
+                if (Vector3.Angle(faceDirection, directionOfTravel) < 80)
+                {
+                    float influence = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
+                    directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, influence);
+                }
             }
 
             // Scale the velocity back up a bit
@@ -533,8 +567,6 @@ namespace mikeee324.OpenPutt
 
             // Apply the players final hit force multiplier
             velocityMagnitude *= golfClub.forceMultiplier;
-
-            bool currentCourseIsDrivingRange = currentCourse != null && currentCourse.drivingRangeMode;
 
             // Only clamp hit speed if they player is on a normal course
             bool shouldClampSpeed = playerManager == null || !currentCourseIsDrivingRange;
@@ -549,12 +581,6 @@ namespace mikeee324.OpenPutt
 
             // Put the direction and magnitude back together
             Vector3 velocity = directionOfTravel * velocityMagnitude;
-
-            // Mini golf usually works best when the ball stays on the floor initially
-            if (openPutt.enableVerticalHits || currentCourseIsDrivingRange)
-                velocity.y = Mathf.Clamp(velocity.y, 0, golfBall.BallMaxSpeed);
-            else
-                velocity.y = 0;
 
             // Fix NaNs so we don't die
             if (float.IsNaN(velocity.y))
@@ -576,9 +602,9 @@ namespace mikeee324.OpenPutt
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
 
-            if (visual != null) {
+            // A debug line renderer to show the resulting hit direction
+            if (visual != null)
                 visual.OnBallHit(golfBall.transform.position, velocity);
-            }
         }
 
         private void ResetPositionBuffers()
