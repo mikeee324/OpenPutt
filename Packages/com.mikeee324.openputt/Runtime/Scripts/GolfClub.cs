@@ -19,6 +19,7 @@ namespace mikeee324.OpenPutt
         public MeshRenderer headMesh;
         public GameObject shaftEndPostion;
         public VRCPickup pickup;
+        public BoxCollider shaftCollider;
 
         public MaterialPropertyBlock headPB;
         public MaterialPropertyBlock shaftPB;
@@ -118,8 +119,6 @@ namespace mikeee324.OpenPutt
 
         public bool canUpdatePuttSyncSpawn = false;
 
-        private float shaftDefaultSize = -1f;
-
         [HideInInspector]
         public bool heldByPlayer = false;
         [UdonSynced, HideInInspector]
@@ -148,10 +147,7 @@ namespace mikeee324.OpenPutt
             handleMesh.transform.localScale = new Vector3(1, 1, 1);
             headMesh.transform.localScale = new Vector3(1, 1, 1);
 
-            shaftDefaultSize = shaftMesh.bounds.size.y;
             headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
-
-            Debug.LogWarning($"{shaftMesh.bounds.size}");
 
             // Update the collider states
             RefreshState();
@@ -234,7 +230,7 @@ namespace mikeee324.OpenPutt
 
         public void RefreshState()
         {
-            if (shaftScale == -1 || shaftDefaultSize == -1)
+            if (shaftScale == -1)
                 RescaleClub(true);
 
             bool isOwner = this.LocalPlayerOwnsThisObject();
@@ -312,9 +308,6 @@ namespace mikeee324.OpenPutt
                 handleMesh.transform.localScale = new Vector3(1, 1, 1);
                 headMesh.transform.localScale = new Vector3(1, 1, 1);
 
-                if (shaftDefaultSize == -1)
-                    shaftDefaultSize = shaftMesh.bounds.size.y * shaftMesh.transform.lossyScale.y;
-
                 headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
             }
             else
@@ -325,12 +318,14 @@ namespace mikeee324.OpenPutt
                 Vector3 raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
 
                 // if (Physics.BoxCast(shaftMesh.gameObject.transform.position, boxExtents, raycastDir, out RaycastHit h, putter.transform.rotation, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                //     shaftScale = Mathf.Clamp((h.distance - headMesh.bounds.size.z) / shaftDefaultSize, minSize, maxSize);
+                //     shaftScale = Mathf.Clamp((h.distance - headMesh.localBounds.size.z) / shaftDefaultSize, minSize, maxSize);
                 // else 
-                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir, out RaycastHit hit, enableBigShaft ? 100f : maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir.normalized, out RaycastHit hit, enableBigShaft ? 100f : maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
                 {
-                    float shaftGirth = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
-                    shaftScale = Mathf.Clamp((hit.distance - (putter.putterTarget.size.z * shaftGirth)) / shaftDefaultSize, minSize, enableBigShaft ? 100f : maxSize);
+                    float putterScale = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
+                    float putterHeight = putter.putterTarget.size.z * putterScale;
+                    float totalDistanceToFloor = Vector3.Distance(hit.point, shaftMesh.gameObject.transform.position) - putterHeight;
+                    shaftScale = Mathf.Clamp(totalDistanceToFloor / shaftCollider.size.z, minSize, enableBigShaft ? 100f : maxSize);
                 }
             }
 

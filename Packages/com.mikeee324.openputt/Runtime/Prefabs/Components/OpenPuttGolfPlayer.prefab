@@ -1049,30 +1049,30 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0
       value: 0.83
-      inSlope: -0.10081852
-      outSlope: -0.10081852
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.35792488
-    - serializedVersion: 3
-      time: 1.1058177
-      value: 0.42297748
-      inSlope: -1.3648326
-      outSlope: -1.3648326
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.089660704
-    - serializedVersion: 3
-      time: 1.7907916
-      value: 0.060096156
-      inSlope: -0.061729163
-      outSlope: -0.061729163
+      inSlope: 0
+      outSlope: 0
       tangentMode: 136
       weightedMode: 0
       inWeight: 0.33333334
       outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.7757674
+      value: 0.627851
+      inSlope: -0.86732167
+      outSlope: -0.86732167
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.13011573
+    - serializedVersion: 3
+      time: 1.7907916
+      value: 0.060096156
+      inSlope: -0.084625095
+      outSlope: -0.084625095
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.11401964
     - serializedVersion: 3
       time: 5
       value: 0
@@ -1178,8 +1178,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1829,8 +1829,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2030,6 +2030,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 1811774654891117233}
+    - targetCorrespondingSourceObject: {fileID: -914332758332951627, guid: f32016ddb68bb9b45a58f63aba1f08a8,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2213463569754413228}
   m_SourcePrefab: {fileID: 100100000, guid: f32016ddb68bb9b45a58f63aba1f08a8, type: 3}
 --- !u!23 &149639404086247989 stripped
 MeshRenderer:
@@ -2043,6 +2047,33 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 4926412383973620334}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &3968096529827924443 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: -914332758332951627, guid: f32016ddb68bb9b45a58f63aba1f08a8,
+    type: 3}
+  m_PrefabInstance: {fileID: 4926412383973620334}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &2213463569754413228
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3968096529827924443}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.012600997, y: 0.012601008, z: 0.34518483}
+  m_Center: {x: 0, y: 0.000000005143645, z: -0.17259209}
 --- !u!1 &4051626976360451650 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -259972160606440404, guid: f32016ddb68bb9b45a58f63aba1f08a8,
@@ -2219,6 +2250,7 @@ MonoBehaviour:
   headMesh: {fileID: 149639404086247989}
   shaftEndPostion: {fileID: 1215706633630273412}
   pickup: {fileID: 4926412383973621136}
+  shaftCollider: {fileID: 2213463569754413228}
   resizeLayerMask:
     serializedVersion: 2
     m_Bits: 1
