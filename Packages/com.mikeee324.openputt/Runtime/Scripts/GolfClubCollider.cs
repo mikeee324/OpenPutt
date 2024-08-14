@@ -118,6 +118,10 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public float LastKnownHitVelocity { get; private set; }
         /// <summary>
+        /// Logs the how much of the balls direction was biased towards the angle of the club head instead of velocity direction
+        /// </summary>
+        public float LastKnownHitDirBias { get; private set; }
+        /// <summary>
         /// Logs kind of collision occured that trigger a ball hit (trigger,sweep,collision)
         /// </summary>
         public string LastKnownHitType { get; private set; }
@@ -547,6 +551,7 @@ namespace mikeee324.OpenPutt
             // Normalize the direction vector now it's been flattened (Apparently it has to be in this order as well!!)
             directionOfTravel = directionOfTravel.normalized;
 
+            LastKnownHitDirBias = 0;
             if (useClubHeadDirection)
             {
                 Vector3 faceDirection = putterTarget.transform.right;
@@ -554,11 +559,11 @@ namespace mikeee324.OpenPutt
 
                 if (Vector3.Angle(-faceDirection, directionOfTravel) < Vector3.Angle(faceDirection, directionOfTravel))
                     faceDirection = -faceDirection;
-                    
+
                 if (Vector3.Angle(faceDirection, directionOfTravel) < 80)
                 {
-                    float influence = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
-                    directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, influence);
+                    LastKnownHitDirBias = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
+                    directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, LastKnownHitDirBias);
                 }
             }
 

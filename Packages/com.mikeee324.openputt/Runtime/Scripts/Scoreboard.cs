@@ -72,6 +72,7 @@ namespace mikeee324.OpenPutt
 
         #region Dev Mode Stuff
         public TextMeshProUGUI devModeLastClubHitSpeed;
+        public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
         public Slider devModeClubWaitSlider;
