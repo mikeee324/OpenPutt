@@ -656,6 +656,12 @@ namespace mikeee324.OpenPutt
                     SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
             }
         }
+
+        public override void OnLocalPlayerBallStopped()
+        {
+            
+        }
+
     }
 
 }

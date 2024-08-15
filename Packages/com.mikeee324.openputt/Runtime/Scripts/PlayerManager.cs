@@ -235,7 +235,14 @@ namespace mikeee324.OpenPutt
         public void OnBallHit(float speed)
         {
             if (CurrentCourse == null || courseStates.Length != openPutt.courses.Length)
+            {
+                if (openPutt != null)
+                {
+                    foreach (OpenPuttEventListener eventListener in openPutt.eventListeners)
+                        eventListener.OnLocalPlayerBallHit(speed);
+                }
                 return;
+            }
 
             bool sendSync = openPutt != null && openPutt.playerSyncType == PlayerSyncType.All;
 

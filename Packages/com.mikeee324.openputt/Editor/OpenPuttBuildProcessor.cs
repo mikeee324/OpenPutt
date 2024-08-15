@@ -63,6 +63,10 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         }
 
         Utils.Log(TAG, $"SetupOpenPutt - Setup {openPutt.courses.Length} courses");
+
+        InfoUI[] infoUIs = GameObject.FindObjectsByType<InfoUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        foreach (InfoUI infoUI in infoUIs)
+            infoUI.openPutt = openPutt;
     }
 
     private void PopulateBallStartLineRendererReferences()

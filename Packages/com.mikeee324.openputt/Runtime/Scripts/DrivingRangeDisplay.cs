@@ -101,4 +101,10 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
 
     }
+
+    public override void OnLocalPlayerBallStopped()
+    {
+        
+    }
+
 }
