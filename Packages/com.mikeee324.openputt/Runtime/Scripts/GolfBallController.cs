@@ -141,6 +141,12 @@ namespace mikeee324.OpenPutt
 
                 if (ballWasMoving && !_ballMoving)
                 {
+                    if (playerManager != null && playerManager.openPutt != null)
+                    {
+                        foreach (OpenPuttEventListener listener in playerManager.openPutt.eventListeners)
+                            listener.OnLocalPlayerBallStopped();
+                    }
+
                     if (playerManager.openPutt.debugMode)
                     {
                         // Ball stopped moving, output ball speed log for this hit to the log
@@ -244,7 +250,7 @@ namespace mikeee324.OpenPutt
         public float DefaultBallDrag { get; private set; }
         public float DefaultBallAngularDrag { get; private set; }
         public float DefaultBallMaxSpeed { get; private set; }
-        public float BallCurrentSpeed => ballRigidbody != null ? ballRigidbody.velocity.magnitude : 0;
+        public float BallCurrentSpeed => ballRigidbody != null && !ballRigidbody.isKinematic ? ballRigidbody.velocity.magnitude : 0;
         /// <summary>
         /// Speculative seems to make the ball collide way before hitting a wall.. so maybe we have speculative when at rest and dynamic while moving?
         /// Maybe even switch to speculative at high speeds just soi we don't go through floors and walls?

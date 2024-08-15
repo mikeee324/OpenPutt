@@ -12,6 +12,11 @@ namespace mikeee324.OpenPutt
 
         }
 
+        public override void OnLocalPlayerBallStopped()
+        {
+            
+        }
+
         public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
             if (sfxController != null && course != null && hole != null)

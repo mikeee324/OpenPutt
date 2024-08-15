@@ -11,6 +11,11 @@ namespace mikeee324.OpenPutt
         public abstract void OnLocalPlayerBallHit(float speed);
 
         /// <summary>
+        /// Called when the local players ball has stopped moving
+        /// </summary>
+        public abstract void OnLocalPlayerBallStopped();
+
+        /// <summary>
         /// Called when the local player ball drops into a course hole
         /// </summary>
         /// <param name="course">Which course the player was playing on</param>
