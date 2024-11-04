@@ -185,7 +185,7 @@ namespace dev.mikeee324.OpenPutt
                     RescaleClub(false);
             }
 
-            if (shaftScale != shaftMesh.transform.localScale.z)
+            if (!Mathf.Approximately(shaftScale, shaftMesh.transform.localScale.z))
             {
                 var newShaftScale = shaftScale;
                 // Lerp the scale for other players
@@ -235,7 +235,7 @@ namespace dev.mikeee324.OpenPutt
 
         public void RefreshState()
         {
-            if (shaftScale == -1)
+            if (shaftScale < 0)
                 RescaleClub(true);
 
             var isOwner = this.LocalPlayerOwnsThisObject();

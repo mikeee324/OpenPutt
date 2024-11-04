@@ -372,7 +372,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void ReturnAfterDropTimer()
         {
-            if (!this.LocalPlayerOwnsThisObject() || returnAfterDropEndTime == -1)
+            if (!this.LocalPlayerOwnsThisObject() || returnAfterDropEndTime < 0)
                 return;
 
             // If we haven't gotten past the respawn timer
@@ -463,7 +463,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
 
-            if (returnAfterDrop && returnAfterDropEndTime == -1)
+            if (returnAfterDrop && returnAfterDropEndTime < 0)
             {
                 returnAfterDropEndTime = Time.timeSinceLevelLoad + returnAfterDropTime;
                 SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
@@ -521,7 +521,7 @@ namespace dev.mikeee324.OpenPutt
                 this.extraDataChanged = true;
 
             // If there isn't a sync running already, schedule it in
-            if (fastSyncStopTime == -1f)
+            if (fastSyncStopTime < 0)
                 SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
 
             // Update the stop time for fast updates
@@ -572,7 +572,7 @@ namespace dev.mikeee324.OpenPutt
             Utils.SetOwner(Networking.LocalPlayer, gameObject);
 
             // If there isn't a timer running, start one
-            if (returnAfterDropEndTime == -1)
+            if (returnAfterDropEndTime < 0)
                 SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
 
             // Update the timer end stop
