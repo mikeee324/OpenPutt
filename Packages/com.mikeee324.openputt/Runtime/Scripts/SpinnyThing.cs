@@ -1,11 +1,7 @@
-﻿
-using BestHTTP.SecureProtocol.Org.BouncyCastle.Crypto.Engines;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
-using VRC.SDKBase;
-using VRC.Udon;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public enum RotationLockType
     {
@@ -56,9 +52,9 @@ namespace mikeee324.OpenPutt
             rb.centerOfMass = Vector3.zero;
             rb.inertiaTensorRotation = Quaternion.identity;
 
-            foreach (Collider myCollider in myColliders)
+            foreach (var myCollider in myColliders)
             {
-                foreach (Collider toIgnore in collidersToIgnore)
+                foreach (var toIgnore in collidersToIgnore)
                     Physics.IgnoreCollision(myCollider, toIgnore, true);
             }
         }

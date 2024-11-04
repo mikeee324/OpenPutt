@@ -2,7 +2,7 @@
 using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class SFXController : UdonSharpBehaviour
@@ -70,7 +70,7 @@ namespace mikeee324.OpenPutt
                 localExtraSoundSource.volume = localExtraSoundSource.volume > maxVolume ? maxVolume : localExtraSoundSource.volume;
                 localBallEnteredHoleSource.volume = localBallEnteredHoleSource.volume > maxVolume ? maxVolume : localBallEnteredHoleSource.volume;
 
-                for (int i = 0; i < remotePlayerAudioSources.Length; i++)
+                for (var i = 0; i < remotePlayerAudioSources.Length; i++)
                     remotePlayerAudioSources[i].volume = remotePlayerAudioSources[i].volume > maxVolume ? maxVolume : remotePlayerAudioSources[i].volume;
             }
         }
@@ -91,7 +91,7 @@ namespace mikeee324.OpenPutt
         {
             if (ballHitSounds.Length == 0) return;
 
-            AudioClip noiseToPlay = ballHoleSounds.GetRandom();
+            var noiseToPlay = ballHoleSounds.GetRandom();
             if (!randomiseHoleSounds && courseNumber >= 0 && courseNumber < ballHoleSounds.Length)
                 noiseToPlay = ballHoleSounds[courseNumber];
 
@@ -165,7 +165,7 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            if (clipToPlay != null)
+            if (Utilities.IsValid(clipToPlay))
             {
                 if (isRemote)
                     PlayRemoteSoundAtPosition(clipToPlay, at: position, maxRange: 100f, canInterrupt: false);
@@ -176,7 +176,7 @@ namespace mikeee324.OpenPutt
 
         public void PlayLocalSoundAtPosition(AudioSource audioSource, AudioClip clip, Vector3 at, bool canInterrupt)
         {
-            if (audioSource == null) return;
+            if (!Utilities.IsValid(audioSource)) return;
 
             if (!usePlayOneShot && audioSource.isPlaying)
             {
@@ -220,9 +220,9 @@ namespace mikeee324.OpenPutt
 
         public void PlayRemoteSoundAtPosition(AudioClip clip, Vector3 at, float maxRange = 10f, bool canInterrupt = true)
         {
-            AudioSource audioSource = remotePlayerAudioSources[remoteAudioSourceID];
+            var audioSource = remotePlayerAudioSources[remoteAudioSourceID];
 
-            int originalSourceID = remoteAudioSourceID;
+            var originalSourceID = remoteAudioSourceID;
 
 
             // Make sure that the next sound plays uses the next audio source in the list
@@ -230,7 +230,7 @@ namespace mikeee324.OpenPutt
             if (remoteAudioSourceID >= remotePlayerAudioSources.Length)
                 remoteAudioSourceID = 0;
 
-            if (audioSource == null)
+            if (!Utilities.IsValid(audioSource))
                 return;
 
             if (!usePlayOneShot && audioSource.isPlaying)
@@ -241,7 +241,7 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    for (int i = remoteAudioSourceID; i < remotePlayerAudioSources.Length; i++)
+                    for (var i = remoteAudioSourceID; i < remotePlayerAudioSources.Length; i++)
                     {
                         /// We looped around and did not find an audiosource we can use - just give up
                         if (i == originalSourceID)
@@ -251,7 +251,7 @@ namespace mikeee324.OpenPutt
                         if (!audioSource.isPlaying)
                         {
                             remoteAudioSourceID = i;
-                            if (remotePlayerAudioSources[remoteAudioSourceID] != null)
+                            if (Utilities.IsValid(remotePlayerAudioSources[remoteAudioSourceID]))
                                 audioSource = remotePlayerAudioSources[remoteAudioSourceID];
                         }
                     }
@@ -264,7 +264,7 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            if (audioSource == null)
+            if (!Utilities.IsValid(audioSource))
             {
                 Utils.Log(this, $"Not playing remote sound clip {clip.name} as the audio source is null");
                 return;

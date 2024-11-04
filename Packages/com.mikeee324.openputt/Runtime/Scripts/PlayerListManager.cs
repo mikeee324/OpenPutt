@@ -1,11 +1,10 @@
-﻿
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
     /// This script keeps track of what position each player is on the scoreboards.<br/>
@@ -47,11 +46,11 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            PlayerManager playerManager = playerUpdateQueue[0];
+            var playerManager = playerUpdateQueue[0];
 
             // TODO: Check if the player will even be moved first - no need to do anything if they aren't moving around the array
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
 
             // If the player is in the list - remove them from it
             if (playerManager.ScoreboardPositionByScore >= 0 || playerManager.ScoreboardPositionByTime >= 0)
@@ -66,15 +65,15 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            if (playerManager != null && playerManager.Owner != null)
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.Owner))
             {
                 // Add the player back into the list but in their new position (Should also tell scoreboard manager to update the rows that have changed)
-                _AddPlayer(playerManager, out int scorePos, out int timePos);
+                _AddPlayer(playerManager, out var scorePos, out var timePos);
 
                 if (openPutt.debugMode)
                 {
                     stopwatch.Stop();
-                    Utils.Log(this, $"AddPlayer({stopwatch.Elapsed.TotalMilliseconds}ms) - Added {(playerManager.Owner != null ? playerManager.Owner.displayName : "NA")}({playerManager.PlayerID}) to lists. (S={scorePos}/T={timePos}) PC(S={TempPlayersSortedByScore.Length}/T={TempPlayersSortedByTime.Length})");
+                    Utils.Log(this, $"AddPlayer({stopwatch.Elapsed.TotalMilliseconds}ms) - Added {(Utilities.IsValid(playerManager.Owner) ? playerManager.Owner.displayName : "NA")}({playerManager.PlayerID}) to lists. (S={scorePos}/T={timePos}) PC(S={TempPlayersSortedByScore.Length}/T={TempPlayersSortedByTime.Length})");
                     stopwatch.Restart();
                 }
             }
@@ -99,7 +98,7 @@ namespace mikeee324.OpenPutt
         /// <param name="playerManager">The player that triggered an update</param>
         public void OnPlayerUpdate(PlayerManager playerManager)
         {
-            if (playerManager == null) return;
+            if (!Utilities.IsValid(playerManager)) return;
 
             // Add player to the update queue
             playerUpdateQueue = playerUpdateQueue.Add(playerManager);
@@ -119,7 +118,7 @@ namespace mikeee324.OpenPutt
             timePos = -1;
 
             // PlayerManager is null, return before we die
-            if (playerManager == null)
+            if (!Utilities.IsValid(playerManager))
                 return;
 
             // We only add people who have started playing
@@ -129,24 +128,24 @@ namespace mikeee324.OpenPutt
             playerManager.scoreboardRowNeedsUpdating = true;
 
             // Cache the data we need so we don't repeat this work every time we loop through the players list
-            int newPlayerID = playerManager.PlayerID;
-            int newPlayerScore = playerManager.PlayerTotalScore;
-            int newPlayerTime = playerManager.PlayerTotalTime;
+            var newPlayerID = playerManager.PlayerID;
+            var newPlayerScore = playerManager.PlayerTotalScore;
+            var newPlayerTime = playerManager.PlayerTotalTime;
 
             // Add this player to their correct position in the list sorted by score
             scorePos = 0;
             timePos = 0;
-            for (int i = 0; i < TempPlayersSortedByScore.Length; i++)
+            for (var i = 0; i < TempPlayersSortedByScore.Length; i++)
             {
                 // Check if this is where we should place this player in the score list
-                int thisScore = TempPlayersSortedByScore[i].PlayerTotalScore;
+                var thisScore = TempPlayersSortedByScore[i].PlayerTotalScore;
                 if (newPlayerScore > thisScore)
                     scorePos = i + 1;
                 else if (thisScore == newPlayerScore && TempPlayersSortedByScore[i].PlayerID < newPlayerID)
                     scorePos = i + 1;
 
                 // Check if this is where we should place this player in the timer list
-                int thisTime = TempPlayersSortedByTime[i].PlayerTotalTime;
+                var thisTime = TempPlayersSortedByTime[i].PlayerTotalTime;
                 if (newPlayerTime > thisTime)
                     timePos = i + 1;
                 else if (thisTime == newPlayerTime && TempPlayersSortedByTime[i].PlayerID < newPlayerID)
@@ -164,10 +163,10 @@ namespace mikeee324.OpenPutt
         /// <param name="playerManager">The player to remove</param>
         private void _RemovePlayer(PlayerManager playerManager)
         {
-            if (playerManager == null) return;
+            if (!Utilities.IsValid(playerManager)) return;
 
-            int originalScorePos = playerManager.ScoreboardPositionByScore;
-            int originalTimePos = playerManager.ScoreboardPositionByTime;
+            var originalScorePos = playerManager.ScoreboardPositionByScore;
+            var originalTimePos = playerManager.ScoreboardPositionByTime;
 
             // Remove this player from the list
             if (originalScorePos >= 0)
@@ -183,15 +182,15 @@ namespace mikeee324.OpenPutt
         private void _CheckForChanges()
         {
             // Update index positions on all PlayerManagers in the list
-            for (int sp = 0; sp < openPutt.scoreboardManager.numberOfPlayersToDisplay; sp++)
+            for (var sp = 0; sp < openPutt.scoreboardManager.numberOfPlayersToDisplay; sp++)
             {
-                bool requestRefresh = false;
+                var requestRefresh = false;
 
-                PlayerManager oldPlayerByScore = sp < PlayersSortedByScore.Length ? PlayersSortedByScore[sp] : null;
-                PlayerManager newPlayerByScore = sp < TempPlayersSortedByScore.Length ? TempPlayersSortedByScore[sp] : null;
+                var oldPlayerByScore = sp < PlayersSortedByScore.Length ? PlayersSortedByScore[sp] : null;
+                var newPlayerByScore = sp < TempPlayersSortedByScore.Length ? TempPlayersSortedByScore[sp] : null;
 
-                PlayerManager oldPlayerByTime = sp < PlayersSortedByTime.Length ? PlayersSortedByTime[sp] : null;
-                PlayerManager newPlayerByTime = sp < TempPlayersSortedByTime.Length ? TempPlayersSortedByTime[sp] : null;
+                var oldPlayerByTime = sp < PlayersSortedByTime.Length ? PlayersSortedByTime[sp] : null;
+                var newPlayerByTime = sp < TempPlayersSortedByTime.Length ? TempPlayersSortedByTime[sp] : null;
 
                 if (!requestRefresh)
                 {
@@ -204,9 +203,9 @@ namespace mikeee324.OpenPutt
                 if (!requestRefresh)
                 {
                     if (ScoreboardManager.SpeedGolfMode)
-                        requestRefresh = newPlayerByTime != null && newPlayerByTime.scoreboardRowNeedsUpdating;
+                        requestRefresh = Utilities.IsValid(newPlayerByTime) && newPlayerByTime.scoreboardRowNeedsUpdating;
                     else
-                        requestRefresh = newPlayerByScore != null && newPlayerByScore.scoreboardRowNeedsUpdating;
+                        requestRefresh = Utilities.IsValid(newPlayerByScore) && newPlayerByScore.scoreboardRowNeedsUpdating;
                 }
 
                 if (sp < TempPlayersSortedByScore.Length && TempPlayersSortedByScore[sp].ScoreboardPositionByScore != sp)

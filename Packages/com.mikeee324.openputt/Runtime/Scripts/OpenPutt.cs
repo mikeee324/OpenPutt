@@ -7,12 +7,12 @@ using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.Common.Interfaces;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : CyanPlayerObjectPoolEventListener
     {
-        public string CurrentVersion { get; } = "0.8.3";
+        public string CurrentVersion { get; } = "0.8.4";
 
         #region References
         [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
@@ -80,11 +80,11 @@ namespace mikeee324.OpenPutt
         /// <summary>
         /// Shortcut for asking the object pool for the size of the pool.
         /// </summary>
-        public int MaxPlayerCount => objectPool != null ? objectPool.poolSize : 0;
+        public int MaxPlayerCount => Utilities.IsValid(objectPool) ? objectPool.poolSize : 0;
         /// <summary>
         /// Returns the current number of players that have started playing at least 1 course
         /// </summary>
-        public int CurrentPlayerCount => playerListManager != null && playerListManager.PlayersSortedByScore != null ? playerListManager.PlayersSortedByScore.Length : 0;
+        public int CurrentPlayerCount => Utilities.IsValid(playerListManager) && Utilities.IsValid(playerListManager.PlayersSortedByScore) ? playerListManager.PlayersSortedByScore.Length : 0;
 
         /// <summary>
         /// Keeps a reference to the PlayerManager that is assigned to the local player
@@ -104,10 +104,10 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                int score = 0;
-                foreach (CourseManager course in courses)
+                var score = 0;
+                foreach (var course in courses)
                 {
-                    if (course == null || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
                         continue;
                     score += course.maxScore;
                 }
@@ -121,10 +121,10 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                int score = 0;
-                foreach (CourseManager course in courses)
+                var score = 0;
+                foreach (var course in courses)
                 {
-                    if (course == null || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
                         continue;
                     score += course.maxTime;
                 }
@@ -138,10 +138,10 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                int score = 0;
-                foreach (CourseManager course in courses)
+                var score = 0;
+                foreach (var course in courses)
                 {
-                    if (course == null || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
                         continue;
                     score += course.parScore;
                 }
@@ -152,10 +152,10 @@ namespace mikeee324.OpenPutt
         {
             get
             {
-                int score = 0;
-                foreach (CourseManager course in courses)
+                var score = 0;
+                foreach (var course in courses)
                 {
-                    if (course == null || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
                         continue;
                     score += course.parTime;
                 }
@@ -174,14 +174,14 @@ namespace mikeee324.OpenPutt
             debugMode = true;
 #endif
 
-            if (objectPool == null || objectAssigner == null || courses.Length == 0)
+            if (!Utilities.IsValid(objectPool) || !Utilities.IsValid(objectAssigner) || courses.Length == 0)
             {
                 Utils.LogError(this, "Missing some references! Please check everything is assigned correctly in the inspector. Disabling OpenPutt..");
                 gameObject.SetActive(false);
                 return;
             }
 
-            foreach (CourseMarker marker in courseMarkers)
+            foreach (var marker in courseMarkers)
                 marker.ResetUI();
 
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
@@ -193,7 +193,7 @@ namespace mikeee324.OpenPutt
 
         public override void OnDeserialization()
         {
-            if (scoreboardManager != null)
+            if (Utilities.IsValid(scoreboardManager))
                 scoreboardManager.RefreshSettingsIfVisible();
         }
 
@@ -207,7 +207,7 @@ namespace mikeee324.OpenPutt
                 playerSyncType = PlayerSyncType.FinishOnly;
 
             // In case the refresh curve has been blanked out in unity, set up the default curve for refresh intervals
-            if (syncTimeCurve == null || syncTimeCurve.length == 0)
+            if (!Utilities.IsValid(syncTimeCurve) || syncTimeCurve.length == 0)
             {
                 syncTimeCurve = new AnimationCurve();
                 syncTimeCurve.AddKey(0f, 2f);
@@ -221,7 +221,7 @@ namespace mikeee324.OpenPutt
 
         public override void _OnLocalPlayerAssigned()
         {
-            if (LocalPlayerManager == null)
+            if (!Utilities.IsValid(LocalPlayerManager))
             {
                 Utils.LogError(this, "LocalPlayerManager not found! Something bad happened!");
             }
@@ -231,7 +231,7 @@ namespace mikeee324.OpenPutt
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            PlayerManager playerManager = allPlayerManagers[poolIndex];
+            var playerManager = allPlayerManagers[poolIndex];
 
             playerManager.openPutt = this;
 
@@ -248,7 +248,7 @@ namespace mikeee324.OpenPutt
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            PlayerManager playerManager = allPlayerManagers[poolIndex];
+            var playerManager = allPlayerManagers[poolIndex];
 
             if (player.isLocal)
                 LocalPlayerManager = null;
@@ -269,10 +269,10 @@ namespace mikeee324.OpenPutt
         public override void OnStringLoadSuccess(IVRCStringDownload result)
         {
             this.openPuttChangelog = result.Result;
-            if (this.openPuttChangelog != null && this.openPuttChangelog.Length > 0 && this.openPuttChangelog.Contains("\n"))
+            if (Utilities.IsValid(this.openPuttChangelog) && this.openPuttChangelog.Length > 0 && this.openPuttChangelog.Contains("\n"))
                 this.latestOpenPuttVer = this.openPuttChangelog.Substring(0, this.openPuttChangelog.IndexOf("\n"));
 
-            if (this.latestOpenPuttVer == null)
+            if (!Utilities.IsValid(this.latestOpenPuttVer))
                 this.latestOpenPuttVer = "";
 
             this.latestOpenPuttVer = this.latestOpenPuttVer.Trim();

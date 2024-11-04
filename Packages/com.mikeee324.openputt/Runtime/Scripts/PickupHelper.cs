@@ -3,7 +3,7 @@ using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon.Common;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class PickupHelper : UdonSharpBehaviour
@@ -13,7 +13,7 @@ namespace mikeee324.OpenPutt
         /// If there is a VRCPickup registered this will say which hand the local player is using to hold it. (<b>None/Left/Right</b>)<br/>
         /// Note: Desktop users usually report VRCPickup.PickupHand.Right when they are holding an object
         /// </summary>
-        public VRCPickup.PickupHand CurrentHand => _currentHand;
+        public VRC_Pickup.PickupHand CurrentHand => _currentHand;
         public bool LeftUseButtonDown { get; private set; }
         public bool RightUseButtonDown { get; private set; }
         public bool LeftGripButtonDown { get; private set; }
@@ -27,12 +27,12 @@ namespace mikeee324.OpenPutt
 
         #region Internal Vars
         private VRCPickup pickup;
-        private VRCPickup.PickupHand _currentHand = VRC_Pickup.PickupHand.None;
+        private VRC_Pickup.PickupHand _currentHand = VRC_Pickup.PickupHand.None;
         #endregion
 
         void Start()
         {
-            if (pickup == null)
+            if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
 
             moveHorizontalAxis = 0f;
@@ -43,22 +43,22 @@ namespace mikeee324.OpenPutt
 
         public void Drop()
         {
-            if (pickup != null)
+            if (Utilities.IsValid(pickup))
                 pickup.Drop();
         }
 
         public override void OnPickup()
         {
             // Check if Player is still holding item (Scripts could force the object to be dropped)
-            if (pickup != null && pickup.IsHeld && pickup.currentPlayer == Networking.LocalPlayer)
+            if (Utilities.IsValid(pickup) && pickup.IsHeld && pickup.currentPlayer == Networking.LocalPlayer)
                 _currentHand = pickup.currentHand;
             else
-                _currentHand = VRCPickup.PickupHand.None;
+                _currentHand = VRC_Pickup.PickupHand.None;
         }
 
         public override void OnDrop()
         {
-            _currentHand = VRCPickup.PickupHand.None;
+            _currentHand = VRC_Pickup.PickupHand.None;
         }
 
         public override void InputGrab(bool value, UdonInputEventArgs args)

@@ -6,8 +6,9 @@ using UnityEngine.UI;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using Random = UnityEngine.Random;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public enum ScoreboardView
     {
@@ -55,7 +56,7 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI updateAvailableLabel;
         public TextMeshProUGUI changelogText;
 
-        public UnityEngine.UI.Image scoreboardBackground;
+        public Image scoreboardBackground;
 
         public Slider clubPowerSlider;
         public TextMeshProUGUI clubPowerValueLabel;
@@ -68,7 +69,7 @@ namespace mikeee324.OpenPutt
         public Slider ballRColorSlider;
         public Slider ballGColorSlider;
         public Slider ballBColorSlider;
-        public UnityEngine.UI.Image ballColorPreview;
+        public Image ballColorPreview;
 
         #region Dev Mode Stuff
         public TextMeshProUGUI devModeLastClubHitSpeed;
@@ -91,12 +92,12 @@ namespace mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
         public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
-        public UnityEngine.UI.Image devModeExperimentalClubColliderCheckbox;
-        public UnityEngine.UI.Image devModeSmoothDirClubColliderCheckbox;
-        public UnityEngine.UI.Image devModeForAllCheckbox;
-        public UnityEngine.UI.Image footColliderCheckbox;
-        public UnityEngine.UI.Image clubRendererCheckbox;
-        public UnityEngine.UI.Image clubHeadDirectionCheckbox;
+        public Image devModeExperimentalClubColliderCheckbox;
+        public Image devModeSmoothDirClubColliderCheckbox;
+        public Image devModeForAllCheckbox;
+        public Image footColliderCheckbox;
+        public Image clubRendererCheckbox;
+        public Image clubHeadDirectionCheckbox;
         public Dropdown devModeColliderVelTypeDropdown;
         public Dropdown devModeClubColliderTypeDropdown;
         public Dropdown devModeBallColliderTypeDropdown;
@@ -105,13 +106,13 @@ namespace mikeee324.OpenPutt
 
         public GameObject desktopModeBox;
 
-        public UnityEngine.UI.Image verticalHitsCheckbox;
-        public UnityEngine.UI.Image isPlayingCheckbox;
-        public UnityEngine.UI.Image leftHandModeCheckbox;
-        public UnityEngine.UI.Image enableBigShaftCheckbox;
-        public UnityEngine.UI.Image courseReplaysCheckbox;
-        public UnityEngine.UI.Image invertCameraXCheckbox;
-        public UnityEngine.UI.Image invertCameraYCheckbox;
+        public Image verticalHitsCheckbox;
+        public Image isPlayingCheckbox;
+        public Image leftHandModeCheckbox;
+        public Image enableBigShaftCheckbox;
+        public Image courseReplaysCheckbox;
+        public Image invertCameraXCheckbox;
+        public Image invertCameraYCheckbox;
         public Material checkboxOn;
         public Material checkboxOff;
         public Button resetButton;
@@ -130,7 +131,7 @@ namespace mikeee324.OpenPutt
         private float totalHeightOfScrollViewport = 0f;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
 
-        public int NumberOfColumns => manager != null && manager.openPutt != null ? manager.openPutt.courses.Length + 2 : 0;
+        public int NumberOfColumns => Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.courses.Length + 2 : 0;
         [HideInInspector]
         public int MaxVisibleRowCount = 12;
 
@@ -201,21 +202,21 @@ namespace mikeee324.OpenPutt
                     }
 
                     // Toggle extra canvases (parent canvas.enabled doesn't seem to be passed down properly)
-                    if (scoreboardCanvas != null)
+                    if (Utilities.IsValid(scoreboardCanvas))
                     {
-                        if (playerListCanvas != null)
+                        if (Utilities.IsValid(playerListCanvas))
                             playerListCanvas.enabled = scoreboardCanvas.enabled;
-                        if (topRowCanvas != null)
+                        if (Utilities.IsValid(topRowCanvas))
                             topRowCanvas.enabled = scoreboardCanvas.enabled;
-                        if (parRowCanvas != null)
+                        if (Utilities.IsValid(parRowCanvas))
                             parRowCanvas.enabled = scoreboardCanvas.enabled;
 
-                        for (int i = 0; i < scoreboardRows.Length; i++)
-                            if (manager.CurrentPlayerList != null && i < manager.CurrentPlayerList.Length)
+                        for (var i = 0; i < scoreboardRows.Length; i++)
+                            if (Utilities.IsValid(manager.CurrentPlayerList) && i < manager.CurrentPlayerList.Length)
                                 scoreboardRows[i].UpdateVisibility(manager.CurrentPlayerList[i]);
                     }
 
-                    if (manager != null)
+                    if (Utilities.IsValid(manager))
                         manager.requestedScoreboardView = value;
 
                     if (manager.devModeTaps < 30 && value != ScoreboardView.Settings)
@@ -229,36 +230,36 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (manager == null || manager.openPutt == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt))
             {
                 Utils.LogError(this, "Missing references to manager or OpenPutt! Disabling this scoreboard.");
                 gameObject.SetActive(false);
                 return;
             }
 
-            if (topRowCanvas == null)
+            if (!Utilities.IsValid(topRowCanvas))
                 topRowCanvas = topRowPanel.transform.GetChild(0).GetComponent<Canvas>();
-            if (parRowCanvas == null)
+            if (!Utilities.IsValid(parRowCanvas))
                 parRowCanvas = parRowPanel.transform.GetChild(0).GetComponent<Canvas>();
 
             CurrentScoreboardView = ScoreboardView.Info;
 
             // This is here because i haven't figured out how to make editor scripts properly yet
             scoreboardRows = new ScoreboardPlayerRow[playerListCanvas.transform.childCount];
-            for (int i = 0; i < playerListCanvas.transform.childCount; i++)
+            for (var i = 0; i < playerListCanvas.transform.childCount; i++)
                 scoreboardRows[i] = playerListCanvas.transform.GetChild(i).GetComponent<ScoreboardPlayerRow>();
 
             // Make sure that the scoreboard has basically no thickness so the laser pointer works properly
-            if (rectTransform == null)
+            if (!Utilities.IsValid(rectTransform))
                 rectTransform = transform.GetChild(0).GetComponent<RectTransform>();
-            if (rectTransform != null)
+            if (Utilities.IsValid(rectTransform))
             {
-                Vector3 scoreboardScale = rectTransform.localScale;
+                var scoreboardScale = rectTransform.localScale;
                 if (scoreboardScale.z != 0.01f)
                     rectTransform.localScale = new Vector3(scoreboardScale.x, scoreboardScale.y, 0.01f);
             }
 
-            if (creditsText != null)
+            if (Utilities.IsValid(creditsText))
             {
                 creditsText.text = creditsText.text.Replace("{OpenPuttCurrVer}", manager.openPutt.CurrentVersion);
             }
@@ -283,10 +284,10 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void RefreshSettingsMenu()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
             clubPowerSlider.value = playerManager.golfClub.forceMultiplier;
             clubPowerValueLabel.text = String.Format("{0:F2}x", clubPowerSlider.value);
@@ -295,9 +296,9 @@ namespace mikeee324.OpenPutt
             sfxVolumeValueLabel.text = String.Format("{0:P0}", sfxVolumeSlider.value);
 
             // Just use the first audio source volume
-            foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.BGMAudioSources)
             {
-                if (audioSource == null) continue;
+                if (!Utilities.IsValid(audioSource)) continue;
                 bgmVolumeSlider.value = audioSource.volume;
                 bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
                 break;
@@ -305,16 +306,16 @@ namespace mikeee324.OpenPutt
             bgmVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.BGMAudioSources.Length > 0);
 
             // Just use the first audio source volume
-            foreach (AudioSource audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.WorldAudioSources)
             {
-                if (audioSource == null) continue;
+                if (!Utilities.IsValid(audioSource)) continue;
                 worldVolumeSlider.value = audioSource.volume;
                 worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
                 break;
             }
             worldVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.WorldAudioSources.Length > 0);
 
-            Color color = playerManager.BallColor;
+            var color = playerManager.BallColor;
 
             ballRColorSlider.value = color.r;
             ballGColorSlider.value = color.g;
@@ -329,26 +330,26 @@ namespace mikeee324.OpenPutt
             leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
 
-            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+            var cameraManager = manager.openPutt.desktopModeCameraController;
             invertCameraXCheckbox.material = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
             invertCameraYCheckbox.material = cameraManager.invertCameraY ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             ballColorPreview.color = playerManager.BallColor;
         }
 
         public void OnClubPowerChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.forceMultiplier = clubPowerSlider.value;
 
             clubPowerValueLabel.text = String.Format("{0:F2}x", clubPowerSlider.value);
@@ -356,10 +357,10 @@ namespace mikeee324.OpenPutt
 
         public void OnClubPowerReset()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.forceMultiplier = 1f;
 
             RefreshSettingsMenu();
@@ -367,7 +368,7 @@ namespace mikeee324.OpenPutt
 
         public void OnSFXVolumeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
             manager.openPutt.SFXController.Volume = sfxVolumeSlider.value;
@@ -377,7 +378,7 @@ namespace mikeee324.OpenPutt
 
         public void OnSFXVolumeReset()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
             manager.openPutt.SFXController.Volume = 1f;
@@ -387,10 +388,10 @@ namespace mikeee324.OpenPutt
 
         public void OnBGMVolumeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.BGMAudioSources)
                 audioSource.volume = bgmVolumeSlider.value;
 
             bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
@@ -398,10 +399,10 @@ namespace mikeee324.OpenPutt
 
         public void OnBGMVolumeReset()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (AudioSource audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.BGMAudioSources)
                 audioSource.volume = 1f;
 
             RefreshSettingsMenu();
@@ -409,10 +410,10 @@ namespace mikeee324.OpenPutt
 
         public void OnWorldVolumeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (AudioSource audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.WorldAudioSources)
                 audioSource.volume = worldVolumeSlider.value;
 
             worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
@@ -420,10 +421,10 @@ namespace mikeee324.OpenPutt
 
         public void OnWorldVolumeReset()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (AudioSource audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.WorldAudioSources)
                 audioSource.volume = 1f;
 
             RefreshSettingsMenu();
@@ -431,10 +432,10 @@ namespace mikeee324.OpenPutt
 
         public void OnBallColorChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
             // Set the new ball colour
             playerManager.BallColor = new Color(ballRColorSlider.value, ballGColorSlider.value, ballBColorSlider.value);
@@ -448,12 +449,12 @@ namespace mikeee324.OpenPutt
 
         public void OnBallColorReset()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
-            playerManager.BallColor = new Color(UnityEngine.Random.Range(0, 1f), UnityEngine.Random.Range(0, 1f), UnityEngine.Random.Range(0, 1f));
+            playerManager.BallColor = new Color(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
 
             RefreshSettingsMenu();
 
@@ -464,12 +465,12 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleVerticalHits()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
             if (Networking.LocalPlayer.isMaster)
             {
-                PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+                var playerManager = manager.openPutt.LocalPlayerManager;
 
                 playerManager.openPutt.enableVerticalHits = !playerManager.openPutt.enableVerticalHits;
 
@@ -481,10 +482,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleExperimentalClub()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
             playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
 
@@ -493,10 +494,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleInvertCameraX()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+            var cameraManager = manager.openPutt.desktopModeCameraController;
 
             cameraManager.invertCameraX = !cameraManager.invertCameraX;
 
@@ -505,10 +506,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleInvertCameraY()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            DesktopModeCameraController cameraManager = manager.openPutt.desktopModeCameraController;
+            var cameraManager = manager.openPutt.desktopModeCameraController;
 
             cameraManager.invertCameraY = !cameraManager.invertCameraY;
 
@@ -517,11 +518,11 @@ namespace mikeee324.OpenPutt
 
         public void OnColliderVelocityTypeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
-            int val = devModeColliderVelTypeDropdown.value;
+            var playerManager = manager.openPutt.LocalPlayerManager;
+            var val = devModeColliderVelTypeDropdown.value;
             playerManager.golfClub.putter.velocityCalculationType = (ClubColliderVelocityType)val;
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(val == 1);
@@ -532,11 +533,11 @@ namespace mikeee324.OpenPutt
 
         public void OnClubColliderTypeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
-            int val = devModeClubColliderTypeDropdown.value;
+            var playerManager = manager.openPutt.LocalPlayerManager;
+            var val = devModeClubColliderTypeDropdown.value;
             switch (val)
             {
                 case 0:
@@ -558,11 +559,11 @@ namespace mikeee324.OpenPutt
 
         public void OnBallColliderTypeChanged()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
-            int val = devModeBallColliderTypeDropdown.value;
+            var playerManager = manager.openPutt.LocalPlayerManager;
+            var val = devModeBallColliderTypeDropdown.value;
 
             switch (val)
             {
@@ -585,12 +586,12 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleClubRenderer()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
-            bool isActive = playerManager.golfClubVisualiser.gameObject.activeInHierarchy;
+            var isActive = playerManager.golfClubVisualiser.gameObject.activeInHierarchy;
 
             playerManager.golfClubVisualiser.gameObject.SetActive(!isActive);
 
@@ -599,10 +600,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleClubHeadDirection()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
             playerManager.golfClubHead.useClubHeadDirection = !playerManager.golfClubHead.useClubHeadDirection;
 
@@ -611,10 +612,10 @@ namespace mikeee324.OpenPutt
 
         public void OnTogglePlayerManager()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.isPlaying = !playerManager.isPlaying;
 
             if (playerManager.isPlaying)
@@ -625,21 +626,21 @@ namespace mikeee324.OpenPutt
             else
             {
                 // Drop the shoulder objects and set them back to Vector3.zero
-                GameObject attachedObject = playerManager.openPutt.leftShoulderPickup.ObjectToAttach;
+                var attachedObject = playerManager.openPutt.leftShoulderPickup.ObjectToAttach;
                 VRCPickup pickup;
-                if (attachedObject != null)
+                if (Utilities.IsValid(attachedObject))
                 {
                     pickup = attachedObject.GetComponent<VRCPickup>();
-                    if (pickup != null)
+                    if (Utilities.IsValid(pickup))
                         pickup.Drop();
 
                     attachedObject.transform.localPosition = Vector3.zero;
                 }
                 attachedObject = playerManager.openPutt.rightShoulderPickup.ObjectToAttach;
-                if (attachedObject != null)
+                if (Utilities.IsValid(attachedObject))
                 {
                     pickup = attachedObject.GetComponent<VRCPickup>();
-                    if (pickup != null)
+                    if (Utilities.IsValid(pickup))
                         pickup.Drop();
 
                     attachedObject.transform.localPosition = Vector3.zero;
@@ -647,10 +648,10 @@ namespace mikeee324.OpenPutt
 
                 //Drop the BodyMountedObjects
                 pickup = playerManager.openPutt.leftShoulderPickup.gameObject.GetComponent<VRCPickup>();
-                if (pickup != null)
+                if (Utilities.IsValid(pickup))
                     pickup.Drop();
                 pickup = playerManager.openPutt.rightShoulderPickup.gameObject.GetComponent<VRCPickup>();
-                if (pickup != null)
+                if (Utilities.IsValid(pickup))
                     pickup.Drop();
 
                 // Disable the pickups
@@ -668,10 +669,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleUnlimitedShaftSize()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.enableBigShaft = !playerManager.golfClub.enableBigShaft;
 
             RefreshSettingsMenu();
@@ -679,10 +680,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleLeftHand()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.IsInLeftHandedMode = !playerManager.IsInLeftHandedMode;
 
             RefreshSettingsMenu();
@@ -690,12 +691,12 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleDevModeForAll()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.devModePlayerWhitelist == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.devModePlayerWhitelist))
                 return;
 
-            string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+            var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
-            if (localPlayerName != null && manager.openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+            if (Utilities.IsValid(localPlayerName) && manager.openPutt.devModePlayerWhitelist.Contains(localPlayerName))
             {
                 Utils.SetOwner(Networking.LocalPlayer, manager.openPutt.gameObject);
                 manager.openPutt.enableDevModeForAll = !manager.openPutt.enableDevModeForAll;
@@ -707,7 +708,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleFootCollider()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.footCollider == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.footCollider))
                 return;
 
             manager.openPutt.footCollider.gameObject.SetActive(!manager.openPutt.footCollider.gameObject.activeSelf);
@@ -722,10 +723,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleExperimental()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
 
             RefreshDevModeMenu();
@@ -733,10 +734,10 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleSmoothDir()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.putter.smoothedHitDirection = !playerManager.golfClub.putter.smoothedHitDirection;
 
             RefreshDevModeMenu();
@@ -744,7 +745,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleCourseReplays()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
             if (Networking.LocalPlayer.isMaster)
@@ -759,7 +760,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleSettings()
         {
-            if (manager != null)
+            if (Utilities.IsValid(manager))
             {
                 manager.devModeTaps++;
                 manager.requestedScoreboardView = ScoreboardView.Settings;
@@ -770,7 +771,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleDevMode()
         {
-            if (manager != null)
+            if (Utilities.IsValid(manager))
             {
                 manager.requestedScoreboardView = ScoreboardView.DevMode;
                 manager.OnPlayerOpenSettings(this);
@@ -780,7 +781,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleInfo()
         {
-            if (manager != null)
+            if (Utilities.IsValid(manager))
             {
                 manager.requestedScoreboardView = ScoreboardView.Info;
             }
@@ -790,12 +791,12 @@ namespace mikeee324.OpenPutt
 
         public void OnShowPrefabInfo()
         {
-            if (manager != null)
+            if (Utilities.IsValid(manager))
             {
                 manager.requestedScoreboardView = ScoreboardView.OpenPutt;
 
-                string latest = manager.openPutt.latestOpenPuttVer;
-                string current = manager.openPutt.CurrentVersion;
+                var latest = manager.openPutt.latestOpenPuttVer;
+                var current = manager.openPutt.CurrentVersion;
 
                 if (current.Length > 0 && latest.Length > 0)
                 {
@@ -813,7 +814,7 @@ namespace mikeee324.OpenPutt
 
         public void OnToggleTimerMode()
         {
-            if (manager == null) return;
+            if (!Utilities.IsValid(manager)) return;
 
             manager.SpeedGolfMode = true;
             if (parRowPanel.transform.childCount > 0)
@@ -825,7 +826,7 @@ namespace mikeee324.OpenPutt
 
         public void OnShowScoreboard()
         {
-            if (manager == null) return;
+            if (!Utilities.IsValid(manager)) return;
 
             manager.SpeedGolfMode = false;
             if (parRowPanel.transform.childCount > 0)
@@ -844,25 +845,25 @@ namespace mikeee324.OpenPutt
 
         public void OnResetConfirm()
         {
-            if (manager == null || manager.openPutt == null) return;
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt)) return;
 
-            PlayerManager pm = manager.openPutt.LocalPlayerManager;
-            if (pm != null)
+            var pm = manager.openPutt.LocalPlayerManager;
+            if (Utilities.IsValid(pm))
             {
                 pm.ResetPlayerScores();
 
-                if (pm.golfClub != null)
+                if (Utilities.IsValid(pm.golfClub))
                 {
-                    if (pm.golfClub.pickup != null)
+                    if (Utilities.IsValid(pm.golfClub.pickup))
                         pm.golfClub.pickup.Drop();
-                    if (pm.golfClub.puttSync != null)
+                    if (Utilities.IsValid(pm.golfClub.puttSync))
                         pm.golfClub.puttSync.Respawn();
                 }
-                if (pm.golfBall != null)
+                if (Utilities.IsValid(pm.golfBall))
                 {
                     if (pm.golfBall.GetComponent<VRCPickup>() != null)
                         pm.golfBall.GetComponent<VRCPickup>().Drop();
-                    if (pm.golfClub.puttSync != null)
+                    if (Utilities.IsValid(pm.golfClub.puttSync))
                         pm.golfClub.puttSync.Respawn();
                     pm.golfBall.BallIsMoving = false;
                 }
@@ -891,10 +892,10 @@ namespace mikeee324.OpenPutt
         #region Dev Mode UI Functions
         public void RefreshDevModeMenu()
         {
-            if (manager == null || manager.openPutt == null || manager.openPutt.LocalPlayerManager == null)
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            PlayerManager playerManager = manager.openPutt.LocalPlayerManager;
+            var playerManager = manager.openPutt.LocalPlayerManager;
 
             devModeBallWeightSlider.value = playerManager.golfBall.BallWeight;
             devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
@@ -937,9 +938,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallWeightReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallWeight = player.golfBall.DefaultBallWeight;
 
@@ -948,9 +949,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallWeightChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallWeight = devModeBallWeightSlider.value;
             devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
@@ -958,9 +959,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubWaitFramesReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.hitWaitFrames = 2;
 
@@ -969,9 +970,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubWaitFramesChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.hitWaitFrames = Mathf.RoundToInt(devModeClubWaitSlider.value);
             devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
@@ -979,9 +980,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubHitBackstepReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
@@ -990,9 +991,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubHitBackstepChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.multiFrameAverageMaxBacksteps = Mathf.RoundToInt(devModeClubBackstepSlider.value);
             devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
@@ -1000,9 +1001,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubHitVelSmoothReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
@@ -1011,9 +1012,9 @@ namespace mikeee324.OpenPutt
 
         public void OnClubHitVelSmoothChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfClub.putter.singleFrameSmoothFactor = devModeClubVelSmoothSlider.value;
             devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
@@ -1021,9 +1022,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallFrictionReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallFriction = player.golfBall.DefaultBallFriction;
 
@@ -1032,9 +1033,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallFrictionChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallFriction = devModeBallFrictionSlider.value;
             devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
@@ -1042,9 +1043,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallADragReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallAngularDrag = player.golfBall.DefaultBallAngularDrag;
 
@@ -1053,9 +1054,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallADragChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallAngularDrag = devModeBallADragSlider.value;
             devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
@@ -1063,9 +1064,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallDragReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallDrag = player.golfBall.DefaultBallDrag;
 
@@ -1074,9 +1075,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallDragChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             var roundedVal = String.Format("{0:F3}", devModeBallDragSlider.value);
 
@@ -1086,9 +1087,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallMaxSpeedReset()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallMaxSpeed = player.golfBall.DefaultBallMaxSpeed;
 
@@ -1097,9 +1098,9 @@ namespace mikeee324.OpenPutt
 
         public void OnBallMaxSpeedChanged()
         {
-            PlayerManager player = manager.openPutt.LocalPlayerManager;
+            var player = manager.openPutt.LocalPlayerManager;
 
-            if (player == null) return;
+            if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallMaxSpeed = devModeBallMaxSpeedSlider.value;
             devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
@@ -1110,7 +1111,7 @@ namespace mikeee324.OpenPutt
         {
             Canvas.ForceUpdateCanvases();
 
-            if (target == null)
+            if (!Utilities.IsValid(target))
                 scrollRect.content.anchoredPosition = Vector2.zero;
             else
                 scrollRect.content.anchoredPosition =
@@ -1121,48 +1122,48 @@ namespace mikeee324.OpenPutt
         public void UpdateTabColours()
         {
             // Update Tab Background Colours
-            Color defaultBackground = Color.clear;
-            Color selectedBackground = Color.white;
+            var defaultBackground = Color.clear;
+            var selectedBackground = Color.white;
 
-            Color newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager == null || !manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
-            Color newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (manager != null && manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
-            Color newInfoCol = _currentScoreboardView == ScoreboardView.Info ? selectedBackground : defaultBackground;
-            Color newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? selectedBackground : defaultBackground;
-            Color newDevModeCol = _currentScoreboardView == ScoreboardView.DevMode ? selectedBackground : defaultBackground;
-            Color newOpenPuttCol = _currentScoreboardView == ScoreboardView.OpenPutt ? selectedBackground : defaultBackground;
+            var newScoreboardCol = _currentScoreboardView == ScoreboardView.Scoreboard && (!Utilities.IsValid(manager) || !manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
+            var newSpeedrunCol = _currentScoreboardView == ScoreboardView.Scoreboard && (Utilities.IsValid(manager) && manager.SpeedGolfMode) ? selectedBackground : defaultBackground;
+            var newInfoCol = _currentScoreboardView == ScoreboardView.Info ? selectedBackground : defaultBackground;
+            var newSettingsCol = _currentScoreboardView == ScoreboardView.Settings ? selectedBackground : defaultBackground;
+            var newDevModeCol = _currentScoreboardView == ScoreboardView.DevMode ? selectedBackground : defaultBackground;
+            var newOpenPuttCol = _currentScoreboardView == ScoreboardView.OpenPutt ? selectedBackground : defaultBackground;
 
             if (scoreboardTabBackground.colors.normalColor != newScoreboardCol)
             {
-                ColorBlock colorBlock = scoreboardTabBackground.colors;
+                var colorBlock = scoreboardTabBackground.colors;
                 colorBlock.normalColor = newScoreboardCol;
                 scoreboardTabBackground.colors = colorBlock;
             }
             if (scoreboardTimerTabBackground.colors.normalColor != newSpeedrunCol)
             {
-                ColorBlock colorBlock = scoreboardTimerTabBackground.colors;
+                var colorBlock = scoreboardTimerTabBackground.colors;
                 colorBlock.normalColor = newSpeedrunCol;
                 scoreboardTimerTabBackground.colors = colorBlock;
             }
             if (infoTabBackground.colors.normalColor != newInfoCol)
             {
-                ColorBlock colorBlock = infoTabBackground.colors;
+                var colorBlock = infoTabBackground.colors;
                 colorBlock.normalColor = newInfoCol;
                 infoTabBackground.colors = colorBlock;
             }
             if (settingsTabBackground.colors.normalColor != newSettingsCol)
             {
-                ColorBlock colorBlock = settingsTabBackground.colors;
+                var colorBlock = settingsTabBackground.colors;
                 colorBlock.normalColor = newSettingsCol;
                 settingsTabBackground.colors = colorBlock;
             }
             if (openPuttTabBackground.colors.normalColor != newOpenPuttCol)
             {
-                ColorBlock colorBlock = openPuttTabBackground.colors;
+                var colorBlock = openPuttTabBackground.colors;
                 colorBlock.normalColor = newOpenPuttCol;
                 openPuttTabBackground.colors = colorBlock;
             }
 
-            bool devModeEnabled = manager.LocalPlayerCanAccessDevMode || manager.LocalPlayerCanAccessToolbox;
+            var devModeEnabled = manager.LocalPlayerCanAccessDevMode || manager.LocalPlayerCanAccessToolbox;
             devModeTabBackground.gameObject.SetActive(devModeEnabled);
             
             rightTabsPanel.sizeDelta = new Vector2(devModeEnabled ? 1.01f : .81f, rightTabsPanel.sizeDelta.y);
@@ -1171,7 +1172,7 @@ namespace mikeee324.OpenPutt
 
             if (devModeTabBackground.colors.normalColor != newDevModeCol)
             {
-                ColorBlock colorBlock = devModeTabBackground.colors;
+                var colorBlock = devModeTabBackground.colors;
                 colorBlock.normalColor = newDevModeCol;
                 devModeTabBackground.colors = colorBlock;
             }
@@ -1179,23 +1180,23 @@ namespace mikeee324.OpenPutt
 
         public void UpdateViewportHeight()
         {
-            RectTransform scoreboardPanel = GetComponent<RectTransform>();
+            var scoreboardPanel = GetComponent<RectTransform>();
 
             // Update size of canvas so scrollviews work
-            RectTransform playerListRect = playerListCanvas.GetComponent<RectTransform>();
+            var playerListRect = playerListCanvas.GetComponent<RectTransform>();
 
             // Get the total height of the player canvas view
-            if (scoreboardPanel != null && scoreboardHeader != null && topRowPanel != null && parRowPanel != null)
+            if (Utilities.IsValid(scoreboardPanel) && Utilities.IsValid(scoreboardHeader) && Utilities.IsValid(topRowPanel) && Utilities.IsValid(parRowPanel))
                 totalHeightOfScrollViewport = scoreboardPanel.sizeDelta.y - scoreboardHeader.sizeDelta.y - topRowPanel.sizeDelta.y - parRowPanel.sizeDelta.y;
 
-            if (scoreboardPanel != null && scoreboardHeader != null && topRowPanel != null && parRowPanel != null)
+            if (Utilities.IsValid(scoreboardPanel) && Utilities.IsValid(scoreboardHeader) && Utilities.IsValid(topRowPanel) && Utilities.IsValid(parRowPanel))
             {
                 // Work out how many rows we can fit in that height
                 MaxVisibleRowCount = (int)Math.Floor(totalHeightOfScrollViewport / (rowHeight + rowPadding));
                 if ((rowHeight + rowPadding) * MaxVisibleRowCount > totalHeightOfScrollViewport)
                     MaxVisibleRowCount--;
 
-                float totalHeightOfAllRows = (rowHeight + rowPadding) * (manager.CurrentPlayerList != null ? manager.CurrentPlayerList.Length : MaxVisibleRowCount);
+                var totalHeightOfAllRows = (rowHeight + rowPadding) * (Utilities.IsValid(manager.CurrentPlayerList) ? manager.CurrentPlayerList.Length : MaxVisibleRowCount);
                 playerListRect.sizeDelta = new Vector2(playerListRect.sizeDelta.x, totalHeightOfAllRows);
 
                 UpdateScrollableState();
@@ -1208,13 +1209,13 @@ namespace mikeee324.OpenPutt
         private void UpdateScrollableState()
         {
             // Toggle scrollview if the players list is taller than the viewport
-            ScrollRect scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
+            var scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
 
-            PlayerManager[] activePlayers = manager.CurrentPlayerList;
-            if (activePlayers == null || activePlayers.Length == 0)
+            var activePlayers = manager.CurrentPlayerList;
+            if (!Utilities.IsValid(activePlayers) || activePlayers.Length == 0)
                 return;
 
-            bool scrollableState = (rowHeight + rowPadding) * activePlayers.Length > totalHeightOfScrollViewport;
+            var scrollableState = (rowHeight + rowPadding) * activePlayers.Length > totalHeightOfScrollViewport;
             if (scrollRect.enabled != scrollableState)
             {
                 scrollRect.enabled = scrollableState;
@@ -1224,8 +1225,8 @@ namespace mikeee324.OpenPutt
                     SnapTo(scrollRect, null);
 
                 // Toggle raycast target depending on scrollRect state
-                UnityEngine.UI.Image scrollPanel = playerListCanvas.transform.parent.GetComponent<UnityEngine.UI.Image>();
-                if (scrollPanel != null)
+                var scrollPanel = playerListCanvas.transform.parent.GetComponent<Image>();
+                if (Utilities.IsValid(scrollPanel))
                     scrollPanel.raycastTarget = scrollRect.enabled;
             }
         }
@@ -1236,21 +1237,21 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void ScrollToLocalPlayer()
         {
-            ScrollRect scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
+            var scrollRect = playerListCanvas.transform.parent.GetComponent<ScrollRect>();
             // If this is the local players row, and we need to scroll to their position
-            if (scrollRect != null && scrollRect.enabled)
+            if (Utilities.IsValid(scrollRect) && scrollRect.enabled)
             {
-                PlayerManager[] activePlayers = manager.CurrentPlayerList;
-                if (activePlayers == null || activePlayers.Length == 0)
+                var activePlayers = manager.CurrentPlayerList;
+                if (!Utilities.IsValid(activePlayers) || activePlayers.Length == 0)
                     return;
 
-                for (int position = 0; position < activePlayers.Length; position++)
+                for (var position = 0; position < activePlayers.Length; position++)
                 {
-                    if (activePlayers[position].Owner != null && activePlayers[position].Owner == Networking.LocalPlayer)
+                    if (Utilities.IsValid(activePlayers[position].Owner) && activePlayers[position].Owner == Networking.LocalPlayer)
                     {
                         // Find the row transform
-                        Transform newRow = playerListCanvas.transform.GetChild(position);
-                        if (newRow != null)
+                        var newRow = playerListCanvas.transform.GetChild(position);
+                        if (Utilities.IsValid(newRow))
                             SnapTo(scrollRect, newRow); // Snap the ScrollView to this position so the local player is in view
                     }
                 }
@@ -1266,25 +1267,25 @@ namespace mikeee324.OpenPutt
     {
         public static ScoreboardPlayerRow CreateRow(this Scoreboard scoreboard, int rowID, RectTransform parent = null)
         {
-            int scoreboardColumnCount = scoreboard.manager.openPutt.courses.Length + 2; // + Name + Total
-            RectTransform newRow = GameObject.Instantiate(scoreboard.manager.rowPrefab).GetComponent<RectTransform>();
+            var scoreboardColumnCount = scoreboard.manager.openPutt.courses.Length + 2; // + Name + Total
+            var newRow = GameObject.Instantiate(scoreboard.manager.rowPrefab).GetComponent<RectTransform>();
 
-            ScoreboardPlayerRow row = newRow.GetComponent<ScoreboardPlayerRow>();
+            var row = newRow.GetComponent<ScoreboardPlayerRow>();
             row.name = $"Player {rowID}";
             row.gameObject.SetActive(true);
             row.rowCanvas = row.GetComponent<Canvas>();
             row.scoreboard = scoreboard;
-            //if (parent == null)
+            //if (!Utilities.IsValid(parent))
             //    row.player = scoreboard.manager.openPutt.objectAssigner.transform.GetChild(rowID).GetComponent<PlayerManager>();
             row.rectTransform = newRow;
             row.columns = new ScoreboardPlayerColumn[scoreboardColumnCount];
 
             row.rectTransform.anchoredPosition = new Vector3(0f, -(scoreboard.rowHeight + scoreboard.rowPadding) * rowID);
 
-            float columnXOffset = 0f;
-            for (int col = 0; col < scoreboardColumnCount; col++)
+            var columnXOffset = 0f;
+            for (var col = 0; col < scoreboardColumnCount; col++)
             {
-                RectTransform rect = GameObject.Instantiate(scoreboard.manager.colPrefab).GetComponent<RectTransform>();
+                var rect = GameObject.Instantiate(scoreboard.manager.colPrefab).GetComponent<RectTransform>();
 
                 if (col == 0)
                     rect.name = "Player Name";
@@ -1293,9 +1294,9 @@ namespace mikeee324.OpenPutt
                 else
                     rect.name = $"Course {col}";
 
-                ScoreboardPlayerColumn rowCol = rect.GetComponent<ScoreboardPlayerColumn>();
+                var rowCol = rect.GetComponent<ScoreboardPlayerColumn>();
                 rowCol.scoreboardRow = row;
-                rowCol.colBackground = rect.GetComponent<UnityEngine.UI.Image>();
+                rowCol.colBackground = rect.GetComponent<Image>();
                 rowCol.colText = rect.GetChild(0).GetComponent<TextMeshProUGUI>();
                 row.columns[col] = rowCol;
 
@@ -1312,7 +1313,7 @@ namespace mikeee324.OpenPutt
                 }
                 else
                 {
-                    float widthForEachHole = (scoreboard.rectTransform.sizeDelta.x - scoreboard.nameColumnWidth - scoreboard.totalColumnWidth - (scoreboard.columnPadding * (scoreboardColumnCount - 1))) / (scoreboardColumnCount - 2);
+                    var widthForEachHole = (scoreboard.rectTransform.sizeDelta.x - scoreboard.nameColumnWidth - scoreboard.totalColumnWidth - (scoreboard.columnPadding * (scoreboardColumnCount - 1))) / (scoreboardColumnCount - 2);
                     rect.sizeDelta = new Vector2(widthForEachHole, scoreboard.rowHeight);
                 }
 
@@ -1322,13 +1323,13 @@ namespace mikeee324.OpenPutt
             }
 
             // Position this row in the list
-            if (parent == null)
+            if (!Utilities.IsValid(parent))
                 newRow.SetParent(scoreboard.playerListCanvas.GetComponent<RectTransform>(), false);
             else
                 newRow.SetParent(parent, false);
 
 
-            if (parent == null && rowID < scoreboard.scoreboardRows.Length)
+            if (!Utilities.IsValid(parent) && rowID < scoreboard.scoreboardRows.Length)
                 scoreboard.scoreboardRows[rowID] = row;
 
             return row;

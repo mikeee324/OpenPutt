@@ -1,9 +1,8 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class BGMController : UdonSharpBehaviour
@@ -22,10 +21,10 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (audioSource == null)
+            if (!Utilities.IsValid(audioSource))
                 audioSource = GetComponent<AudioSource>();
 
-            if (audioSource == null)
+            if (!Utilities.IsValid(audioSource))
             {
                 Utils.Log(this, "Could not find the audio source to control! Disabling myself...");
                 this.enabled = false;
@@ -46,7 +45,7 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public void TryStartNextTrack()
         {
-            if (audioSource == null)
+            if (!Utilities.IsValid(audioSource))
                 return;
 
             // Check every 250ms
@@ -90,7 +89,7 @@ namespace mikeee324.OpenPutt
 
         public override void OnDeserialization()
         {
-            if (audioSource == null || !isSynced)
+            if (!Utilities.IsValid(audioSource) || !isSynced)
                 return;
 
             Utils.Log(this, $"Received a clip to play! It started playing {Networking.GetServerTimeInMilliseconds() - currentTrackStartedTime}ms ago for the owner.");

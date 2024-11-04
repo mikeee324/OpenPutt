@@ -1,9 +1,8 @@
-
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SteppyThing : UdonSharpBehaviour
@@ -34,7 +33,7 @@ namespace mikeee324.OpenPutt
         {
             stepRBs = new Rigidbody[steps.Length];
             stepRestLocations = new Vector3[steps.Length];
-            for (int i = 0; i < steps.Length; i++)
+            for (var i = 0; i < steps.Length; i++)
             {
                 stepRBs[i] = steps[i].GetComponent<Rigidbody>();
                 if (steps[i].gameObject.activeInHierarchy)
@@ -42,7 +41,7 @@ namespace mikeee324.OpenPutt
                 else
                     stepRestLocations[i] = steps[i].transform.position;
 
-                MeshCollider collider = steps[i].GetComponent<MeshCollider>();
+                var collider = steps[i].GetComponent<MeshCollider>();
                 collider.isTrigger = false;
 
                 // Make Steps Ignore Collisions with neighbouring steps
@@ -54,7 +53,7 @@ namespace mikeee324.OpenPutt
                     Physics.IgnoreCollision(steps[i], stepBallHolders[i - 1], true);
 
                 // Ignore other colliders like ground mesh etc
-                foreach (Collider toIgnore in collidersToIgnore)
+                foreach (var toIgnore in collidersToIgnore)
                     Physics.IgnoreCollision(steps[i], toIgnore, true);
             }
 
@@ -73,14 +72,14 @@ namespace mikeee324.OpenPutt
         {
             stepCyclerTimer += Time.deltaTime;
 
-            float cycleProgress = stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime);
+            var cycleProgress = stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime);
 
-            bool localStepCycle = globalUpCycle;
+            var localStepCycle = globalUpCycle;
 
-            for (int i = 0; i < steps.Length; i++)
+            for (var i = 0; i < steps.Length; i++)
             {
-                Vector3 startPos = stepRestLocations[i];
-                Vector3 targetPos = stepRestLocations[i];
+                var startPos = stepRestLocations[i];
+                var targetPos = stepRestLocations[i];
 
                 if (localStepCycle)
                 {

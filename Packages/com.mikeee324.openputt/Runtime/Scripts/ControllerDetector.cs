@@ -1,9 +1,8 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public class ControllerDetector : UdonSharpBehaviour
     {
@@ -40,7 +39,7 @@ namespace mikeee324.OpenPutt
 
 #if UNITY_EDITOR
             // Wait for user to close editor pause windows before checking
-            bool menuOpen = Physics.OverlapSphereNonAlloc(Networking.LocalPlayer.GetPosition(), 9999f, menuCollider, (1 << 19) | (1 << 20) | (1 << 21)) > 0;
+            var menuOpen = Physics.OverlapSphereNonAlloc(Networking.LocalPlayer.GetPosition(), 9999f, menuCollider, (1 << 19) | (1 << 20) | (1 << 21)) > 0;
             if (menuOpen)
             {
                 SendCustomEventDelayedSeconds(nameof(DetectControllers), .25f);
@@ -48,10 +47,10 @@ namespace mikeee324.OpenPutt
             }
 #endif
 
-            bool joystick1CheckResult = CheckType(0);
-            bool joystick2CheckResult = CheckType(1);
-            bool joystick3CheckResult = CheckType(2);
-            bool joystick4CheckResult = CheckType(3);
+            var joystick1CheckResult = CheckType(0);
+            var joystick2CheckResult = CheckType(1);
+            var joystick3CheckResult = CheckType(2);
+            var joystick4CheckResult = CheckType(3);
 
             if (joystick1CheckResult && joystick2CheckResult && joystick3CheckResult && joystick4CheckResult)
             {
@@ -67,13 +66,13 @@ namespace mikeee324.OpenPutt
         {
             SendCustomEventDelayedFrames(nameof(CheckCurrentJoystick), 0);
 
-            float moveHorizontal = Input.GetAxis("Horizontal");
-            float moveVertical = Input.GetAxis("Vertical");
+            var moveHorizontal = Input.GetAxis("Horizontal");
+            var moveVertical = Input.GetAxis("Vertical");
 
             if (moveHorizontal.IsNearZero() && moveVertical.IsNearZero())
                 return;
 
-            int prevJoystick = LastKnownJoystickID;
+            var prevJoystick = LastKnownJoystickID;
 
             float joyHorizontal = Joysticks[0].MoveHorizontal(1), joyVertical = -Joysticks[0].MoveVertical(1);
             if (!joyHorizontal.IsNearZero() && !joyVertical.IsNearZero())
@@ -117,9 +116,9 @@ namespace mikeee324.OpenPutt
                 totalTicks[joystickIndex]++;
 
                 // Read LookHorizontal from both controller types
-                float LT = ControllerExtensions.GetInputAxis(4, joystickID: joystickIndex + 1);
-                float RT = ControllerExtensions.GetInputAxis(5, joystickID: joystickIndex + 1);
-                bool weirdDS4Thing = LT == -1 && RT == -1;
+                var LT = ControllerExtensions.GetInputAxis(4, joystickID: joystickIndex + 1);
+                var RT = ControllerExtensions.GetInputAxis(5, joystickID: joystickIndex + 1);
+                var weirdDS4Thing = LT == -1 && RT == -1;
 
                 // If the xbox mode reads -1 and the ds4 reads near 0, log the tick as a valid DS4 tick
                 if (weirdDS4Thing)

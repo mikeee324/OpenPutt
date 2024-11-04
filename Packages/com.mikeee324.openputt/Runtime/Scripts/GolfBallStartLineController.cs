@@ -1,59 +1,70 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     // This needs to run after the ball has moved so the line draws in the correct place
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(50), RequireComponent(typeof(LineRenderer))]
     public class GolfBallStartLineController : UdonSharpBehaviour
     {
         #region Public Setting/References
+
         public GolfBallController golfBall;
+
         [Tooltip("A reference to the LineRenderer (Should be on the same GameObject)")]
         public LineRenderer lineRenderer;
+
         [Tooltip("Limits what layers to look for CourseStartPosition colliders on so there is less to loop through every time we check")]
         public LayerMask courseStartPosLayerMask;
+
         [Range(16, 64), Tooltip("If you have trouble starting courses because the line doesn't appear.. try increasing this number")]
         public int maximumNoOfColliders = 32;
+
         #endregion
 
         #region Internal Vars
+
         /// <summary>
         /// A reference to the nearest available course start position that the ball will be snapped to if dropped by the player
         /// </summary>
         private CourseStartPosition closestBallStart = null;
+
         /// <summary>
         /// A reference to the course that will be marked as 'Started' if the player drops the ball
         /// </summary>
         private CourseManager courseThatIsBeingStarted = null;
+
         /// <summary>
         /// Makes sure we only have 1 instance on the local area check queued up with Udon
         /// </summary>
         private bool localAreaCheckActive = false;
+
         /// <summary>
         /// Contains a list of all matching colliders in the local area of the player (as of the last check)
         /// </summary>
         private Collider[] localAreaColliders = new Collider[32];
+
         /// <summary>
         /// A list that is populated with a list of CourseStartPositions that is assigned at startup to speed up checks
         /// </summary>
-        [HideInInspector]
-        public CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
+        [HideInInspector] public CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
+
         /// <summary>
         /// A list that is populated with a list of Colliders that we can use to quickly filter out non CourseStartPositions
         /// </summary>
-        [HideInInspector]
-        public Collider[] knownStartColliders = new Collider[0];
+        [HideInInspector] public Collider[] knownStartColliders = new Collider[0];
+
         #endregion
 
         #region Animation Stuff
+
         private Vector3 lerpStartPosition = Vector3.zero;
         private Vector3 lerpStopPosition = Vector3.zero;
         private float lerpToStartTime = -1f;
         private AnimationCurve simpleEaseInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
         #endregion
 
         void Start()
@@ -94,7 +105,7 @@ namespace mikeee324.OpenPutt
         /// <returns></returns>
         public bool StartDropAnimation(Vector3 ballWorldPosition)
         {
-            if (!gameObject.activeSelf || closestBallStart == null)
+            if (!gameObject.activeSelf || !Utilities.IsValid(closestBallStart))
                 return false;
 
             lerpStartPosition = ballWorldPosition;
@@ -122,7 +133,7 @@ namespace mikeee324.OpenPutt
                 if (maximumNoOfColliders != localAreaColliders.Length)
                     localAreaColliders = new Collider[maximumNoOfColliders];
 
-                float radius = 2f;
+                var radius = 2f;
                 if (Utils.LocalPlayerIsValid())
                     radius = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
                 radius = Mathf.Clamp(radius, 2f, 100f);
@@ -130,11 +141,11 @@ namespace mikeee324.OpenPutt
                 CourseStartPosition newSpawnPos = null;
                 CourseManager newCourse = null;
 
-                float closestDistance = -1f;
+                var closestDistance = -1f;
 
-                Vector3 golfBallPos = golfBall.CurrentPosition;
+                var golfBallPos = golfBall.CurrentPosition;
 
-                int hitColliders = Physics.OverlapSphereNonAlloc(golfBallPos, radius, localAreaColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
+                var hitColliders = Physics.OverlapSphereNonAlloc(golfBallPos, radius, localAreaColliders, courseStartPosLayerMask, QueryTriggerInteraction.Collide);
 
                 // Find the closest start point
                 if (hitColliders > 0)
@@ -142,15 +153,15 @@ namespace mikeee324.OpenPutt
                     Collider colliderToFindCache = null;
                     CourseStartPosition courseStartPositionCache = null;
 
-                    for (int i = 0; i < hitColliders; i++)
+                    for (var i = 0; i < hitColliders; i++)
                     {
                         colliderToFindCache = localAreaColliders[i];
                         // Null colliders in this array is a thing that happens - skip over them
-                        if (colliderToFindCache == null)
+                        if (!Utilities.IsValid(colliderToFindCache))
                             continue;
 
                         // Check if this collider is in our known array
-                        int indexOfCollider = knownStartColliders.IndexOf(colliderToFindCache);
+                        var indexOfCollider = knownStartColliders.IndexOf(colliderToFindCache);
                         if (indexOfCollider == -1)
                             continue;
 
@@ -158,12 +169,12 @@ namespace mikeee324.OpenPutt
                         courseStartPositionCache = knownStartPositions[indexOfCollider];
 
                         // If this start position is null run away
-                        if (courseStartPositionCache == null)
+                        if (!Utilities.IsValid(courseStartPositionCache))
                             continue;
 
                         // If this position is closer to the ball than anything we've seen so far
-                        float thisDistance = Vector3.Distance(golfBallPos, courseStartPositionCache.transform.position);
-                        if (newSpawnPos == null || thisDistance < closestDistance)
+                        var thisDistance = Vector3.Distance(golfBallPos, courseStartPositionCache.transform.position);
+                        if (!Utilities.IsValid(newSpawnPos) || thisDistance < closestDistance)
                         {
                             // Save it as the closest position
                             newSpawnPos = courseStartPositionCache;
@@ -191,13 +202,13 @@ namespace mikeee324.OpenPutt
         {
             if (lerpToStartTime >= 0f)
             {
-                if (closestBallStart == null || golfBall.pickedUpByPlayer)
+                if (!Utilities.IsValid(closestBallStart) || golfBall.pickedUpByPlayer)
                 {
                     return;
                 }
 
-                float lerpMaxTime = 0.5f;
-                float lerpProgress = Mathf.Clamp(lerpToStartTime / lerpMaxTime, 0, 1);
+                var lerpMaxTime = 0.5f;
+                var lerpProgress = Mathf.Clamp(lerpToStartTime / lerpMaxTime, 0, 1);
 
                 if (lerpProgress < 1f)
                 {
@@ -217,7 +228,7 @@ namespace mikeee324.OpenPutt
                 SetEnabled(false);
             }
 
-            if (closestBallStart == null)
+            if (!Utilities.IsValid(closestBallStart))
             {
                 // Can't see a ball spawn nearby - hide line renderer
                 lineRenderer.SetPosition(0, Vector3.zero);

@@ -1,10 +1,8 @@
-﻿
-using mikeee324.OpenPutt;
+﻿using dev.mikeee324.OpenPutt;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class DrivingRangeDisplay : OpenPuttEventListener
@@ -15,6 +13,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     private PlayerManager playerManager;
     private GolfBallController golfBall;
     private int highestScoreSoFar = 0;
+
     private bool MonitoringDistance
     {
         set => this.enabled = value;
@@ -24,7 +23,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
         // Disable Update() and LateUpdate() calls - we will enable things as when we need to monitor the ball distance
         this.enabled = false;
-        if (openPutt == null || drivingRangeCourse == null || distanceLabel == null)
+        if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(drivingRangeCourse) || !Utilities.IsValid(distanceLabel))
         {
             return;
         }
@@ -35,12 +34,12 @@ public class DrivingRangeDisplay : OpenPuttEventListener
         if (!this.enabled)
             return;
 
-        if (playerManager == null)
+        if (!Utilities.IsValid(playerManager))
             return;
 
-        if (golfBall == null)
+        if (!Utilities.IsValid(golfBall))
             golfBall = playerManager.golfBall;
-        if (golfBall == null)
+        if (!Utilities.IsValid(golfBall))
             return;
 
         if (playerManager.CurrentCourse == drivingRangeCourse)
@@ -50,7 +49,7 @@ public class DrivingRangeDisplay : OpenPuttEventListener
                 MonitoringDistance = false;
             }
 
-            int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
+            var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
             if (distance > highestScoreSoFar)
             {
                 highestScoreSoFar = distance;
@@ -81,9 +80,9 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
         highestScoreSoFar = 0;
 
-        if (playerManager == null)
+        if (!Utilities.IsValid(playerManager))
             playerManager = openPutt.LocalPlayerManager;
-        if (playerManager == null)
+        if (!Utilities.IsValid(playerManager))
             return;
 
         if (playerManager.CurrentCourse == drivingRangeCourse)
@@ -94,17 +93,13 @@ public class DrivingRangeDisplay : OpenPuttEventListener
 
     public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
     {
-
     }
 
     public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
     {
-
     }
 
     public override void OnLocalPlayerBallStopped()
     {
-        
     }
-
 }

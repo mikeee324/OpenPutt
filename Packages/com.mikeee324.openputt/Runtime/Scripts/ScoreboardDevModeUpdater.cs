@@ -1,6 +1,7 @@
 ﻿using UdonSharp;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public class ScoreboardDevModeUpdater : UdonSharpBehaviour
     {
@@ -15,13 +16,13 @@ namespace mikeee324.OpenPutt
 
         private void Update()
         {
-            if (openPutt == null)
+            if (!Utilities.IsValid(openPutt))
                 openPutt = scoreboard.manager.openPutt;
 
-            if (openPutt != null && localPlayerManager == null)
+            if (Utilities.IsValid(openPutt) && !Utilities.IsValid(localPlayerManager))
                 localPlayerManager = openPutt.LocalPlayerManager;
 
-            if (localPlayerManager == null)
+            if (!Utilities.IsValid(localPlayerManager))
                 return;
 
             scoreboard.devModeLastClubHitSpeed.text = string.Format("{0:F2} {1}", localPlayerManager.golfClubHead.LastKnownHitVelocity, localPlayerManager.golfClubHead.LastKnownHitType);

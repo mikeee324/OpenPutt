@@ -1,9 +1,8 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
-namespace mikeee324.OpenPutt
+
+namespace dev.mikeee324.OpenPutt
 {
     public enum ScoreboardVisibility
     {
@@ -31,16 +30,16 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (backgroundCanvas != null)
+            if (Utilities.IsValid(backgroundCanvas))
                 CanvasWasEnabledAtStart = backgroundCanvas.enabled;
         }
 
         public bool ShouldBeVisible(Vector3 playerPosition)
         {
-            bool isNowActive = false;
+            var isNowActive = false;
 
-            float scoreboardDistance = Vector3.Distance(playerPosition, nearbyCenterTransform != null ? nearbyCenterTransform.position : transform.position);
-            bool playerIsNearby = scoreboardDistance < this.nearbyMaxRadius;
+            var scoreboardDistance = Vector3.Distance(playerPosition, Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position);
+            var playerIsNearby = scoreboardDistance < this.nearbyMaxRadius;
 
             switch (this.scoreboardVisiblility)
             {
@@ -55,9 +54,9 @@ namespace mikeee324.OpenPutt
 
                     if (isNowActive && this.attachedToCourse >= 0)
                     {
-                        PlayerManager playerManager = manager != null && manager.openPutt != null ? manager.openPutt.LocalPlayerManager : null;
+                        var playerManager = Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.LocalPlayerManager : null;
 
-                        if (playerManager == null || !playerManager.IsReady || playerManager.courseStates[this.attachedToCourse] != CourseState.Completed)
+                        if (!Utilities.IsValid(playerManager) || !playerManager.IsReady || playerManager.courseStates[this.attachedToCourse] != CourseState.Completed)
                         {
                             isNowActive = false;
                         }
@@ -80,7 +79,7 @@ namespace mikeee324.OpenPutt
                     break;
                 case ScoreboardVisibility.NearbyOnly:
                 case ScoreboardVisibility.NearbyAndCourseFinished:
-                    if (nearbyCenterTransform != null)
+                    if (Utilities.IsValid(nearbyCenterTransform))
                         Gizmos.DrawWireSphere(nearbyCenterTransform.position, nearbyMaxRadius);
                     else
                         Gizmos.DrawWireSphere(transform.position, nearbyMaxRadius);

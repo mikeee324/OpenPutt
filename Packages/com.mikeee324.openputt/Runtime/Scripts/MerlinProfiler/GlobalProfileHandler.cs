@@ -1,9 +1,9 @@
 ﻿// GlobalProfileHandler.cs - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5
 #define AVERAGE_OUTPUT
 
+using TMPro;
 using UdonSharp;
 using UnityEngine;
-using TMPro;
 
 [DefaultExecutionOrder(1000000000)]
 public class GlobalProfileHandler : UdonSharpBehaviour
@@ -55,14 +55,14 @@ public class GlobalProfileHandler : UdonSharpBehaviour
     public override void PostLateUpdate()
     {
         _elapsedTime += (float)_kickoff.stopwatch.Elapsed.TotalSeconds * 1000f;
-        float now = Time.timeSinceLevelLoad;
+        var now = Time.timeSinceLevelLoad;
         _measuredFrametimeTotal += (now - lastFrame) * 1000f;
         lastFrame = now;
 
 #if AVERAGE_OUTPUT
         if (_measuredTimeFrameCount >= MEASURE_FRAME_AMOUNT)
         {
-            float frameTime = _measuredFrametimeTotal / _measuredTimeFrameCount;
+            var frameTime = _measuredFrametimeTotal / _measuredTimeFrameCount;
             _timeText.text = $"Udon: {(_measuredTimeTotal / _measuredTimeFrameCount):F4}ms\nFrametime: {(frameTime):F4}ms ({(1000 / frameTime):F0}fps)";
             _measuredTimeTotal = 0f;
             _measuredFrametimeTotal = 0f;

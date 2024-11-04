@@ -1,8 +1,8 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
     /// Forces any golf balls to jump back to their last known valid position when colliding with this object<br/>
@@ -13,8 +13,8 @@ namespace mikeee324.OpenPutt
     {
         private void OnCollisionEnter(Collision collision)
         {
-            GolfBallController golfBall = collision.gameObject.GetComponent<GolfBallController>();
-            if (golfBall != null)
+            var golfBall = collision.gameObject.GetComponent<GolfBallController>();
+            if (Utilities.IsValid(golfBall))
             {
                 golfBall._RespawnBallWithErrorNoise();
             }
@@ -22,8 +22,8 @@ namespace mikeee324.OpenPutt
 
         private void OnTriggerEnter(Collider other)
         {
-            GolfBallController golfBall = other.gameObject.GetComponent<GolfBallController>();
-            if (golfBall != null)
+            var golfBall = other.gameObject.GetComponent<GolfBallController>();
+            if (Utilities.IsValid(golfBall))
             {
                 golfBall._RespawnBallWithErrorNoise();
             }

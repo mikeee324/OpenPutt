@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
     /// This is an attempt at trying to work with multiple controller types. <b>* It is NOT finished or fully tested either! *</b>
@@ -135,7 +135,7 @@ namespace mikeee324.OpenPutt
 
         private static bool IsJoystickKeyPressed(int joystickKeyID, int joystickID)
         {
-            int keyCode = (int)KeyCode.Joystick1Button0;
+            var keyCode = (int)KeyCode.Joystick1Button0;
             keyCode += ((joystickID - 1) * 20);
             keyCode += joystickKeyID;
             return Input.GetKey((KeyCode)keyCode);

@@ -1,16 +1,19 @@
 ﻿// GlobalProfileKickoss.cs - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5
+
+using System;
+using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
 
 [DefaultExecutionOrder(-1000000000)]
 public class GlobalProfileKickoff : UdonSharpBehaviour
 {
-    [System.NonSerialized]
-    public System.Diagnostics.Stopwatch stopwatch;
+    [NonSerialized]
+    public Stopwatch stopwatch;
 
     private void Start()
     {
-        stopwatch = new System.Diagnostics.Stopwatch();
+        stopwatch = new Stopwatch();
     }
 
     private void FixedUpdate()
