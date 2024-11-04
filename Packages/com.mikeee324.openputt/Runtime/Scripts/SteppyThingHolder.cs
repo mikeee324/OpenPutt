@@ -1,8 +1,6 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
-using VRC.Udon;
 
 public class SteppyThingHolder : UdonSharpBehaviour
 {
@@ -11,9 +9,9 @@ public class SteppyThingHolder : UdonSharpBehaviour
 
     void Start()
     {
-        if (myCollider == null)
+        if (!Utilities.IsValid(myCollider))
             myCollider = GetComponent<Collider>();
-        if (myRenderer == null)
+        if (!Utilities.IsValid(myRenderer))
             myRenderer = GetComponent<MeshRenderer>();
     }
 

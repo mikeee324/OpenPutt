@@ -1,7 +1,7 @@
 ﻿using UdonSharp;
 using UnityEngine;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class CourseStartPosition : UdonSharpBehaviour

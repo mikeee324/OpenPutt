@@ -1,5 +1,4 @@
-﻿
-using mikeee324.OpenPutt;
+﻿using dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -21,12 +20,12 @@ public class AutoObjectToggler : UdonSharpBehaviour
     {
         if (Utils.LocalPlayerIsValid())
         {
-            Vector3 pos = Networking.LocalPlayer.GetPosition();
+            var pos = Networking.LocalPlayer.GetPosition();
 
-            bool enableObjects = colliderToMonitor != null && colliderToMonitor.bounds.Contains(pos);
-            foreach (UdonBehaviour obj in scriptsToDisable)
+            var enableObjects = Utilities.IsValid(colliderToMonitor) && colliderToMonitor.bounds.Contains(pos);
+            foreach (var obj in scriptsToDisable)
                 obj.enabled = enableObjects;
-            foreach (GameObject obj in objectsToDisable)
+            foreach (var obj in objectsToDisable)
                 obj.SetActive(enableObjects);
 
             this.enabled = false;
@@ -37,9 +36,9 @@ public class AutoObjectToggler : UdonSharpBehaviour
     {
         if (player == Networking.LocalPlayer)
         {
-            foreach (UdonBehaviour obj in scriptsToDisable)
+            foreach (var obj in scriptsToDisable)
                 obj.enabled = true;
-            foreach (GameObject obj in objectsToDisable)
+            foreach (var obj in objectsToDisable)
                 obj.SetActive(true);
         }
     }
@@ -48,9 +47,9 @@ public class AutoObjectToggler : UdonSharpBehaviour
     {
         if (player == Networking.LocalPlayer)
         {
-            foreach (UdonBehaviour obj in scriptsToDisable)
+            foreach (var obj in scriptsToDisable)
                 obj.enabled = false;
-            foreach (GameObject obj in objectsToDisable)
+            foreach (var obj in objectsToDisable)
                 obj.SetActive(false);
         }
     }

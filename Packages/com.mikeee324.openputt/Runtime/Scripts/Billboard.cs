@@ -2,7 +2,7 @@
 using UnityEngine;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class Billboard : UdonSharpBehaviour
@@ -15,15 +15,15 @@ namespace mikeee324.OpenPutt
 
         void Update()
         {
-            if (Networking.LocalPlayer != null && !Networking.LocalPlayer.IsValid())
+            if (Utilities.IsValid(Networking.LocalPlayer) && !Networking.LocalPlayer.IsValid())
                 return;
 
-            Vector3 headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+            var headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
 
             if (headPosition != Vector3.zero)
                 transform.LookAt(headPosition);
 
-            if (attachToObject != null)
+            if (Utilities.IsValid(attachToObject))
                 transform.position = attachToObject.transform.position + new Vector3(0, 0.1f, 0);
         }
     }

@@ -1,9 +1,8 @@
-﻿
-using mikeee324.OpenPutt;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public class BallTester : UdonSharpBehaviour
     {
@@ -71,7 +70,7 @@ namespace mikeee324.OpenPutt
 
         public void HitBall()
         {
-            if (ballController != null && ballController.enabled)
+            if (Utilities.IsValid(ballController) && ballController.enabled)
                 ballController.requestedBallVelocity = currentVelocity;
             else
                 ballController.OnBallHit(currentVelocity);

@@ -1,12 +1,11 @@
-﻿
-using System;
+﻿using System;
 using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public enum PlayerSyncType
     {
@@ -81,9 +80,9 @@ namespace mikeee324.OpenPutt
                 if (openPutt.enableDevModeForAll)
                     return true;
 
-                string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+                var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
-                if (localPlayerName != null && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+                if (Utilities.IsValid(localPlayerName) && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
                     return true;
 
                 return false;
@@ -99,9 +98,9 @@ namespace mikeee324.OpenPutt
                 if (openPutt.enableDevModeForAll)
                     return true;
 
-                string localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+                var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
-                if (localPlayerName != null && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
+                if (Utilities.IsValid(localPlayerName) && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
                     return true;
 
                 if (devModeTaps >= 30)
@@ -132,7 +131,7 @@ namespace mikeee324.OpenPutt
         /// </summary>
         public PlayerManager[] CurrentPlayerList { get; private set; }
 
-        public int NumberOfColumns => openPutt != null ? openPutt.courses.Length + 2 : 0;
+        public int NumberOfColumns => Utilities.IsValid(openPutt) ? openPutt.courses.Length + 2 : 0;
         [HideInInspector]
         public ScoreboardView requestedScoreboardView = ScoreboardView.Info;
 
@@ -145,19 +144,19 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (openPutt == null)
+            if (!Utilities.IsValid(openPutt))
             {
                 Utils.LogError(this, "Missing OpenPutt Reference! Disabling Scoreboards");
                 gameObject.SetActive(false);
-                foreach (Scoreboard scoreboard in scoreboards)
+                foreach (var scoreboard in scoreboards)
                     scoreboard.gameObject.SetActive(false);
                 return;
             }
 
-            foreach (Scoreboard scoreboard in scoreboards)
+            foreach (var scoreboard in scoreboards)
                 scoreboard.manager = this;
 
-            foreach (Scoreboard scoreboard in staticScoreboards)
+            foreach (var scoreboard in staticScoreboards)
                 scoreboard.manager = this;
 
             allScoreboards = scoreboards.AddRange(staticScoreboards);
@@ -183,8 +182,8 @@ namespace mikeee324.OpenPutt
             // After all scoreboard have initialised - queue a full refresh
             if (!allScoreboardsInitialised)
             {
-                bool queueBigRefresh = true;
-                foreach (Scoreboard scoreboard in scoreboards)
+                var queueBigRefresh = true;
+                foreach (var scoreboard in scoreboards)
                 {
                     if (!scoreboard.HasInitializedUI)
                     {
@@ -204,12 +203,12 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            bool devModeEnabled = LocalPlayerCanAccessDevMode || LocalPlayerCanAccessToolbox;
+            var devModeEnabled = LocalPlayerCanAccessDevMode || LocalPlayerCanAccessToolbox;
 
             if (!devModeEnabled && requestedScoreboardView == ScoreboardView.DevMode)
                 requestedScoreboardView = ScoreboardView.Scoreboard;
 
-            for (int i = 0; i < allScoreboards.Length; i++)
+            for (var i = 0; i < allScoreboards.Length; i++)
             {
                 if (i < scoreboards.Length)
                 {
@@ -234,14 +233,14 @@ namespace mikeee324.OpenPutt
                 }
             }
 
-            int currentVisibleScoreboardID = 0;
+            var currentVisibleScoreboardID = 0;
 
-            Vector3 localPlayerPos = Networking.LocalPlayer.GetPosition();
+            var localPlayerPos = Networking.LocalPlayer.GetPosition();
 
-            for (int i = 0; i < scoreboardPositions.Length; i++)
+            for (var i = 0; i < scoreboardPositions.Length; i++)
             {
-                ScoreboardPositioner position = scoreboardPositions[i];
-                bool isVisibleHere = position.ShouldBeVisible(localPlayerPos);
+                var position = scoreboardPositions[i];
+                var isVisibleHere = position.ShouldBeVisible(localPlayerPos);
 
                 // We ran out of scoreboards in the pool so just show the positioner canvases if needed
                 if (currentVisibleScoreboardID >= scoreboards.Length)
@@ -253,7 +252,7 @@ namespace mikeee324.OpenPutt
                     position.backgroundCanvas.enabled = false;
 
                     // Move this scoreboard to the correct position
-                    Scoreboard scoreboard = this.scoreboards[currentVisibleScoreboardID];
+                    var scoreboard = this.scoreboards[currentVisibleScoreboardID];
                     scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
                     scoreboard.transform.localScale = position.transform.lossyScale;
 
@@ -277,7 +276,7 @@ namespace mikeee324.OpenPutt
             if (requestedScoreboardView != ScoreboardView.Settings)
                 return;
 
-            foreach (Scoreboard scoreboard in scoreboards)
+            foreach (var scoreboard in scoreboards)
                 scoreboard.RefreshSettingsMenu();
         }
 
@@ -329,20 +328,20 @@ namespace mikeee324.OpenPutt
         /// <param name="forceUpdate">True forces an update on all rows</param>
         public void CheckPlayerListForChanges(bool forceUpdate = false)
         {
-            PlayerManager[] newList = GetPlayerList();
+            var newList = GetPlayerList();
 
-            if (CurrentPlayerList == null)
+            if (!Utilities.IsValid(CurrentPlayerList))
             {
                 CurrentPlayerList = new PlayerManager[0];
                 forceUpdate = true;
             }
 
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
 
-            int[] rowsToUpdate = new int[0];
+            var rowsToUpdate = new int[0];
 
             // We need to check which rows have changed and request a refresh
-            for (int i = 0; i < numberOfPlayersToDisplay; i++)
+            for (var i = 0; i < numberOfPlayersToDisplay; i++)
             {
                 // Find the current player in this row
                 PlayerManager thisRowPlayer = null;
@@ -355,7 +354,7 @@ namespace mikeee324.OpenPutt
                     thisRowNewPlayer = newList[i];
 
                 // If this row has no player and hasn't changed - we don't need to update this row
-                if (thisRowPlayer == null && thisRowNewPlayer == null)
+                if (!Utilities.IsValid(thisRowPlayer) && !Utilities.IsValid(thisRowNewPlayer))
                     continue;
 
                 // Check if an update is being forced (for when player toggles between timer/normal mode)
@@ -365,7 +364,7 @@ namespace mikeee324.OpenPutt
                     continue;
                 }
 
-                bool requestRefresh = false;
+                var requestRefresh = false;
 
                 // Check if player in this row has changed
                 if (!requestRefresh)
@@ -373,7 +372,7 @@ namespace mikeee324.OpenPutt
 
                 // Check if this row has been marked as dirty and needs refreshing
                 if (!requestRefresh)
-                    requestRefresh = thisRowNewPlayer != null && thisRowNewPlayer.scoreboardRowNeedsUpdating;
+                    requestRefresh = Utilities.IsValid(thisRowNewPlayer) && thisRowNewPlayer.scoreboardRowNeedsUpdating;
 
                 // Add to the list to refresh
                 if (requestRefresh)
@@ -397,7 +396,7 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            if (progressiveUpdateCurrentScoreboardID == 0 && (CurrentPlayerList == null || CurrentPlayerList.Length == 0))
+            if (progressiveUpdateCurrentScoreboardID == 0 && (!Utilities.IsValid(CurrentPlayerList) || CurrentPlayerList.Length == 0))
             {
                 CurrentPlayerList = GetPlayerList();
             }
@@ -429,10 +428,10 @@ namespace mikeee324.OpenPutt
 
             progressiveUpdateCurrentScoreboardID += 1;
 
-            int rowIDToUpdate = progressiveRowUpdateQueue[0];
+            var rowIDToUpdate = progressiveRowUpdateQueue[0];
 
             // Update the row for this player if we found one
-            if (CurrentPlayerList != null)
+            if (Utilities.IsValid(CurrentPlayerList))
             {
                 if (rowIDToUpdate == -1)
                 {
@@ -461,11 +460,11 @@ namespace mikeee324.OpenPutt
         /// <param name="scoreboard">The scoreboard that is now displaying the settings tab</param>
         public void OnPlayerOpenSettings(Scoreboard scoreboard)
         {
-            if (scoreboard == null) return;
+            if (!Utilities.IsValid(scoreboard)) return;
 
-            foreach (Scoreboard thisScoreboard in scoreboards)
+            foreach (var thisScoreboard in scoreboards)
             {
-                if (thisScoreboard == null) continue;
+                if (!Utilities.IsValid(thisScoreboard)) continue;
                 if (thisScoreboard.gameObject != scoreboard.gameObject)
                 {
                     thisScoreboard.CurrentScoreboardView = ScoreboardView.Scoreboard;
@@ -479,11 +478,11 @@ namespace mikeee324.OpenPutt
         /// <returns></returns>
         public PlayerManager[] GetPlayerList()
         {
-            Stopwatch stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
 
-            PlayerManager[] allPlayers = SpeedGolfMode ? openPutt.PlayersSortedByTime : openPutt.PlayersSortedByScore;
+            var allPlayers = SpeedGolfMode ? openPutt.PlayersSortedByTime : openPutt.PlayersSortedByScore;
 
-            if (allPlayers == null)
+            if (!Utilities.IsValid(allPlayers))
                 return new PlayerManager[0];
 
             if (allPlayers.Length <= numberOfPlayersToDisplay)
@@ -497,12 +496,12 @@ namespace mikeee324.OpenPutt
             // Warning, this can be slow!
 
             // Find current players position in the list
-            int myPosition = SpeedGolfMode ? openPutt.LocalPlayerManager.ScoreboardPositionByTime : openPutt.LocalPlayerManager.ScoreboardPositionByScore;
+            var myPosition = SpeedGolfMode ? openPutt.LocalPlayerManager.ScoreboardPositionByTime : openPutt.LocalPlayerManager.ScoreboardPositionByScore;
             myPosition = Mathf.Clamp(myPosition, 0, allPlayers.Length);
 
             // Work out where we need to slice the array
-            int startPos = myPosition - (int)Math.Ceiling(numberOfPlayersToDisplay / 2d);
-            int endPos = myPosition + (int)Math.Floor(numberOfPlayersToDisplay / 2d);
+            var startPos = myPosition - (int)Math.Ceiling(numberOfPlayersToDisplay / 2d);
+            var endPos = myPosition + (int)Math.Floor(numberOfPlayersToDisplay / 2d);
 
             // If the player is near the top or bottom shift the positions so we still fill the board up
             startPos -= endPos >= allPlayers.Length ? endPos - allPlayers.Length : 0;

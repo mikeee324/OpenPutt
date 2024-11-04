@@ -1,9 +1,9 @@
-﻿
-using mikeee324.OpenPutt;
-using System;
+﻿using System;
+using dev.mikeee324.OpenPutt;
 using TMPro;
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.UI;
 using VRC.SDKBase;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(101)]
@@ -11,7 +11,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 {
 
     public ScoreboardPlayerRow scoreboardRow;
-    public UnityEngine.UI.Image colBackground;
+    public Image colBackground;
     public TextMeshProUGUI colText;
 
     private Scoreboard scoreboard => scoreboardRow.scoreboard;
@@ -24,7 +24,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
     private void UpdateNameColumn(PlayerManager player)
     {
-        if (player == null || player.Owner == null || player.Owner.displayName == null)
+        if (!Utilities.IsValid(player) || !Utilities.IsValid(player.Owner) || !Utilities.IsValid(player.Owner.displayName))
             return;
 
         SetText(player.Owner.displayName);
@@ -34,18 +34,18 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
     private void UpdateTotalScoreColumn(PlayerManager player)
     {
-        bool playerIsAbovePar = false;
-        bool playerIsBelowPar = false;
+        var playerIsAbovePar = false;
+        var playerIsBelowPar = false;
 
-        if (player == null)
+        if (!Utilities.IsValid(player))
         {
             SetText("-");
         }
         else
         {
             // Render the last column - This is usually the "Total" column
-            bool finishedAllCourses = true;
-            foreach (CourseState courseState in player.courseStates)
+            var finishedAllCourses = true;
+            foreach (var courseState in player.courseStates)
             {
                 // TODO: Maybe count skipped courses as completed too?
                 if (courseState != CourseState.Completed)
@@ -57,7 +57,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
             if (scoreboardManager.SpeedGolfMode)
             {
-                int currentPlayerTime = player.PlayerTotalTime;
+                var currentPlayerTime = player.PlayerTotalTime;
                 if (currentPlayerTime == 999999)
                 {
                     SetText("-");
@@ -66,7 +66,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 }
                 else
                 {
-                    int totalParTime = openPutt.TotalParTime;
+                    var totalParTime = openPutt.TotalParTime;
                     SetText(TimeSpan.FromSeconds(currentPlayerTime).ToString(@"m\:ss"));
                     playerIsAbovePar = currentPlayerTime > 0 && currentPlayerTime > totalParTime;
                     playerIsBelowPar = finishedAllCourses && currentPlayerTime > 0 && currentPlayerTime < totalParTime;
@@ -74,7 +74,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
             }
             else
             {
-                int currentPlayerScore = player.PlayerTotalScore;
+                var currentPlayerScore = player.PlayerTotalScore;
                 if (currentPlayerScore == 999999)
                 {
                     SetText("-");
@@ -83,7 +83,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 }
                 else
                 {
-                    int totalParScore = openPutt.TotalParScore;
+                    var totalParScore = openPutt.TotalParScore;
                     SetText($"{currentPlayerScore}");
                     playerIsAbovePar = currentPlayerScore > 0 && currentPlayerScore > totalParScore;
                     playerIsBelowPar = finishedAllCourses && currentPlayerScore < totalParScore;
@@ -110,9 +110,9 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
     private void UpdateScoreColumn(PlayerManager player)
     {
-        Color newBGColour = isEvenRow ? scoreboardManager.scoreBackground1 : scoreboardManager.scoreBackground2;
+        var newBGColour = isEvenRow ? scoreboardManager.scoreBackground1 : scoreboardManager.scoreBackground2;
 
-        if (player == null)
+        if (!Utilities.IsValid(player))
         {
             SetText("-");
             SetTextColour(scoreboardManager.text);
@@ -124,15 +124,15 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
             //  if (col - 1 < player.courseStates.Length)
 
-            CourseState courseState = player.courseStates[col - 1];
-            int holeScore = player.courseScores[col - 1];
+            var courseState = player.courseStates[col - 1];
+            var holeScore = player.courseScores[col - 1];
 
             bool playerIsAbovePar;
             bool playerIsBelowPar;
 
-            CourseManager course = openPutt.courses[col - 1];
+            var course = openPutt.courses[col - 1];
 
-            bool courseIsDrivingRange = openPutt != null && course != null && course.drivingRangeMode;
+            var courseIsDrivingRange = Utilities.IsValid(openPutt) && Utilities.IsValid(course) && course.drivingRangeMode;
 
             if (courseIsDrivingRange)
             {
@@ -199,7 +199,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
         switch (scoreboardRow.rowType)
         {
             case ScoreboardPlayerRowType.Normal:
-                if (player != null)
+                if (Utilities.IsValid(player))
                 {
                     if (columnIndex == 0)
                     {
@@ -216,7 +216,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 }
                 break;
             case ScoreboardPlayerRowType.Par:
-                if (openPutt != null && openPutt.courses.Length > 0)
+                if (Utilities.IsValid(openPutt) && openPutt.courses.Length > 0)
                 {
                     if (columnIndex == 0)
                     {
@@ -231,7 +231,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     }
                     else if (columnIndex > 0 || columnIndex < scoreboardRow.NumberOfColumns - 2)
                     {
-                        CourseManager course = openPutt.courses[columnIndex - 1];
+                        var course = openPutt.courses[columnIndex - 1];
                         if (scoreboardManager.SpeedGolfMode)
                             SetText(TimeSpan.FromSeconds(course.parTime).ToString(@"m\:ss"));
                         else
@@ -242,7 +242,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 }
                 break;
             case ScoreboardPlayerRowType.Header:
-                if (openPutt != null && openPutt.courses.Length > 0)
+                if (Utilities.IsValid(openPutt) && openPutt.courses.Length > 0)
                 {
                     if (columnIndex == 0)
                     {
@@ -254,10 +254,10 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     }
                     else if (columnIndex > 0 || columnIndex < scoreboardRow.NumberOfColumns - 2)
                     {
-                        CourseManager course = openPutt.courses[columnIndex - 1];
+                        var course = openPutt.courses[columnIndex - 1];
 
-                        string newText = $"{col}";
-                        if (course != null && course.scoreboardShortName != null && course.scoreboardShortName.Length > 0)
+                        var newText = $"{col}";
+                        if (Utilities.IsValid(course) && Utilities.IsValid(course.scoreboardShortName) && course.scoreboardShortName.Length > 0)
                             newText = course.scoreboardShortName;
 
                         SetText(newText);

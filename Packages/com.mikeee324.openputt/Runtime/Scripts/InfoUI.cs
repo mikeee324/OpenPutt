@@ -1,13 +1,10 @@
-﻿
-using mikeee324.OpenPutt;
-using TMPro;
+﻿using TMPro;
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
-using VRC.Udon;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
 
     public enum InfoUIDisplayType : int
@@ -61,10 +58,10 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (valueTextLabel == null)
+            if (!Utilities.IsValid(valueTextLabel))
                 valueTextLabel = GetComponent<TextMeshProUGUI>();
 
-            if (openPutt == null)
+            if (!Utilities.IsValid(openPutt))
                 return;
 
             // If this object isn't already registered as an event listener, register it here automatically
@@ -102,11 +99,11 @@ namespace mikeee324.OpenPutt
         private void UpdateUI()
         {
             // Check if we need to populate the local player manager etc
-            if (localPlayerManager == null)
+            if (!Utilities.IsValid(localPlayerManager))
             {
                 localPlayerManager = openPutt.LocalPlayerManager;
 
-                if (localPlayerManager != null)
+                if (Utilities.IsValid(localPlayerManager))
                 {
                     golfBall = localPlayerManager.golfBall;
                     golfClubCollider = localPlayerManager.golfClubHead;
@@ -114,11 +111,11 @@ namespace mikeee324.OpenPutt
             }
 
             // If we caouldn't find one yet, just skip doing anything here
-            if (localPlayerManager == null)
+            if (!Utilities.IsValid(localPlayerManager))
                 return;
 
             // If this UI is attached to a particular course and the player isn't playing it right now - ignore updates
-            if (attachedToCourse != null && localPlayerManager.CurrentCourse != attachedToCourse)
+            if (Utilities.IsValid(attachedToCourse) && localPlayerManager.CurrentCourse != attachedToCourse)
             {
                 StopUpdate();
                 return;
@@ -130,7 +127,7 @@ namespace mikeee324.OpenPutt
                 case InfoUIDisplayType.HitDistance:
                 case InfoUIDisplayType.HitLongestDistance:
                     {
-                        int distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
+                        var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
                         if (distance > topValue)
                         {
                             topValue = distance;

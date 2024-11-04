@@ -1,6 +1,7 @@
 ﻿using UdonSharp;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttInternalEvents : OpenPuttEventListener
@@ -19,29 +20,29 @@ namespace mikeee324.OpenPutt
 
         public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
-            if (sfxController != null && course != null && hole != null)
+            if (Utilities.IsValid(sfxController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
                 sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, false);
 
             if (score == 1)
             {
-                if (sfxController != null && hole != null)
+                if (Utilities.IsValid(sfxController) && Utilities.IsValid(hole))
                     sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, false);
             }
             else
             {
-                if (sfxController != null && hole != null)
+                if (Utilities.IsValid(sfxController) && Utilities.IsValid(hole))
                     sfxController.PlayScoreSoundAtPosition(hole.transform.position, scoreRelativeToPar, false);
             }
         }
 
         public override void OnRemotePlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
         {
-            if (sfxController != null && course != null && hole != null)
+            if (Utilities.IsValid(sfxController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
                 sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, true);
 
             if (score == 1)
             {
-                if (sfxController != null && hole != null)
+                if (Utilities.IsValid(sfxController) && Utilities.IsValid(hole))
                     sfxController.PlayHoleInOneSoundAtPosition(hole.transform.position, true);
             }
         }

@@ -4,7 +4,7 @@ using UnityEngine;
 using VRC.SDKBase;
 using Random = UnityEngine.Random;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class Utils : UdonSharpBehaviour
@@ -39,7 +39,7 @@ namespace mikeee324.OpenPutt
 
         public static void Log(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
-            if (context == null)
+            if (!Utilities.IsValid(context))
             {
                 Debug.LogError("Log context is missing!");
                 return;
@@ -54,7 +54,7 @@ namespace mikeee324.OpenPutt
 
         public static void LogWarning(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
-            if (context == null)
+            if (!Utilities.IsValid(context))
             {
                 Debug.LogError("Log context is missing!");
                 return;
@@ -69,7 +69,7 @@ namespace mikeee324.OpenPutt
 
         public static void LogError(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
-            if (context == null)
+            if (!Utilities.IsValid(context))
             {
                 Debug.LogError("Log context is missing!");
                 return;
@@ -100,16 +100,16 @@ namespace mikeee324.OpenPutt
         /// <returns>true if a person is in it. False if there is no box collider or no person in it.</returns>
         public static bool PlayerPresentInBoxCollider(GameObject objectWithBoxCollider)
         {
-            if (objectWithBoxCollider == null)
+            if (!Utilities.IsValid(objectWithBoxCollider))
             {
                 LogError(tag: "Utils", message: nameof(PlayerPresentInBoxCollider) + " tried to run but had no box collider.", tagColor: "red");
                 return false;
             }
-            VRCPlayerApi[] vrcPlayers = new VRCPlayerApi[100]; //This is to check if players are present.
+            var vrcPlayers = new VRCPlayerApi[100]; //This is to check if players are present.
             VRCPlayerApi.GetPlayers(vrcPlayers);
-            foreach (VRCPlayerApi player in vrcPlayers)
+            foreach (var player in vrcPlayers)
             {
-                if (player == null) continue;
+                if (!Utilities.IsValid(player)) continue;
                 if (objectWithBoxCollider.GetComponent<BoxCollider>().bounds.Contains(player.GetPosition()))
                 {
                     return true;
@@ -154,7 +154,7 @@ namespace mikeee324.OpenPutt
         /// Gets a UNIX-like timestamp but starts at 2023-01-01 00:00:00 UTC so float precision is better (maybe?)
         /// </summary>
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
-        public static float GetUnixTimestamp() => (float)(System.DateTime.UtcNow - new System.DateTime(2023, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds;
+        public static float GetUnixTimestamp() => (float)(DateTime.UtcNow - new DateTime(2023, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds;
     }
 
     public static class Extensions
@@ -216,7 +216,7 @@ namespace mikeee324.OpenPutt
                 }
                 if (i <= j)
                 {
-                    ScoreboardPositioner temp = array[i];
+                    var temp = array[i];
                     array[i] = array[j];
                     array[j] = temp;
                     i++;
@@ -245,9 +245,9 @@ namespace mikeee324.OpenPutt
         /// <param name="atStart">True=push onto index 0, false=push onto end of array</param>
         public static T[] Push<T>(this T[] array, T item, bool atStart = true)
         {
-            int length = array.Length;
+            var length = array.Length;
 
-            T[] newArray = new T[length];
+            var newArray = new T[length];
 
             newArray.SetValue(item, atStart ? 0 : array.Length - 1);
 
@@ -276,7 +276,7 @@ namespace mikeee324.OpenPutt
             direction2.Normalize();
 
             // Check if the vectors are nearly opposite
-            float dot = Vector3.Dot(direction1, direction2);
+            var dot = Vector3.Dot(direction1, direction2);
             if (Mathf.Abs(dot + 1.0f) < 0.0001f)
             {
                 // Handle nearly opposite vectors by returning one of them, based on the bias
@@ -284,7 +284,7 @@ namespace mikeee324.OpenPutt
             }
 
             // Compute the biased direction vector
-            Vector3 biasedDirection = (direction1 * (1 - bias) + direction2 * bias);
+            var biasedDirection = (direction1 * (1 - bias) + direction2 * bias);
 
             // Ensure the result is a valid direction vector
             if (biasedDirection == Vector3.zero)

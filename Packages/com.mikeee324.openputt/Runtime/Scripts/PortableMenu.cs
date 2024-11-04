@@ -1,7 +1,8 @@
 ﻿/**
  * Made by TummyTime
  */
-using mikeee324.OpenPutt;
+
+using dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -29,7 +30,7 @@ public class PortableMenu : UdonSharpBehaviour
             _allowMenuToOpen = value;
             if (AllowMenuToOpen)
             {
-                bool wasEnabled = this.enabled;
+                var wasEnabled = this.enabled;
 
                 this.enabled = leftUseButtonDown && rightUseButtonDown;
 
@@ -93,19 +94,19 @@ public class PortableMenu : UdonSharpBehaviour
             if (originalHandDistance != -1f && leftUseButtonDown && rightUseButtonDown)
             {
                 // Maybe this crashes if an avatar doesn't have finger bones? - No idea
-                Vector3 leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
-                Vector3 rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
-                float currentDistance = Vector3.Distance(leftHand, rightHand);
+                var leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
+                var rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
+                var currentDistance = Vector3.Distance(leftHand, rightHand);
 
-                bool newIsVisible = false;
+                var newIsVisible = false;
                 if (currentDistance > (originalHandDistance * openThreshold))
                     newIsVisible = true;
                 else if (closeThreshold > 0.0f && currentDistance < (originalHandDistance * closeThreshold))
                     newIsVisible = false;
 
-                Vector3 directionBetweenHands = leftHand - rightHand;
-                Vector3 menuScale = Vector3.one * directionBetweenHands.magnitude;
-                Vector3 menuPosition = (directionBetweenHands * 0.5f) + rightHand;
+                var directionBetweenHands = leftHand - rightHand;
+                var menuScale = Vector3.one * directionBetweenHands.magnitude;
+                var menuPosition = (directionBetweenHands * 0.5f) + rightHand;
 
                 if (newIsVisible)
                 {
@@ -121,10 +122,10 @@ public class PortableMenu : UdonSharpBehaviour
         }
         else if (Input.GetKey(menuKey))
         {
-            Vector3 menuScale = Vector3.one * 1.7f;
-            Vector3 headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
-            Vector3 menuPosition = headPosition + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
-            Quaternion menuRotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
+            var menuScale = Vector3.one * 1.7f;
+            var headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+            var menuPosition = headPosition + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
+            var menuRotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
 
             visibleMenuObject.transform.SetPositionAndRotation(menuPosition, menuRotation);
             visibleMenuObject.transform.localScale = menuScale;
@@ -138,12 +139,12 @@ public class PortableMenu : UdonSharpBehaviour
     {
         if (!Utils.LocalPlayerIsValid()) return;
 
-        Vector3 playerPos = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
-        Vector3 menuPos = visibleMenuObject.transform.position;
+        var playerPos = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+        var menuPos = visibleMenuObject.transform.position;
 
-        float distanceToMenu = Vector3.Distance(playerPos, menuPos);
+        var distanceToMenu = Vector3.Distance(playerPos, menuPos);
 
-        bool shouldHideMenu = distanceToMenu > hideDistance;
+        var shouldHideMenu = distanceToMenu > hideDistance;
 
         if (shouldHideMenu)
         {

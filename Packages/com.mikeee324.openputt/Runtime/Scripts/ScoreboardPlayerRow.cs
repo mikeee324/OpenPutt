@@ -1,12 +1,8 @@
-﻿
-using mikeee324.OpenPutt;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
-using UnityEngine.UI;
 using VRC.SDKBase;
-using VRC.Udon;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public enum ScoreboardPlayerRowType
     {
@@ -45,7 +41,7 @@ namespace mikeee324.OpenPutt
         private void Start()
         {
             columns = new ScoreboardPlayerColumn[NumberOfColumns];
-            for (int i = 0; i < NumberOfColumns; i++)
+            for (var i = 0; i < NumberOfColumns; i++)
                 columns[i] = transform.GetChild(i).GetComponent<ScoreboardPlayerColumn>();
         }
 
@@ -57,10 +53,10 @@ namespace mikeee324.OpenPutt
         {
             UpdateVisibility(player);
 
-            for (int i = 0; i < columns.Length; i++)
+            for (var i = 0; i < columns.Length; i++)
                 columns[i].Refresh(player);
 
-            if (player != null)
+            if (Utilities.IsValid(player))
                 player.scoreboardRowNeedsUpdating = false;
         }
 
@@ -70,11 +66,11 @@ namespace mikeee324.OpenPutt
         /// <param name="player">The player that we want to display in this row</param>
         public void UpdateVisibility(PlayerManager player)
         {
-            bool visible = scoreboard.scoreboardCanvas.enabled;
+            var visible = scoreboard.scoreboardCanvas.enabled;
 
             if (visible && (int)rowType == (int)ScoreboardPlayerRowType.Normal)
             {
-                if (player == null || !player.gameObject.activeSelf || (scoreboard.manager.hideInactivePlayers && !player.PlayerHasStartedPlaying))
+                if (!Utilities.IsValid(player) || !player.gameObject.activeSelf || (scoreboard.manager.hideInactivePlayers && !player.PlayerHasStartedPlaying))
                     visible = false;
             }
 
@@ -93,7 +89,7 @@ namespace mikeee324.OpenPutt
         /// <returns>True if this row needs its colours updating, false if nothing else needs to happen</returns>
         public bool SetPosition(int position)
         {
-            bool wasAnEvenRow = isEvenRow;
+            var wasAnEvenRow = isEvenRow;
 
             CurrentPosition = position;
 

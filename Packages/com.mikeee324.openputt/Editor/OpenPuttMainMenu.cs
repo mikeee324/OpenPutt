@@ -7,7 +7,7 @@ using UnityEditor.SceneManagement;
 using Varneon.VUdon.ArrayExtensions;
 using UnityEditor.PackageManager.UI;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public class OpenPuttMainMenu : EditorWindow
     {

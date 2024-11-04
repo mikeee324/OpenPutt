@@ -1,12 +1,10 @@
-﻿
-using System;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(-1)]
     public class BodyMountedObject : UdonSharpBehaviour
@@ -49,7 +47,7 @@ namespace mikeee324.OpenPutt
         public float defaultPickupProximity = 0.2f;
         public KeyCode desktopInputKey = KeyCode.M;
         public ControllerButtons controllerInputKey = ControllerButtons.None;
-        public VRCPickup.PickupHand pickupHandLimit = VRCPickup.PickupHand.None;
+        public VRC_Pickup.PickupHand pickupHandLimit = VRC_Pickup.PickupHand.None;
         public bool applyVelocityAfterDrop = false;
         [HideInInspector]
         public bool pickedUpAtLeastOnce = false;
@@ -58,23 +56,23 @@ namespace mikeee324.OpenPutt
         #endregion
 
         #region Internal Vars
-        private VRCPickup.PickupHand _heldInHand = VRCPickup.PickupHand.None;
-        public VRCPickup.PickupHand heldInHand
+        private VRC_Pickup.PickupHand _heldInHand = VRC_Pickup.PickupHand.None;
+        public VRC_Pickup.PickupHand heldInHand
         {
             get => _heldInHand;
             set
             {
 
-                if (_heldInHand != VRCPickup.PickupHand.None && value == VRCPickup.PickupHand.None)
+                if (_heldInHand != VRC_Pickup.PickupHand.None && value == VRC_Pickup.PickupHand.None)
                 {
                     _heldInHand = value;
                     // Object was just dropped by the player
                     ActivateAndTakeOwnership();
 
-                    if (objectToAttach != null)
+                    if (Utilities.IsValid(objectToAttach))
                     {
-                        UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
-                        foreach (UdonBehaviour listener in listeners)
+                        var listeners = objectToAttach.GetComponents<UdonBehaviour>();
+                        foreach (var listener in listeners)
                         {
                             listener.SetProgramVariable("lastHeldFrameVelocity", lastFrameVelocity);
                             listener.SendCustomEvent(dropEventName);
@@ -83,21 +81,21 @@ namespace mikeee324.OpenPutt
 
                         if (applyVelocityAfterDrop)
                         {
-                            Rigidbody rb = objectToAttach.GetComponent<Rigidbody>();
-                            if (rb != null)
+                            var rb = objectToAttach.GetComponent<Rigidbody>();
+                            if (Utilities.IsValid(rb))
                                 rb.velocity = lastFrameVelocity;
                         }
                     }
                 }
-                if (_heldInHand == VRCPickup.PickupHand.None && value != VRCPickup.PickupHand.None)
+                if (_heldInHand == VRC_Pickup.PickupHand.None && value != VRC_Pickup.PickupHand.None)
                 {
                     _heldInHand = value;
                     // Object was just pickup up by the player
                     ActivateAndTakeOwnership();
-                    if (objectToAttach != null)
+                    if (Utilities.IsValid(objectToAttach))
                     {
-                        UdonBehaviour[] listeners = objectToAttach.GetComponents<UdonBehaviour>();
-                        foreach (UdonBehaviour listener in listeners)
+                        var listeners = objectToAttach.GetComponents<UdonBehaviour>();
+                        foreach (var listener in listeners)
                         {
                             listener.SendCustomEvent(pickupEventName);
                             listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
@@ -119,11 +117,11 @@ namespace mikeee324.OpenPutt
 
         void Start()
         {
-            if (objectToAttach != null)
+            if (Utilities.IsValid(objectToAttach))
                 originalRotation = objectToAttach.transform.rotation;
-            if (pickup == null)
+            if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
-            if (mountingOffsetHeightScale == null || mountingOffsetHeightScale.length == 0)
+            if (!Utilities.IsValid(mountingOffsetHeightScale) || mountingOffsetHeightScale.length == 0)
             {
                 mountingOffsetHeightScale.AddKey(0f, 0.5f);
                 mountingOffsetHeightScale.AddKey(1.5f, 1f);
@@ -147,19 +145,19 @@ namespace mikeee324.OpenPutt
                 firstFrameCheck = true;
             }
 
-            VRCPickup.PickupHand currentHand = VRCPickup.PickupHand.None;
-            if (pickup != null)
+            var currentHand = VRC_Pickup.PickupHand.None;
+            if (Utilities.IsValid(pickup))
             {
                 // Get VR pickup status
-                currentHand = pickup != null ? pickup.currentHand : VRCPickup.PickupHand.None;
+                currentHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
                 // If player is on Desktop - override this if they press the correct key
                 if (!userIsInVR)
                 {
-                    pickupHandLimit = VRCPickup.PickupHand.None;
-                    currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRCPickup.PickupHand.Right : VRCPickup.PickupHand.None;
+                    pickupHandLimit = VRC_Pickup.PickupHand.None;
+                    currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRC_Pickup.PickupHand.Right : VRC_Pickup.PickupHand.None;
                     if (controllerInputKey != ControllerButtons.None)
                     {
-                        if (controllerDetector != null && controllerDetector.LastUsedJoystick.IsKeyPressed(controllerInputKey, controllerDetector.LastKnownJoystickID))
+                        if (Utilities.IsValid(controllerDetector) && controllerDetector.LastUsedJoystick.IsKeyPressed(controllerInputKey, controllerDetector.LastKnownJoystickID))
                             currentHand = VRC_Pickup.PickupHand.Right;
                     }
                 }
@@ -168,11 +166,11 @@ namespace mikeee324.OpenPutt
                     currentHand = VRC_Pickup.PickupHand.Right;
 
                 // If it is limited to one hand only and player picked it up with the wrong hand
-                if (pickupHandLimit != VRCPickup.PickupHand.None && pickup != null && pickupHandLimit != currentHand)
+                if (pickupHandLimit != VRC_Pickup.PickupHand.None && Utilities.IsValid(pickup) && pickupHandLimit != currentHand)
                 {
                     // Drop this object
                     pickup.Drop();
-                    currentHand = VRCPickup.PickupHand.None;
+                    currentHand = VRC_Pickup.PickupHand.None;
                 }
 
                 // Trigger event calls if this changed
@@ -180,7 +178,7 @@ namespace mikeee324.OpenPutt
             }
 
             // We either can't tell if it's being held or we know it's not being held
-            if (currentHand == VRCPickup.PickupHand.None)
+            if (currentHand == VRC_Pickup.PickupHand.None)
             {
                 if (mountToPlayerPosition)
                 {
@@ -193,7 +191,7 @@ namespace mikeee324.OpenPutt
                     gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(mountToBone);
                 }
 
-                if (pickup != null)
+                if (Utilities.IsValid(pickup))
                     pickup.pickupable = true;
 
                 lastFramePosition = Vector3.zero;
@@ -215,26 +213,26 @@ namespace mikeee324.OpenPutt
             if (!pickedUpAtLeastOnce)
                 pickedUpAtLeastOnce = true;
 
-            if (pickup != null)
+            if (Utilities.IsValid(pickup))
                 pickup.pickupable = false;
 
-            if (objectToAttach != null)
+            if (Utilities.IsValid(objectToAttach))
                 objectToAttach.transform.position = gameObject.transform.position;
 
             if (userIsInVR)
             {
-                if (objectToAttach != null)
+                if (Utilities.IsValid(objectToAttach))
                     objectToAttach.transform.rotation = gameObject.transform.rotation;
             }
             else
             {
-                if (objectToAttach != null)
+                if (Utilities.IsValid(objectToAttach))
                     objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
                 gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
                 gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
             }
 
-            if (rbToAttach != null)
+            if (Utilities.IsValid(rbToAttach))
             {
                 rbToAttach.position = gameObject.transform.position;
                 rbToAttach.rotation = gameObject.transform.rotation;
@@ -243,7 +241,7 @@ namespace mikeee324.OpenPutt
 
         private void ActivateAndTakeOwnership()
         {
-            if (objectToAttach == null) return;
+            if (!Utilities.IsValid(objectToAttach)) return;
 
             if (!objectToAttach.gameObject.activeInHierarchy)
                 objectToAttach.gameObject.SetActive(true);
@@ -277,9 +275,9 @@ namespace mikeee324.OpenPutt
                 return;
             }
 
-            float lastKnownPlayerHeight = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
+            var lastKnownPlayerHeight = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
 
-            float scaleFactor = mountingOffsetHeightScale.Evaluate(lastKnownPlayerHeight);
+            var scaleFactor = mountingOffsetHeightScale.Evaluate(lastKnownPlayerHeight);
 
             currentOffset = mountingOffset * scaleFactor;
             pickup.proximity = 0.2f * scaleFactor;

@@ -1,9 +1,9 @@
-﻿
-using TMPro;
+﻿using TMPro;
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
     /// This script doesn't do much other than display the hole number or name right now.. I intend this to allow people to summon their ball or golf club using the course markers in the future.
@@ -23,9 +23,9 @@ namespace mikeee324.OpenPutt
 
         public void ResetUI()
         {
-            if (courseManager == null) return;
+            if (!Utilities.IsValid(courseManager)) return;
 
-            if (topText != null)
+            if (Utilities.IsValid(topText))
             {
                 if (courseManager.scoreboardLongName.Length > 0)
                     topText.text = courseManager.scoreboardLongName;
@@ -33,7 +33,7 @@ namespace mikeee324.OpenPutt
                     topText.text = $"Hole {courseManager.holeNumber + 1}";
             }
 
-            if (bottomText != null)
+            if (Utilities.IsValid(bottomText))
             {
                 if (courseManager.parScore > 0 && !courseManager.drivingRangeMode)
                 {

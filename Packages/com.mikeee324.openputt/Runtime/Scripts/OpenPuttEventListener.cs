@@ -1,6 +1,6 @@
 ﻿using UdonSharp;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     public abstract class OpenPuttEventListener : UdonSharpBehaviour
     {

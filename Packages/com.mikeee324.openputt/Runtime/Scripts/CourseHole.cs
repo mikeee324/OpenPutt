@@ -1,8 +1,8 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
-namespace mikeee324.OpenPutt
+namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class CourseHole : UdonSharpBehaviour
@@ -29,7 +29,7 @@ namespace mikeee324.OpenPutt
 
         private void OnTriggerEnter(Collider other)
         {
-            if (courseManager != null)
+            if (Utilities.IsValid(courseManager))
             {
                 courseManager.OnBallEnterHole(this, other);
             }
@@ -37,22 +37,22 @@ namespace mikeee324.OpenPutt
 
         public void OnBallEntered()
         {
-            if (courseManager != null && courseManager.openPutt != null)
+            if (Utilities.IsValid(courseManager) && Utilities.IsValid(courseManager.openPutt))
             {
                 if (localPlayerBallEnteredEvent)
                 {
-                    int localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
-                    int localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
+                    var localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
+                    var localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
 
                     localPlayerBallEnteredEvent = false;
-                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                    foreach (var eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnLocalPlayerFinishCourse(courseManager, this, localPlayerScore, localPlayerScoreRelative);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player finished course");
                 }
                 else
                 {
-                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                    foreach (var eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnRemotePlayerFinishCourse(courseManager, this, -1, -1);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Remote Player finished course");
@@ -62,23 +62,23 @@ namespace mikeee324.OpenPutt
 
         public void OnHoleInOne()
         {
-            if (courseManager != null && courseManager.openPutt != null && courseManager.openPutt.SFXController != null)
+            if (Utilities.IsValid(courseManager) && Utilities.IsValid(courseManager.openPutt) && Utilities.IsValid(courseManager.openPutt.SFXController))
             {
                 if (localPlayerHoleInOneEvent)
                 {
                     localPlayerHoleInOneEvent = false;
 
-                    int localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
-                    int localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
+                    var localPlayerScore = courseManager.openPutt.LocalPlayerManager.courseScores[courseManager.holeNumber];
+                    var localPlayerScoreRelative = localPlayerScore - courseManager.parScore;
 
-                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                    foreach (var eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnLocalPlayerFinishCourse(courseManager, this, localPlayerScore, localPlayerScoreRelative);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
                 }
                 else
                 {
-                    foreach (OpenPuttEventListener eventListener in courseManager.openPutt.eventListeners)
+                    foreach (var eventListener in courseManager.openPutt.eventListeners)
                         eventListener.OnRemotePlayerFinishCourse(courseManager, this, 1, 1 - courseManager.parScore);
                     if (courseManager.openPutt.debugMode)
                         Utils.Log(this, $"Course{courseManager.holeNumber} - Local Player Hole In One!");
