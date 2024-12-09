@@ -255,7 +255,7 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(rectTransform))
             {
                 var scoreboardScale = rectTransform.localScale;
-                if (scoreboardScale.z != 0.01f)
+                if (!Mathf.Approximately(scoreboardScale.z, 0.01f))
                     rectTransform.localScale = new Vector3(scoreboardScale.x, scoreboardScale.y, 0.01f);
             }
 

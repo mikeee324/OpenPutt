@@ -29,7 +29,7 @@ namespace dev.mikeee324.OpenPutt
 
         void Update()
         {
-            if (autoSpeedIncreases && resetTicker == -1f)
+            if (autoSpeedIncreases && resetTicker < 0f)
             {
                 resetTicker = 0;
                 if (currentVelocity == Vector3.zero)

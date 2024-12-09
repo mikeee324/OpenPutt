@@ -184,7 +184,7 @@ public class PortableMenu : UdonSharpBehaviour
 
                 pickup.pickupable = false;
 
-                if (originalHandDistance == -1)
+                if (originalHandDistance < 0)
                     originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftHand), Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightHand));
             }
             else

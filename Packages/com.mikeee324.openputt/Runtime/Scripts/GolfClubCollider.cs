@@ -198,7 +198,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             var speed = FrameVelocitySmoothedForScaling.magnitude;
-            if (overrideSpeed != -1f)
+            if (overrideSpeed < 0f)
                 speed = overrideSpeed;
 
             if (framesSinceHit >= 0)
