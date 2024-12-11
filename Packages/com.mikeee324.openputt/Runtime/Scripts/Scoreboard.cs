@@ -167,6 +167,27 @@ namespace dev.mikeee324.OpenPutt
                             openPuttPanel.gameObject.SetActive(true);
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
+
+                            if (Utilities.IsValid(manager))
+                            {
+                                manager.requestedScoreboardView = ScoreboardView.OpenPutt;
+
+                                var latest = manager.openPutt.latestOpenPuttVer;
+                                var current = manager.openPutt.CurrentVersion;
+
+                                if (current.Length > 0 && latest.Length > 0)
+                                {
+                                    updateAvailableLabel.gameObject.SetActive(latest != current);
+                                    updateAvailableLabel.text = $"Update Available!\nLatest version is {latest}\nVersion in this world is {current}";
+                                }
+                                else
+                                {
+                                    updateAvailableLabel.gameObject.SetActive(false);
+                                }
+
+                                changelogText.text = manager.openPutt.openPuttChangelog;
+                            }
+
                             break;
                         case ScoreboardView.DevMode:
                             settingsPanel.gameObject.SetActive(false);
@@ -224,6 +245,17 @@ namespace dev.mikeee324.OpenPutt
 
                     if (manager.devModeTaps < 30 && value != ScoreboardView.Settings)
                         manager.devModeTaps = 0;
+
+                    if (Utilities.IsValid(manager.openPutt))
+                    {
+                        switch (_currentScoreboardView)
+                        {
+                            case ScoreboardView.Settings:
+                            case ScoreboardView.DevMode:
+                                manager.openPutt.SavePersistantData();
+                                break;
+                        }
+                    }
                 }
 
                 _currentScoreboardView = value;
@@ -784,9 +816,6 @@ namespace dev.mikeee324.OpenPutt
                 manager.OnPlayerOpenSettings(this);
             }
 
-            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
-                manager.openPutt.SavePersistantData();
-
             CurrentScoreboardView = ScoreboardView.DevMode;
         }
 
@@ -797,9 +826,6 @@ namespace dev.mikeee324.OpenPutt
                 manager.requestedScoreboardView = ScoreboardView.Info;
             }
 
-            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
-                manager.openPutt.SavePersistantData();
-
             CurrentScoreboardView = ScoreboardView.Info;
         }
 
@@ -807,27 +833,7 @@ namespace dev.mikeee324.OpenPutt
         public void OnShowPrefabInfo()
         {
             if (Utilities.IsValid(manager))
-            {
                 manager.requestedScoreboardView = ScoreboardView.OpenPutt;
-
-                var latest = manager.openPutt.latestOpenPuttVer;
-                var current = manager.openPutt.CurrentVersion;
-
-                if (current.Length > 0 && latest.Length > 0)
-                {
-                    updateAvailableLabel.gameObject.SetActive(latest != current);
-                    updateAvailableLabel.text = $"Update Available!\nLatest version is {latest}\nVersion in this world is {current}";
-                }
-                else
-                {
-                    updateAvailableLabel.gameObject.SetActive(false);
-                }
-
-                changelogText.text = manager.openPutt.openPuttChangelog;
-            }
-
-            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
-                manager.openPutt.SavePersistantData();
 
             CurrentScoreboardView = ScoreboardView.OpenPutt;
         }
@@ -839,9 +845,6 @@ namespace dev.mikeee324.OpenPutt
             manager.SpeedGolfMode = true;
             if (parRowPanel.transform.childCount > 0)
                 parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
-
-            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
-                manager.openPutt.SavePersistantData();
 
             manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
@@ -855,9 +858,6 @@ namespace dev.mikeee324.OpenPutt
             if (parRowPanel.transform.childCount > 0)
                 parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
 
-            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
-                manager.openPutt.SavePersistantData();
-            
             manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
         }
