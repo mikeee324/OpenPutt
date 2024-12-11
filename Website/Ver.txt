@@ -1,3 +1,16 @@
+0.8.6
+--------
+- Replaces CyanPlayerObjectPool with VRC Player Objects
+- VRC Persistence is now used to save the following:
+    - Ball Colour
+    - World/SFX/BGM Volumes
+- Fixes hits sometimes being counted twice
+- Fixes personal mirrors on desktop causing issues with desktop cam mode
+- Updates all scoreboard UIs to use VRC supersampling material
+- Scoreboard player sorting has been updated to run through everybody when activated
+- Removes null checks and replaces them with Utilities.IsValid()
+- Renames a few files to prevent clashing with other libraries
+
 0.8.5
 --------
 - Course start pad file is now an FBX file

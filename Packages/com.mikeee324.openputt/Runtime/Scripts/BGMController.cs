@@ -9,13 +9,16 @@ namespace dev.mikeee324.OpenPutt
     {
         [Header("References")]
         public AudioSource audioSource;
+
         [Header("BGM Tracks")]
         public AudioClip[] audioClips;
+
         [Header("Settings")]
         public bool isSynced = true;
 
         [UdonSynced]
-        private int currentTrackStartedTime = 0;
+        private int currentTrackStartedTime;
+
         [UdonSynced]
         private int currentTrackID;
 
@@ -26,8 +29,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(audioSource))
             {
-                Utils.Log(this, "Could not find the audio source to control! Disabling myself...");
-                this.enabled = false;
+                OpenPuttUtils.Log(this, "Could not find the audio source to control! Disabling myself...");
+                enabled = false;
                 return;
             }
 
@@ -92,7 +95,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(audioSource) || !isSynced)
                 return;
 
-            Utils.Log(this, $"Received a clip to play! It started playing {Networking.GetServerTimeInMilliseconds() - currentTrackStartedTime}ms ago for the owner.");
+            OpenPuttUtils.Log(this, $"Received a clip to play! It started playing {Networking.GetServerTimeInMilliseconds() - currentTrackStartedTime}ms ago for the owner.");
 
             audioSource.clip = audioClips[currentTrackID];
             audioSource.time = (Networking.GetServerTimeInMilliseconds() - currentTrackStartedTime) * 0.001f;

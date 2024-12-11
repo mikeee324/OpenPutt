@@ -12,15 +12,26 @@ using VRC.Udon.Common;
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class PortableMenu : UdonSharpBehaviour
 {
-    [SerializeField] private KeyCode menuKey = KeyCode.N;
-    [SerializeField] private GameObject visibleMenuObject;
-    [SerializeField] private VRCPickup pickup;
-    [SerializeField] private Vector3 desktopHeadOffset = Vector3.zero;
+    [SerializeField]
+    private KeyCode menuKey = KeyCode.N;
 
-    [SerializeField] private float hideDistance = 3f;
+    [SerializeField]
+    private GameObject visibleMenuObject;
 
-    [SerializeField, Range(0f, 1f), Tooltip("How small the menu can get before it is hidden (relative to the initial opening size)")] private float closeThreshold = 0.4f;
-    [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")] private float openThreshold = 2f;
+    [SerializeField]
+    private VRCPickup pickup;
+
+    [SerializeField]
+    private Vector3 desktopHeadOffset = Vector3.zero;
+
+    [SerializeField]
+    private float hideDistance = 3f;
+
+    [SerializeField, Range(0f, 1f), Tooltip("How small the menu can get before it is hidden (relative to the initial opening size)")]
+    private float closeThreshold = 0.4f;
+
+    [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")]
+    private float openThreshold = 2f;
 
     public bool AllowMenuToOpen
     {
@@ -30,13 +41,13 @@ public class PortableMenu : UdonSharpBehaviour
             _allowMenuToOpen = value;
             if (AllowMenuToOpen)
             {
-                var wasEnabled = this.enabled;
+                var wasEnabled = enabled;
 
-                this.enabled = leftUseButtonDown && rightUseButtonDown;
+                enabled = leftUseButtonDown && rightUseButtonDown;
 
-                if (this.enabled != wasEnabled)
+                if (enabled != wasEnabled)
                 {
-                    if (this.enabled)
+                    if (enabled)
                     {
                         originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftHand), Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightHand));
                     }
@@ -45,13 +56,13 @@ public class PortableMenu : UdonSharpBehaviour
         }
     }
 
-    public bool golfClubHeldByPlayer = false;
-    public bool golfBallHeldByPlayer = false;
+    public bool golfClubHeldByPlayer;
+    public bool golfBallHeldByPlayer;
     private bool _allowMenuToOpen = true;
-    private bool leftUseButtonDown = false;
-    private bool rightUseButtonDown = false;
+    private bool leftUseButtonDown;
+    private bool rightUseButtonDown;
     private float originalHandDistance = -1f;
-    private bool userIsInVR = false;
+    private bool userIsInVR;
 
     void Start()
     {
@@ -67,7 +78,7 @@ public class PortableMenu : UdonSharpBehaviour
     /// </summary>
     public void IsUserInVRCheck()
     {
-        if (Utils.LocalPlayerIsValid())
+        if (OpenPuttUtils.LocalPlayerIsValid())
         {
             userIsInVR = Networking.LocalPlayer.IsUserInVR();
 
@@ -91,6 +102,7 @@ public class PortableMenu : UdonSharpBehaviour
                 originalHandDistance = -1f;
                 return;
             }
+
             if (originalHandDistance != -1f && leftUseButtonDown && rightUseButtonDown)
             {
                 // Maybe this crashes if an avatar doesn't have finger bones? - No idea
@@ -137,7 +149,7 @@ public class PortableMenu : UdonSharpBehaviour
     /// </summary>
     public void ShouldHideMenu()
     {
-        if (!Utils.LocalPlayerIsValid()) return;
+        if (!OpenPuttUtils.LocalPlayerIsValid()) return;
 
         var playerPos = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
         var menuPos = visibleMenuObject.transform.position;

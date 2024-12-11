@@ -10,12 +10,17 @@ namespace dev.mikeee324.OpenPutt
     public class BodyMountedObject : UdonSharpBehaviour
     {
         #region Public Settings
+
         [Header("Object Settings")]
         public ControllerDetector controllerDetector;
+
         public Rigidbody rb;
+
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
+
         private Rigidbody rbToAttach;
+
         public GameObject ObjectToAttach
         {
             get => objectToAttach;
@@ -27,42 +32,54 @@ namespace dev.mikeee324.OpenPutt
                 ActivateAndTakeOwnership();
             }
         }
+
         [Tooltip("When the player picks up this object it will send this an event with this name to the attached object")]
         public string pickupEventName = "OnScriptPickup";
+
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string dropEventName = "OnScriptDrop";
+
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
+
         public VRCPickup pickup;
 
-        [Header("Mounting Settings")]
-        [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
+        [Header("Mounting Settings")] [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
-        public bool mountToPlayerPosition = false;
+
+        public bool mountToPlayerPosition;
         public Vector3 mountingOffset = Vector3.zero;
+
         [Tooltip("Toggles scaling this offset based onthe local players height (allows you to move it further away from their head if they are taller)")]
-        public bool mountingOffsetHeightScaling = false;
-        public AnimationCurve mountingOffsetHeightScale = null;
+        public bool mountingOffsetHeightScaling;
+
+        public AnimationCurve mountingOffsetHeightScale;
+
         [Tooltip("Allows the VRCPickup proximity to scale with the players height to hopefully make it easier to grab things")]
         public float defaultPickupProximity = 0.2f;
+
         public KeyCode desktopInputKey = KeyCode.M;
         public ControllerButtons controllerInputKey = ControllerButtons.None;
         public VRC_Pickup.PickupHand pickupHandLimit = VRC_Pickup.PickupHand.None;
-        public bool applyVelocityAfterDrop = false;
+        public bool applyVelocityAfterDrop;
+
         [HideInInspector]
-        public bool pickedUpAtLeastOnce = false;
+        public bool pickedUpAtLeastOnce;
+
         [HideInInspector]
-        public bool forcePickedUp = false;
+        public bool forcePickedUp;
+
         #endregion
 
         #region Internal Vars
+
         private VRC_Pickup.PickupHand _heldInHand = VRC_Pickup.PickupHand.None;
+
         public VRC_Pickup.PickupHand heldInHand
         {
             get => _heldInHand;
             set
             {
-
                 if (_heldInHand != VRC_Pickup.PickupHand.None && value == VRC_Pickup.PickupHand.None)
                 {
                     _heldInHand = value;
@@ -87,6 +104,7 @@ namespace dev.mikeee324.OpenPutt
                         }
                     }
                 }
+
                 if (_heldInHand == VRC_Pickup.PickupHand.None && value != VRC_Pickup.PickupHand.None)
                 {
                     _heldInHand = value;
@@ -106,13 +124,15 @@ namespace dev.mikeee324.OpenPutt
                 _heldInHand = value;
             }
         }
+
         private Quaternion originalRotation;
 
         private Vector3 lastFramePosition = Vector3.zero;
         private Vector3 lastFrameVelocity = Vector3.zero;
-        private bool firstFrameCheck = false;
-        private bool userIsInVR = false;
+        private bool firstFrameCheck;
+        private bool userIsInVR;
         private Vector3 currentOffset = Vector3.zero;
+
         #endregion
 
         void Start()
@@ -247,7 +267,7 @@ namespace dev.mikeee324.OpenPutt
                 objectToAttach.gameObject.SetActive(true);
 
             if (!Networking.LocalPlayer.IsOwner(objectToAttach.gameObject))
-                Utils.SetOwner(Networking.LocalPlayer, objectToAttach.gameObject);
+                OpenPuttUtils.SetOwner(Networking.LocalPlayer, objectToAttach.gameObject);
         }
 
         public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)
@@ -269,7 +289,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            if (!Utils.LocalPlayerIsValid())
+            if (!OpenPuttUtils.LocalPlayerIsValid())
             {
                 SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
                 return;

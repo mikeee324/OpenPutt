@@ -9,7 +9,6 @@ using VRC.SDKBase;
 [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(101)]
 public class ScoreboardPlayerColumn : UdonSharpBehaviour
 {
-
     public ScoreboardPlayerRow scoreboardRow;
     public Image colBackground;
     public TextMeshProUGUI colText;
@@ -214,6 +213,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                         UpdateScoreColumn(player);
                     }
                 }
+
                 break;
             case ScoreboardPlayerRowType.Par:
                 if (Utilities.IsValid(openPutt) && openPutt.courses.Length > 0)
@@ -237,9 +237,11 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                         else
                             SetText($"{course.parScore}");
                     }
+
                     SetTextColour(scoreboardManager.text);
                     SetBackgroundColour(scoreboardManager.nameBackground2);
                 }
+
                 break;
             case ScoreboardPlayerRowType.Header:
                 if (Utilities.IsValid(openPutt) && openPutt.courses.Length > 0)
@@ -262,9 +264,11 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
                         SetText(newText);
                     }
+
                     SetTextColour(scoreboardManager.text);
                     SetBackgroundColour(scoreboardManager.nameBackground2);
                 }
+
                 break;
         }
     }

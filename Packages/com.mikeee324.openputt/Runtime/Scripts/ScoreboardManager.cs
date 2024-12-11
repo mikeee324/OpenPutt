@@ -13,10 +13,12 @@ namespace dev.mikeee324.OpenPutt
         /// All score updates will be displayed as soon as the refresh interval allows
         /// </summary>
         All,
+
         /// <summary>
         /// Only player course start/end updates will be synced
         /// </summary>
         StartAndFinish,
+
         /// <summary>
         /// Only player course finish events will be synced
         /// </summary>
@@ -31,45 +33,58 @@ namespace dev.mikeee324.OpenPutt
 
         public Scoreboard[] scoreboards;
         public Scoreboard[] staticScoreboards;
+
         /// <summary>
         /// Used to avoid having to build a joined array of scoreboards+staticScoreboards after start
         /// </summary>
         private Scoreboard[] allScoreboards;
+
         public ScoreboardPositioner[] scoreboardPositions;
 
-        [Space, Header("Settings")]
-        [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
+        [Space, Header("Settings")] [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
         public float maxRefreshInterval = .25f;
+
         [Range(1f, 5f), Tooltip("Amount of time in seconds between scoreboard position updates")]
         public float scoreboardPositionUpdateInterval = 1f;
+
         [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]
         public int numberOfPlayersToDisplay = 12;
+
         [Tooltip("This should stay enabled unless you're debugging the scoreboard player lists")]
         public bool hideInactivePlayers = true;
 
         [Header("Background Colours")]
         public Color nameBackground1 = Color.black;
+
         public Color scoreBackground1 = Color.black;
         public Color totalBackground1 = Color.black;
+
         [Space]
         public Color nameBackground2 = Color.black;
+
         public Color scoreBackground2 = Color.black;
         public Color totalBackground2 = Color.black;
+
         [Space]
         public Color currentCourseBackground = Color.black;
+
         public Color underParBackground = Color.green;
         public Color overParBackground = Color.red;
+
         [Header("Text Colours")]
         public Color text = Color.white;
+
         public Color currentCourseText = Color.white;
         public Color underParText = Color.white;
         public Color overParText = Color.white;
 
         [Header("Prefab References")]
         public GameObject rowPrefab;
+
         public GameObject colPrefab;
 
         #region Internal Vars
+
         /// <summary>
         /// Determines whether or not the local player currently has access to the dev mode tab
         /// </summary>
@@ -80,7 +95,7 @@ namespace dev.mikeee324.OpenPutt
                 if (openPutt.enableDevModeForAll)
                     return true;
 
-                var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+                var localPlayerName = OpenPuttUtils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
                 if (Utilities.IsValid(localPlayerName) && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
                     return true;
@@ -88,6 +103,7 @@ namespace dev.mikeee324.OpenPutt
                 return false;
             }
         }
+
         /// <summary>
         /// Determines whether or not the local player currently has access to the dev mode tab
         /// </summary>
@@ -98,7 +114,7 @@ namespace dev.mikeee324.OpenPutt
                 if (openPutt.enableDevModeForAll)
                     return true;
 
-                var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+                var localPlayerName = OpenPuttUtils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
                 if (Utilities.IsValid(localPlayerName) && openPutt.devModePlayerWhitelist.Contains(localPlayerName))
                     return true;
@@ -109,6 +125,7 @@ namespace dev.mikeee324.OpenPutt
                 return false;
             }
         }
+
         /// <summary>
         /// Whether or not the scoreboard is showing course times instead of scores
         /// </summary>
@@ -122,31 +139,37 @@ namespace dev.mikeee324.OpenPutt
                     RequestRefreshForRow(-2, true);
                     CheckPlayerListForChanges(forceUpdate: true);
                 }
+
                 _speedGolfMode = value;
             }
         }
-        private bool _speedGolfMode = false;
+
+        private bool _speedGolfMode;
+
         /// <summary>
         /// Returns the last known list of players that was pushed out to all scoreboards
         /// </summary>
         public PlayerManager[] CurrentPlayerList { get; private set; }
 
         public int NumberOfColumns => Utilities.IsValid(openPutt) ? openPutt.courses.Length + 2 : 0;
+
         [HideInInspector]
         public ScoreboardView requestedScoreboardView = ScoreboardView.Info;
 
-        private int progressiveUpdateCurrentScoreboardID = 0;
+        private int progressiveUpdateCurrentScoreboardID;
         private int[] progressiveRowUpdateQueue = new int[0];
-        private bool allScoreboardsInitialised = false;
+        private bool allScoreboardsInitialised;
+
         [HideInInspector]
-        public int devModeTaps = 0;
+        public int devModeTaps;
+
         #endregion
 
         void Start()
         {
             if (!Utilities.IsValid(openPutt))
             {
-                Utils.LogError(this, "Missing OpenPutt Reference! Disabling Scoreboards");
+                OpenPuttUtils.LogError(this, "Missing OpenPutt Reference! Disabling Scoreboards");
                 gameObject.SetActive(false);
                 foreach (var scoreboard in scoreboards)
                     scoreboard.gameObject.SetActive(false);
@@ -176,7 +199,7 @@ namespace dev.mikeee324.OpenPutt
             SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), scoreboardPositionUpdateInterval);
 
             // Don't do anything if we can't find the local player
-            if (!Utils.LocalPlayerIsValid())
+            if (!OpenPuttUtils.LocalPlayerIsValid())
                 return;
 
             // After all scoreboard have initialised - queue a full refresh
@@ -252,7 +275,7 @@ namespace dev.mikeee324.OpenPutt
                     position.backgroundCanvas.enabled = false;
 
                     // Move this scoreboard to the correct position
-                    var scoreboard = this.scoreboards[currentVisibleScoreboardID];
+                    var scoreboard = scoreboards[currentVisibleScoreboardID];
                     scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
                     scoreboard.transform.localScale = position.transform.lossyScale;
 
@@ -384,7 +407,7 @@ namespace dev.mikeee324.OpenPutt
 
             stopwatch.Stop();
             if (openPutt.debugMode)
-                Utils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
+                OpenPuttUtils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
         }
 
         public void ProgressiveScoreboardRowUpdate()
@@ -489,7 +512,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 stopwatch.Stop();
                 if (openPutt.debugMode)
-                    Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Can fit all players inside available rows. No array slicing required.");
+                    OpenPuttUtils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Can fit all players inside available rows. No array slicing required.");
                 return allPlayers;
             }
 
@@ -517,7 +540,7 @@ namespace dev.mikeee324.OpenPutt
             stopwatch.Stop();
 
             if (openPutt.debugMode)
-                Utils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Could not fit all players inside available rows. Array slicing was required. Returning {allPlayers.Length} players for the scoreboards.");
+                OpenPuttUtils.Log(this, $"GetPlayerList({stopwatch.Elapsed.TotalMilliseconds}ms) - Could not fit all players inside available rows. Array slicing was required. Returning {allPlayers.Length} players for the scoreboards.");
 
             return allPlayers;
         }

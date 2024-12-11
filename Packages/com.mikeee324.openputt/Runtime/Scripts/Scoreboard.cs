@@ -22,13 +22,12 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
-        [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")]
-        [Header("External References")]
-        [Tooltip("This is needed to receive refresh events and give access to the player info")]
+        [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")] [Header("External References")] [Tooltip("This is needed to receive refresh events and give access to the player info")]
         public ScoreboardManager manager;
 
         [Header("Internal References (All are required to be set)")]
         public ScoreboardPlayerRow[] scoreboardRows = new ScoreboardPlayerRow[0];
+
         public RectTransform rectTransform;
         public Canvas myCanvas;
         public RectTransform scoreboardHeader;
@@ -72,6 +71,7 @@ namespace dev.mikeee324.OpenPutt
         public Image ballColorPreview;
 
         #region Dev Mode Stuff
+
         public TextMeshProUGUI devModeLastClubHitSpeed;
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
@@ -102,6 +102,7 @@ namespace dev.mikeee324.OpenPutt
         public Dropdown devModeClubColliderTypeDropdown;
         public Dropdown devModeBallColliderTypeDropdown;
         public Transform devModeSettingsBox;
+
         #endregion
 
         public GameObject desktopModeBox;
@@ -113,25 +114,27 @@ namespace dev.mikeee324.OpenPutt
         public Image courseReplaysCheckbox;
         public Image invertCameraXCheckbox;
         public Image invertCameraYCheckbox;
-        public Material checkboxOn;
-        public Material checkboxOff;
+        public Sprite checkboxOn;
+        public Sprite checkboxOff;
         public Button resetButton;
         public Button resetConfirmButton;
         public Button resetCancelButton;
 
         [Space, Header("Sizing")]
         public float nameColumnWidth = 0.35f;
+
         public float totalColumnWidth = 0.2f;
         public float columnPadding = 0.005f;
         public float rowPadding = 0.01f;
         public float rowHeight = 0.15f;
 
-        private bool initializedUI = false;
+        private bool initializedUI;
         public bool HasInitializedUI => initializedUI;
-        private float totalHeightOfScrollViewport = 0f;
+        private float totalHeightOfScrollViewport;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
 
         public int NumberOfColumns => Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.courses.Length + 2 : 0;
+
         [HideInInspector]
         public int MaxVisibleRowCount = 12;
 
@@ -232,7 +235,7 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt))
             {
-                Utils.LogError(this, "Missing references to manager or OpenPutt! Disabling this scoreboard.");
+                OpenPuttUtils.LogError(this, "Missing references to manager or OpenPutt! Disabling this scoreboard.");
                 gameObject.SetActive(false);
                 return;
             }
@@ -303,6 +306,7 @@ namespace dev.mikeee324.OpenPutt
                 bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
                 break;
             }
+
             bgmVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.BGMAudioSources.Length > 0);
 
             // Just use the first audio source volume
@@ -313,6 +317,7 @@ namespace dev.mikeee324.OpenPutt
                 worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
                 break;
             }
+
             worldVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.WorldAudioSources.Length > 0);
 
             var color = playerManager.BallColor;
@@ -323,16 +328,16 @@ namespace dev.mikeee324.OpenPutt
 
             ballColorPreview.color = color;
 
-            courseReplaysCheckbox.material = manager.openPutt.replayableCourses ? checkboxOn : checkboxOff;
+            courseReplaysCheckbox.sprite = manager.openPutt.replayableCourses ? checkboxOn : checkboxOff;
 
-            verticalHitsCheckbox.material = playerManager.openPutt.enableVerticalHits ? checkboxOn : checkboxOff;
-            isPlayingCheckbox.material = playerManager.isPlaying ? checkboxOff : checkboxOn;
-            leftHandModeCheckbox.material = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
-            enableBigShaftCheckbox.material = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
+            verticalHitsCheckbox.sprite = playerManager.openPutt.enableVerticalHits ? checkboxOn : checkboxOff;
+            isPlayingCheckbox.sprite = playerManager.isPlaying ? checkboxOff : checkboxOn;
+            leftHandModeCheckbox.sprite = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
+            enableBigShaftCheckbox.sprite = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
 
             var cameraManager = manager.openPutt.desktopModeCameraController;
-            invertCameraXCheckbox.material = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
-            invertCameraYCheckbox.material = cameraManager.invertCameraY ? checkboxOn : checkboxOff;
+            invertCameraXCheckbox.sprite = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
+            invertCameraYCheckbox.sprite = cameraManager.invertCameraY ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -636,6 +641,7 @@ namespace dev.mikeee324.OpenPutt
 
                     attachedObject.transform.localPosition = Vector3.zero;
                 }
+
                 attachedObject = playerManager.openPutt.rightShoulderPickup.ObjectToAttach;
                 if (Utilities.IsValid(attachedObject))
                 {
@@ -694,11 +700,11 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.devModePlayerWhitelist))
                 return;
 
-            var localPlayerName = Utils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
+            var localPlayerName = OpenPuttUtils.LocalPlayerIsValid() ? Networking.LocalPlayer.displayName : null;
 
             if (Utilities.IsValid(localPlayerName) && manager.openPutt.devModePlayerWhitelist.Contains(localPlayerName))
             {
-                Utils.SetOwner(Networking.LocalPlayer, manager.openPutt.gameObject);
+                OpenPuttUtils.SetOwner(Networking.LocalPlayer, manager.openPutt.gameObject);
                 manager.openPutt.enableDevModeForAll = !manager.openPutt.enableDevModeForAll;
                 manager.openPutt.RequestSerialization();
             }
@@ -766,6 +772,7 @@ namespace dev.mikeee324.OpenPutt
                 manager.requestedScoreboardView = ScoreboardView.Settings;
                 manager.OnPlayerOpenSettings(this);
             }
+
             CurrentScoreboardView = ScoreboardView.Settings;
         }
 
@@ -776,6 +783,10 @@ namespace dev.mikeee324.OpenPutt
                 manager.requestedScoreboardView = ScoreboardView.DevMode;
                 manager.OnPlayerOpenSettings(this);
             }
+
+            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
+                manager.openPutt.SavePersistantData();
+
             CurrentScoreboardView = ScoreboardView.DevMode;
         }
 
@@ -785,6 +796,10 @@ namespace dev.mikeee324.OpenPutt
             {
                 manager.requestedScoreboardView = ScoreboardView.Info;
             }
+
+            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
+                manager.openPutt.SavePersistantData();
+
             CurrentScoreboardView = ScoreboardView.Info;
         }
 
@@ -807,8 +822,13 @@ namespace dev.mikeee324.OpenPutt
                 {
                     updateAvailableLabel.gameObject.SetActive(false);
                 }
+
                 changelogText.text = manager.openPutt.openPuttChangelog;
             }
+
+            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
+                manager.openPutt.SavePersistantData();
+
             CurrentScoreboardView = ScoreboardView.OpenPutt;
         }
 
@@ -819,6 +839,9 @@ namespace dev.mikeee324.OpenPutt
             manager.SpeedGolfMode = true;
             if (parRowPanel.transform.childCount > 0)
                 parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+
+            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
+                manager.openPutt.SavePersistantData();
 
             manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
@@ -832,6 +855,9 @@ namespace dev.mikeee324.OpenPutt
             if (parRowPanel.transform.childCount > 0)
                 parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
 
+            if (Utilities.IsValid(manager.openPutt) && (CurrentScoreboardView == ScoreboardView.Settings || CurrentScoreboardView == ScoreboardView.DevMode))
+                manager.openPutt.SavePersistantData();
+            
             manager.requestedScoreboardView = ScoreboardView.Scoreboard;
             CurrentScoreboardView = ScoreboardView.Scoreboard;
         }
@@ -856,17 +882,19 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Utilities.IsValid(pm.golfClub.pickup))
                         pm.golfClub.pickup.Drop();
-                    if (Utilities.IsValid(pm.golfClub.puttSync))
-                        pm.golfClub.puttSync.Respawn();
+                    if (Utilities.IsValid(pm.golfClub.openPuttSync))
+                        pm.golfClub.openPuttSync.Respawn();
                 }
+
                 if (Utilities.IsValid(pm.golfBall))
                 {
                     if (pm.golfBall.GetComponent<VRCPickup>() != null)
                         pm.golfBall.GetComponent<VRCPickup>().Drop();
-                    if (Utilities.IsValid(pm.golfClub.puttSync))
-                        pm.golfClub.puttSync.Respawn();
+                    if (Utilities.IsValid(pm.golfClub.openPuttSync))
+                        pm.golfClub.openPuttSync.Respawn();
                     pm.golfBall.BallIsMoving = false;
                 }
+
                 pm.RequestSync();
 
                 pm.UpdateTotals();
@@ -874,7 +902,7 @@ namespace dev.mikeee324.OpenPutt
                 pm.openPutt.OnPlayerUpdate(pm);
 
                 if (manager.openPutt.debugMode)
-                    Utils.Log(this, "Player reset their scores");
+                    OpenPuttUtils.Log(this, "Player reset their scores");
             }
 
             OnResetCancel();
@@ -890,6 +918,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         #region Dev Mode UI Functions
+
         public void RefreshDevModeMenu()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -928,12 +957,12 @@ namespace dev.mikeee324.OpenPutt
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
-            devModeExperimentalClubColliderCheckbox.material = playerManager.golfClub.putter.smoothFollowClubHead ? checkboxOn : checkboxOff;
-            devModeSmoothDirClubColliderCheckbox.material = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
-            devModeForAllCheckbox.material = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
-            footColliderCheckbox.material = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
-            clubRendererCheckbox.material = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
-            clubHeadDirectionCheckbox.material = playerManager.golfClubHead.useClubHeadDirection ? checkboxOn : checkboxOff;
+            devModeExperimentalClubColliderCheckbox.sprite = playerManager.golfClub.putter.smoothFollowClubHead ? checkboxOn : checkboxOff;
+            devModeSmoothDirClubColliderCheckbox.sprite = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
+            devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
+            footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
+            clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
+            clubHeadDirectionCheckbox.sprite = playerManager.golfClubHead.useClubHeadDirection ? checkboxOn : checkboxOff;
         }
 
         public void OnBallWeightReset()
@@ -1105,6 +1134,7 @@ namespace dev.mikeee324.OpenPutt
             player.golfBall.BallMaxSpeed = devModeBallMaxSpeedSlider.value;
             devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
         }
+
         #endregion
 
         public void SnapTo(ScrollRect scrollRect, Transform target)
@@ -1114,9 +1144,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(target))
                 scrollRect.content.anchoredPosition = Vector2.zero;
             else
-                scrollRect.content.anchoredPosition =
-                        (Vector2)scrollRect.transform.InverseTransformPoint(scrollRect.transform.position)
-                        - (Vector2)scrollRect.transform.InverseTransformPoint(target.position);
+                scrollRect.content.anchoredPosition = (Vector2)scrollRect.transform.InverseTransformPoint(scrollRect.transform.position) - (Vector2)scrollRect.transform.InverseTransformPoint(target.position);
         }
 
         public void UpdateTabColours()
@@ -1138,24 +1166,28 @@ namespace dev.mikeee324.OpenPutt
                 colorBlock.normalColor = newScoreboardCol;
                 scoreboardTabBackground.colors = colorBlock;
             }
+
             if (scoreboardTimerTabBackground.colors.normalColor != newSpeedrunCol)
             {
                 var colorBlock = scoreboardTimerTabBackground.colors;
                 colorBlock.normalColor = newSpeedrunCol;
                 scoreboardTimerTabBackground.colors = colorBlock;
             }
+
             if (infoTabBackground.colors.normalColor != newInfoCol)
             {
                 var colorBlock = infoTabBackground.colors;
                 colorBlock.normalColor = newInfoCol;
                 infoTabBackground.colors = colorBlock;
             }
+
             if (settingsTabBackground.colors.normalColor != newSettingsCol)
             {
                 var colorBlock = settingsTabBackground.colors;
                 colorBlock.normalColor = newSettingsCol;
                 settingsTabBackground.colors = colorBlock;
             }
+
             if (openPuttTabBackground.colors.normalColor != newOpenPuttCol)
             {
                 var colorBlock = openPuttTabBackground.colors;
@@ -1165,7 +1197,7 @@ namespace dev.mikeee324.OpenPutt
 
             var devModeEnabled = manager.LocalPlayerCanAccessDevMode || manager.LocalPlayerCanAccessToolbox;
             devModeTabBackground.gameObject.SetActive(devModeEnabled);
-            
+
             rightTabsPanel.sizeDelta = new Vector2(devModeEnabled ? 1.01f : .81f, rightTabsPanel.sizeDelta.y);
 
             devModeSettingsBox.gameObject.SetActive(manager.LocalPlayerCanAccessDevMode);

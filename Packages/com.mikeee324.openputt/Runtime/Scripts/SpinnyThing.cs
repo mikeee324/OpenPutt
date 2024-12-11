@@ -14,8 +14,10 @@ namespace dev.mikeee324.OpenPutt
     {
         public Vector3 rotationTorque = Vector3.zero;
         public float rigidBodymass = 20f;
+
         [Range(0.1f, 20f)]
-        public float maxRotationSpeed = 0f;
+        public float maxRotationSpeed;
+
         private Rigidbody rb;
         public CollisionDetectionMode rigidbodyTargetCollisionMode = CollisionDetectionMode.ContinuousDynamic;
         public LayerMask layersToIgnore;
@@ -26,11 +28,13 @@ namespace dev.mikeee324.OpenPutt
         /// Stores the starting position of this spinny thing so we can lock the position manually in LateUpdate()
         /// </summary>
         private Vector3 originalPosition;
+
         /// <summary>
         /// Used when trying to lock the rotation of this object so it only spins on one axis<br/>
         /// Would be better to maybe use Quaternions but I can't figure out how to lock the axises with them.. so eulerAngles will do for now
         /// </summary>
         private Vector3 originalRotationEuler;
+
         private Quaternion originalRotationQuaternion;
 
         [Tooltip("Changing this to EulerAngles can be useful if your spinny thing keeps rotating slightly on axises that are supposed to be locked")]
@@ -70,20 +74,13 @@ namespace dev.mikeee324.OpenPutt
 
             if (lockRotationUsing == RotationLockType.EulerAngles)
             {
-                transform.localEulerAngles = new Vector3(
-                    rotationTorque.x == 0.0f ? originalRotationEuler.x : transform.localEulerAngles.x,
-                    rotationTorque.y == 0.0f ? originalRotationEuler.y : transform.localEulerAngles.y,
-                    rotationTorque.z == 0.0f ? originalRotationEuler.z : transform.localEulerAngles.z
-                );
+                transform.localEulerAngles = new Vector3(rotationTorque.x == 0.0f ? originalRotationEuler.x : transform.localEulerAngles.x, rotationTorque.y == 0.0f ? originalRotationEuler.y : transform.localEulerAngles.y,
+                    rotationTorque.z == 0.0f ? originalRotationEuler.z : transform.localEulerAngles.z);
             }
             else if (lockRotationUsing == RotationLockType.Quaternions)
             {
-                transform.localRotation = new Quaternion(
-                    rotationTorque.x == 0.0f ? originalRotationQuaternion.x : transform.localRotation.x,
-                    rotationTorque.y == 0.0f ? originalRotationQuaternion.y : transform.localRotation.y,
-                    rotationTorque.z == 0.0f ? originalRotationQuaternion.z : transform.localRotation.z,
-                    transform.localRotation.w
-                );
+                transform.localRotation = new Quaternion(rotationTorque.x == 0.0f ? originalRotationQuaternion.x : transform.localRotation.x, rotationTorque.y == 0.0f ? originalRotationQuaternion.y : transform.localRotation.y,
+                    rotationTorque.z == 0.0f ? originalRotationQuaternion.z : transform.localRotation.z, transform.localRotation.w);
             }
         }
 
@@ -91,7 +88,7 @@ namespace dev.mikeee324.OpenPutt
         {
             transform.position = originalPosition;
         }
-        
+
         private void OnEnable()
         {
             rb = GetComponent<Rigidbody>();

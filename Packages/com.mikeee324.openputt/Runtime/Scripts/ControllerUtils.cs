@@ -8,22 +8,38 @@ namespace dev.mikeee324.OpenPutt
     /// </summary>
     public enum Controller
     {
-        None, Xbox, DS4
+        None,
+        Xbox,
+        DS4
     }
 
     public enum ControllerButtons
     {
-        None, A, B, X, Y, LB, RB, LT, RT, Select, Start, LeftStick, RightStick
+        None,
+        A,
+        B,
+        X,
+        Y,
+        LB,
+        RB,
+        LT,
+        RT,
+        Select,
+        Start,
+        LeftStick,
+        RightStick
     }
 
     public enum DevicePlatform
     {
-        Desktop, PCVR, AndroidVR, AndroidMobile
+        Desktop,
+        PCVR,
+        AndroidVR,
+        AndroidMobile
     }
 
     public static class DevicePlatformExtensions
     {
-
         public static string GetName(this DevicePlatform platform)
         {
             switch (platform)
@@ -54,14 +70,13 @@ namespace dev.mikeee324.OpenPutt
             else return DevicePlatform.AndroidMobile;
 #else
             if (player.IsUserInVR()) return DevicePlatform.PCVR;
-            else return DevicePlatform.Desktop;
+            return DevicePlatform.Desktop;
 #endif
         }
     }
 
     public static class ControllerExtensions
     {
-
         public static string GetName(this Controller platform)
         {
             switch (platform)
@@ -212,8 +227,7 @@ namespace dev.mikeee324.OpenPutt
                 case Controller.DS4:
                     if (rawOutput)
                         return GetInputAxis(4, joystickID: joystickID);
-                    else
-                        return (GetInputAxis(4, joystickID: joystickID) + 1) / 2; // DS4 Goes -1 to 1
+                    return (GetInputAxis(4, joystickID: joystickID) + 1) / 2; // DS4 Goes -1 to 1
                 default:
                     return 0;
             }
@@ -231,8 +245,7 @@ namespace dev.mikeee324.OpenPutt
                 case Controller.DS4:
                     if (rawOutput)
                         return GetInputAxis(5, joystickID: joystickID);
-                    else
-                        return (GetInputAxis(5, joystickID: joystickID) + 1) / 2; // DS4 Goes -1 to 1
+                    return (GetInputAxis(5, joystickID: joystickID) + 1) / 2; // DS4 Goes -1 to 1
                 default:
                     return 0;
             }

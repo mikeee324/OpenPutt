@@ -7,9 +7,8 @@ using Random = UnityEngine.Random;
 namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class Utils : UdonSharpBehaviour
+    public class OpenPuttUtils : UdonSharpBehaviour
     {
-
         public static void Log(string tag, string message, string tagColor = "green")
         {
 #if UNITY_STANDALONE_WIN
@@ -105,6 +104,7 @@ namespace dev.mikeee324.OpenPutt
                 LogError(tag: "Utils", message: nameof(PlayerPresentInBoxCollider) + " tried to run but had no box collider.", tagColor: "red");
                 return false;
             }
+
             var vrcPlayers = new VRCPlayerApi[100]; //This is to check if players are present.
             VRCPlayerApi.GetPlayers(vrcPlayers);
             foreach (var player in vrcPlayers)
@@ -115,6 +115,7 @@ namespace dev.mikeee324.OpenPutt
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -166,8 +167,19 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="deadzone">The deadzone (Default: 0.05f)</param>
         /// <returns></returns>
         public static bool IsNearZero(this float f, float deadzone = .05f) => Mathf.Abs(f) <= Mathf.Abs(deadzone);
+
+        public static bool IsNear(this float a, float b, float deadzone = .05f)
+        {
+            if (float.IsNaN(a) || float.IsNaN(b))
+                return false; 
+            if (float.IsInfinity(a) || float.IsInfinity(b))
+                return a == b;
+            return Math.Abs(a - b) < deadzone;
+        }
+
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
-        public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+        public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
+
         /// <summary>
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -214,6 +226,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     j--;
                 }
+
                 if (i <= j)
                 {
                     var temp = array[i];
@@ -295,5 +308,4 @@ namespace dev.mikeee324.OpenPutt
             return biasedDirection.normalized;
         }
     }
-
 }

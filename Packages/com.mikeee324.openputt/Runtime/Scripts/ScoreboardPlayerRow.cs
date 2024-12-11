@@ -15,13 +15,16 @@ namespace dev.mikeee324.OpenPutt
     public class ScoreboardPlayerRow : UdonSharpBehaviour
     {
         public Scoreboard scoreboard;
+
         public ScoreboardPlayerRowType rowType;
+
         //public PlayerManager player;
         public ScoreboardPlayerColumn[] columns;
         public RectTransform rectTransform;
         public Canvas rowCanvas;
 
         public int CurrentPosition { get; private set; }
+
         public bool IsVisible
         {
             get => _isVisible;
@@ -31,12 +34,13 @@ namespace dev.mikeee324.OpenPutt
                 rowCanvas.enabled = value;
             }
         }
+
         public float RowHeight => scoreboard.rowHeight;
         public float RowPadding => scoreboard.rowPadding;
         public int NumberOfColumns => transform.childCount;
         private int rowIndex => CurrentPosition;
         private bool isEvenRow => rowIndex % 2 == 0;
-        private bool _isVisible = false;
+        private bool _isVisible;
 
         private void Start()
         {
@@ -97,6 +101,5 @@ namespace dev.mikeee324.OpenPutt
             // If we swapped type of row, refresh it as the background colour will need to change
             return wasAnEvenRow != isEvenRow;
         }
-
     }
 }

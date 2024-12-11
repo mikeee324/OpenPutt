@@ -16,16 +16,20 @@ namespace dev.mikeee324.OpenPutt
     public class ScoreboardPositioner : UdonSharpBehaviour
     {
         [Header("References")]
-        public ScoreboardManager manager = null;
-        public Canvas backgroundCanvas = null;
-        public Transform nearbyCenterTransform = null;
+        public ScoreboardManager manager;
+
+        public Canvas backgroundCanvas;
+        public Transform nearbyCenterTransform;
 
         [Space, Header("Settings")]
         public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
+
         [Tooltip("How close the player needs to be to this scoreboard if one of the 'nearby' settings are used above")]
         public float nearbyMaxRadius = 10f;
+
         [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
         public int attachedToCourse = -1;
+
         public bool CanvasWasEnabledAtStart { get; private set; }
 
         void Start()
@@ -39,9 +43,9 @@ namespace dev.mikeee324.OpenPutt
             var isNowActive = false;
 
             var scoreboardDistance = Vector3.Distance(playerPosition, Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position);
-            var playerIsNearby = scoreboardDistance < this.nearbyMaxRadius;
+            var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
 
-            switch (this.scoreboardVisiblility)
+            switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:
                     isNowActive = true;
@@ -52,15 +56,16 @@ namespace dev.mikeee324.OpenPutt
                 case ScoreboardVisibility.NearbyAndCourseFinished:
                     isNowActive = playerIsNearby;
 
-                    if (isNowActive && this.attachedToCourse >= 0)
+                    if (isNowActive && attachedToCourse >= 0)
                     {
                         var playerManager = Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.LocalPlayerManager : null;
 
-                        if (!Utilities.IsValid(playerManager) || !playerManager.IsReady || playerManager.courseStates[this.attachedToCourse] != CourseState.Completed)
+                        if (!Utilities.IsValid(playerManager) || !playerManager.IsReady || playerManager.courseStates[attachedToCourse] != CourseState.Completed)
                         {
                             isNowActive = false;
                         }
                     }
+
                     break;
                 case ScoreboardVisibility.Hidden:
                     isNowActive = false;
@@ -72,7 +77,7 @@ namespace dev.mikeee324.OpenPutt
 
         private void OnDrawGizmosSelected()
         {
-            switch (this.scoreboardVisiblility)
+            switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:
                 case ScoreboardVisibility.Hidden:

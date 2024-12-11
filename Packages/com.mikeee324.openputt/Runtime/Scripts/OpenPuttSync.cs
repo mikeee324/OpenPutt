@@ -7,7 +7,7 @@ using VRC.Udon.Common.Interfaces;
 namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(999)]
-    public class PuttSync : UdonSharpBehaviour
+    public class OpenPuttSync : UdonSharpBehaviour
     {
         #region Public Settings
 
@@ -33,7 +33,7 @@ namespace dev.mikeee324.OpenPutt
         public bool monitorPickupEvents = true;
 
         [Tooltip("Should this object be returned to its spawn position after players let go of it")]
-        public bool returnAfterDrop = false;
+        public bool returnAfterDrop;
 
         [Range(2f, 300f), Tooltip("If ReturnAfterDrop is enabled this object will be put back into its original position after this many seconds of not being held")]
         public float returnAfterDropTime = 10f;
@@ -65,12 +65,14 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// The last known position of this object from the network (synced between players)
         /// </summary>
-        [UdonSynced] private Vector3 syncPosition;
+        [UdonSynced]
+        private Vector3 syncPosition;
 
         /// <summary>
         /// The last known rotation of this object from the network (synced between players)
         /// </summary>
-        [UdonSynced] private Quaternion syncRotation;
+        [UdonSynced]
+        private Quaternion syncRotation;
 
         /// <summary>
         /// The respawn position for this object in world space
@@ -82,7 +84,8 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private Quaternion originalRotation;
 
-        [UdonSynced] private int currentOwnerHandInt = (int)VRC_Pickup.PickupHand.None;
+        [UdonSynced]
+        private int currentOwnerHandInt = (int)VRC_Pickup.PickupHand.None;
 
         private VRC_Pickup.PickupHand currentOwnerHand
         {
@@ -96,7 +99,7 @@ namespace dev.mikeee324.OpenPutt
 
         #region Internal Working Vars
 
-        private bool isBeingHeldByExternalScript = false;
+        private bool isBeingHeldByExternalScript;
 
         /// <summary>
         /// Amount of time (in seconds) between fast object syncs for this object (Scaled based on player count using fastSyncIntervalCurve)
@@ -109,27 +112,27 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// True if we just received the first network sync for this object
         /// </summary>
-        private bool isFirstSync = false;
+        private bool isFirstSync;
 
         /// <summary>
         /// True if this object has had at least 1 network update
         /// </summary>
-        private bool hasSynced = false;
+        private bool hasSynced;
 
         /// <summary>
         /// Keeps track of whether PuttSync is already monitoring remote updates and syncing positions etc
         /// </summary>
-        private bool isHandlingRemoteUpdates = false;
+        private bool isHandlingRemoteUpdates;
 
         /// <summary>
         /// Used to allow a sync in case some extra data changed (e.g. player changed which hand they hold the pickup with)
         /// </summary>
-        private bool extraDataChanged = false;
+        private bool extraDataChanged;
 
         private bool firstEnable = true;
 
         private VRCPlayerApi localPlayer;
-        private float lastKnownDistanceUpdateValue = 0f;
+        private float lastKnownDistanceUpdateValue;
         private Vector3 lastSyncVelocity = Vector3.zero;
         private Vector3 lastSyncPos = Vector3.zero;
         private Quaternion lastSyncRot = Quaternion.identity;
@@ -208,10 +211,10 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // Send a network sync if enough time has passed and the object has moved/rotated (seems to work fine if the parent of this object moves also)
-            if (this.transform.hasChanged || extraDataChanged || !monitorPickupEvents)
+            if (transform.hasChanged || extraDataChanged || !monitorPickupEvents)
             {
                 RequestSerialization();
-                this.transform.hasChanged = false;
+                transform.hasChanged = false;
                 extraDataChanged = false;
             }
 
@@ -358,7 +361,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 isHandlingRemoteUpdates = true;
 
-                if (!Utilities.IsValid(localPlayer) && Utils.LocalPlayerIsValid())
+                if (!Utilities.IsValid(localPlayer) && OpenPuttUtils.LocalPlayerIsValid())
                     localPlayer = Networking.LocalPlayer;
 
                 HandleRemoteUpdate();
@@ -435,7 +438,7 @@ namespace dev.mikeee324.OpenPutt
                     return;
                 }
 
-                Utils.SetOwner(Networking.LocalPlayer, gameObject);
+                OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
 
                 currentOwnerHand = VRC_Pickup.PickupHand.None;
 
@@ -474,6 +477,12 @@ namespace dev.mikeee324.OpenPutt
 
             // Keep a track of which hand the player is holding the pickup in
             UpdatePickupCurrentHand();
+        }
+
+        public override void OnPlayerRestored(VRCPlayerApi player)
+        {
+            if (Networking.GetOwner(gameObject) != Networking.LocalPlayer) return;
+            RequestFastSync(true);
         }
 
         /// <summary>
@@ -569,7 +578,7 @@ namespace dev.mikeee324.OpenPutt
             if (!returnAfterDrop)
                 return;
 
-            Utils.SetOwner(Networking.LocalPlayer, gameObject);
+            OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
 
             // If there isn't a timer running, start one
             if (returnAfterDropEndTime < 0)
@@ -609,7 +618,7 @@ namespace dev.mikeee324.OpenPutt
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
             var localPlayerIsOwner = Networking.LocalPlayer == player;
-            var isPickupable = Utils.LocalPlayerIsValid() && localPlayerIsOwner;
+            var isPickupable = OpenPuttUtils.LocalPlayerIsValid() && localPlayerIsOwner;
             // Enable pickup for the owner
             if (canManagePickupable && Utilities.IsValid(pickup) && !pickup.pickupable)
                 pickup.pickupable = isPickupable;
@@ -626,8 +635,8 @@ namespace dev.mikeee324.OpenPutt
             var offsetPosDiff = (oldOffset - newOwnerHandOffset).magnitude;
             var offsetRotDiff = Quaternion.Angle(oldRotationOffset, newOwnerHandOffsetRotation);
 
-            this.syncPosition = newOwnerHandOffset;
-            this.syncRotation = newOwnerHandOffsetRotation;
+            syncPosition = newOwnerHandOffset;
+            syncRotation = newOwnerHandOffsetRotation;
 
             // If the offsets from the players hand change - send a sync
             if (offsetPosDiff > 0.1f || offsetRotDiff > 1f)

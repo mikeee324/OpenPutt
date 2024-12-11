@@ -29,17 +29,17 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// A reference to the nearest available course start position that the ball will be snapped to if dropped by the player
         /// </summary>
-        private CourseStartPosition closestBallStart = null;
+        private CourseStartPosition closestBallStart;
 
         /// <summary>
         /// A reference to the course that will be marked as 'Started' if the player drops the ball
         /// </summary>
-        private CourseManager courseThatIsBeingStarted = null;
+        private CourseManager courseThatIsBeingStarted;
 
         /// <summary>
         /// Makes sure we only have 1 instance on the local area check queued up with Udon
         /// </summary>
-        private bool localAreaCheckActive = false;
+        private bool localAreaCheckActive;
 
         /// <summary>
         /// Contains a list of all matching colliders in the local area of the player (as of the last check)
@@ -49,12 +49,14 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// A list that is populated with a list of CourseStartPositions that is assigned at startup to speed up checks
         /// </summary>
-        [HideInInspector] public CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
+        [HideInInspector]
+        public CourseStartPosition[] knownStartPositions = new CourseStartPosition[0];
 
         /// <summary>
         /// A list that is populated with a list of Colliders that we can use to quickly filter out non CourseStartPositions
         /// </summary>
-        [HideInInspector] public Collider[] knownStartColliders = new Collider[0];
+        [HideInInspector]
+        public Collider[] knownStartColliders = new Collider[0];
 
         #endregion
 
@@ -134,7 +136,7 @@ namespace dev.mikeee324.OpenPutt
                     localAreaColliders = new Collider[maximumNoOfColliders];
 
                 var radius = 2f;
-                if (Utils.LocalPlayerIsValid())
+                if (OpenPuttUtils.LocalPlayerIsValid())
                     radius = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
                 radius = Mathf.Clamp(radius, 2f, 100f);
 

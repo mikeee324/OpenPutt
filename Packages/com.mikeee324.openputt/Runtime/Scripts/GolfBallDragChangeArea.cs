@@ -11,7 +11,8 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(0)]
     public class GolfBallDragChangeArea : UdonSharpBehaviour
     {
-        [SerializeField] private float dragInArea = 0f;
+        [SerializeField]
+        private float dragInArea;
 
         public void OnTriggerEnter(Collider other)
         {
