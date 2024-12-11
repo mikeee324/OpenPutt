@@ -65,10 +65,11 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class CourseManager : UdonSharpBehaviour
     {
-        [HideInInspector] public int holeNumber = 0;
+        [HideInInspector]
+        public int holeNumber;
 
         [Header("Course Settings"), Tooltip("The par score for this hole")]
-        public int parScore = 0;
+        public int parScore;
 
         [Tooltip("This will stop the player after this many hits, also used as the default score if a player skips this hole")]
         public int maxScore = 12;
@@ -80,10 +81,10 @@ namespace dev.mikeee324.OpenPutt
         public int maxTime = 300;
 
         [Tooltip("The players score on this hole will be how far they hit the ball in meters from the start pad")]
-        public bool drivingRangeMode = false;
+        public bool drivingRangeMode;
 
         [Tooltip("Overrides the global replayable courses setting")]
-        public bool courseIsAlwaysReplayable = false;
+        public bool courseIsAlwaysReplayable;
 
         [Tooltip("Override the hole number column text on scoreboards (Can be used to give holes names or something I dunno..)")]
         public string scoreboardShortName = "";
@@ -91,8 +92,12 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
         public string scoreboardLongName = "";
 
-        [HideInInspector] public OpenPutt openPutt;
-        [Header("Object References")] public CourseStartPosition[] ballSpawns;
+        [HideInInspector]
+        public OpenPutt openPutt;
+
+        [Header("Object References")]
+        public CourseStartPosition[] ballSpawns;
+
         public GameObject[] holes;
 
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]

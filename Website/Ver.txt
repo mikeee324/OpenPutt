@@ -1,3 +1,12 @@
+0.8.6
+--------
+- Replaces CyanPlayerObjectPool with VRC Player Objects
+- VRC Persistence is now used to save the following:
+    - Ball Colour
+    - World/SFX/BGM Volumes
+- Scoreboard player sorting has been updated to run through everybody when activated
+- Removes null checks and replaces them with Utilities.IsValid()
+
 0.8.5
 --------
 - Course start pad file is now an FBX file

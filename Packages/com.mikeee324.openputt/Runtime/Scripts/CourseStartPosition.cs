@@ -10,4 +10,3 @@ namespace dev.mikeee324.OpenPutt
         public Collider myCollider;
     }
 }
-

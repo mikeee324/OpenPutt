@@ -9,11 +9,13 @@ namespace dev.mikeee324.OpenPutt
     public class PickupHelper : UdonSharpBehaviour
     {
         #region Public API
+
         /// <summary>
         /// If there is a VRCPickup registered this will say which hand the local player is using to hold it. (<b>None/Left/Right</b>)<br/>
         /// Note: Desktop users usually report VRCPickup.PickupHand.Right when they are holding an object
         /// </summary>
         public VRC_Pickup.PickupHand CurrentHand => _currentHand;
+
         public bool LeftUseButtonDown { get; private set; }
         public bool RightUseButtonDown { get; private set; }
         public bool LeftGripButtonDown { get; private set; }
@@ -23,11 +25,14 @@ namespace dev.mikeee324.OpenPutt
         public float moveVerticalAxis { get; private set; }
         public float lookHorizontalAxis { get; private set; }
         public float lookVerticalAxis { get; private set; }
+
         #endregion
 
         #region Internal Vars
+
         private VRCPickup pickup;
         private VRC_Pickup.PickupHand _currentHand = VRC_Pickup.PickupHand.None;
+
         #endregion
 
         void Start()

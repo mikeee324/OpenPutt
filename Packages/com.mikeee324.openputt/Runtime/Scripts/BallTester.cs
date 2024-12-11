@@ -10,21 +10,23 @@ namespace dev.mikeee324.OpenPutt
         public Vector3 ballVelocity;
         public Vector3 originalPosition;
 
-        public bool hitBall = false;
-        public bool respawnBall = false;
+        public bool hitBall;
+        public bool respawnBall;
+
         [Range(1f, 10f)]
         public float resetTime = 1f;
+
         private float resetTicker = -1f;
 
-        public bool autoSpeedIncreases = false;
+        public bool autoSpeedIncreases;
         public Vector3 currentVelocity = Vector3.zero;
 
-        public OpenPutt openPutt = null;
+        public OpenPutt openPutt;
 
         void Start()
         {
-            originalPosition = this.transform.position;
-            ballController.playerManager.openPutt = this.openPutt;
+            originalPosition = transform.position;
+            ballController.playerManager.openPutt = openPutt;
         }
 
         void Update()
@@ -55,12 +57,14 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
             }
+
             if (hitBall)
             {
                 hitBall = false;
                 HitBall();
                 resetTicker = 0f;
             }
+
             if (respawnBall)
             {
                 respawnBall = false;

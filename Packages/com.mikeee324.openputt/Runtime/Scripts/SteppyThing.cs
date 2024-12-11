@@ -8,26 +8,28 @@ namespace dev.mikeee324.OpenPutt
     public class SteppyThing : UdonSharpBehaviour
     {
         public Collider[] steps;
-        public bool toggleBallHolderRenderers = false;
+        public bool toggleBallHolderRenderers;
         public Collider[] stepBallHolders;
         public Collider[] stepBallHolderNS;
 
         [Range(1, 10f), Tooltip("Time in seconds for each full up/down cycle of the steps")]
         public float stepCycleTime = 1f;
+
         [Range(0, 5f), Tooltip("Time in seconds the steps will sit still for when they reach the up or down position")]
         public float stepStopTime = 0.5f;
+
         public AnimationCurve stepCycleCurve;
 
         public Collider[] collidersToIgnore;
-        private float stepCyclerTimer = 0f;
-        private float stepStopTimer = 0f;
+        private float stepCyclerTimer;
+        private float stepStopTimer;
         public Vector3[] stepRestLocations;
         private bool globalUpCycle = true;
 
         [UdonSynced]
-        private bool _masterUpCycleState = false;
+        private bool _masterUpCycleState;
 
-        private Rigidbody[] stepRBs = null;
+        private Rigidbody[] stepRBs;
 
         void Start()
         {
@@ -118,7 +120,7 @@ namespace dev.mikeee324.OpenPutt
                     stepStopTimer = 0;
                     globalUpCycle = !globalUpCycle;
 
-                    if (Utils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
+                    if (OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
                     {
                         _masterUpCycleState = globalUpCycle;
                         RequestSerialization();

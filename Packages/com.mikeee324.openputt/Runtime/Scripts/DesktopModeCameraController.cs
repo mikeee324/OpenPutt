@@ -10,7 +10,9 @@ namespace dev.mikeee324.OpenPutt
     {
         #region References
 
-        [Header("References")] public OpenPutt openPutt;
+        [Header("References")]
+        public OpenPutt openPutt;
+
         public DesktopModeController desktopModeController;
 
         public Camera thisCam;
@@ -25,8 +27,11 @@ namespace dev.mikeee324.OpenPutt
         [Header("Settings"), Range(.2f, 10f), Tooltip("The default distance to the object we are following")]
         public float distance = 10.0f;
 
-        [Range(.2f, 10f)] public float minDistance = .5f;
-        [Range(.2f, 10f)] public float maxDistance = 5f;
+        [Range(.2f, 10f)]
+        public float minDistance = .5f;
+
+        [Range(.2f, 10f)]
+        public float maxDistance = 5f;
 
         [Range(1, 5), Tooltip("How fast the camera smoothly zooms")]
         public float cameraZoomSpeed = 2f;
@@ -37,13 +42,18 @@ namespace dev.mikeee324.OpenPutt
         [Range(0, 5), Tooltip("How fast the camera moves vertically")]
         public float cameraYSpeed = 1f;
 
-        public bool invertCameraX = false;
-        public bool invertCameraY = false;
+        public bool invertCameraX;
+        public bool invertCameraY;
 
-        [Range(-89.9f, 89.9f)] public float cameraMinY = -40f;
-        [Range(-89.9f, 89.9f)] public float cameraMaxY = 89.9f;
+        [Range(-89.9f, 89.9f)]
+        public float cameraMinY = -40f;
 
-        [Header("Camera Masks")] public LayerMask defaultCullingMask;
+        [Range(-89.9f, 89.9f)]
+        public float cameraMaxY = 89.9f;
+
+        [Header("Camera Masks")]
+        public LayerMask defaultCullingMask;
+
         public LayerMask noPlayersCullingMask;
 
         #endregion
@@ -59,7 +69,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Locks the Y axis mouse movement on the camera while lining up a shot
         /// </summary>
-        public bool LockCamera = false;
+        public bool LockCamera;
 
         #endregion
 
@@ -68,25 +78,25 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Current rotation angle for horizontal orbit around the target
         /// </summary>
-        private float currentCameraX = 0;
+        private float currentCameraX;
 
         /// <summary>
         /// Current rotation angle for vertical orbit around the target
         /// </summary>
         private float currentCameraY = 10;
 
-        private float currentHorizontalDelta = 0;
-        private float currentVerticalDelta = 0;
-        private float currentKeyboardHorizontalDelta = 0;
-        private float currentKeyboardVerticalDelta = 0;
+        private float currentHorizontalDelta;
+        private float currentVerticalDelta;
+        private float currentKeyboardHorizontalDelta;
+        private float currentKeyboardVerticalDelta;
 
-        private float currentMoveVertical = 0;
-        private float currentMoveHorizontal = 0;
+        private float currentMoveVertical;
+        private float currentMoveHorizontal;
 
         /// <summary>
         /// Stores the cameras distance from the target from the last frame, used to lerping the camera distance
         /// </summary>
-        private float lastKnownRealDistance = 0;
+        private float lastKnownRealDistance;
 
         #endregion
 
@@ -120,10 +130,6 @@ namespace dev.mikeee324.OpenPutt
             var angle = Vector3.Angle(Vector3.forward, direction);
             var sign = Mathf.Sign(Vector3.Dot(Vector3.up, Vector3.Cross(Vector3.forward, direction)));
             return angle * sign;
-        }
-
-        void Start()
-        {
         }
 
         public override void InputMoveHorizontal(float value, UdonInputEventArgs args)

@@ -6,7 +6,7 @@ using UdonSharp;
 using UnityEngine;
 
 [DefaultExecutionOrder(-1000000000)]
-public class GlobalProfileKickoff : UdonSharpBehaviour
+public class OPProfileKickoff : UdonSharpBehaviour
 {
     [NonSerialized]
     public Stopwatch stopwatch;

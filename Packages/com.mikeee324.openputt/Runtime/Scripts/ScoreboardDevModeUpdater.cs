@@ -11,7 +11,6 @@ namespace dev.mikeee324.OpenPutt
 
         void Start()
         {
-
         }
 
         private void Update()
@@ -28,7 +27,7 @@ namespace dev.mikeee324.OpenPutt
             scoreboard.devModeLastClubHitSpeed.text = string.Format("{0:F2} {1}", localPlayerManager.golfClubHead.LastKnownHitVelocity, localPlayerManager.golfClubHead.LastKnownHitType);
             scoreboard.devModeLastClubHitDirBias.text = string.Format("{0:F0}%", localPlayerManager.golfClubHead.LastKnownHitDirBias * 100f);
             scoreboard.devModeBallSpeed.text = string.Format("{0:F2}", localPlayerManager.golfBall.BallCurrentSpeed);
-            scoreboard.devModeClubSpeed.text = string.Format("{0:F2}",  localPlayerManager.golfClubHead.FrameVelocitySmoothed.magnitude);
+            scoreboard.devModeClubSpeed.text = string.Format("{0:F2}", localPlayerManager.golfClubHead.FrameVelocitySmoothed.magnitude);
         }
     }
 }

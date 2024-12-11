@@ -12,26 +12,25 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     public TextMeshProUGUI distanceLabel;
     private PlayerManager playerManager;
     private GolfBallController golfBall;
-    private int highestScoreSoFar = 0;
+    private int highestScoreSoFar;
 
     private bool MonitoringDistance
     {
-        set => this.enabled = value;
+        set => enabled = value;
     }
 
     void Start()
     {
         // Disable Update() and LateUpdate() calls - we will enable things as when we need to monitor the ball distance
-        this.enabled = false;
+        enabled = false;
         if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(drivingRangeCourse) || !Utilities.IsValid(distanceLabel))
         {
-            return;
         }
     }
 
     public override void PostLateUpdate()
     {
-        if (!this.enabled)
+        if (!enabled)
             return;
 
         if (!Utilities.IsValid(playerManager))
@@ -66,14 +65,14 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
         if (player == Networking.LocalPlayer)
         {
-            distanceLabel.text = $"-";
+            distanceLabel.text = "-";
         }
     }
 
     public override void OnPlayerTriggerExit(VRCPlayerApi player)
     {
         if (player == Networking.LocalPlayer)
-            this.enabled = false;
+            enabled = false;
     }
 
     public override void OnLocalPlayerBallHit(float speed)

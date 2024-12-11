@@ -22,7 +22,7 @@ public class ScoreboardManagerEditor : Editor
             {
                 if (manager.scoreboards[scoreboardID] == null)
                 {
-                    Utils.LogError(manager, $"Scoreboard ID {scoreboardID} is null! Please make sure all scoreboards have been assigned properly!");
+                    OpenPuttUtils.LogError(manager, $"Scoreboard ID {scoreboardID} is null! Please make sure all scoreboards have been assigned properly!");
                     continue;
                 }
 

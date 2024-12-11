@@ -21,7 +21,9 @@ namespace dev.mikeee324.OpenPutt
     {
         #region References
 
-        [Header("References")] public OpenPutt openPutt;
+        [Header("References")]
+        public OpenPutt openPutt;
+
         public Camera desktopCamera;
         public ControllerDetector controllerDetector;
         public DesktopModeCameraController desktopCameraController;
@@ -52,7 +54,9 @@ namespace dev.mikeee324.OpenPutt
 
         #region Public Settings
 
-        [Header("Settings")] public LayerMask directionLineMask;
+        [Header("Settings")]
+        public LayerMask directionLineMask;
+
         public float lineMaxLength = 1.5f;
 
         [Tooltip("Defines which keyboard key will swap the player to the ball camera")]
@@ -207,30 +211,31 @@ namespace dev.mikeee324.OpenPutt
 
         #region Private Vars
 
-        private bool desktopCamVisible = false;
-        private bool isAimingShot = false;
-        private bool initialized = false;
+        private bool desktopCamVisible;
+        private bool isAimingShot;
+        private bool initialized;
 
-        private Vector3[] directionLinePoints = new Vector3[] { Vector3.zero, Vector3.zero, Vector3.zero, Vector3.zero };
+        private Vector3[] directionLinePoints = { Vector3.zero, Vector3.zero, Vector3.zero, Vector3.zero };
 
-        [HideInInspector] public DevicePlatform localPlayerPlatform = DevicePlatform.Desktop;
+        [HideInInspector]
+        public DevicePlatform localPlayerPlatform = DevicePlatform.Desktop;
 
-        private Collider[] _menuColliders = new Collider[1];
+        private Collider[] _menuColliders = new Collider[5];
 
         private DesktopModeAimType playerIsCurrentlyAimingWith = DesktopModeAimType.Nothing;
 
-        private bool playerIsHoldingMouseAimButton = false;
-        private bool playerIsHoldingControllerAimButton = false;
-        private bool playerIsHoldingJump = false;
-        private bool playerIsHoldingUIAimButton = false;
+        private bool playerIsHoldingMouseAimButton;
+        private bool playerIsHoldingControllerAimButton;
+        private bool playerIsHoldingJump;
+        private bool playerIsHoldingUIAimButton;
 
-        private bool currentShotIsChargingUp = false;
-        private float currentShotSpeed = 0f;
+        private bool currentShotIsChargingUp;
+        private float currentShotSpeed;
 
-        private bool playerIsHoldingControllerCamButton = false;
-        private bool playerIsHoldingControllerTogglePlayersButton = false;
+        private bool playerIsHoldingControllerCamButton;
+        private bool playerIsHoldingControllerTogglePlayersButton;
 
-        private float lastShotSpeed = 0f;
+        private float lastShotSpeed;
 
         #endregion
 
@@ -249,10 +254,11 @@ namespace dev.mikeee324.OpenPutt
 
         public void CheckIfMenuIsOpen()
         {
-            if (!Utils.LocalPlayerIsValid() || !gameObject.activeSelf) return;
+            if (!OpenPuttUtils.LocalPlayerIsValid() || !gameObject.activeSelf) return;
 
-            var numberOfColliders = Physics.OverlapSphereNonAlloc(Networking.LocalPlayer.GetPosition(), 9999f, _menuColliders, (1 << 19) | (1 << 20) | (1 << 21));
-            var menuMightBeOpen = numberOfColliders > 0;
+            // Note: This also registers grabbable personal mirrors - so we check for at least more than 1 collider
+            var numberOfColliders = Physics.OverlapSphereNonAlloc(Networking.LocalPlayer.GetPosition(), 9999f, _menuColliders, (1 << 19));
+            var menuMightBeOpen = numberOfColliders > 1;
 
             if (menuMightBeOpen)
             {
@@ -266,6 +272,13 @@ namespace dev.mikeee324.OpenPutt
                 mobileUI.SetActive(!menuMightBeOpen);
 
             SendCustomEventDelayedSeconds(nameof(CheckIfMenuIsOpen), .25f);
+        }
+
+        public override void OnPlayerRespawn(VRCPlayerApi player)
+        {
+            // If player respawns - disable camera automatically
+            if (IsBallCamEnabled)
+                IsBallCamEnabled = false;
         }
 
         public void CheckIfPlayerPickedUpBall()
@@ -284,7 +297,7 @@ namespace dev.mikeee324.OpenPutt
         public void InitializeCamera()
         {
             // Wait until the local player is valid
-            if (!Utils.LocalPlayerIsValid())
+            if (!OpenPuttUtils.LocalPlayerIsValid())
             {
                 SendCustomEventDelayedSeconds(nameof(InitializeCamera), .25f);
                 return;
@@ -295,7 +308,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 gameObject.SetActive(false);
                 desktopUI.SetActive(false);
-                Utils.LogError(this, "Player is in VR disabling desktop camera");
+                OpenPuttUtils.LogError(this, "Player is in VR disabling desktop camera");
                 return;
             }
 

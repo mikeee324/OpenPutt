@@ -13,12 +13,12 @@ public class AutoObjectToggler : UdonSharpBehaviour
 
     void Start()
     {
-        this.gameObject.layer = 0;
+        gameObject.layer = 0;
     }
 
     private void LateUpdate()
     {
-        if (Utils.LocalPlayerIsValid())
+        if (OpenPuttUtils.LocalPlayerIsValid())
         {
             var pos = Networking.LocalPlayer.GetPosition();
 
@@ -28,7 +28,7 @@ public class AutoObjectToggler : UdonSharpBehaviour
             foreach (var obj in objectsToDisable)
                 obj.SetActive(enableObjects);
 
-            this.enabled = false;
+            enabled = false;
         }
     }
 

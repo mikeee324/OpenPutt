@@ -1,5 +1,6 @@
 ﻿using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -11,8 +12,10 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("References")] public GolfClub club;
-        public PuttSync puttSync;
+        [Header("References")]
+        public GolfClub club;
+
+        [FormerlySerializedAs("puttSync")] public OpenPuttSync openPuttSync;
         public VRCPickup pickup;
         public GolfBallStartLineController startLine;
         public MaterialPropertyBlock materialPropertyBlock;
@@ -24,22 +27,26 @@ namespace dev.mikeee324.OpenPutt
         public PhysicMaterial floorMaterial;
 
         public PlayerManager playerManager;
-        [SerializeField] private Rigidbody ballRigidbody = null;
-        [SerializeField] private SphereCollider ballCollider = null;
+
+        [SerializeField]
+        private Rigidbody ballRigidbody;
+
+        [SerializeField]
+        private SphereCollider ballCollider;
 
         [Space] [Header("General Settings")] [Tooltip("Allows players to pick up their ball at any time as long as the ball is not moving")]
-        public bool allowBallPickup = false;
+        public bool allowBallPickup;
 
         [Tooltip("Allows players to pick up their ball if they are not currently playing a course AND the ball is not moving")]
         public bool allowBallPickupWhenNotPlaying = true;
 
         [Tooltip("Allows players to hit the ball at any time while it is moving (Default is no, which only lets them do this while they are not playing a course)")]
-        public bool allowBallHitWhileMoving = false;
+        public bool allowBallHitWhileMoving;
 
         [Tooltip("Should the ball hit noise be played if the ball falls onto a floor?")]
         public bool audioWhenBallHitsFloor = true;
 
-        public bool canUpdatePuttSyncSpawn = false;
+        public bool canUpdatePuttSyncSpawn;
 
         [Space]
         [Header("Ball Physics")]
@@ -49,7 +56,7 @@ namespace dev.mikeee324.OpenPutt
         public float defaultBallDrag = .02f;
 
         [Range(0, 1), Tooltip("The amount of drag to apply to the balls RigidBody (Overrides the default drag above)")]
-        public float ballDragOverride = 0f;
+        public float ballDragOverride;
 
         [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
         public bool enableAirResistance = true;
@@ -66,15 +73,20 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("How long a ball can roll before being stopped automatically (in seconds)")]
         public float maxBallRollingTime = 30f;
 
-        [Space] [SerializeField, Range(0, 90)] float groundSnappingMaxGroundAngle = 45f;
+        [Space] [SerializeField, Range(0, 90)]
+        float groundSnappingMaxGroundAngle = 45f;
 
-        [SerializeField, Range(0f, 100f)] float groundSnappingMinSpeed = 15f;
+        [SerializeField, Range(0f, 100f)]
+        float groundSnappingMinSpeed = 15f;
 
-        [SerializeField, Range(0f, 100f)] float groundSnappingMaxSpeed = 100f;
+        [SerializeField, Range(0f, 100f)]
+        float groundSnappingMaxSpeed = 100f;
 
-        [SerializeField, Min(0f)] float groundSnappingProbeDistance = 1f;
+        [SerializeField, Min(0f)]
+        float groundSnappingProbeDistance = 1f;
 
-        [SerializeField] LayerMask groundSnappingProbeMask = -1;
+        [SerializeField]
+        LayerMask groundSnappingProbeMask = -1;
 
         [Space] [Range(0, 2), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
         public float wallBounceSpeedMultiplier = 0.7f;
@@ -182,7 +194,7 @@ namespace dev.mikeee324.OpenPutt
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
                                 respawnPosition = CurrentPosition;
                                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    Utils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                    OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
                             }
                         }
                         else if (respawnPosition != Vector3.zero)
@@ -214,15 +226,18 @@ namespace dev.mikeee324.OpenPutt
             get => _ballMoving;
         }
 
-        [SerializeField] private bool _ballMoving = false;
+        [SerializeField]
+        private bool _ballMoving = true;
+
         public bool pickedUpByPlayer { get; private set; }
 
         /// <summary>
         /// Used to ignore the first collision after we drop the ball - hopefully stops it flying away on flat surfaces
         /// </summary>
-        private bool droppedByPlayer = false;
+        private bool droppedByPlayer;
 
-        [HideInInspector] public int currentOwnerHideOverride = 0;
+        [HideInInspector]
+        public int currentOwnerHideOverride;
 
         public float BallWeight
         {
@@ -271,10 +286,10 @@ namespace dev.mikeee324.OpenPutt
         #region Internal Vars
 
         /// Tracks how long a ball has been rolling for so we can stop it if it rolls for way too long
-        private float timeMoving = 0f;
+        private float timeMoving;
 
         /// Tracks how long the ball has been slowly rolling for so we can just bring it to a proper stop
-        private float timeNotMoving = 0f;
+        private float timeNotMoving;
 
         /// Tracks the velocity of the ball in the last frame so we can reflect properly on walls
         private Vector3 lastFrameVelocity;
@@ -287,7 +302,8 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 lastHeldFramePosition;
 
         /// Stores the velocity of the club that needs to be applied in the next FixedUpdate() frame
-        [SerializeField] public Vector3 requestedBallVelocity = Vector3.zero;
+        [SerializeField]
+        public Vector3 requestedBallVelocity = Vector3.zero;
 
         Vector3 velocity;
 
@@ -308,7 +324,8 @@ namespace dev.mikeee324.OpenPutt
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
         private float currentGroundDynamicFriction = 0f;
 
-        [HideInInspector] public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+        [HideInInspector]
+        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
 
         /// <summary>
         /// Used to log ball speed after it gets hit, can be used to track down issues.. maybe
@@ -323,13 +340,13 @@ namespace dev.mikeee324.OpenPutt
             BallIsMoving = false;
 
             if (!Utilities.IsValid(wallMaterial))
-                Utils.LogError(this, "Cannot detect walls! Please assign a wall PhysicMaterial to this ball!");
+                OpenPuttUtils.LogError(this, "Cannot detect walls! Please assign a wall PhysicMaterial to this ball!");
 
             if (!Utilities.IsValid(floorMaterial))
-                Utils.LogError(this, "Cannot detect floors! Please assign a floor PhysicMaterial to this ball!");
+                OpenPuttUtils.LogError(this, "Cannot detect floors! Please assign a floor PhysicMaterial to this ball!");
 
-            if (!Utilities.IsValid(puttSync))
-                puttSync = GetComponent<PuttSync>();
+            if (!Utilities.IsValid(openPuttSync))
+                openPuttSync = GetComponent<OpenPuttSync>();
 
             if (!Utilities.IsValid(ballRigidbody))
                 ballRigidbody = GetComponent<Rigidbody>();
@@ -370,47 +387,51 @@ namespace dev.mikeee324.OpenPutt
             this.enabled = enabled;
         }
 
-        private int numberOfPickedUpFrames = 0;
-        private int numberOfStillPickedUpFrames = 0;
+        private int numberOfPickedUpFrames;
+        private int numberOfStillPickedUpFrames;
+
+        public override void PostLateUpdate()
+        {
+            if (!pickedUpByPlayer) return;
+
+            if (numberOfPickedUpFrames < 1)
+            {
+                numberOfPickedUpFrames++;
+                lastHeldFrameVelocity = Vector3.zero;
+                lastHeldFramePosition = ballRigidbody.position;
+            }
+            else
+            {
+                var newFrameVelocity = (ballRigidbody.position - lastHeldFramePosition) / Time.deltaTime;
+                if (newFrameVelocity.magnitude > 0.01f)
+                {
+                    numberOfStillPickedUpFrames = 0;
+                    lastHeldFrameVelocity = newFrameVelocity;
+                }
+                else
+                {
+                    numberOfStillPickedUpFrames++;
+
+                    if (!playerManager.ownerIsInVR || numberOfStillPickedUpFrames >= 5)
+                    {
+                        lastHeldFrameVelocity = Vector3.zero;
+                    }
+                }
+            }
+
+            lastHeldFramePosition = ballRigidbody.position;
+
+            if (Utilities.IsValid(openPuttSync))
+                openPuttSync.RequestFastSync();
+        }
 
         private void FixedUpdate()
         {
             ClearPhysicsState();
 
+            // If ball is picked up by player - we do stuff in PostLateUpdate instead
             if (pickedUpByPlayer)
-            {
-                if (numberOfPickedUpFrames < 3)
-                {
-                    numberOfPickedUpFrames++;
-                    lastHeldFrameVelocity = Vector3.zero;
-                    lastHeldFramePosition = ballRigidbody.position;
-                }
-                else
-                {
-                    var newFrameVelocity = (ballRigidbody.position - lastHeldFramePosition) / Time.deltaTime;
-                    if (newFrameVelocity.magnitude > 0.01f)
-                    {
-                        numberOfStillPickedUpFrames = 0;
-                        lastHeldFrameVelocity = newFrameVelocity;
-                    }
-                    else
-                    {
-                        numberOfStillPickedUpFrames++;
-
-                        if (!playerManager.ownerIsInVR || numberOfStillPickedUpFrames >= 5)
-                        {
-                            lastHeldFrameVelocity = Vector3.zero;
-                        }
-                    }
-                }
-
-                lastHeldFramePosition = ballRigidbody.position;
-
-                if (Utilities.IsValid(puttSync))
-                    puttSync.RequestFastSync();
-
                 return;
-            }
 
             // Freeze the ball position without going kinematic
             if (!BallIsMoving)
@@ -463,7 +484,7 @@ namespace dev.mikeee324.OpenPutt
                 var ballRollingForTooLong = timeMoving > maxBallRollingTime;
                 var ballRollingTooSlowForTooLong = timeNotMoving >= minBallSpeedMaxTime;
 
-                var onGround = Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, groundSnappingProbeDistance, groundSnappingProbeMask);
+                var onGround = Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, groundSnappingProbeDistance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
 
                 if (ballRollingForTooLong || ballRollingTooSlowForTooLong)
                 {
@@ -478,7 +499,7 @@ namespace dev.mikeee324.OpenPutt
                                 BallIsMoving = false;
 
                                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    Utils.Log(this, "Ball is on a slope and appears to be stuck here - allow player to hit it again");
+                                    OpenPuttUtils.Log(this, "Ball is on a slope and appears to be stuck here - allow player to hit it again");
                             }
                             else
                             {
@@ -488,7 +509,7 @@ namespace dev.mikeee324.OpenPutt
                                 BallIsMoving = true;
 
                                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    Utils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={hit.normal.y})");
+                                    OpenPuttUtils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={hit.normal.y})");
                             }
                         }
                         else
@@ -524,7 +545,7 @@ namespace dev.mikeee324.OpenPutt
                     var rotationAxis = Vector3.Cross(Vector3.up, directionOfTravel).normalized;
                     transform.localRotation = Quaternion.Euler(rotationAxis * angle) * transform.localRotation;
                     var worldRotation = transform.parent.rotation * transform.localRotation;
-                    ballRigidbody.rotation = worldRotation;
+                    ballRigidbody.rotation = worldRotation.normalized;
                 }
             }
             else
@@ -543,15 +564,15 @@ namespace dev.mikeee324.OpenPutt
 
             // Tell PuttSync to sync position if it's attached
             var sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (Utilities.IsValid(startLine) && startLine.gameObject.activeSelf);
-            if (Utilities.IsValid(puttSync) && sendFastPositionSync)
-                puttSync.RequestFastSync();
+            if (Utilities.IsValid(openPuttSync) && sendFastPositionSync)
+                openPuttSync.RequestFastSync();
         }
 
         public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
         {
             if (!Utilities.IsValid(courseThatIsBeingStarted))
             {
-                Utils.LogError(position, $"Player tried to start a course but a CourseStartPosition({(Utilities.IsValid(position) && Utilities.IsValid(position.name) ? position.name : "null")}) is missing a reference to its CourseManager!");
+                OpenPuttUtils.LogError(position, $"Player tried to start a course but a CourseStartPosition({(Utilities.IsValid(position) && Utilities.IsValid(position.name) ? position.name : "null")}) is missing a reference to its CourseManager!");
                 return;
             }
 
@@ -610,7 +631,7 @@ namespace dev.mikeee324.OpenPutt
             if (startLine.StartDropAnimation(CurrentPosition))
             {
                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                    Utils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
+                    OpenPuttUtils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
             }
             else
             {
@@ -620,13 +641,13 @@ namespace dev.mikeee324.OpenPutt
                     if (playerManager.CurrentCourse.drivingRangeMode)
                     {
                         if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                            Utils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
+                            OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                         playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                     }
                     else if (Utilities.IsValid(respawnPosition))
                     {
                         if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                            Utils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
+                            OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
                         BallIsMoving = false;
 
@@ -713,6 +734,10 @@ namespace dev.mikeee324.OpenPutt
         public void OnBallHit(Vector3 withVelocity)
         {
             SetEnabled(true);
+            
+            // Tell the club to disarm for a second
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
+                playerManager.golfClub.DisableClubColliderFor();
 
             var playerIsPlayingACourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse);
 
@@ -723,13 +748,6 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
                     playerManager.golfClub.DisableClubColliderFor();
                 return;
-            }
-
-            if (!playerIsPlayingACourse)
-            {
-                // Tell the club to disarm for a second
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
-                    playerManager.golfClub.DisableClubColliderFor();
             }
 
             if (withVelocity == Vector3.zero)
@@ -853,7 +871,7 @@ namespace dev.mikeee324.OpenPutt
             if (collisionNormal.y > wallBounceHeightIgnoreAmount)
             {
                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                    Utils.Log(this, "Ignored wall bounce because it was below me!");
+                    OpenPuttUtils.Log(this, "Ignored wall bounce because it was below me!");
                 return;
             }
 
@@ -1123,8 +1141,8 @@ namespace dev.mikeee324.OpenPutt
                     pickup.pickupable = newPickupState;
                 }
 
-                if (Utilities.IsValid(puttSync) && canUpdatePuttSyncSpawn)
-                    puttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
+                if (Utilities.IsValid(openPuttSync) && canUpdatePuttSyncSpawn)
+                    openPuttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
             }
             else
             {

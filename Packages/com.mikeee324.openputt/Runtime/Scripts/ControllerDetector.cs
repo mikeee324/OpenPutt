@@ -33,7 +33,7 @@ namespace dev.mikeee324.OpenPutt
             if (Networking.LocalPlayer.IsUserInVR())
             {
                 Debug.Log("ControllerDetector is only made for non VR users.. stopping.");
-                this.gameObject.SetActive(false);
+                gameObject.SetActive(false);
                 return;
             }
 
@@ -79,17 +79,20 @@ namespace dev.mikeee324.OpenPutt
                 if (moveHorizontal == joyHorizontal && moveVertical == joyVertical)
                     LastKnownJoystickID = 1;
 
-            joyHorizontal = Joysticks[1].MoveHorizontal(2); joyVertical = -Joysticks[1].MoveVertical(2);
+            joyHorizontal = Joysticks[1].MoveHorizontal(2);
+            joyVertical = -Joysticks[1].MoveVertical(2);
             if (!joyHorizontal.IsNearZero() && !joyVertical.IsNearZero())
                 if (moveHorizontal == joyHorizontal && moveVertical == joyVertical)
                     LastKnownJoystickID = 2;
 
-            joyHorizontal = Joysticks[2].MoveHorizontal(3); joyVertical = -Joysticks[2].MoveVertical(3);
+            joyHorizontal = Joysticks[2].MoveHorizontal(3);
+            joyVertical = -Joysticks[2].MoveVertical(3);
             if (!joyHorizontal.IsNearZero() && !joyVertical.IsNearZero())
                 if (moveHorizontal == joyHorizontal && moveVertical == joyVertical)
                     LastKnownJoystickID = 3;
 
-            joyHorizontal = Joysticks[3].MoveHorizontal(4); joyVertical = -Joysticks[3].MoveVertical(4);
+            joyHorizontal = Joysticks[3].MoveHorizontal(4);
+            joyVertical = -Joysticks[3].MoveVertical(4);
             if (!joyHorizontal.IsNearZero() && !joyVertical.IsNearZero())
                 if (moveHorizontal == joyHorizontal && moveVertical == joyVertical)
                     LastKnownJoystickID = 4;
@@ -111,21 +114,19 @@ namespace dev.mikeee324.OpenPutt
 
                 return true;
             }
-            else
-            {
-                totalTicks[joystickIndex]++;
 
-                // Read LookHorizontal from both controller types
-                var LT = ControllerExtensions.GetInputAxis(4, joystickID: joystickIndex + 1);
-                var RT = ControllerExtensions.GetInputAxis(5, joystickID: joystickIndex + 1);
-                var weirdDS4Thing = LT == -1 && RT == -1;
+            totalTicks[joystickIndex]++;
 
-                // If the xbox mode reads -1 and the ds4 reads near 0, log the tick as a valid DS4 tick
-                if (weirdDS4Thing)
-                    ds4Ticks[joystickIndex]++;
+            // Read LookHorizontal from both controller types
+            var LT = ControllerExtensions.GetInputAxis(4, joystickID: joystickIndex + 1);
+            var RT = ControllerExtensions.GetInputAxis(5, joystickID: joystickIndex + 1);
+            var weirdDS4Thing = LT == -1 && RT == -1;
 
-                return false;
-            }
+            // If the xbox mode reads -1 and the ds4 reads near 0, log the tick as a valid DS4 tick
+            if (weirdDS4Thing)
+                ds4Ticks[joystickIndex]++;
+
+            return false;
         }
     }
 }

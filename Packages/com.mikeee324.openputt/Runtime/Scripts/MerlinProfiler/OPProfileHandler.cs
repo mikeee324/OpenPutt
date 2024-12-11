@@ -1,4 +1,5 @@
 ﻿// GlobalProfileHandler.cs - https://gist.github.com/MerlinVR/2da80b29361588ddb556fd8d3f3f47b5
+
 #define AVERAGE_OUTPUT
 
 using TMPro;
@@ -6,22 +7,22 @@ using UdonSharp;
 using UnityEngine;
 
 [DefaultExecutionOrder(1000000000)]
-public class GlobalProfileHandler : UdonSharpBehaviour
+public class OPProfileHandler : UdonSharpBehaviour
 {
     public TextMeshProUGUI _timeText;
-    private GlobalProfileKickoff _kickoff;
+    private OPProfileKickoff _kickoff;
 
     private void Start()
     {
-        _kickoff = GetComponent<GlobalProfileKickoff>();
+        _kickoff = GetComponent<OPProfileKickoff>();
     }
 
     private int _currentFrame = -1;
-    private float _elapsedTime = 0f;
+    private float _elapsedTime;
 #if AVERAGE_OUTPUT
-    private float _measuredFrametimeTotal = 0f;
-    private float _measuredTimeTotal = 0f;
-    private int _measuredTimeFrameCount = 0;
+    private float _measuredFrametimeTotal;
+    private float _measuredTimeTotal;
+    private int _measuredTimeFrameCount;
     private const int MEASURE_FRAME_AMOUNT = 45;
 #endif
 
@@ -68,6 +69,7 @@ public class GlobalProfileHandler : UdonSharpBehaviour
             _measuredFrametimeTotal = 0f;
             _measuredTimeFrameCount = 0;
         }
+
         _measuredTimeTotal += _elapsedTime;
         _measuredTimeFrameCount += 1;
 #else

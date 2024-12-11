@@ -13,7 +13,6 @@ namespace com.dev.mikeee324.OpenPutt
 
         void Start()
         {
-
         }
 
         public override void PostLateUpdate()

@@ -1,19 +1,12 @@
 {
   "dependencies": {
-    "com.cyan.playerobjectpool": {
-      "version": "file:com.cyan.playerobjectpool",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.mikeee324.openputt": {
       "version": "file:com.mikeee324.openputt",
       "depth": 0,
       "source": "embedded",
       "dependencies": {
-        "com.vrchat.worlds": "3.5.2",
-        "com.unity.textmeshpro": "2.1.0",
-        "com.cyan.playerobjectpool": "1.1.2",
+        "com.vrchat.worlds": "3.7.4",
+        "com.unity.textmeshpro": "3.0.9",
         "com.varneon.vudon.array-extensions": "0.3.1"
       }
     },
@@ -51,8 +44,8 @@
       "source": "registry",
       "dependencies": {
         "com.unity.burst": "1.8.4",
-        "com.unity.modules.unityanalytics": "1.0.0",
-        "com.unity.nuget.mono-cecil": "1.11.4"
+        "com.unity.nuget.mono-cecil": "1.11.4",
+        "com.unity.modules.unityanalytics": "1.0.0"
       },
       "url": "https://packages.unity.com"
     },
@@ -64,7 +57,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.rider": {
-      "version": "3.0.28",
+      "version": "3.0.34",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -139,7 +132,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.textmeshpro": {
-      "version": "3.0.6",
+      "version": "3.0.9",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -152,9 +145,9 @@
       "depth": 0,
       "source": "registry",
       "dependencies": {
+        "com.unity.modules.audio": "1.0.0",
         "com.unity.modules.director": "1.0.0",
         "com.unity.modules.animation": "1.0.0",
-        "com.unity.modules.audio": "1.0.0",
         "com.unity.modules.particlesystem": "1.0.0"
       },
       "url": "https://packages.unity.com"
@@ -183,9 +176,9 @@
       "depth": 1,
       "source": "registry",
       "dependencies": {
-        "com.unity.modules.subsystems": "1.0.0",
         "com.unity.modules.vr": "1.0.0",
         "com.unity.modules.xr": "1.0.0",
+        "com.unity.modules.subsystems": "1.0.0",
         "com.unity.xr.legacyinputhelpers": "2.1.7"
       },
       "url": "https://packages.unity.com"
@@ -217,7 +210,8 @@
         "com.unity.timeline": "1.7.6",
         "com.unity.xr.management": "4.3.3",
         "com.unity.xr.oculus": "4.0.0",
-        "com.unity.postprocessing": "3.2.2"
+        "com.unity.postprocessing": "3.2.2",
+        "com.unity.ugui": "1.0.0"
       }
     },
     "com.vrchat.core.vpm-resolver": {
@@ -236,8 +230,7 @@
         "com.unity.cinemachine": "2.9.7",
         "com.unity.textmeshpro": "3.0.6",
         "com.unity.inputsystem": "1.2.0",
-        "com.unity.ai.navigation": "1.1.5",
-        "com.unity.ugui": "1.0.0"
+        "com.unity.ai.navigation": "1.1.5"
       }
     },
     "com.unity.modules.ai": {

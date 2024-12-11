@@ -1,5 +1,6 @@
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon.Common;
@@ -12,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
         public PlayerManager playerManager;
         public GolfBallController ball;
         public GolfClubCollider putter;
-        public PuttSync puttSync;
+        [FormerlySerializedAs("puttSync")] public OpenPuttSync openPuttSync;
         public MeshRenderer handleMesh;
         public MeshRenderer shaftMesh;
         public MeshRenderer headMesh;
@@ -60,7 +61,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         [UdonSynced, FieldChangeCallback(nameof(ClubIsArmed))]
-        private bool _clubArmed = false;
+        private bool _clubArmed;
 
         public bool ClubIsArmed
         {
@@ -116,35 +117,39 @@ namespace dev.mikeee324.OpenPutt
         }
 
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
-        public bool enableBigShaft = false;
+        public bool enableBigShaft;
 
         public Color offColour = Color.white;
         public Color onColour = Color.red;
         public Color offEmission = Color.black;
         public Color onEmission = Color.red;
 
-        public bool canUpdatePuttSyncSpawn = false;
+        public bool canUpdatePuttSyncSpawn;
 
-        [HideInInspector] public bool heldByPlayer = false;
-        [UdonSynced, HideInInspector] private float shaftScale = -1f;
-        private bool LeftUseButtonDown = false;
-        private bool RightUseButtonDown = false;
-        private bool clubColliderIsTempDisabled = false;
-        private bool localPlayerIsInVR = false;
+        [HideInInspector]
+        public bool heldByPlayer;
+
+        [UdonSynced, HideInInspector]
+        private float shaftScale = -1f;
+
+        private bool LeftUseButtonDown;
+        private bool RightUseButtonDown;
+        private bool clubColliderIsTempDisabled;
+        private bool localPlayerIsInVR;
 
         private void Start()
         {
             // Make sure everything we need is on the same layer
-            shaftMesh.gameObject.layer = this.gameObject.layer;
-            headMesh.gameObject.layer = this.gameObject.layer;
+            shaftMesh.gameObject.layer = gameObject.layer;
+            headMesh.gameObject.layer = gameObject.layer;
             if (Utilities.IsValid(putter))
-                putter.gameObject.layer = this.gameObject.layer;
+                putter.gameObject.layer = gameObject.layer;
 
             if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
 
-            if (!Utilities.IsValid(puttSync))
-                puttSync = GetComponent<PuttSync>();
+            if (!Utilities.IsValid(openPuttSync))
+                openPuttSync = GetComponent<OpenPuttSync>();
             shaftScale = 1;
 
             shaftMesh.transform.localScale = new Vector3(1, 1, 1);
@@ -156,7 +161,7 @@ namespace dev.mikeee324.OpenPutt
             // Update the collider states
             RefreshState();
 
-            this.enabled = false;
+            enabled = false;
 
             LocalPlayerCheck();
         }
@@ -204,13 +209,13 @@ namespace dev.mikeee324.OpenPutt
             else if (!isOwner)
             {
                 // Local player doesn't own this club and the scale hasn't changed - do nothing
-                this.enabled = false;
+                enabled = false;
             }
         }
 
         public override void OnDeserialization()
         {
-            this.enabled = true;
+            enabled = true;
         }
 
         /// <summary>
@@ -281,8 +286,8 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(pickup))
                 pickup.pickupable = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRC_Pickup.PickupHand.None;
 
-            if (Utilities.IsValid(puttSync) && canUpdatePuttSyncSpawn)
-                puttSync.SetSpawnPosition(new Vector3(0, -2, 0), Quaternion.identity);
+            if (Utilities.IsValid(openPuttSync) && canUpdatePuttSyncSpawn)
+                openPuttSync.SetSpawnPosition(new Vector3(0, -2, 0), Quaternion.identity);
         }
 
         public void OnRespawn()
@@ -334,8 +339,8 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (Utilities.IsValid(puttSync) && puttSync.LocalPlayerOwnsThisObject())
-                puttSync.RequestFastSync();
+            if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                openPuttSync.RequestFastSync();
         }
 
         /// <summary>
@@ -346,7 +351,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(playerManager))
                 return;
 
-            this.enabled = true;
+            enabled = true;
             heldByPlayer = true;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
@@ -354,8 +359,8 @@ namespace dev.mikeee324.OpenPutt
             playerManager.ClubVisible = true;
             playerManager.RequestSync(syncNow: true);
 
-            if (Utilities.IsValid(puttSync) && puttSync.LocalPlayerOwnsThisObject())
-                puttSync.RequestFastSync();
+            if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                openPuttSync.RequestFastSync();
 
             if (!Utilities.IsValid(playerManager.openPutt))
                 return;
@@ -368,7 +373,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void OnScriptDrop()
         {
-            this.enabled = false;
+            enabled = false;
 
             heldByPlayer = false;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
@@ -383,8 +388,8 @@ namespace dev.mikeee324.OpenPutt
                 playerManager.RequestSync();
             }
 
-            if (Utilities.IsValid(puttSync) && puttSync.LocalPlayerOwnsThisObject())
-                puttSync.RequestFastSync();
+            if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                openPuttSync.RequestFastSync();
 
             UpdateClubState();
 
@@ -393,7 +398,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPickup()
         {
-            this.enabled = true;
+            enabled = true;
 
             heldByPlayer = true;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
@@ -404,7 +409,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnDrop()
         {
-            this.enabled = false;
+            enabled = false;
 
             LeftUseButtonDown = false;
             RightUseButtonDown = false;

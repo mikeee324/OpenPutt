@@ -24,7 +24,8 @@ namespace dev.mikeee324.OpenPutt
         [Space, Header("Visibility Settings")] [Tooltip("The color to fade out to (usually has transparency on)")]
         public Color labelHideColor = new Color(94, 129, 172, 0);
 
-        [Tooltip("The color to fade in to")] public Color labelVisibleColor = new Color(94, 129, 172);
+        [Tooltip("The color to fade in to")]
+        public Color labelVisibleColor = new Color(94, 129, 172);
 
         [Tooltip("A curve that describes how visible the label will be depending on the distance to the local player (Time=Distance In Meters)")]
         public AnimationCurve localLabelVisibilityCurve;
@@ -67,7 +68,7 @@ namespace dev.mikeee324.OpenPutt
             // Do a regular check to see if the label should be turned on or off
             SendCustomEventDelayedSeconds(nameof(CheckVisibility), 0.15f);
 
-            this.enabled = false;
+            enabled = false;
         }
 
         public override void PostLateUpdate()
@@ -149,7 +150,7 @@ namespace dev.mikeee324.OpenPutt
 
         public void CheckVisibility()
         {
-            if (!Utils.LocalPlayerIsValid())
+            if (!OpenPuttUtils.LocalPlayerIsValid())
             {
                 // Vary the time between each check to try and stop them all happening at once
                 SendCustomEventDelayedSeconds(nameof(CheckVisibility), Random.Range(.1f, .15f));
@@ -161,17 +162,17 @@ namespace dev.mikeee324.OpenPutt
             var visiblityVal = IsMyLabel ? localLabelVisibilityCurve.Evaluate(distance) : remoteLabelVisibilityCurve.Evaluate(distance);
             var newActiveState = visiblityVal > 0.1f;
 
-            if (this.enabled != newActiveState)
+            if (enabled != newActiveState)
             {
                 // Stop script from being called in Update()
-                this.enabled = newActiveState;
+                enabled = newActiveState;
 
                 // Also toggle canvas off as this saves some time during rendering
-                this.canvas.enabled = newActiveState;
+                canvas.enabled = newActiveState;
 
                 // If the label is now visible snap it back to th eball before the next frame
                 if (newActiveState)
-                    this.UpdatePosition();
+                    UpdatePosition();
             }
 
             // Vary the time between each check to try and stop them all happening at once

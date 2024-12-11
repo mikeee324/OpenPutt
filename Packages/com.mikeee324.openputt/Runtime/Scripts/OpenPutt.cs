@@ -1,38 +1,38 @@
-﻿using Cyan.PlayerObjectPool;
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDK3.Persistence;
 using VRC.SDK3.StringLoading;
 using VRC.SDKBase;
-using VRC.Udon;
 using VRC.Udon.Common.Interfaces;
 
 namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
-    public class OpenPutt : CyanPlayerObjectPoolEventListener
+    public class OpenPutt : UdonSharpBehaviour
     {
-        public string CurrentVersion { get; } = "0.8.5";
+        public string CurrentVersion { get; } = "0.8.6";
 
         #region References
-        [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
-        [Header("Internal References")]
-        [Tooltip("This is a reference to Cyans Player Object Pool")]
-        public CyanPlayerObjectPool objectPool;
-        [Tooltip("This is a reference to Cyans Player Object Pool Assigner")]
-        public CyanPlayerObjectAssigner objectAssigner;
-        [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
+
+        [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")] [Header("Internal References")] [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
         public PlayerListManager playerListManager;
+
         [Tooltip("The ScoreboardManager looks after all scoreboards in the world (Moving them between positions and refreshing them)")]
         public ScoreboardManager scoreboardManager;
+
         [Tooltip("This array holds a reference to all Courses that you create for your world")]
         public CourseManager[] courses;
+
         [Tooltip("This array holds a reference to the little canvases that display hole numbers/names/par score")]
         public CourseMarker[] courseMarkers;
+
         [Tooltip("This curve is used to stop players sending syncs too often depending on the amount of players in the instance (If blank OpenPutt will populate this at runtime)")]
         public AnimationCurve syncTimeCurve;
+
         [Header("Local Player Objects")]
         public BodyMountedObject leftShoulderPickup;
+
         public BodyMountedObject rightShoulderPickup;
         public BodyMountedObject footCollider;
         public PortableMenu portableScoreboard;
@@ -41,46 +41,55 @@ namespace dev.mikeee324.OpenPutt
         public AudioSource[] WorldAudioSources;
         public DesktopModeController desktopModeController;
         public DesktopModeCameraController desktopModeCameraController;
+
         [Header("External References")]
         public OpenPuttEventListener[] eventListeners;
+
         #endregion
 
         #region Game Settings
-        [Header("Game Settings")]
-        [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
-        public bool replayableCourses = false;
+
+        [Header("Game Settings")] [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
+        public bool replayableCourses;
+
         [UdonSynced, Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
-        public bool enableVerticalHits = false;
+        public bool enableVerticalHits;
+
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
-        public bool coursesCanBePlayedInAnyOrder = false;
+        public bool coursesCanBePlayedInAnyOrder;
+
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
-        public bool enableDevModeForAll = false;
+        public bool enableDevModeForAll;
+
         #endregion
 
         #region Other Settings
-        [Header("Other Settings")]
-        [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
+
+        [Header("Other Settings")] [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
         public int ballRenderQueueBase = 2000;
+
         [Tooltip("A list of players that can access the dev mode tab by default")]
-        public string[] devModePlayerWhitelist = new string[] { "mikeee324", "TummyTime" };
+        public string[] devModePlayerWhitelist = { "mikeee324", "TummyTime" };
+
         [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
-        public bool debugMode = false;
+        public bool debugMode;
+
         public VRCUrl versionURL;
+
         #endregion
 
         #region API
+
         public PlayerManager[] PlayersSortedByScore => playerListManager.PlayersSortedByScore;
         public PlayerManager[] PlayersSortedByTime => playerListManager.PlayersSortedByTime;
         public float maxRefreshInterval { get; private set; }
+
         /// <summary>
         /// Determines when PlayerManagers will sync their score data (Used to reduce network traffic when there's lots of players)
         /// </summary>
         [HideInInspector]
         public PlayerSyncType playerSyncType = PlayerSyncType.All;
-        /// <summary>
-        /// Shortcut for asking the object pool for the size of the pool.
-        /// </summary>
-        public int MaxPlayerCount => Utilities.IsValid(objectPool) ? objectPool.poolSize : 0;
+
         /// <summary>
         /// Returns the current number of players that have started playing at least 1 course
         /// </summary>
@@ -90,12 +99,13 @@ namespace dev.mikeee324.OpenPutt
         /// Keeps a reference to the PlayerManager that is assigned to the local player
         /// </summary>
         [HideInInspector]
-        public PlayerManager LocalPlayerManager = null;
+        public PlayerManager LocalPlayerManager;
+
         /// <summary>
         /// Is a list of all PlayerManagers from the object pool - Can be used as a shortcut to getting player data without any GetComponent calls etc
         /// </summary>
         [HideInInspector]
-        public PlayerManager[] allPlayerManagers = null;
+        public PlayerManager[] allPlayerManagers = new PlayerManager[0];
 
         /// <summary>
         /// Sums up the maximum score a player can get across all courses
@@ -111,9 +121,11 @@ namespace dev.mikeee324.OpenPutt
                         continue;
                     score += course.maxScore;
                 }
+
                 return score;
             }
         }
+
         /// <summary>
         /// Sums up the maximum time a player can score across all courses
         /// </summary>
@@ -128,9 +140,11 @@ namespace dev.mikeee324.OpenPutt
                         continue;
                     score += course.maxTime;
                 }
+
                 return score;
             }
         }
+
         /// <summary>
         /// Sums up the par on all courses
         /// </summary>
@@ -145,9 +159,11 @@ namespace dev.mikeee324.OpenPutt
                         continue;
                     score += course.parScore;
                 }
+
                 return score;
             }
         }
+
         public int TotalParTime
         {
             get
@@ -159,24 +175,26 @@ namespace dev.mikeee324.OpenPutt
                         continue;
                     score += course.parTime;
                 }
+
                 return score;
             }
         }
+
         public string latestOpenPuttVer = "";
         public string openPuttChangelog = "";
+
         #endregion
 
         void Start()
         {
-
 #if UNITY_EDITOR
             //Force debug mode on in editor
             debugMode = true;
 #endif
 
-            if (!Utilities.IsValid(objectPool) || !Utilities.IsValid(objectAssigner) || courses.Length == 0)
+            if (courses.Length == 0)
             {
-                Utils.LogError(this, "Missing some references! Please check everything is assigned correctly in the inspector. Disabling OpenPutt..");
+                OpenPuttUtils.LogError(this, "Missing some references! Please check everything is assigned correctly in the inspector. Disabling OpenPutt..");
                 gameObject.SetActive(false);
                 return;
             }
@@ -219,46 +237,67 @@ namespace dev.mikeee324.OpenPutt
             maxRefreshInterval = syncTimeCurve.Evaluate(numberOfPlayers);
         }
 
-        public override void _OnLocalPlayerAssigned()
-        {
-            if (!Utilities.IsValid(LocalPlayerManager))
-            {
-                Utils.LogError(this, "LocalPlayerManager not found! Something bad happened!");
-            }
-        }
-
-        public override void _OnPlayerAssigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
+        public override void OnPlayerJoined(VRCPlayerApi player)
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            var playerManager = allPlayerManagers[poolIndex];
-
-            playerManager.openPutt = this;
-
-            if (player.isLocal)
-            {
-                LocalPlayerManager = playerManager;
-
-                if (!debugMode)
-                    debugMode = devModePlayerWhitelist.Contains(player.displayName);
-            }
+            SendCustomEventDelayedFrames(nameof(RemoveInvalidPlayerManagers), 2);
         }
 
-        public override void _OnPlayerUnassigned(VRCPlayerApi player, int poolIndex, UdonBehaviour poolObject)
+        public override void OnPlayerLeft(VRCPlayerApi player)
         {
             UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            var playerManager = allPlayerManagers[poolIndex];
-
-            if (player.isLocal)
-                LocalPlayerManager = null;
-
-            playerListManager.OnPlayerUpdate(playerManager);
+            SendCustomEventDelayedFrames(nameof(RemoveInvalidPlayerManagers), 2);
         }
 
         public void OnPlayerUpdate(PlayerManager playerManager)
         {
-            playerListManager.OnPlayerUpdate(playerManager);
+            if (playerManager.Owner.isLocal)
+                LocalPlayerManager = playerManager;
+
+            if (!allPlayerManagers.Contains(playerManager))
+                allPlayerManagers = allPlayerManagers.Add(playerManager);
+
+            playerListManager.OnPlayerUpdate();
+        }
+
+        /// <summary>
+        /// Updates the local players persistant save data
+        /// </summary>
+        public void SavePersistantData()
+        {
+            // Save players ball colour
+            PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
+
+            // Save volume settings
+            PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);
+            PlayerData.SetFloat("OpenPutt-WorldVol", WorldAudioSources.Length > 0 ? WorldAudioSources[0].volume : 1);
+            PlayerData.SetFloat("OpenPutt-BGMVol", BGMAudioSources.Length > 0 ? BGMAudioSources[0].volume : 1);
+        }
+
+        public void LoadPersistantData()
+        {
+            var localPlayer = Networking.LocalPlayer;
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColor"))
+                LocalPlayerManager.BallColor = PlayerData.GetColor(localPlayer, "OpenPutt-BallColor");
+
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
+                SFXController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");
+
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-WorldVol"))
+            {
+                var vol = PlayerData.GetFloat(localPlayer, "OpenPutt-WorldVol");
+                foreach (var worldAudio in WorldAudioSources)
+                    worldAudio.volume = vol;
+            }
+
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-BGMVol"))
+            {
+                var vol = PlayerData.GetFloat(localPlayer, "OpenPutt-BGMVol");
+                foreach (var bgmAudio in BGMAudioSources)
+                    bgmAudio.volume = vol;
+            }
         }
 
         public void CheckForUpdate()
@@ -266,16 +305,28 @@ namespace dev.mikeee324.OpenPutt
             VRCStringDownloader.LoadUrl(versionURL, (IUdonEventReceiver)this);
         }
 
+        public void RemoveInvalidPlayerManagers()
+        {
+            var newPlayerManagers = new PlayerManager[0];
+            for (var i = 0; i < allPlayerManagers.Length; i++)
+                if (Utilities.IsValid(allPlayerManagers[i]))
+                    newPlayerManagers = newPlayerManagers.Add(allPlayerManagers[i]);
+
+            allPlayerManagers = newPlayerManagers;
+
+            playerListManager.OnPlayerUpdate();
+        }
+
         public override void OnStringLoadSuccess(IVRCStringDownload result)
         {
-            this.openPuttChangelog = result.Result;
-            if (Utilities.IsValid(this.openPuttChangelog) && this.openPuttChangelog.Length > 0 && this.openPuttChangelog.Contains("\n"))
-                this.latestOpenPuttVer = this.openPuttChangelog.Substring(0, this.openPuttChangelog.IndexOf("\n"));
+            openPuttChangelog = result.Result;
+            if (Utilities.IsValid(openPuttChangelog) && openPuttChangelog.Length > 0 && openPuttChangelog.Contains("\n"))
+                latestOpenPuttVer = openPuttChangelog.Substring(0, openPuttChangelog.IndexOf("\n"));
 
-            if (!Utilities.IsValid(this.latestOpenPuttVer))
-                this.latestOpenPuttVer = "";
+            if (!Utilities.IsValid(latestOpenPuttVer))
+                latestOpenPuttVer = "";
 
-            this.latestOpenPuttVer = this.latestOpenPuttVer.Trim();
+            latestOpenPuttVer = latestOpenPuttVer.Trim();
         }
     }
 }

@@ -18,13 +18,13 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
 
         if (openPutt == null)
         {
-            Utils.LogWarning("ScoreboardBuilder", "Could not find an OpenPutt prefab in the scene.. doing nothing");
+            OpenPuttUtils.LogWarning("ScoreboardBuilder", "Could not find an OpenPutt prefab in the scene.. doing nothing");
             return;
         }
 
         if (openPutt.scoreboardManager == null)
         {
-            Utils.LogError("ScoreboardBuilder", "OpenPutt prefab can't find scoreboard manager! Make sure all references are set up correctly!");
+            OpenPuttUtils.LogError("ScoreboardBuilder", "OpenPutt prefab can't find scoreboard manager! Make sure all references are set up correctly!");
             return;
         }
 
@@ -35,7 +35,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
         if (ShouldBuildScoreboards(openPutt.scoreboardManager, scoreboards))
         {
             BuildScoreboards(openPutt.scoreboardManager, scoreboards);
-            Utils.LogWarning(openPutt.scoreboardManager, $"Scoreboards were populated because some rows or columns were missing. If you would like to avoid this click the 'Setup Scoreboards' button on the ScoreboardManager inspector window!");
+            OpenPuttUtils.LogWarning(openPutt.scoreboardManager, $"Scoreboards were populated because some rows or columns were missing. If you would like to avoid this click the 'Setup Scoreboards' button on the ScoreboardManager inspector window!");
         }
     }
 
@@ -49,7 +49,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
         {
             if (scoreboards[scoreboardID] == null)
             {
-                Utils.LogError(manager, $"Scoreboard ID {scoreboardID} is null! Please make sure all scoreboards have been assigned properly!");
+                OpenPuttUtils.LogError(manager, $"Scoreboard ID {scoreboardID} is null! Please make sure all scoreboards have been assigned properly!");
                 continue;
             }
 
@@ -61,7 +61,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                 EditorUtility.ClearProgressBar();
                 return;
             }
-            Utils.Log("ScoreboardBuildProcessor", $"Clearing old rows from scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
+            OpenPuttUtils.Log("ScoreboardBuildProcessor", $"Clearing old rows from scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
 
             while (scoreboards[scoreboardID].topRowPanel.transform.childCount > 0)
             {
@@ -92,7 +92,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                 return;
             }
 
-            Utils.Log("ScoreboardBuildProcessor", $"Creating top rows for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
+            OpenPuttUtils.Log("ScoreboardBuildProcessor", $"Creating top rows for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
 
             ScoreboardPlayerRow row = scoreboards[scoreboardID].CreateRow(0, scoreboards[scoreboardID].topRowPanel);
             row.rowType = ScoreboardPlayerRowType.Header;
@@ -116,7 +116,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                 }
                 ScoreboardPlayerRow row = scoreboards[scoreboardID].CreateRow(playerID);
                 row.gameObject.SetActive(false);
-                Utils.Log("ScoreboardBuildProcessor", $"Creating row {playerID} for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
+                OpenPuttUtils.Log("ScoreboardBuildProcessor", $"Creating row {playerID} for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
             }
         }
 
