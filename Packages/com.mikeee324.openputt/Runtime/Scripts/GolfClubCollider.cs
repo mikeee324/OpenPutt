@@ -25,6 +25,8 @@ namespace dev.mikeee324.OpenPutt
     {
         [Header("References")] [Tooltip("Reference to OpenPutt to skip a few steps")]
         public OpenPutt openPutt;
+        
+        public PlayerManager playerManager;
 
         [Tooltip("Which golf club is this collider attached to?")]
         public GolfClub golfClub;
@@ -305,7 +307,7 @@ namespace dev.mikeee324.OpenPutt
                 if (angle > 180.0f)
                     angle -= 360.0f;
                 if (angle != 0 && !myRigidbody.isKinematic)
-                    myRigidbody.angularVelocity = (1f / Time.fixedDeltaTime * angle * axis * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
+                    myRigidbody.angularVelocity = axis * (1f / Time.fixedDeltaTime * angle * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
             }
             else
             {
@@ -363,8 +365,9 @@ namespace dev.mikeee324.OpenPutt
         public override void PostLateUpdate()
         {
             UpdateVelocity();
+            ResizeClubCollider();
 
-            if (!positionBufferWasJustReset && !clubIsTouchingBall && framesSinceHit == -1)
+            if (framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
             {
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame
                 if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out var hit, FrameVelocity.magnitude * Time.deltaTime))
@@ -379,24 +382,26 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // If the ball has been hit
-            if (framesSinceHit != -1)
+            if (framesSinceHit < 0) return;
+
+            framesSinceHit += 1;
+
+            // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
+            if (framesSinceHit >= hitWaitFrames)
             {
-                framesSinceHit += 1;
+                // Consume the hit event
+                framesSinceHit = -1;
 
-                // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-                if (framesSinceHit >= hitWaitFrames)
-                {
-                    // Consume the hit event
-                    framesSinceHit = -1;
-
-                    // Send the velocity to the ball
-                    HandleBallHit();
-                }
+                // Send the velocity to the ball
+                HandleBallHit();
             }
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            if (!Utilities.IsValid(other))
+                return;
+
             // Ignore extra hits to the ball until we have processed the first
             if (framesSinceHit >= 0 || positionBufferWasJustReset)
                 return;
@@ -417,20 +422,12 @@ namespace dev.mikeee324.OpenPutt
 
             LastKnownHitType = "(Trigger)";
 
-            if (hitWaitFrames == 0)
-            {
-                // Make it so we send the hit event in this same frame
-                framesSinceHit = 99;
-            }
-            else
-            {
-                framesSinceHit = 0;
-            }
+            framesSinceHit = 0;
         }
 
         private void OnTriggerExit(Collider other)
         {
-            if (other.gameObject != golfBall.gameObject)
+            if (!Utilities.IsValid(other) || other.gameObject != golfBall.gameObject)
                 return;
 
             clubIsTouchingBall = false;
@@ -440,12 +437,12 @@ namespace dev.mikeee324.OpenPutt
 
         private void OnCollisionEnter(Collision collision)
         {
-            // Ignore extra hits to the ball until we have processed the first
-            if (framesSinceHit >= 0 || positionBufferWasJustReset)
-                return;
-
             // We only care if this collided with the local players ball
             if (!Utilities.IsValid(collision) || !Utilities.IsValid(collision.rigidbody) || collision.rigidbody.gameObject != golfBall.gameObject)
+                return;
+
+            // Ignore extra hits to the ball until we have processed the first
+            if (framesSinceHit >= 0 || positionBufferWasJustReset)
                 return;
 
             // Stops players from launching the ball by placing the club inside the ball and arming it
@@ -460,17 +457,8 @@ namespace dev.mikeee324.OpenPutt
 
             LastKnownHitType = "(Collision)";
 
-            if (hitWaitFrames == 0)
-            {
-                // Make it so we send the hit event in this same frame
-                framesSinceHit = 99;
-            }
-            else
-            {
-                framesSinceHit = 0;
-            }
+            framesSinceHit = 0;
         }
-
 
         private void OnCollisionExit(Collision collision)
         {
@@ -484,13 +472,15 @@ namespace dev.mikeee324.OpenPutt
 
         private void HandleBallHit()
         {
-            // OpenPutt is null and we can find it
-            if (!Utilities.IsValid(openPutt) && Utilities.IsValid(golfClub) && Utilities.IsValid(golfClub.playerManager) && Utilities.IsValid(golfClub.playerManager.openPutt))
-                openPutt = golfClub.playerManager.openPutt;
+            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(playerManager))
+            {
+                OpenPuttUtils.LogError(this, "Missing references on GolfClubCollider! Cannot handle the ball hit!");
+                return;
+            }
 
-            var playerManager = golfClub.playerManager;
             var currentCourse = playerManager.CurrentCourse;
-
+            var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
+            
             var directionOfTravel = Vector3.zero;
             var velocityMagnitude = 0f;
 
@@ -559,15 +549,9 @@ namespace dev.mikeee324.OpenPutt
                     var newVel = (latestPos - oldestPos) / timeTaken;
                     directionOfTravel = newVel;
                     velocityMagnitude = newVel.magnitude;
-
-                    // Don't really need this here? - Should already be averaged out - Use the smoothed collider direction if we are told to
-                    //if (smoothedHitDirection && lastPositions[3] != Vector3.zero)
-                    //    directionOfTravel = lastPositions[0] - lastPositions[3];
                     break;
                 }
             }
-
-            var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
 
             // If we are currently disallowing hits to go vertical
             if (!openPutt.enableVerticalHits && !currentCourseIsDrivingRange)
@@ -628,7 +612,7 @@ namespace dev.mikeee324.OpenPutt
                 OpenPuttUtils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");
 
             LastKnownHitVelocity = velocity.magnitude;
-            
+
             // Register the hit with the ball
             golfBall.OnBallHit(velocity);
 
@@ -652,7 +636,7 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public void MoveToClubWithoutVelocity(bool resetBuffers = true)
+        private void MoveToClubWithoutVelocity(bool resetBuffers = true)
         {
             if (!Utilities.IsValid(myRigidbody) || !Utilities.IsValid(putterTarget))
                 return;
@@ -670,6 +654,11 @@ namespace dev.mikeee324.OpenPutt
 
             if (resetBuffers)
                 ResetPositionBuffers();
+        }
+
+        public void OverrideLastHitVelocity(float newSpeed)
+        {
+            LastKnownHitVelocity = newSpeed;
         }
     }
 }

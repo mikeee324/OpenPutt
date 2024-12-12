@@ -190,6 +190,7 @@ namespace dev.mikeee324.OpenPutt
                         if (!openPutt.enableVerticalHits)
                             ballDirection.y = 0;
 
+                        playerManager.golfClubHead.OverrideLastHitVelocity(currentShotSpeed);
                         golfBall.OnBallHit(ballDirection * currentShotSpeed);
 
                         UpdateUI(CurrentShotSpeedNormalised, noSmooth: true);
@@ -250,6 +251,11 @@ namespace dev.mikeee324.OpenPutt
             SendCustomEventDelayedSeconds(nameof(InitializeCamera), .25f);
 
             SendCustomEventDelayedSeconds(nameof(CheckIfMenuIsOpen), .25f);
+        }
+
+        public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
+        {
+            playerManager = localPlayerManager;
         }
 
         public void CheckIfMenuIsOpen()

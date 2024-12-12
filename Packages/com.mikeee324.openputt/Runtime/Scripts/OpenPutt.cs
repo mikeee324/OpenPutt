@@ -251,11 +251,18 @@ namespace dev.mikeee324.OpenPutt
             SendCustomEventDelayedFrames(nameof(RemoveInvalidPlayerManagers), 2);
         }
 
+        public void OnLocalPlayerInitialised(PlayerManager playerManager)
+        {
+            OpenPuttUtils.Log(this, $"Local player init");
+            LocalPlayerManager = playerManager;
+
+            // Only call this for the first time we see it
+            foreach (var listener in eventListeners)
+                listener.OnLocalPlayerInitialised(LocalPlayerManager);
+        }
+
         public void OnPlayerUpdate(PlayerManager playerManager)
         {
-            if (playerManager.Owner.isLocal)
-                LocalPlayerManager = playerManager;
-
             if (!allPlayerManagers.Contains(playerManager))
                 allPlayerManagers = allPlayerManagers.Add(playerManager);
 
@@ -268,7 +275,8 @@ namespace dev.mikeee324.OpenPutt
         public void SavePersistantData()
         {
             // Save players ball colour
-            PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
+            if (Utilities.IsValid(LocalPlayerManager))
+                PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
 
             // Save volume settings
             PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);

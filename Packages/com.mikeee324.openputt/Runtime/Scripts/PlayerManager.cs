@@ -305,7 +305,7 @@ namespace dev.mikeee324.OpenPutt
                         courseScores[CurrentCourse.holeNumber] += 1;
                         if (courseScores[CurrentCourse.holeNumber] > CurrentCourse.maxScore)
                             courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
-                        
+
                         if (openPutt.debugMode)
                             OpenPuttUtils.Log(this, $"Player hit ball on course {CurrentCourse.holeNumber}. Score is now {courseScores[CurrentCourse.holeNumber]}. (OnBallHit)");
 
@@ -708,7 +708,11 @@ namespace dev.mikeee324.OpenPutt
 
             // Refresh scoreboards
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.scoreboardManager))
+            {
+                if (Owner == Networking.LocalPlayer)
+                    openPutt.OnLocalPlayerInitialised(this);
                 openPutt.OnPlayerUpdate(this);
+            }
         }
 
         public void ResetPlayerScores()

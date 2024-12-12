@@ -23,9 +23,6 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
         // Disable Update() and LateUpdate() calls - we will enable things as when we need to monitor the ball distance
         enabled = false;
-        if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(drivingRangeCourse) || !Utilities.IsValid(distanceLabel))
-        {
-        }
     }
 
     public override void PostLateUpdate()
@@ -35,9 +32,6 @@ public class DrivingRangeDisplay : OpenPuttEventListener
 
         if (!Utilities.IsValid(playerManager))
             return;
-
-        if (!Utilities.IsValid(golfBall))
-            golfBall = playerManager.golfBall;
         if (!Utilities.IsValid(golfBall))
             return;
 
@@ -73,6 +67,15 @@ public class DrivingRangeDisplay : OpenPuttEventListener
     {
         if (player == Networking.LocalPlayer)
             enabled = false;
+    }
+
+    public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
+    {
+        playerManager = localPlayerManager;
+
+        if (!Utilities.IsValid(playerManager)) return;
+        
+        golfBall = playerManager.golfBall;
     }
 
     public override void OnLocalPlayerBallHit(float speed)

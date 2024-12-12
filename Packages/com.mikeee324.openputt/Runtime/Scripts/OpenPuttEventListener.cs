@@ -5,6 +5,12 @@ namespace dev.mikeee324.OpenPutt
     public abstract class OpenPuttEventListener : UdonSharpBehaviour
     {
         /// <summary>
+        /// Called when OpenPutt has assigned and finished setting up a PlayerManager for the local player
+        /// </summary>
+        /// <param name="localPlayerManager">The PlayerManager that was assigned</param>
+        public abstract void OnLocalPlayerInitialised(PlayerManager localPlayerManager);
+        
+        /// <summary>
         /// Called when local player hits their ball
         /// </summary>
         /// <param name="speed">The velocity magnitude that was just applied to the ball</param>

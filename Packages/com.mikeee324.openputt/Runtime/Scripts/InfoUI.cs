@@ -56,7 +56,7 @@ namespace dev.mikeee324.OpenPutt
         public string defaultText = "-";
 
         private TextMeshProUGUI valueTextLabel;
-        private PlayerManager localPlayerManager;
+        private PlayerManager playerManager;
         private GolfBallController golfBall;
         private GolfClubCollider golfClubCollider;
         private bool monitoringChanges;
@@ -104,24 +104,11 @@ namespace dev.mikeee324.OpenPutt
 
         private void UpdateUI()
         {
-            // Check if we need to populate the local player manager etc
-            if (!Utilities.IsValid(localPlayerManager))
-            {
-                localPlayerManager = openPutt.LocalPlayerManager;
-
-                if (Utilities.IsValid(localPlayerManager))
-                {
-                    golfBall = localPlayerManager.golfBall;
-                    golfClubCollider = localPlayerManager.golfClubHead;
-                }
-            }
-
-            // If we caouldn't find one yet, just skip doing anything here
-            if (!Utilities.IsValid(localPlayerManager))
+            if (!Utilities.IsValid(playerManager))
                 return;
 
             // If this UI is attached to a particular course and the player isn't playing it right now - ignore updates
-            if (Utilities.IsValid(attachedToCourse) && localPlayerManager.CurrentCourse != attachedToCourse)
+            if (Utilities.IsValid(attachedToCourse) && playerManager.CurrentCourse != attachedToCourse)
             {
                 StopUpdate();
                 return;
@@ -138,9 +125,9 @@ namespace dev.mikeee324.OpenPutt
                     {
                         topValue = distance;
                         if (useMetric)
-                            valueTextLabel.text = string.Format("{0:F0}m", distance);
+                            valueTextLabel.text = $"{distance:F0}m";
                         else
-                            valueTextLabel.text = string.Format("{0:F0}yd", distance * 1.09361f);
+                            valueTextLabel.text = $"{distance * 1.09361f:F0}yd";
                     }
 
                     break;
@@ -148,9 +135,9 @@ namespace dev.mikeee324.OpenPutt
                 case InfoUIDisplayType.HitSpeed:
                 {
                     if (useMetric)
-                        valueTextLabel.text = string.Format("{0:F1}km/h", golfClubCollider.LastKnownHitVelocity * 3.6f);
+                        valueTextLabel.text = $"{golfClubCollider.LastKnownHitVelocity * 3.6f:F1}km/h";
                     else
-                        valueTextLabel.text = string.Format("{0:F1}mph", golfClubCollider.LastKnownHitVelocity * 2.2369362921f);
+                        valueTextLabel.text = $"{golfClubCollider.LastKnownHitVelocity * 2.2369362921f:F1}mph";
 
                     // This is a one-time update
                     StopUpdate();
@@ -160,9 +147,9 @@ namespace dev.mikeee324.OpenPutt
                 case InfoUIDisplayType.BallSpeed:
                 {
                     if (useMetric)
-                        valueTextLabel.text = string.Format("{0:F1}km/h", golfBall.BallCurrentSpeed * 3.6f);
+                        valueTextLabel.text = $"{golfBall.BallCurrentSpeed * 3.6f:F1}km/h";
                     else
-                        valueTextLabel.text = string.Format("{0:F1}mph", golfBall.BallCurrentSpeed * 2.2369362921f);
+                        valueTextLabel.text = $"{golfBall.BallCurrentSpeed * 2.2369362921f:F1}mph";
                     break;
                 }
             }
@@ -192,6 +179,16 @@ namespace dev.mikeee324.OpenPutt
             }
 
             StartUpdate();
+        }
+        
+        public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
+        {
+            playerManager = localPlayerManager;
+
+            if (!Utilities.IsValid(playerManager)) return;
+            
+            golfBall = playerManager.golfBall;
+            golfClubCollider = playerManager.golfClubHead;
         }
 
         public override void OnLocalPlayerFinishCourse(CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
