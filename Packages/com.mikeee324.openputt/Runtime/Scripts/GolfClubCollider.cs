@@ -13,7 +13,8 @@ namespace dev.mikeee324.OpenPutt
     {
         SingleFrame = 0,
         SingleFrameSmoothed = 1,
-        MultiFrameAverage = 2
+        MultiFrameAverage = 2,
+        FollowVelocity = 3
     }
 
     /// <summary>
@@ -308,6 +309,20 @@ namespace dev.mikeee324.OpenPutt
                     angle -= 360.0f;
                 if (angle != 0 && !myRigidbody.isKinematic)
                     myRigidbody.angularVelocity = axis * (1f / Time.fixedDeltaTime * angle * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
+
+                if (framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
+                {
+                    // Perform a sweep test to see if we'll be hitting the ball in the next frame
+                    if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(newVel, out var hit, newVel.magnitude * Time.deltaTime))
+                    {
+                        // We only care if this collided with the local players ball
+                        if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
+                        {
+                            LastKnownHitType = "(F-Sweep)";
+                            framesSinceHit = 0;
+                        }
+                    }
+                }
             }
             else
             {
@@ -375,7 +390,7 @@ namespace dev.mikeee324.OpenPutt
                     // We only care if this collided with the local players ball
                     if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
                     {
-                        LastKnownHitType = "(Sweep)";
+                        LastKnownHitType = "(L-Sweep)";
                         framesSinceHit = 0;
                     }
                 }
@@ -506,6 +521,12 @@ namespace dev.mikeee324.OpenPutt
                             if (lastPositions[i] != Vector3.zero)
                                 directionOfTravel = lastPositions[0] - lastPositions[i];
                     break;
+                case ClubColliderVelocityType.FollowVelocity:
+                {
+                    directionOfTravel = myRigidbody.velocity;
+                    velocityMagnitude = myRigidbody.velocity.magnitude;
+                    break;
+                }
                 case ClubColliderVelocityType.MultiFrameAverage:
                 {
                     // Grab positons/time taken
