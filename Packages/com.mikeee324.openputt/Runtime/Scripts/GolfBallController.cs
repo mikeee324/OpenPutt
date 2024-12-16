@@ -1123,7 +1123,7 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.drag = 0.05f;
                     ballRigidbody.angularDrag = 0;
 
-                    // Set the appropriate collision detection mode
+                    // Set the appropriate collision detection mode (speculative picks up club hits better - dynamic works better when the ball is moving around, speculative makes it bounce off random edges it shouldn't)
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
                     //ballRigidbody.collisionDetectionMode = requestedCollisionMode;
                 }
