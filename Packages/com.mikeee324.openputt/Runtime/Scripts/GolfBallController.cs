@@ -1124,8 +1124,8 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.angularDrag = 0;
 
                     // Set the appropriate collision detection mode
-                    //ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
-                    ballRigidbody.collisionDetectionMode = requestedCollisionMode;
+                    ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
+                    //ballRigidbody.collisionDetectionMode = requestedCollisionMode;
                 }
 
                 // Only allow the local player to pick up their ball when it has stopped
