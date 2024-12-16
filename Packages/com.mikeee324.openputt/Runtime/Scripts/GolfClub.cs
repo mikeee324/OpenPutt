@@ -13,11 +13,14 @@ namespace dev.mikeee324.OpenPutt
         public PlayerManager playerManager;
         public GolfBallController ball;
         public GolfClubCollider putter;
-        [FormerlySerializedAs("puttSync")] public OpenPuttSync openPuttSync;
+
+        [FormerlySerializedAs("puttSync")]
+        public OpenPuttSync openPuttSync;
+
         public MeshRenderer handleMesh;
         public MeshRenderer shaftMesh;
         public MeshRenderer headMesh;
-        public GameObject shaftEndPostion;
+        public GameObject shaftEndPosition;
         public VRCPickup pickup;
         public BoxCollider shaftCollider;
 
@@ -34,12 +37,10 @@ namespace dev.mikeee324.OpenPutt
             {
                 var hand = CurrentHandFromBodyMount;
                 if (hand != VRC_Pickup.PickupHand.None)
-                {
                     return hand;
-                }
 
-                if (GetComponent<VRCPickup>() != null)
-                    hand = GetComponent<VRCPickup>().currentHand;
+                if (Utilities.IsValid(pickup))
+                    hand = pickup.currentHand;
 
                 return hand;
             }
@@ -156,7 +157,7 @@ namespace dev.mikeee324.OpenPutt
             handleMesh.transform.localScale = new Vector3(1, 1, 1);
             headMesh.transform.localScale = new Vector3(1, 1, 1);
 
-            headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
+            headMesh.gameObject.transform.position = shaftEndPosition.transform.position;
 
             // Update the collider states
             RefreshState();
@@ -204,7 +205,7 @@ namespace dev.mikeee324.OpenPutt
                 handleMesh.transform.localScale = new Vector3(shaftGirth, shaftGirth, 1);
                 headMesh.transform.localScale = new Vector3(1, 1, shaftGirth);
 
-                headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
+                headMesh.gameObject.transform.position = shaftEndPosition.transform.position;
             }
             else if (!isOwner)
             {
@@ -224,12 +225,11 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="duration">Amount of time to disable the club for in seconds</param>
         public void DisableClubColliderFor(float duration = 1f)
         {
-            if (!clubColliderIsTempDisabled)
-            {
-                clubColliderIsTempDisabled = true;
-                RefreshState();
-                SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
-            }
+            if (clubColliderIsTempDisabled) return;
+            
+            clubColliderIsTempDisabled = true;
+            RefreshState();
+            SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
         }
 
         public void EnableClubCollider()
@@ -318,14 +318,14 @@ namespace dev.mikeee324.OpenPutt
                 handleMesh.transform.localScale = new Vector3(1, 1, 1);
                 headMesh.transform.localScale = new Vector3(1, 1, 1);
 
-                headMesh.gameObject.transform.position = shaftEndPostion.transform.position;
+                headMesh.gameObject.transform.position = shaftEndPosition.transform.position;
             }
             else
             {
                 var minSize = .1f;
                 var maxSize = localPlayerIsInVR ? 3f : 6f;
 
-                var raycastDir = shaftEndPostion.transform.position - shaftMesh.gameObject.transform.position;
+                var raycastDir = shaftEndPosition.transform.position - shaftMesh.gameObject.transform.position;
 
                 // if (Physics.BoxCast(shaftMesh.gameObject.transform.position, boxExtents, raycastDir, out RaycastHit h, putter.transform.rotation, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
                 //     shaftScale = Mathf.Clamp((h.distance - headMesh.localBounds.size.z) / shaftDefaultSize, minSize, maxSize);

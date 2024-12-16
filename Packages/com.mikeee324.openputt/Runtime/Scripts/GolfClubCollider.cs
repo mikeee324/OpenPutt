@@ -26,7 +26,7 @@ namespace dev.mikeee324.OpenPutt
     {
         [Header("References")] [Tooltip("Reference to OpenPutt to skip a few steps")]
         public OpenPutt openPutt;
-        
+
         public PlayerManager playerManager;
 
         [Tooltip("Which golf club is this collider attached to?")]
@@ -73,6 +73,7 @@ namespace dev.mikeee324.OpenPutt
         public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrame;
 
         public CollisionDetectionMode collisionType = CollisionDetectionMode.Continuous;
+        public bool enableSweepTests = true;
 
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;
@@ -206,11 +207,6 @@ namespace dev.mikeee324.OpenPutt
             MoveToClubWithoutVelocity();
         }
 
-        private void OnDisable()
-        {
-            MoveToClubWithoutVelocity();
-        }
-
         public void OnClubArmed()
         {
             framesSinceClubArmed = 0;
@@ -310,13 +306,13 @@ namespace dev.mikeee324.OpenPutt
                 if (angle != 0 && !myRigidbody.isKinematic)
                     myRigidbody.angularVelocity = axis * (1f / Time.fixedDeltaTime * angle * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
 
-                if (framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
+                if (enableSweepTests && framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
                 {
                     // Perform a sweep test to see if we'll be hitting the ball in the next frame
                     if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(newVel, out var hit, newVel.magnitude * Time.deltaTime))
                     {
                         // We only care if this collided with the local players ball
-                        if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
+                        if (Utilities.IsValid(hit.rigidbody) && hit.rigidbody.gameObject == golfBall.gameObject)
                         {
                             LastKnownHitType = "(F-Sweep)";
                             framesSinceHit = 0;
@@ -382,7 +378,7 @@ namespace dev.mikeee324.OpenPutt
             UpdateVelocity();
             ResizeClubCollider();
 
-            if (framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
+            if (enableSweepTests && framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
             {
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame
                 if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out var hit, FrameVelocity.magnitude * Time.deltaTime))
@@ -396,20 +392,17 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            // If the ball has been hit
+            // If the ball has not been hit, we do nothing
             if (framesSinceHit < 0) return;
 
-            framesSinceHit += 1;
-
             // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-            if (framesSinceHit >= hitWaitFrames)
-            {
-                // Consume the hit event
-                framesSinceHit = -1;
+            if (framesSinceHit++ < hitWaitFrames) return;
+            
+            // Consume the hit event
+            framesSinceHit = -1;
 
-                // Send the velocity to the ball
-                HandleBallHit();
-            }
+            // Send the velocity to the ball
+            HandleBallHit();
         }
 
         private void OnTriggerEnter(Collider other)
@@ -435,7 +428,8 @@ namespace dev.mikeee324.OpenPutt
 
             clubIsTouchingBall = true;
 
-            LastKnownHitType = "(Trigger)";
+            if (framesSinceHit < 0)
+                LastKnownHitType = "(Trigger)";
 
             framesSinceHit = 0;
         }
@@ -470,7 +464,8 @@ namespace dev.mikeee324.OpenPutt
 
             clubIsTouchingBall = true;
 
-            LastKnownHitType = "(Collision)";
+            if (framesSinceHit < 0)
+                LastKnownHitType = "(Collision)";
 
             framesSinceHit = 0;
         }
@@ -495,7 +490,7 @@ namespace dev.mikeee324.OpenPutt
 
             var currentCourse = playerManager.CurrentCourse;
             var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
-            
+
             var directionOfTravel = Vector3.zero;
             var velocityMagnitude = 0f;
 
@@ -507,9 +502,11 @@ namespace dev.mikeee324.OpenPutt
 
                     // Use the smoothed collider direction if we are told to
                     if (smoothedHitDirection)
+                    {
                         for (var i = 0; i < 3; i++)
                             if (lastPositions[i] != Vector3.zero)
                                 directionOfTravel = lastPositions[0] - lastPositions[i];
+                    }
                     break;
                 case ClubColliderVelocityType.SingleFrameSmoothed:
                     directionOfTravel = FrameVelocitySmoothed;
@@ -517,9 +514,11 @@ namespace dev.mikeee324.OpenPutt
 
                     // Use the smoothed collider direction if we are told to
                     if (smoothedHitDirection)
+                    {
                         for (var i = 0; i < 3; i++)
                             if (lastPositions[i] != Vector3.zero)
                                 directionOfTravel = lastPositions[0] - lastPositions[i];
+                    }
                     break;
                 case ClubColliderVelocityType.FollowVelocity:
                 {

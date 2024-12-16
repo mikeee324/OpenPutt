@@ -5,6 +5,7 @@
 using TMPro;
 using UdonSharp;
 using UnityEngine;
+using VRC.SDKBase;
 
 [DefaultExecutionOrder(1000000000)]
 public class OPProfileHandler : UdonSharpBehaviour
@@ -28,6 +29,7 @@ public class OPProfileHandler : UdonSharpBehaviour
 
     private void FixedUpdate()
     {
+        if (!Utilities.IsValid(_kickoff) || !Utilities.IsValid(_kickoff.stopwatch)) return;
         if (_currentFrame != Time.frameCount)
         {
             _elapsedTime = 0f;
@@ -40,6 +42,7 @@ public class OPProfileHandler : UdonSharpBehaviour
 
     private void Update()
     {
+        if (!Utilities.IsValid(_kickoff) || !Utilities.IsValid(_kickoff.stopwatch)) return;
         if (_currentFrame != Time.frameCount) // FixedUpdate didn't run this frame, so reset the time
             _elapsedTime = 0f;
 
@@ -48,6 +51,7 @@ public class OPProfileHandler : UdonSharpBehaviour
 
     private void LateUpdate()
     {
+        if (!Utilities.IsValid(_kickoff) || !Utilities.IsValid(_kickoff.stopwatch)) return;
         _elapsedTime += (float)_kickoff.stopwatch.Elapsed.TotalSeconds * 1000f;
     }
 
@@ -55,6 +59,7 @@ public class OPProfileHandler : UdonSharpBehaviour
 
     public override void PostLateUpdate()
     {
+        if (!Utilities.IsValid(_kickoff) || !Utilities.IsValid(_kickoff.stopwatch)) return;
         _elapsedTime += (float)_kickoff.stopwatch.Elapsed.TotalSeconds * 1000f;
         var now = Time.timeSinceLevelLoad;
         _measuredFrametimeTotal += (now - lastFrame) * 1000f;
