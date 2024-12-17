@@ -31,7 +31,7 @@ namespace dev.mikeee324.OpenPutt
         public int[] courseScores = { };
 
         [UdonSynced]
-        public int[] courseTimes = { };
+        public double[] courseTimes = { };
 
         [UdonSynced]
         public CourseState[] courseStates = { };
@@ -161,7 +161,7 @@ namespace dev.mikeee324.OpenPutt
         /// Total number of milliseconds the player took to complete the courses
         /// </summary>
         [UdonSynced]
-        public int PlayerTotalTime = 999999;
+        public double PlayerTotalTime = 999999;
 
         /// <summary>
         /// Check if the player has started at least 1 course in the world. Useful for checking if the player is actually playing the game or not.
@@ -280,7 +280,7 @@ namespace dev.mikeee324.OpenPutt
                     courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                     if (!CurrentCourse.drivingRangeMode)
                         courseScores[CurrentCourse.holeNumber] = 1;
-                    courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                    courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInSeconds();
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
@@ -289,7 +289,7 @@ namespace dev.mikeee324.OpenPutt
                         courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                         if (!CurrentCourse.drivingRangeMode)
                             courseScores[CurrentCourse.holeNumber] = 1;
-                        courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInMilliseconds();
+                        courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInSeconds();
                     }
                     else
                     {
@@ -409,7 +409,7 @@ namespace dev.mikeee324.OpenPutt
             else
             {
                 // Calculate the amount of time player spent on this course
-                courseTimes[course.holeNumber] = Mathf.CeilToInt((Networking.GetServerTimeInMilliseconds() - courseTimes[course.holeNumber]) * 0.001f);
+                courseTimes[course.holeNumber] = Networking.CalculateServerDeltaTime(Networking.GetServerTimeInSeconds(), courseTimes[course.holeNumber]);
             }
 
             if (openPutt.debugMode)
@@ -721,7 +721,7 @@ namespace dev.mikeee324.OpenPutt
             isPlaying = true;
             CurrentCourse = null;
             courseScores = new int[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
-            courseTimes = new int[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
+            courseTimes = new double[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             courseStates = new CourseState[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             for (var i = 0; i < courseScores.Length; i++)
             {
@@ -744,7 +744,7 @@ namespace dev.mikeee324.OpenPutt
             if (PlayerHasStartedPlaying)
             {
                 var score = 0;
-                var totalTime = 0;
+                var totalTime = 0d;
 
                 for (var i = 0; i < courseScores.Length; i++)
                 {
