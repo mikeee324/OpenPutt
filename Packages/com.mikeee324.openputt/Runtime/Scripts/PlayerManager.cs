@@ -400,16 +400,18 @@ namespace dev.mikeee324.OpenPutt
                     courseScores[course.holeNumber] = distance;
             }
 
-            if (newCourseState == CourseState.PlayedAndSkipped || newCourseState == CourseState.Skipped)
+            switch (newCourseState)
             {
-                // If the player skipped this course - assign the max score for this course
-                courseScores[course.holeNumber] = course.maxScore;
-                courseTimes[course.holeNumber] = course.maxTime;
-            }
-            else
-            {
-                // Calculate the amount of time player spent on this course
-                courseTimes[course.holeNumber] = Networking.CalculateServerDeltaTime(Networking.GetServerTimeInSeconds(), courseTimes[course.holeNumber]);
+                case CourseState.PlayedAndSkipped:
+                case CourseState.Skipped:
+                    // If the player skipped this course - assign the max score for this course
+                    courseScores[course.holeNumber] = course.maxScore;
+                    courseTimes[course.holeNumber] = course.maxTime;
+                    break;
+                default:
+                    // Calculate the amount of time player spent on this course
+                    courseTimes[course.holeNumber] = Math.Floor(Networking.CalculateServerDeltaTime(Networking.GetServerTimeInSeconds(), courseTimes[course.holeNumber]));
+                    break;
             }
 
             if (openPutt.debugMode)
