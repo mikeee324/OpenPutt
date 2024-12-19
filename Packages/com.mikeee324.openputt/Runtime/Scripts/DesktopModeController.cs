@@ -671,12 +671,18 @@ namespace dev.mikeee324.OpenPutt
 
                 if (currentCourse.drivingRangeMode)
                 {
-                    courseParLabel.text = "BEST";
+                    golfBall.GetLastHitData(out var maxDist, out var totalDist);
+                    maxDist = Mathf.FloorToInt(maxDist);
+                    
                     courseHitsLabel.text = "CUR";
-                    courseParValueLabel.text = $"{playerManager.courseScores[currentCourse.holeNumber]}m";
+                    courseHitsValueLabel.text = $"{maxDist:F0}m";
 
-                    var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
-                    courseHitsValueLabel.text = $"{distance}m";
+                    var bestScore = playerManager.courseScores[currentCourse.holeNumber];
+                    if (maxDist > bestScore)
+                        bestScore = Mathf.FloorToInt(maxDist);
+                    
+                    courseParLabel.text = "BEST";
+                    courseParValueLabel.text = $"{bestScore:F0}m";
                 }
                 else
                 {
@@ -687,7 +693,7 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 if (currentCourse.drivingRangeMode)
-                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
+                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .1f);
             }
         }
 

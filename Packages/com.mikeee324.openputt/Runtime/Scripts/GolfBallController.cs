@@ -194,9 +194,7 @@ namespace dev.mikeee324.OpenPutt
                             if (!pickedUpByPlayer)
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
-                                respawnPosition = CurrentPosition;
-                                if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                SetRespawnPosition(CurrentPosition);
                             }
                         }
                         else if (respawnPosition != Vector3.zero)
@@ -324,7 +322,7 @@ namespace dev.mikeee324.OpenPutt
         private bool resetBallTimers = true;
 
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
-        private float currentGroundDynamicFriction = 0f;
+        //private float currentGroundDynamicFriction = 0f;
 
         public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
 
@@ -332,6 +330,16 @@ namespace dev.mikeee324.OpenPutt
         /// Used to log ball speed after it gets hit, can be used to track down issues... maybe
         /// </summary>
         private float[] speedDataLogging = new float[0];
+
+        /// <summary>
+        /// The furthest distance that the ball was from the position where it was hit
+        /// </summary>
+        private float lastHitMaxDistance = 0;
+
+        /// <summary>
+        /// Keeps track of how far the ball actually travelled in total for its last hit
+        /// </summary>
+        private float lastHitTravelDistance = 0;
 
         #endregion
 
@@ -469,6 +477,9 @@ namespace dev.mikeee324.OpenPutt
 
                     // Consume the hit event
                     requestedBallVelocity = Vector3.zero;
+
+                    lastHitMaxDistance = 0;
+                    lastHitTravelDistance = 0;
                 }
                 else
                 {
@@ -562,6 +573,24 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.WakeUp();
             }
 
+            if (BallIsMoving)
+            {
+                if (openPuttSync.originalPosition == respawnPosition)
+                {
+                    if (Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, 10f, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                    {
+                        SetRespawnPosition(hit.point);
+                    }
+                }
+                var distanceFromRespawnPos = Vector3.Distance(ballRigidbody.position, respawnPosition);
+                if (lastHitMaxDistance < distanceFromRespawnPos)
+                    lastHitMaxDistance = distanceFromRespawnPos;
+
+                var distanceTravelledThisFrame = Vector3.Distance(ballRigidbody.position, lastFramePosition);
+                if (lastFramePosition.magnitude > .01f)
+                    lastHitTravelDistance += distanceTravelledThisFrame;
+            }
+
             if (ballRigidbody.isKinematic)
                 lastFrameVelocity = (ballRigidbody.position - lastFramePosition) / Time.deltaTime;
             else
@@ -593,7 +622,7 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.angularVelocity = Vector3.zero;
             }
 
-            respawnPosition = position.transform.position;
+            SetRespawnPosition(position.transform.position);
 
             //  BallIsMoving = false;
 
@@ -724,12 +753,19 @@ namespace dev.mikeee324.OpenPutt
 
             SetPosition(respawnPos);
 
-            respawnPosition = respawnPos;
+            SetRespawnPosition(respawnPos);
         }
 
         public void SetPosition(Vector3 worldPos)
         {
             ballRigidbody.position = worldPos;
+        }
+
+        public void SetRespawnPosition(Vector3 pos)
+        {
+            respawnPosition = pos;
+            if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
         }
 
         public void _RespawnBallWithErrorNoise()
@@ -840,7 +876,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 // If the golf club hit the ball... let the golf club handle that hit properly
                 if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
-                
+
                 // TODO: A static rigidbody may or may not help with ball collisions
                 // This if statement will confuse things though.. need to think of a better way (Steppy thing doesn't work properly with it)
                 // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
@@ -1092,6 +1128,17 @@ namespace dev.mikeee324.OpenPutt
         public void Wakeup()
         {
             ballRigidbody.WakeUp();
+        }
+
+        /// <summary>
+        /// Returns the data from the last hit of the ball
+        /// </summary>
+        /// <param name="maxStraightLineDistance">The furthest distance recorded</param>
+        /// <param name="totalDistanceTravelled">The total amount of distance that was covered by the ball</param>
+        public void GetLastHitData(out float maxStraightLineDistance, out float totalDistanceTravelled)
+        {
+            maxStraightLineDistance = lastHitMaxDistance;
+            totalDistanceTravelled = lastHitTravelDistance;
         }
 
         /// <summary>

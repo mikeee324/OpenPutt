@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System;
+using TMPro;
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
@@ -9,19 +10,19 @@ namespace dev.mikeee324.OpenPutt
     public enum InfoUIDisplayType
     {
         /// <summary>
-        /// Displays current hit distance from start point
+        /// Displays the cumulative distance travelled by the ball since it was last hit by the player
         /// </summary>
-        HitDistance,
+        LastHitTotalDistanceTravelled,
 
         /// <summary>
-        /// Displays the longest distance recorded so far
+        /// Displays the largest straight line distance that the ball reached after being hit by the player
         /// </summary>
-        HitLongestDistance,
+        LastHitMaxDistance,
 
         /// <summary>
         /// Displays last known golf club hit speed
         /// </summary>
-        HitSpeed,
+        LastHitSpeed,
 
         /// <summary>
         /// Displays current ball speed
@@ -117,22 +118,26 @@ namespace dev.mikeee324.OpenPutt
             // Work out what to display and then display it
             switch (displayType)
             {
-                case InfoUIDisplayType.HitDistance:
-                case InfoUIDisplayType.HitLongestDistance:
+                case InfoUIDisplayType.LastHitTotalDistanceTravelled:
                 {
-                    var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
-                    if (distance > topValue)
-                    {
-                        topValue = distance;
-                        if (useMetric)
-                            valueTextLabel.text = $"{distance:F0}m";
-                        else
-                            valueTextLabel.text = $"{distance * 1.09361f:F0}yd";
-                    }
-
+                    golfBall.GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
+                    if (useMetric)
+                        valueTextLabel.text = $"{totalDistanceTravelled:F0}m";
+                    else
+                        valueTextLabel.text = $"{totalDistanceTravelled * 1.09361f:F0}yd";
                     break;
                 }
-                case InfoUIDisplayType.HitSpeed:
+                case InfoUIDisplayType.LastHitMaxDistance:
+                {
+                    golfBall.GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
+                    maxDistance = Mathf.FloorToInt(maxDistance);
+                    if (useMetric)
+                        valueTextLabel.text = $"{maxDistance:F0}m";
+                    else
+                        valueTextLabel.text = $"{maxDistance * 1.09361f:F0}yd";
+                    break;
+                }
+                case InfoUIDisplayType.LastHitSpeed:
                 {
                     if (useMetric)
                         valueTextLabel.text = $"{golfClubCollider.LastKnownHitVelocity * 3.6f:F1}km/h";
@@ -157,36 +162,15 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnLocalPlayerBallHit(float speed)
         {
-            switch (displayType)
-            {
-                case InfoUIDisplayType.HitDistance:
-                {
-                    topValue = 0;
-                    break;
-                }
-                case InfoUIDisplayType.HitLongestDistance:
-                {
-                    break;
-                }
-                case InfoUIDisplayType.HitSpeed:
-                {
-                    break;
-                }
-                case InfoUIDisplayType.BallSpeed:
-                {
-                    break;
-                }
-            }
-
             StartUpdate();
         }
-        
+
         public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
         {
             playerManager = localPlayerManager;
 
             if (!Utilities.IsValid(playerManager)) return;
-            
+
             golfBall = playerManager.golfBall;
             golfClubCollider = playerManager.golfClubHead;
         }
@@ -203,13 +187,13 @@ namespace dev.mikeee324.OpenPutt
         {
             switch (displayType)
             {
-                case InfoUIDisplayType.HitDistance:
-                case InfoUIDisplayType.HitLongestDistance:
+                case InfoUIDisplayType.LastHitTotalDistanceTravelled:
+                case InfoUIDisplayType.LastHitMaxDistance:
                 {
                     StopUpdate();
                     break;
                 }
-                case InfoUIDisplayType.HitSpeed:
+                case InfoUIDisplayType.LastHitSpeed:
                 {
                     break;
                 }

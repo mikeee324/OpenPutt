@@ -11,7 +11,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : UdonSharpBehaviour
     {
-        public string CurrentVersion { get; } = "0.8.7";
+        public readonly string CurrentVersion = "0.8.8";
 
         #region References
 

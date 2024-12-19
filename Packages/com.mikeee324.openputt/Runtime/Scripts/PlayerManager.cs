@@ -31,7 +31,7 @@ namespace dev.mikeee324.OpenPutt
         public int[] courseScores = { };
 
         [UdonSynced]
-        public double[] courseTimes = { };
+        public long[] courseTimes = { };
 
         [UdonSynced]
         public CourseState[] courseStates = { };
@@ -158,7 +158,7 @@ namespace dev.mikeee324.OpenPutt
         public int PlayerTotalScore = 999999;
 
         /// <summary>
-        /// Total number of milliseconds the player took to complete the courses
+        /// Total number of seconds the player took to complete the courses
         /// </summary>
         [UdonSynced]
         public double PlayerTotalTime = 999999;
@@ -280,7 +280,7 @@ namespace dev.mikeee324.OpenPutt
                     courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                     if (!CurrentCourse.drivingRangeMode)
                         courseScores[CurrentCourse.holeNumber] = 1;
-                    courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInSeconds();
+                    courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
@@ -289,7 +289,7 @@ namespace dev.mikeee324.OpenPutt
                         courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                         if (!CurrentCourse.drivingRangeMode)
                             courseScores[CurrentCourse.holeNumber] = 1;
-                        courseTimes[CurrentCourse.holeNumber] = Networking.GetServerTimeInSeconds();
+                        courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
                     }
                     else
                     {
@@ -394,10 +394,10 @@ namespace dev.mikeee324.OpenPutt
 
             if (course.drivingRangeMode)
             {
-                var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
+                golfBall.GetLastHitData(out var maxDistance, out var totalDistance);
                 // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
-                if (distance > courseScores[course.holeNumber])
-                    courseScores[course.holeNumber] = distance;
+                if (maxDistance > courseScores[course.holeNumber])
+                    courseScores[course.holeNumber] = Mathf.FloorToInt(maxDistance);
             }
 
             switch (newCourseState)
@@ -410,7 +410,7 @@ namespace dev.mikeee324.OpenPutt
                     break;
                 default:
                     // Calculate the amount of time player spent on this course
-                    courseTimes[course.holeNumber] = Math.Floor(Networking.CalculateServerDeltaTime(Networking.GetServerTimeInSeconds(), courseTimes[course.holeNumber]));
+                    courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
                     break;
             }
 
@@ -551,9 +551,9 @@ namespace dev.mikeee324.OpenPutt
                             ballNotOnCourseCounter++;
 
                         // If the players new score is above the previous driving range score, then overwrite it
-                        var distance = (int)Math.Floor(Vector3.Distance(golfBall.CurrentPosition, golfBall.respawnPosition));
-                        if (distance > courseScores[CurrentCourse.holeNumber])
-                            courseScores[CurrentCourse.holeNumber] = distance;
+                        golfBall.GetLastHitData(out var maxDistance, out var totalDistance);
+                        if (maxDistance > courseScores[CurrentCourse.holeNumber])
+                            courseScores[CurrentCourse.holeNumber] = Mathf.FloorToInt(maxDistance);
                     }
 
                     // Increase max floor time for driving ranges
@@ -679,7 +679,9 @@ namespace dev.mikeee324.OpenPutt
                         golfBall.SetPosition(new Vector3(0, -90, 0));
 
                     if (Utilities.IsValid(golfBall.openPuttSync))
-                        golfBall.respawnPosition = golfBall.openPuttSync.originalPosition;
+                    {
+                        golfBall.SetRespawnPosition(golfBall.openPuttSync.originalPosition);
+                    }
                 }
 
                 golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
@@ -723,7 +725,7 @@ namespace dev.mikeee324.OpenPutt
             isPlaying = true;
             CurrentCourse = null;
             courseScores = new int[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
-            courseTimes = new double[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
+            courseTimes = new long[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             courseStates = new CourseState[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             for (var i = 0; i < courseScores.Length; i++)
             {
@@ -762,9 +764,10 @@ namespace dev.mikeee324.OpenPutt
                             totalTime += courseTimes[i];
                             break;
                         case CourseState.Playing:
-                            // Not counting courses that are in progress for now (but this is how you'd do it!)
-                            // UpdateTotals would have to be run regularly for this to work though (can cause lag)
-                            //  totalTime += Networking.GetServerTimeInMilliseconds() - courseTimes[i];
+                            // We don't include times for in progress courses - updating scoreboards is expensive
+                            // var time = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[i];
+                            // if (time > 0)
+                            //     totalTime += time;
                             break;
                         case CourseState.Completed:
                             totalTime += courseTimes[i];

@@ -69,6 +69,7 @@ namespace dev.mikeee324.OpenPutt
         public Color currentCourseBackground = Color.black;
 
         public Color underParBackground = Color.green;
+        public Color onParBackground = Color.green;
         public Color overParBackground = Color.red;
 
         [Header("Text Colours")]
@@ -76,6 +77,7 @@ namespace dev.mikeee324.OpenPutt
 
         public Color currentCourseText = Color.white;
         public Color underParText = Color.white;
+        public Color onParText = Color.white;
         public Color overParText = Color.white;
 
         [Header("Prefab References")]
@@ -504,9 +506,6 @@ namespace dev.mikeee324.OpenPutt
             var stopwatch = Stopwatch.StartNew();
 
             var allPlayers = SpeedGolfMode ? openPutt.PlayersSortedByTime : openPutt.PlayersSortedByScore;
-
-            if (!Utilities.IsValid(allPlayers))
-                return new PlayerManager[0];
 
             if (allPlayers.Length <= numberOfPlayersToDisplay)
             {

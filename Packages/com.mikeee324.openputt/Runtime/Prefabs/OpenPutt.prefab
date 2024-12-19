@@ -3078,10 +3078,12 @@ MonoBehaviour:
   totalBackground2: {r: 0.2627451, g: 0.29803923, b: 0.36862746, a: 1}
   currentCourseBackground: {r: 0.36862746, g: 0.5058824, b: 0.6745098, a: 1}
   underParBackground: {r: 0.6392157, g: 0.74509805, b: 0.54901963, a: 1}
+  onParBackground: {r: 0.6392157, g: 0.74509805, b: 0.54901963, a: 1}
   overParBackground: {r: 0.7490196, g: 0.38039216, b: 0.41568628, a: 1}
   text: {r: 1, g: 1, b: 1, a: 1}
   currentCourseText: {r: 1, g: 1, b: 1, a: 1}
   underParText: {r: 1, g: 1, b: 1, a: 1}
+  onParText: {r: 1, g: 1, b: 1, a: 1}
   overParText: {r: 1, g: 1, b: 1, a: 1}
   rowPrefab: {fileID: 6854239977690447805, guid: a91348cdfcf1d7d408f064c6bb7235e1,
     type: 3}
@@ -9370,6 +9372,12 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 346779403353652203}
     m_Modifications:
+    - target: {fileID: 1054184374720795390, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 1054184374720795390, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
     - target: {fileID: 2947258982885957471, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
       propertyPath: serializationData.Prefab
@@ -9381,6 +9389,12 @@ PrefabInstance:
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 3260686431100315325, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+    - target: {fileID: 3572999892572893681, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 3572999892572893681, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
     - target: {fileID: 4926412382919218372, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}

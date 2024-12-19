@@ -150,6 +150,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                 // If the player is playing this course right now, then the stored value is the time when they started the course
                 if (courseState == CourseState.Playing)
                 {
+                    // timeOnThisCourse = DateTime.UtcNow.GetUnixTimestamp() - timeOnThisCourse;
+                    // SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
                     SetText("-");
                     playerIsAbovePar = false;
                     playerIsBelowPar = false;
@@ -192,7 +194,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
             }
             else
             {
-                SetTextColour(scoreboardManager.text);
+                SetTextColour(scoreboardManager.onParText);
+                newBGColour = scoreboardManager.onParBackground;
             }
         }
 
