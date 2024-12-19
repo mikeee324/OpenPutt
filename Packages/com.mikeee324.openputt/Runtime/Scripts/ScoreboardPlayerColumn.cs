@@ -145,15 +145,23 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
             }
             else if (scoreboardManager.SpeedGolfMode)
             {
-                double timeOnThisCourse = player.courseTimes[col - 1];
+                var timeOnThisCourse = player.courseTimes[col - 1];
 
                 // If the player is playing this course right now, then the stored value is the time when they started the course
                 if (courseState == CourseState.Playing)
-                    timeOnThisCourse = (Networking.GetServerTimeInMilliseconds() - timeOnThisCourse) * .001f;
-
-                SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
-                playerIsAbovePar = timeOnThisCourse > course.parTime;
-                playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < course.parTime;
+                {
+                    // timeOnThisCourse = DateTime.UtcNow.GetUnixTimestamp() - timeOnThisCourse;
+                    // SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
+                    SetText("-");
+                    playerIsAbovePar = false;
+                    playerIsBelowPar = false;
+                }
+                else
+                {
+                    SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
+                    playerIsAbovePar = timeOnThisCourse > course.parTime;
+                    playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < course.parTime;
+                }
             }
             else
             {
@@ -186,7 +194,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
             }
             else
             {
-                SetTextColour(scoreboardManager.text);
+                SetTextColour(scoreboardManager.onParText);
+                newBGColour = scoreboardManager.onParBackground;
             }
         }
 

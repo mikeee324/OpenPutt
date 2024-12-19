@@ -275,7 +275,13 @@ namespace dev.mikeee324.OpenPutt
 
             return newArray;
         }
-
+        
+        public static long GetUnixTimestamp(this DateTime dateTime)
+        {
+            var utcDateTime = dateTime.ToUniversalTime();
+            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            return (utcDateTime.Ticks - unixEpoch.Ticks) / TimeSpan.TicksPerSecond;
+        }
 
         public static Vector3 BiasedDirection(this Vector3 direction1, Vector3 direction2, float bias)
         {

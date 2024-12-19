@@ -57,6 +57,10 @@ namespace dev.mikeee324.OpenPutt
         {
             UpdateVisibility(player);
 
+            // If in speed golf mode - update totals to include in progress courses
+            //if (scoreboard.manager.SpeedGolfMode && Utilities.IsValid(player))
+            //    player.UpdateTotals();
+
             for (var i = 0; i < columns.Length; i++)
                 columns[i].Refresh(player);
 

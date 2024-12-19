@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1921876704575701316}
   - component: {fileID: 7273602615808973338}
   m_Layer: 17
-  m_Name: LongestDistanceVal
+  m_Name: MaxDistanceVal
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -392,7 +392,7 @@ GameObject:
   - component: {fileID: 6282917658260363835}
   - component: {fileID: 1653597779728209548}
   m_Layer: 17
-  m_Name: HitDistance
+  m_Name: Distance Travelled
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -446,7 +446,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Current Distance
+  m_text: Distance Travelled
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -854,7 +854,7 @@ GameObject:
   - component: {fileID: 6405841942678864961}
   - component: {fileID: 7057728477845556745}
   m_Layer: 17
-  m_Name: HitDistanceVal
+  m_Name: DistanceTravelledVal
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1042,7 +1042,7 @@ GameObject:
   - component: {fileID: 2395203647954768609}
   - component: {fileID: 6944054729729421204}
   m_Layer: 17
-  m_Name: LongestDistance
+  m_Name: MaxDistance
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1096,7 +1096,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Longest Distance
+  m_text: Max Straightline Distance (Used for Driving Ranges)
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -1123,8 +1123,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 10
-  m_fontSizeBase: 10
+  m_fontSize: 7.7
+  m_fontSizeBase: 7.7
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18

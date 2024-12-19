@@ -1,3 +1,12 @@
+0.8.8
+--------
+- Fixes golf club collider again - Hopefully a lot less missed ball hits now!
+- Course timers have been reworked and hopefully count properly now (No longer using server time)
+- Fixes driving range scores not matching what show up on the InfoUI
+- InfoUI can now display the total distance travelled or max straight line distance for each ball hit
+- Adds OnLocalPlayerInitialised() event so third party scripts know when Openputt has been set up for the local player
+- Adds extra scoreboard colour options for when players are on par for each course
+
 0.8.7
 --------
 - Fixes an oopsie

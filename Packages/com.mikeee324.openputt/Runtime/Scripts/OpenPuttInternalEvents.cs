@@ -7,7 +7,11 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPuttInternalEvents : OpenPuttEventListener
     {
         public SFXController sfxController;
-
+        
+        public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
+        {
+        }
+        
         public override void OnLocalPlayerBallHit(float speed)
         {
         }

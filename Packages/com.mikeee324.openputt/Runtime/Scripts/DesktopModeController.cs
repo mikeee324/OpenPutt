@@ -190,6 +190,7 @@ namespace dev.mikeee324.OpenPutt
                         if (!openPutt.enableVerticalHits)
                             ballDirection.y = 0;
 
+                        playerManager.golfClubHead.OverrideLastHitVelocity(currentShotSpeed);
                         golfBall.OnBallHit(ballDirection * currentShotSpeed);
 
                         UpdateUI(CurrentShotSpeedNormalised, noSmooth: true);
@@ -250,6 +251,11 @@ namespace dev.mikeee324.OpenPutt
             SendCustomEventDelayedSeconds(nameof(InitializeCamera), .25f);
 
             SendCustomEventDelayedSeconds(nameof(CheckIfMenuIsOpen), .25f);
+        }
+
+        public override void OnLocalPlayerInitialised(PlayerManager localPlayerManager)
+        {
+            playerManager = localPlayerManager;
         }
 
         public void CheckIfMenuIsOpen()
@@ -665,12 +671,18 @@ namespace dev.mikeee324.OpenPutt
 
                 if (currentCourse.drivingRangeMode)
                 {
-                    courseParLabel.text = "BEST";
+                    golfBall.GetLastHitData(out var maxDist, out var totalDist);
+                    maxDist = Mathf.FloorToInt(maxDist);
+                    
                     courseHitsLabel.text = "CUR";
-                    courseParValueLabel.text = $"{playerManager.courseScores[currentCourse.holeNumber]}m";
+                    courseHitsValueLabel.text = $"{maxDist:F0}m";
 
-                    var distance = Mathf.FloorToInt(Vector3.Distance(golfBall.transform.position, golfBall.respawnPosition));
-                    courseHitsValueLabel.text = $"{distance}m";
+                    var bestScore = playerManager.courseScores[currentCourse.holeNumber];
+                    if (maxDist > bestScore)
+                        bestScore = Mathf.FloorToInt(maxDist);
+                    
+                    courseParLabel.text = "BEST";
+                    courseParValueLabel.text = $"{bestScore:F0}m";
                 }
                 else
                 {
@@ -681,7 +693,7 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 if (currentCourse.drivingRangeMode)
-                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .5f);
+                    SendCustomEventDelayedSeconds(nameof(UpdateUIText), .1f);
             }
         }
 

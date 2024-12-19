@@ -15,7 +15,9 @@ namespace dev.mikeee324.OpenPutt
         [Header("References")]
         public GolfClub club;
 
-        [FormerlySerializedAs("puttSync")] public OpenPuttSync openPuttSync;
+        [FormerlySerializedAs("puttSync")]
+        public OpenPuttSync openPuttSync;
+
         public VRCPickup pickup;
         public GolfBallStartLineController startLine;
         public MaterialPropertyBlock materialPropertyBlock;
@@ -192,9 +194,7 @@ namespace dev.mikeee324.OpenPutt
                             if (!pickedUpByPlayer)
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
-                                respawnPosition = CurrentPosition;
-                                if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                                SetRespawnPosition(CurrentPosition);
                             }
                         }
                         else if (respawnPosition != Vector3.zero)
@@ -227,7 +227,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         [SerializeField]
-        private bool _ballMoving = true;
+        private bool _ballMoving = false;
 
         public bool pickedUpByPlayer { get; private set; }
 
@@ -322,15 +322,24 @@ namespace dev.mikeee324.OpenPutt
         private bool resetBallTimers = true;
 
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
-        private float currentGroundDynamicFriction = 0f;
+        //private float currentGroundDynamicFriction = 0f;
 
-        [HideInInspector]
-        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
+        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
 
         /// <summary>
-        /// Used to log ball speed after it gets hit, can be used to track down issues.. maybe
+        /// Used to log ball speed after it gets hit, can be used to track down issues... maybe
         /// </summary>
         private float[] speedDataLogging = new float[0];
+
+        /// <summary>
+        /// The furthest distance that the ball was from the position where it was hit
+        /// </summary>
+        private float lastHitMaxDistance = 0;
+
+        /// <summary>
+        /// Keeps track of how far the ball actually travelled in total for its last hit
+        /// </summary>
+        private float lastHitTravelDistance = 0;
 
         #endregion
 
@@ -446,7 +455,9 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (!BallIsMoving && requestedBallVelocity != Vector3.zero)
+            {
                 BallIsMoving = true;
+            }
 
             if (BallIsMoving)
             {
@@ -466,6 +477,9 @@ namespace dev.mikeee324.OpenPutt
 
                     // Consume the hit event
                     requestedBallVelocity = Vector3.zero;
+
+                    lastHitMaxDistance = 0;
+                    lastHitTravelDistance = 0;
                 }
                 else
                 {
@@ -550,9 +564,31 @@ namespace dev.mikeee324.OpenPutt
             }
             else
             {
-                ballRigidbody.velocity = Vector3.zero;
-                ballRigidbody.angularVelocity = Vector3.zero;
+                if (!ballRigidbody.isKinematic)
+                {
+                    ballRigidbody.velocity = Vector3.zero;
+                    ballRigidbody.angularVelocity = Vector3.zero;
+                }
+
                 ballRigidbody.WakeUp();
+            }
+
+            if (BallIsMoving)
+            {
+                if (openPuttSync.originalPosition == respawnPosition)
+                {
+                    if (Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, 10f, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                    {
+                        SetRespawnPosition(hit.point);
+                    }
+                }
+                var distanceFromRespawnPos = Vector3.Distance(ballRigidbody.position, respawnPosition);
+                if (lastHitMaxDistance < distanceFromRespawnPos)
+                    lastHitMaxDistance = distanceFromRespawnPos;
+
+                var distanceTravelledThisFrame = Vector3.Distance(ballRigidbody.position, lastFramePosition);
+                if (lastFramePosition.magnitude > .01f)
+                    lastHitTravelDistance += distanceTravelledThisFrame;
             }
 
             if (ballRigidbody.isKinematic)
@@ -580,10 +616,13 @@ namespace dev.mikeee324.OpenPutt
 
             SetPosition(position.transform.position);
 
-            ballRigidbody.velocity = Vector3.zero;
-            ballRigidbody.angularVelocity = Vector3.zero;
+            if (!ballRigidbody.isKinematic)
+            {
+                ballRigidbody.velocity = Vector3.zero;
+                ballRigidbody.angularVelocity = Vector3.zero;
+            }
 
-            respawnPosition = position.transform.position;
+            SetRespawnPosition(position.transform.position);
 
             //  BallIsMoving = false;
 
@@ -714,12 +753,19 @@ namespace dev.mikeee324.OpenPutt
 
             SetPosition(respawnPos);
 
-            respawnPosition = respawnPos;
+            SetRespawnPosition(respawnPos);
         }
 
         public void SetPosition(Vector3 worldPos)
         {
             ballRigidbody.position = worldPos;
+        }
+
+        public void SetRespawnPosition(Vector3 pos)
+        {
+            respawnPosition = pos;
+            if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
         }
 
         public void _RespawnBallWithErrorNoise()
@@ -734,7 +780,7 @@ namespace dev.mikeee324.OpenPutt
         public void OnBallHit(Vector3 withVelocity)
         {
             SetEnabled(true);
-            
+
             // Tell the club to disarm for a second
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
                 playerManager.golfClub.DisableClubColliderFor();
@@ -743,14 +789,9 @@ namespace dev.mikeee324.OpenPutt
 
             // Discard any hits while the ball is already moving and the player is playing a course (allows them to hit the ball as much as they want otherwise)
             if (playerIsPlayingACourse && !allowBallHitWhileMoving && BallIsMoving)
-            {
-                // Tell the club to disarm for a second
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
-                    playerManager.golfClub.DisableClubColliderFor();
                 return;
-            }
 
-            if (withVelocity == Vector3.zero)
+            if (withVelocity.magnitude == 0)
                 return;
 
             ClearPhysicsState();
@@ -793,6 +834,9 @@ namespace dev.mikeee324.OpenPutt
             // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
             if (!pickedUpByPlayer && Utilities.IsValid(collision) && Utilities.IsValid(collision.rigidbody) && Utilities.IsValid(collision.collider))
             {
+                // If the golf club hit the ball... let the golf club handle that hit properly
+                if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
+
                 //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 {
                     SetEnabled(true);
@@ -830,6 +874,9 @@ namespace dev.mikeee324.OpenPutt
             // If we hit something with a dynamic rigidbody that is moving, make sure ball can move
             if (!pickedUpByPlayer && Utilities.IsValid(collision) && Utilities.IsValid(collision.rigidbody) && Utilities.IsValid(collision.collider))
             {
+                // If the golf club hit the ball... let the golf club handle that hit properly
+                if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
+
                 // TODO: A static rigidbody may or may not help with ball collisions
                 // This if statement will confuse things though.. need to think of a better way (Steppy thing doesn't work properly with it)
                 // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
@@ -1084,6 +1131,17 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Returns the data from the last hit of the ball
+        /// </summary>
+        /// <param name="maxStraightLineDistance">The furthest distance recorded</param>
+        /// <param name="totalDistanceTravelled">The total amount of distance that was covered by the ball</param>
+        public void GetLastHitData(out float maxStraightLineDistance, out float totalDistanceTravelled)
+        {
+            maxStraightLineDistance = lastHitMaxDistance;
+            totalDistanceTravelled = lastHitTravelDistance;
+        }
+
+        /// <summary>
         /// Updates the state of various toggles on the ball depending on whether the local player owns this ball or not
         /// </summary>
         /// <param name="localPlayerIsOwner">Does the local player own this ball? (Can usually pass in this.LocalPlayerOwnsThisObject())</param>
@@ -1107,12 +1165,12 @@ namespace dev.mikeee324.OpenPutt
 
                     // Toggle gravity/kinematic on/off depending on whether the ball is moving
                     ballRigidbody.useGravity = BallIsMoving;
-                    ballRigidbody.isKinematic = false;
+                    ballRigidbody.isKinematic = !BallIsMoving;
                     ballRigidbody.detectCollisions = true;
                     ballRigidbody.drag = 0.05f;
                     ballRigidbody.angularDrag = 0;
 
-                    // Set the appropriate collision detection mode
+                    // Set the appropriate collision detection mode (speculative picks up club hits better - dynamic works better when the ball is moving around, speculative makes it bounce off random edges it shouldn't)
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
                     //ballRigidbody.collisionDetectionMode = requestedCollisionMode;
                 }
