@@ -197,6 +197,14 @@ namespace dev.mikeee324.OpenPutt
             return new Vector3(vv.x, 0, vv.z);
         }
 
+        public static Vector3 GetDirectionTowards(this Transform start, Transform end, bool ignoreHeight)
+        {
+            if (ignoreHeight)
+                return (end.position.RemoveHeight() - start.position.RemoveHeight()).normalized;
+
+            return (end.position - start.position).normalized;
+        }
+
         public static Vector3 GetDirectionTowards(this Vector3 start, Vector3 end, bool ignoreHeight)
         {
             if (ignoreHeight)
