@@ -243,6 +243,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                         var course = openPutt.courses[columnIndex - 1];
                         if (scoreboardManager.SpeedGolfMode)
                             SetText(TimeSpan.FromSeconds(course.parTime).ToString(@"m\:ss"));
+                        else if (course.drivingRangeMode)
+                            SetText($"{course.parScore}m");
                         else
                             SetText($"{course.parScore}");
                     }

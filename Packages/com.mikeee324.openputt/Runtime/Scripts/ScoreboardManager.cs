@@ -507,6 +507,8 @@ namespace dev.mikeee324.OpenPutt
 
             var allPlayers = SpeedGolfMode ? openPutt.PlayersSortedByTime : openPutt.PlayersSortedByScore;
 
+            if (!Utilities.IsValid(allPlayers)) return new PlayerManager[0];
+
             if (allPlayers.Length <= numberOfPlayersToDisplay)
             {
                 stopwatch.Stop();

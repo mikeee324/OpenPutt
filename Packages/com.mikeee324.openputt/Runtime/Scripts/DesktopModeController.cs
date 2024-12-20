@@ -186,9 +186,8 @@ namespace dev.mikeee324.OpenPutt
                     // If player stopped aiming and there is a speed, hit the ball with it
                     if (!value && currentShotSpeed > 0.1f)
                     {
-                        var ballDirection = desktopCamera.transform.position.GetDirectionTowards(golfBall.transform.position, ignoreHeight: true);
-                        if (!openPutt.enableVerticalHits)
-                            ballDirection.y = 0;
+                        var currentCourseIsDrivingRange = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode;
+                        var ballDirection = desktopCamera.transform.position.GetDirectionTowards(golfBall.transform.position, ignoreHeight: !openPutt.enableVerticalHits && !currentCourseIsDrivingRange);
 
                         playerManager.golfClubHead.OverrideLastHitVelocity(currentShotSpeed);
                         golfBall.OnBallHit(ballDirection * currentShotSpeed);
@@ -542,9 +541,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (newLineState)
             {
-                var ballDirection = golfBall.transform.position - desktopCamera.transform.position;
-                if (!openPutt.enableVerticalHits)
-                    ballDirection.y = 0;
+                var currentCourseIsDrivingRange = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode;
+                var ballDirection = desktopCamera.transform.GetDirectionTowards(golfBall.transform, ignoreHeight: !openPutt.enableVerticalHits && !currentCourseIsDrivingRange);
 
                 var distance = (lineMaxLength * currentUISpeed) + 0.1f;
 

@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Persistence;
@@ -11,7 +12,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class OpenPutt : UdonSharpBehaviour
     {
-        public readonly string CurrentVersion = "0.8.8";
+        public readonly string CurrentVersion = "0.8.9";
 
         #region References
 
@@ -69,7 +70,7 @@ namespace dev.mikeee324.OpenPutt
         public int ballRenderQueueBase = 2000;
 
         [Tooltip("A list of players that can access the dev mode tab by default")]
-        public string[] devModePlayerWhitelist = { "mikeee324", "TummyTime" };
+        public string[] devModePlayerWhitelist = { "mikeee324", "TummyTime", "Narfe" };
 
         [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
         public bool debugMode;
@@ -267,6 +268,9 @@ namespace dev.mikeee324.OpenPutt
                 allPlayerManagers = allPlayerManagers.Add(playerManager);
 
             playerListManager.OnPlayerUpdate();
+
+            if (playerManager.Owner.isLocal)
+                SavePersistantData();
         }
 
         /// <summary>
@@ -274,14 +278,27 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void SavePersistantData()
         {
+            if (!Utilities.IsValid(LocalPlayerManager)) return;
+
             // Save players ball colour
-            if (Utilities.IsValid(LocalPlayerManager))
-                PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
+            PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
 
             // Save volume settings
             PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);
             PlayerData.SetFloat("OpenPutt-WorldVol", WorldAudioSources.Length > 0 ? WorldAudioSources[0].volume : 1);
             PlayerData.SetFloat("OpenPutt-BGMVol", BGMAudioSources.Length > 0 ? BGMAudioSources[0].volume : 1);
+
+            // Save game state
+            PlayerData.SetLong("OpenPuttGame-Modified", DateTime.UtcNow.GetUnixTimestamp());
+            for (var courseID = 0; courseID < courses.Length; courseID++)
+            {
+                PlayerData.SetInt($"OpenPuttGame-State-{courseID}", (int)LocalPlayerManager.courseStates[courseID]);
+                PlayerData.SetInt($"OpenPuttGame-Score-{courseID}", LocalPlayerManager.courseScores[courseID]);
+                PlayerData.SetLong($"OpenPuttGame-Time-{courseID}", LocalPlayerManager.courseTimes[courseID]);
+            }
+
+            if (debugMode)
+                OpenPuttUtils.Log(this, $"Persistent data saved for {LocalPlayerManager.Owner.displayName}");
         }
 
         public void LoadPersistantData()
@@ -305,6 +322,31 @@ namespace dev.mikeee324.OpenPutt
                 var vol = PlayerData.GetFloat(localPlayer, "OpenPutt-BGMVol");
                 foreach (var bgmAudio in BGMAudioSources)
                     bgmAudio.volume = vol;
+            }
+
+            if (PlayerData.HasKey(localPlayer, "OpenPuttGame-Modified"))
+            {
+                if (DateTime.UtcNow.GetUnixTimestamp() - PlayerData.GetLong(localPlayer, "OpenPuttGame-Modified") < 600)
+                {
+                    for (var courseID = 0; courseID < courses.Length; courseID++)
+                    {
+                        LocalPlayerManager.courseStates[courseID] = (CourseState)PlayerData.GetInt(localPlayer, $"OpenPuttGame-State-{courseID}");
+                        LocalPlayerManager.courseScores[courseID] = PlayerData.GetInt(localPlayer, $"OpenPuttGame-Score-{courseID}");
+                        LocalPlayerManager.courseTimes[courseID] = PlayerData.GetLong(localPlayer, $"OpenPuttGame-Time-{courseID}");
+
+                        if (LocalPlayerManager.courseStates[courseID] == CourseState.Playing)
+                        {
+                            LocalPlayerManager.courseStates[courseID] = CourseState.NotStarted;
+                            LocalPlayerManager.courseScores[courseID] = 0;
+                            LocalPlayerManager.courseTimes[courseID] = 0;
+                        }
+                    }
+
+                    if (debugMode)
+                        OpenPuttUtils.Log(this, $"Restored player scores - updating scoreboards");
+
+                    scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
+                }
             }
         }
 
