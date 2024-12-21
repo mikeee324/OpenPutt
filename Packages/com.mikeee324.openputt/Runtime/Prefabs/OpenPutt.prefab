@@ -3057,6 +3057,9 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 1044367484047784076}
+  timeAllowedPerFrame: 0.2
+  numberOfObjects: 0
+  _currentUpdateIndex: 0
   openPutt: {fileID: 6945536582650298137}
   scoreboards:
   - {fileID: 6894114470488660911}
@@ -4174,7 +4177,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 1784618539755136194}
-  timeAllowedPerFrame: 0.1
+  timeAllowedPerFrame: 0.05
   numberOfObjects: 0
   _currentUpdateIndex: 0
   openPutt: {fileID: 6945536582650298137}
@@ -9680,11 +9683,23 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 5186402819511849805, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
+    - target: {fileID: 5189105544822572305, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 5189105544822572305, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
     - target: {fileID: 6795647789150147966, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 6795647789150147966, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+    - target: {fileID: 8826804128194035019, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 8826804128194035019, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
     - target: {fileID: 8942498337374680370, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}

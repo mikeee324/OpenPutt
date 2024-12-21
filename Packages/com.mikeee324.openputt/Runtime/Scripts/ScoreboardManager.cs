@@ -26,7 +26,7 @@ namespace dev.mikeee324.OpenPutt
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(99)]
-    public class ScoreboardManager : UdonSharpBehaviour
+    public class ScoreboardManager : OpenPuttTimeSlicer
     {
         [Header("The scoreboard manager handles refreshing all scoreboards in the scene and makes sure it doesn't happen too often.")]
         public OpenPutt openPutt;
@@ -138,8 +138,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (value != _speedGolfMode)
                 {
-                    RequestRefreshForRow(-2, true);
-                    CheckPlayerListForChanges(forceUpdate: true);
+                    RequestRefresh();
                 }
 
                 _speedGolfMode = value;
@@ -158,9 +157,8 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public ScoreboardView requestedScoreboardView = ScoreboardView.Info;
 
-        private int progressiveUpdateCurrentScoreboardID;
-        private int[] progressiveRowUpdateQueue = new int[0];
         private bool allScoreboardsInitialised;
+        private int updatesRequested = 0;
 
         [HideInInspector]
         public int devModeTaps;
@@ -186,8 +184,70 @@ namespace dev.mikeee324.OpenPutt
 
             allScoreboards = scoreboards.AddRange(staticScoreboards);
 
+            numberOfObjects = numberOfPlayersToDisplay;
+            enabled = false;
+
             // Update positions of all scoreboards a bit quicker at startup
             SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), .5f);
+        }
+
+        public void RequestRefresh()
+        {
+            numberOfObjects = numberOfPlayersToDisplay;
+            updatesRequested += 1;
+            enabled = true;
+        }
+
+        protected override void _StartUpdateFrame()
+        {
+        }
+
+        protected override void _EndUpdateFrame()
+        {
+        }
+
+        protected override void _OnUpdateItem(int rowIDToUpdate)
+        {
+            if (!Utilities.IsValid(CurrentPlayerList)) return;
+            // Update the row on this scoreboard
+            Scoreboard scoreboard;
+
+            for (var scoreboardID = 0; scoreboardID < allScoreboards.Length; scoreboardID++)
+            {
+                scoreboard = allScoreboards[scoreboardID];
+
+                // Update the row for this player if we found one
+                if (rowIDToUpdate == -1)
+                {
+                    if (scoreboard.topRowPanel.transform.childCount > 0)
+                        scoreboard.topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                }
+                else if (rowIDToUpdate == -2)
+                {
+                    if (scoreboard.parRowPanel.transform.childCount > 0)
+                        scoreboard.parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
+                }
+                else if (rowIDToUpdate >= 0 && rowIDToUpdate < scoreboard.scoreboardRows.Length)
+                {
+                    scoreboard.scoreboardRows[rowIDToUpdate].Refresh(rowIDToUpdate < CurrentPlayerList.Length ? CurrentPlayerList[rowIDToUpdate] : null);
+                }
+            }
+        }
+
+        protected override void _OnUpdateStarted()
+        {
+            CurrentPlayerList = GetPlayerList();
+        }
+
+        protected override void _OnUpdateEnded()
+        {
+            updatesRequested -= 1;
+
+            if (updatesRequested <= 0)
+            {
+                updatesRequested = 0;
+                enabled = false;
+            }
         }
 
         /// <summary>
@@ -220,7 +280,7 @@ namespace dev.mikeee324.OpenPutt
                 if (queueBigRefresh)
                 {
                     allScoreboardsInitialised = true;
-                    CheckPlayerListForChanges();
+                    enabled = true;
                 }
                 else
                 {
@@ -303,180 +363,6 @@ namespace dev.mikeee324.OpenPutt
 
             foreach (var scoreboard in scoreboards)
                 scoreboard.RefreshSettingsMenu();
-        }
-
-        public void RequestRefreshForRow(int rowID, bool startNextFrameIfPossible = false)
-        {
-            // If queue is empty start a new refresh
-            if (progressiveRowUpdateQueue.Length == 0)
-            {
-                progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
-
-                // Empty the player list before the update - Progressive update will fetch a new list before it starts
-                CurrentPlayerList = new PlayerManager[0];
-
-                if (startNextFrameIfPossible)
-                    SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
-                else
-                    SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), maxRefreshInterval);
-            }
-            else
-            {
-                progressiveRowUpdateQueue = progressiveRowUpdateQueue.Add(rowID);
-            }
-        }
-
-        public void RequestRefreshForRows(int[] rowIDs, bool startNextFrameIfPossible = false)
-        {
-            // If queue is empty start a new refresh
-            if (progressiveRowUpdateQueue.Length == 0)
-            {
-                progressiveRowUpdateQueue = progressiveRowUpdateQueue.AddRange(rowIDs);
-
-                // Empty the player list before the update - Progressive update will fetch a new list before it starts
-                CurrentPlayerList = new PlayerManager[0];
-
-                if (startNextFrameIfPossible)
-                    SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
-                else
-                    SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), maxRefreshInterval);
-            }
-            else
-            {
-                progressiveRowUpdateQueue = progressiveRowUpdateQueue.AddRange(rowIDs);
-            }
-        }
-
-        /// <summary>
-        /// Performs a check on all player rows and checks if they need to be updated. If they do a request for a refresh will be added to the queue.
-        /// </summary>
-        /// <param name="forceUpdate">True forces an update on all rows</param>
-        public void CheckPlayerListForChanges(bool forceUpdate = false)
-        {
-            var newList = GetPlayerList();
-
-            if (!Utilities.IsValid(CurrentPlayerList))
-            {
-                CurrentPlayerList = new PlayerManager[0];
-                forceUpdate = true;
-            }
-
-            var stopwatch = Stopwatch.StartNew();
-
-            var rowsToUpdate = new int[0];
-
-            // We need to check which rows have changed and request a refresh
-            for (var i = 0; i < numberOfPlayersToDisplay; i++)
-            {
-                // Find the current player in this row
-                PlayerManager thisRowPlayer = null;
-                if (i < CurrentPlayerList.Length)
-                    thisRowPlayer = CurrentPlayerList[i];
-
-                // Find the player that will be in this row after the update
-                PlayerManager thisRowNewPlayer = null;
-                if (i < newList.Length)
-                    thisRowNewPlayer = newList[i];
-
-                // If this row has no player and hasn't changed - we don't need to update this row
-                if (!Utilities.IsValid(thisRowPlayer) && !Utilities.IsValid(thisRowNewPlayer))
-                    continue;
-
-                // Check if an update is being forced (for when player toggles between timer/normal mode)
-                if (forceUpdate)
-                {
-                    rowsToUpdate = rowsToUpdate.Add(i);
-                    continue;
-                }
-
-                var requestRefresh = false;
-
-                // Check if player in this row has changed
-                if (!requestRefresh)
-                    requestRefresh = thisRowNewPlayer != thisRowPlayer;
-
-                // Check if this row has been marked as dirty and needs refreshing
-                if (!requestRefresh)
-                    requestRefresh = Utilities.IsValid(thisRowNewPlayer) && thisRowNewPlayer.scoreboardRowNeedsUpdating;
-
-                // Add to the list to refresh
-                if (requestRefresh)
-                    rowsToUpdate = rowsToUpdate.Add(i);
-            }
-
-            // Bulk add all rows to update at once
-            RequestRefreshForRows(rowsToUpdate, true);
-
-            stopwatch.Stop();
-            if (openPutt.debugMode)
-                OpenPuttUtils.Log(this, $"CheckPlayerListForChanges({stopwatch.Elapsed.TotalMilliseconds}ms)");
-        }
-
-        public void ProgressiveScoreboardRowUpdate()
-        {
-            if (!allScoreboardsInitialised)
-            {
-                // Wait for a second until all the scoreboards have initialised
-                SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 1);
-                return;
-            }
-
-            if (progressiveUpdateCurrentScoreboardID == 0 && (!Utilities.IsValid(CurrentPlayerList) || CurrentPlayerList.Length == 0))
-            {
-                CurrentPlayerList = GetPlayerList();
-            }
-
-            if (progressiveUpdateCurrentScoreboardID >= scoreboards.Length + staticScoreboards.Length)
-            {
-                // We updated all scoreboards for the first player on the queue, reset ID and remove from the queue
-                progressiveUpdateCurrentScoreboardID = 0;
-
-                if (progressiveRowUpdateQueue.Length > 0)
-                    progressiveRowUpdateQueue = progressiveRowUpdateQueue.RemoveAt(0);
-            }
-
-            // Queue is empty
-            if (progressiveRowUpdateQueue.Length == 0)
-            {
-                // Just check if players are not in the correct order and move them if needed
-                //SortPlayerUI();
-                return;
-            }
-
-            // Update the row on this scoreboard
-            Scoreboard scoreboard = null;
-
-            if (progressiveUpdateCurrentScoreboardID < scoreboards.Length)
-                scoreboard = scoreboards[progressiveUpdateCurrentScoreboardID];
-            else
-                scoreboard = staticScoreboards[progressiveUpdateCurrentScoreboardID - scoreboards.Length];
-
-            progressiveUpdateCurrentScoreboardID += 1;
-
-            var rowIDToUpdate = progressiveRowUpdateQueue[0];
-
-            // Update the row for this player if we found one
-            if (Utilities.IsValid(CurrentPlayerList))
-            {
-                if (rowIDToUpdate == -1)
-                {
-                    if (scoreboard.topRowPanel.transform.childCount > 0)
-                        scoreboard.topRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
-                }
-                else if (rowIDToUpdate == -2)
-                {
-                    if (scoreboard.parRowPanel.transform.childCount > 0)
-                        scoreboard.parRowPanel.GetChild(0).GetComponent<ScoreboardPlayerRow>().Refresh();
-                }
-                else if (rowIDToUpdate >= 0 && rowIDToUpdate < scoreboard.scoreboardRows.Length)
-                {
-                    scoreboard.scoreboardRows[rowIDToUpdate].Refresh(rowIDToUpdate < CurrentPlayerList.Length ? CurrentPlayerList[rowIDToUpdate] : null);
-                }
-            }
-
-            // Loop again next frame to process the queue until it's empty
-            //SendCustomEventDelayedFrames(nameof(ProgressiveScoreboardRowUpdate), 0);
-            SendCustomEventDelayedSeconds(nameof(ProgressiveScoreboardRowUpdate), 0.05f);
         }
 
         /// <summary>

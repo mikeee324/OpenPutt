@@ -163,7 +163,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Using FixedUpdate for tracking the ball because it is a rigidbody
         /// </summary>
-        void FixedUpdate()
+        public override void PostLateUpdate()
         {
             // Early out if we don't have a target
             if (!target) return;
@@ -183,8 +183,8 @@ namespace dev.mikeee324.OpenPutt
             if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
             {
                 // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
-                currentVerticalDelta = -currentMoveVertical;
-                currentHorizontalDelta = currentMoveHorizontal;
+                //currentVerticalDelta = -currentMoveVertical;
+                //currentHorizontalDelta = currentMoveHorizontal;
             }
             else if (!currentMoveVertical.IsNearZero())
             {
@@ -222,10 +222,7 @@ namespace dev.mikeee324.OpenPutt
                 currentCameraY -= (cameraYSpeed * localSpeedModifier) * verticalDelta;
 
             currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
-        }
 
-        public override void PostLateUpdate()
-        {
             transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
             transform.LookAt(target.transform.position);
         }
