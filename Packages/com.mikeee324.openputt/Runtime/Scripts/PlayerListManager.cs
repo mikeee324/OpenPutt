@@ -26,6 +26,8 @@ namespace dev.mikeee324.OpenPutt
         private ScoreboardManager ScoreboardManager => openPutt.scoreboardManager;
         private PlayerManager[] allPlayers;
 
+        private int updatesRequested = 0;
+
         void Start()
         {
             // We don't want to run on first start - nothing to do anyway
@@ -37,6 +39,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void OnPlayerUpdate()
         {
+            updatesRequested += 1;
             enabled = true;
         }
 
@@ -102,52 +105,17 @@ namespace dev.mikeee324.OpenPutt
 
         protected override void _OnUpdateEnded()
         {
-            enabled = false;
-
-            // Run a full check on all rows and update player indexes
-            // Update index positions on all PlayerManagers in the list
-            for (var sp = 0; sp < openPutt.scoreboardManager.numberOfPlayersToDisplay; sp++)
-            {
-                var oldPlayerByScore = sp < PlayersSortedByScore.Length ? PlayersSortedByScore[sp] : null;
-                var newPlayerByScore = sp < TempPlayersSortedByScore.Length ? TempPlayersSortedByScore[sp] : null;
-
-                var oldPlayerByTime = sp < PlayersSortedByTime.Length ? PlayersSortedByTime[sp] : null;
-                var newPlayerByTime = sp < TempPlayersSortedByTime.Length ? TempPlayersSortedByTime[sp] : null;
-
-                bool requestRefresh;
-                if (ScoreboardManager.SpeedGolfMode)
-                    requestRefresh = oldPlayerByTime != newPlayerByTime;
-                else
-                    requestRefresh = oldPlayerByScore != newPlayerByScore;
-
-                if (!requestRefresh)
-                {
-                    if (ScoreboardManager.SpeedGolfMode)
-                        requestRefresh = Utilities.IsValid(newPlayerByTime) && newPlayerByTime.scoreboardRowNeedsUpdating;
-                    else
-                        requestRefresh = Utilities.IsValid(newPlayerByScore) && newPlayerByScore.scoreboardRowNeedsUpdating;
-                }
-
-                if (sp < TempPlayersSortedByScore.Length && TempPlayersSortedByScore[sp].ScoreboardPositionByScore != sp)
-                {
-                    TempPlayersSortedByScore[sp].ScoreboardPositionByScore = sp;
-                    if (!ScoreboardManager.SpeedGolfMode)
-                        requestRefresh = true;
-                }
-
-                if (sp < TempPlayersSortedByTime.Length && TempPlayersSortedByTime[sp].ScoreboardPositionByTime != sp)
-                {
-                    TempPlayersSortedByTime[sp].ScoreboardPositionByTime = sp;
-                    if (ScoreboardManager.SpeedGolfMode)
-                        requestRefresh = true;
-                }
-
-                if (requestRefresh)
-                    ScoreboardManager.RequestRefreshForRow(sp);
-            }
-
             PlayersSortedByScore = TempPlayersSortedByScore;
             PlayersSortedByTime = TempPlayersSortedByTime;
+            
+            ScoreboardManager.RequestRefresh();
+            
+            updatesRequested -= 1;
+            if (updatesRequested <= 0)
+            {
+                updatesRequested = 0;
+                enabled = false;
+            }
         }
     }
 }
