@@ -407,11 +407,11 @@ namespace dev.mikeee324.OpenPutt
             {
                 numberOfPickedUpFrames++;
                 lastHeldFrameVelocity = Vector3.zero;
-                lastHeldFramePosition = ballRigidbody.position;
+                lastHeldFramePosition = transform.position;
             }
             else
             {
-                var newFrameVelocity = (ballRigidbody.position - lastHeldFramePosition) / Time.deltaTime;
+                var newFrameVelocity = (transform.position - lastHeldFramePosition) / Time.deltaTime;
                 if (newFrameVelocity.magnitude > 0.01f)
                 {
                     numberOfStillPickedUpFrames = 0;
