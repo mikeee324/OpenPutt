@@ -1632,6 +1632,7 @@ MonoBehaviour:
   respawnPosition: {x: 0, y: -99, z: 0}
   _ballMoving: 0
   currentOwnerHideOverride: 0
+  lastHeldFrameVelocity: {x: 0, y: 0, z: 0}
   requestedBallVelocity: {x: 0, y: 0, z: 0}
   groundContactCount: 0
   steepContactCount: 0
@@ -1752,7 +1753,7 @@ MonoBehaviour:
   returnListener: {fileID: 4926412384239502559}
   remoteReturnFunction: OnRespawn
   autoRespawn: 1
-  autoRespawnHeight: -100
+  autoRespawnHeight: -200
   canManagePickupable: 1
   originalPosition: {x: 0, y: -99, z: 0}
   grabOriginalPosOnStart: 1
@@ -2398,7 +2399,7 @@ MonoBehaviour:
   returnListener: {fileID: 1054184374720795390}
   remoteReturnFunction: OnRespawn
   autoRespawn: 1
-  autoRespawnHeight: -100
+  autoRespawnHeight: -200
   canManagePickupable: 1
   originalPosition: {x: 0, y: -99, z: 0}
   grabOriginalPosOnStart: 1
