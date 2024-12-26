@@ -22,6 +22,7 @@ namespace dev.mikeee324.OpenPutt
         public MeshRenderer headMesh;
         public GameObject shaftEndPosition;
         public VRCPickup pickup;
+        public Collider handleCollider;
         public BoxCollider shaftCollider;
 
         public MaterialPropertyBlock headPB;
@@ -124,8 +125,6 @@ namespace dev.mikeee324.OpenPutt
         public Color onColour = Color.red;
         public Color offEmission = Color.black;
         public Color onEmission = Color.red;
-
-        public bool canUpdatePuttSyncSpawn;
 
         [HideInInspector]
         public bool heldByPlayer;
@@ -283,11 +282,12 @@ namespace dev.mikeee324.OpenPutt
 
         public void UpdateClubState()
         {
+            var clubCanBePickedUp = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRC_Pickup.PickupHand.None;
             if (Utilities.IsValid(pickup))
-                pickup.pickupable = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRC_Pickup.PickupHand.None;
-
-            if (Utilities.IsValid(openPuttSync) && canUpdatePuttSyncSpawn)
-                openPuttSync.SetSpawnPosition(new Vector3(0, -2, 0), Quaternion.identity);
+                pickup.pickupable = clubCanBePickedUp;
+            
+            if (Utilities.IsValid(handleCollider))
+                handleCollider.enabled = clubCanBePickedUp;
         }
 
         public void OnRespawn()

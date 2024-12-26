@@ -48,8 +48,6 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Should the ball hit noise be played if the ball falls onto a floor?")]
         public bool audioWhenBallHitsFloor = true;
 
-        public bool canUpdatePuttSyncSpawn;
-
         [Space]
         [Header("Ball Physics")]
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
@@ -1199,8 +1197,8 @@ namespace dev.mikeee324.OpenPutt
                     pickup.pickupable = newPickupState;
                 }
 
-                if (Utilities.IsValid(openPuttSync) && canUpdatePuttSyncSpawn)
-                    openPuttSync.SetSpawnPosition(new Vector3(0, -90, 0), Quaternion.identity);
+                if (Utilities.IsValid(ballCollider))
+                    ballCollider.enabled = true;
             }
             else
             {
@@ -1226,6 +1224,9 @@ namespace dev.mikeee324.OpenPutt
                 // Stop other players from picking this ball up
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = false;
+
+                if (Utilities.IsValid(ballCollider))
+                    ballCollider.enabled = false;
 
                 startLine.SetEnabled(false);
             }
