@@ -7,7 +7,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider))]
+    [RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
     public class GolfBallController : UdonSharpBehaviour
     {
         #region Public Settings
@@ -321,7 +321,6 @@ namespace dev.mikeee324.OpenPutt
 
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
         //private float currentGroundDynamicFriction = 0f;
-
         public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
 
         /// <summary>
@@ -395,38 +394,23 @@ namespace dev.mikeee324.OpenPutt
         }
 
         private int numberOfPickedUpFrames;
-        private int numberOfStillPickedUpFrames;
 
         public override void PostLateUpdate()
         {
             if (!pickedUpByPlayer) return;
 
-            if (numberOfPickedUpFrames < 1)
-            {
-                numberOfPickedUpFrames++;
-                lastHeldFrameVelocity = Vector3.zero;
-                lastHeldFramePosition = transform.position;
-            }
-            else
-            {
-                var newFrameVelocity = (transform.position - lastHeldFramePosition) / Time.deltaTime;
-                if (newFrameVelocity.magnitude > 0.01f)
-                {
-                    numberOfStillPickedUpFrames = 0;
-                    lastHeldFrameVelocity = newFrameVelocity;
-                }
-                else
-                {
-                    numberOfStillPickedUpFrames++;
+            var lastVel = lastHeldFrameVelocity;
+            var newVel = (transform.position - lastHeldFramePosition) / Time.deltaTime;
 
-                    if (!playerManager.ownerIsInVR || numberOfStillPickedUpFrames >= 5)
-                    {
-                        lastHeldFrameVelocity = Vector3.zero;
-                    }
-                }
-            }
+            numberOfPickedUpFrames++;
 
-            lastHeldFramePosition = ballRigidbody.position;
+            if (newVel.magnitude > maxBallSpeed)
+                newVel = lastHeldFrameVelocity.normalized * maxBallSpeed;
+            else if (newVel.magnitude < .5f)
+                newVel = lastVel;
+
+            lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .2f);
+            lastHeldFramePosition = transform.position;
 
             if (Utilities.IsValid(openPuttSync))
                 openPuttSync.RequestFastSync();
@@ -580,6 +564,7 @@ namespace dev.mikeee324.OpenPutt
                         SetRespawnPosition(hit.point);
                     }
                 }
+
                 var distanceFromRespawnPos = Vector3.Distance(ballRigidbody.position, respawnPosition);
                 if (lastHitMaxDistance < distanceFromRespawnPos)
                     lastHitMaxDistance = distanceFromRespawnPos;
@@ -644,7 +629,6 @@ namespace dev.mikeee324.OpenPutt
             lastHeldFrameVelocity = Vector3.zero;
 
             numberOfPickedUpFrames = 0;
-            numberOfStillPickedUpFrames = 0;
             pickedUpByPlayer = true;
 
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))

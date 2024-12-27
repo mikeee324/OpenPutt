@@ -6,7 +6,7 @@ using VRC.Udon;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(-1)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(-999)]
     public class BodyMountedObject : UdonSharpBehaviour
     {
         #region Public Settings
@@ -156,12 +156,14 @@ namespace dev.mikeee324.OpenPutt
 
         public override void PostLateUpdate()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer))
+            var localPlayer = Networking.LocalPlayer;
+
+            if (!Utilities.IsValid(localPlayer))
                 return;
 
             if (!firstFrameCheck)
             {
-                userIsInVR = Networking.LocalPlayer.IsUserInVR();
+                userIsInVR = localPlayer.IsUserInVR();
                 firstFrameCheck = true;
             }
 
@@ -202,23 +204,59 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (mountToPlayerPosition)
                 {
-                    gameObject.transform.SetPositionAndRotation(Networking.LocalPlayer.GetPosition(), Networking.LocalPlayer.GetRotation());
+                    gameObject.transform.SetPositionAndRotation(localPlayer.GetPosition(), localPlayer.GetRotation());
                 }
                 else
                 {
                     // Just pin the body object to the bone
-                    gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(currentOffset);
-                    gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(mountToBone);
+                    gameObject.transform.position = localPlayer.GetBonePosition(mountToBone) + transform.TransformDirection(currentOffset);
+                    gameObject.transform.rotation = localPlayer.GetBoneRotation(mountToBone);
                 }
 
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = true;
 
-                lastFramePosition = Vector3.zero;
+                lastFramePosition = transform.position;
                 lastFrameVelocity = Vector3.zero;
 
                 return;
             }
+
+            if (!pickedUpAtLeastOnce)
+                pickedUpAtLeastOnce = true;
+
+            if (Utilities.IsValid(pickup))
+                pickup.pickupable = false;
+
+            var currPos = gameObject.transform.position;
+            var currRot = gameObject.transform.rotation;
+
+            if (Utilities.IsValid(objectToAttach))
+            {
+                if (userIsInVR)
+                {
+                    objectToAttach.transform.rotation = gameObject.transform.rotation;
+                }
+                else
+                {
+                    objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
+
+                    var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                    currPos = head.position + transform.TransformDirection(0, 0, 1);
+                    currRot = head.rotation;
+                }
+
+                transform.SetPositionAndRotation(currPos, currRot);
+                objectToAttach.transform.SetPositionAndRotation(currPos, currRot);
+            }
+
+            if (Utilities.IsValid(rbToAttach) && !rbToAttach.isKinematic)
+            {
+                rbToAttach.position = currPos;
+                rbToAttach.rotation = currRot;
+            }
+
+            var lastVel = lastFrameVelocity;
 
             if (lastFramePosition == Vector3.zero)
                 lastFrameVelocity = Vector3.zero;
@@ -228,35 +266,10 @@ namespace dev.mikeee324.OpenPutt
             if (lastFrameVelocity.magnitude > 15f)
                 lastFrameVelocity = lastFrameVelocity.normalized * 15f;
 
+            if (lastVel.magnitude > .01f)
+                lastFrameVelocity = Vector3.Lerp(lastVel, lastFrameVelocity, .1f);
+            
             lastFramePosition = transform.position;
-
-            if (!pickedUpAtLeastOnce)
-                pickedUpAtLeastOnce = true;
-
-            if (Utilities.IsValid(pickup))
-                pickup.pickupable = false;
-
-            if (Utilities.IsValid(objectToAttach))
-                objectToAttach.transform.position = gameObject.transform.position;
-
-            if (userIsInVR)
-            {
-                if (Utilities.IsValid(objectToAttach))
-                    objectToAttach.transform.rotation = gameObject.transform.rotation;
-            }
-            else
-            {
-                if (Utilities.IsValid(objectToAttach))
-                    objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
-                gameObject.transform.position = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head) + transform.TransformDirection(0, 0, 1);
-                gameObject.transform.rotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
-            }
-
-            if (Utilities.IsValid(rbToAttach))
-            {
-                rbToAttach.position = gameObject.transform.position;
-                rbToAttach.rotation = gameObject.transform.rotation;
-            }
         }
 
         private void ActivateAndTakeOwnership()

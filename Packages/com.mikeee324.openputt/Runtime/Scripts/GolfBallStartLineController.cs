@@ -113,6 +113,8 @@ namespace dev.mikeee324.OpenPutt
             lerpStartPosition = ballWorldPosition;
             lerpStopPosition = closestBallStart.transform.position;
             lerpToStartTime = 0;
+            
+            golfBall.transform.rotation = Quaternion.identity;
 
             return true;
         }
