@@ -1402,7 +1402,7 @@ Rigidbody:
   m_UseGravity: 0
   m_IsKinematic: 1
   m_Interpolate: 1
-  m_Constraints: 0
+  m_Constraints: 112
   m_CollisionDetection: 3
 --- !u!96 &4926412384239502547
 TrailRenderer:
@@ -1610,7 +1610,6 @@ MonoBehaviour:
   allowBallPickupWhenNotPlaying: 1
   allowBallHitWhileMoving: 0
   audioWhenBallHitsFloor: 1
-  canUpdatePuttSyncSpawn: 0
   defaultBallDrag: 0.055
   ballDragOverride: 0.055
   enableAirResistance: 1
@@ -1632,7 +1631,6 @@ MonoBehaviour:
   respawnPosition: {x: 0, y: -99, z: 0}
   _ballMoving: 0
   currentOwnerHideOverride: 0
-  lastHeldFrameVelocity: {x: 0, y: 0, z: 0}
   requestedBallVelocity: {x: 0, y: 0, z: 0}
   groundContactCount: 0
   steepContactCount: 0
@@ -2245,6 +2243,7 @@ MonoBehaviour:
   headMesh: {fileID: 149639404086247989}
   shaftEndPosition: {fileID: 1215706633630273412}
   pickup: {fileID: 3364887681977424718}
+  handleCollider: {fileID: 8106322172600868202}
   shaftCollider: {fileID: 2213463569754413228}
   resizeLayerMask:
     serializedVersion: 2
@@ -2255,7 +2254,6 @@ MonoBehaviour:
   onColour: {r: 1, g: 0, b: 0, a: 1}
   offEmission: {r: 0, g: 0, b: 0, a: 1}
   onEmission: {r: 1, g: 0, b: 0, a: 1}
-  canUpdatePuttSyncSpawn: 0
   heldByPlayer: 0
 --- !u!114 &4653548927913328732
 MonoBehaviour:
