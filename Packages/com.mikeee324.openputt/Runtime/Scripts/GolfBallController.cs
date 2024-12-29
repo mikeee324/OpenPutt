@@ -409,7 +409,10 @@ namespace dev.mikeee324.OpenPutt
             else if (newVel.magnitude < .5f)
                 newVel = lastVel;
 
-            lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .2f);
+            if (Networking.LocalPlayer.IsUserInVR())
+                lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .8f);
+            else
+                lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .2f);
             lastHeldFramePosition = transform.position;
 
             if (Utilities.IsValid(openPuttSync))
@@ -694,6 +697,8 @@ namespace dev.mikeee324.OpenPutt
                 BallIsMoving = true;
 
                 // Apply velocity of the ball that we saw last frame so players can throw the ball
+                if (Networking.LocalPlayer.IsUserInVR())
+                    lastHeldFrameVelocity *= pickup.ThrowVelocityBoostScale;
                 requestedBallVelocity = lastHeldFrameVelocity;
 
                 // Allows ball to bounce

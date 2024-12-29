@@ -669,9 +669,13 @@ namespace dev.mikeee324.OpenPutt
 
                 if (currentCourse.drivingRangeMode)
                 {
-                    golfBall.GetLastHitData(out var maxDist, out var totalDist);
-                    maxDist = Mathf.FloorToInt(maxDist);
-                    
+                    float maxDist = 0;
+                    if (Utilities.IsValid(golfBall))
+                    {
+                        golfBall.GetLastHitData(out maxDist, out var totalDist);
+                        maxDist = Mathf.FloorToInt(maxDist);
+                    }
+
                     courseHitsLabel.text = "CUR";
                     courseHitsValueLabel.text = $"{maxDist:F0}m";
 
