@@ -315,5 +315,10 @@ namespace dev.mikeee324.OpenPutt
             currentOffset = mountingOffset * scaleFactor;
             pickup.proximity = 0.2f * scaleFactor;
         }
+
+        void OnDisable()
+        {
+            pickup.Drop();
+        }
     }
 }

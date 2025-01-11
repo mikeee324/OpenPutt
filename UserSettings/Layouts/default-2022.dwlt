@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 2560
     height: 1349
   m_ShowMode: 4
-  m_Title: Hierarchy
+  m_Title: VRChat SDK
   m_RootView: {fileID: 7}
   m_MinSize: {x: 875, y: 321}
   m_MaxSize: {x: 10000, y: 10000}
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 150}
   m_MaxSize: {x: 24288, y: 24288}
   vertical: 1
-  controlID: 100
+  controlID: 102
 --- !u!114 &4
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -126,7 +126,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 100}
   m_MaxSize: {x: 8096, y: 16192}
   vertical: 1
-  controlID: 51
+  controlID: 26
 --- !u!114 &6
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -228,7 +228,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 100}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 101
+  controlID: 103
 --- !u!114 &10
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -506,7 +506,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Packages/com.mikeee324.openputt/Runtime/Prefabs/Components
+    - Packages/com.mikeee324.openputt/Runtime/Scripts
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -514,16 +514,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Packages/com.mikeee324.openputt/Runtime/Prefabs/Components
+  - Packages/com.mikeee324.openputt/Runtime/Scripts
   m_LastFoldersGridSize: 16
   m_LastProjectPath: D:\Users\Mike\Desktop\Unity\Prefabs\OpenPutt
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 519}
-    m_SelectedIDs: dee30000
-    m_LastClickedID: 58334
-    m_ExpandedIDs: 00000000c85d000094e3000096e3000098e300009ae300009ce300009ee3000000ca9a3bffffff7f
+    m_SelectedIDs: ace30000
+    m_LastClickedID: 58284
+    m_ExpandedIDs: 00000000c85d0000a2e30000a4e30000a6e30000a8e30000aae30000ace3000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -551,7 +551,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 00000000c85d000094e3000096e3000098e300009ae300009ce300009ee30000
+    m_ExpandedIDs: 00000000c85d0000a2e30000a4e30000a6e30000a8e30000aae30000ace30000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -603,7 +603,7 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
     m_NewAssetIndexInList: -1
-    m_ScrollPosition: {x: 0, y: 0}
+    m_ScrollPosition: {x: 0, y: 720}
     m_GridSize: 16
   m_SkipHiddenPackages: 0
   m_DirectoriesAreaWidth: 152
@@ -631,7 +631,7 @@ MonoBehaviour:
     x: 0
     y: 73
     width: 1625
-    height: 880
+    height: 879
   m_SerializedDataModeController:
     m_DataMode: 0
     m_PreferredDataMode: 0
@@ -648,7 +648,7 @@ MonoBehaviour:
   m_ShowGizmos: 0
   m_TargetDisplay: 0
   m_ClearColor: {r: 0, g: 0, b: 0, a: 0}
-  m_TargetSize: {x: 1625, y: 859}
+  m_TargetSize: {x: 1625, y: 858}
   m_TextureFilterMode: 0
   m_TextureHideFlags: 61
   m_RenderIMGUI: 1
@@ -665,8 +665,8 @@ MonoBehaviour:
     vZoomLockedByDefault: 0
     m_HBaseRangeMin: -812.5
     m_HBaseRangeMax: 812.5
-    m_VBaseRangeMin: -429.5
-    m_VBaseRangeMax: 429.5
+    m_VBaseRangeMin: -429
+    m_VBaseRangeMax: 429
     m_HAllowExceedBaseRangeMin: 1
     m_HAllowExceedBaseRangeMax: 1
     m_VAllowExceedBaseRangeMin: 1
@@ -685,9 +685,9 @@ MonoBehaviour:
       x: 0
       y: 21
       width: 1625
-      height: 859
+      height: 858
     m_Scale: {x: 1, y: 1}
-    m_Translation: {x: 812.5, y: 429.5}
+    m_Translation: {x: 812.5, y: 429}
     m_MarginLeft: 0
     m_MarginRight: 0
     m_MarginTop: 0
@@ -695,12 +695,12 @@ MonoBehaviour:
     m_LastShownAreaInsideMargins:
       serializedVersion: 2
       x: -812.5
-      y: -429.5
+      y: -429
       width: 1625
-      height: 859
+      height: 858
     m_MinimalGUI: 1
   m_defaultScale: 1
-  m_LastWindowPixelSize: {x: 1625, y: 880}
+  m_LastWindowPixelSize: {x: 1625, y: 879}
   m_ClearInEditMode: 1
   m_NoCameraWarning: 1
   m_LowResolutionForAspectRatios: 01000000000000000000
@@ -1169,7 +1169,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: 868dfbffda8dfbff2ac7fbff9ce1fbfff0e1fbffd01dfcffa63afcfffc3afcffdc76fcff5497fcffaa97fcff8ad3fcff24f7fcff7af7fcff5a33fdff42b8fdff98b8fdff78f4fdffc014feff1615feff664efeff0069feff5669feff36a5feff6ec5feffc4c5feffa401ffff2822ffff7e22ffff5e5effff5a7fffffb07fffff9abbffffd4faffffcad60500f6df0500780606009a0e0600
+      m_ExpandedIDs: 082ffdff5c2ffdff3c6bfdfffe87fdff5488fdffa8c4fdffd4faffff
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
