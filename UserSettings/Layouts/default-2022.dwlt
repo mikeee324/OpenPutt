@@ -19,7 +19,7 @@ MonoBehaviour:
     width: 2560
     height: 1349
   m_ShowMode: 4
-  m_Title: VRChat SDK
+  m_Title: Hierarchy
   m_RootView: {fileID: 7}
   m_MinSize: {x: 875, y: 321}
   m_MaxSize: {x: 10000, y: 10000}
@@ -43,8 +43,8 @@ MonoBehaviour:
     y: 900
     width: 2560
     height: 399
-  m_MinSize: {x: 100, y: 121}
-  m_MaxSize: {x: 4000, y: 4021}
+  m_MinSize: {x: 100, y: 100}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 14}
   m_Panes:
   - {fileID: 15}
@@ -75,7 +75,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 150}
   m_MaxSize: {x: 24288, y: 24288}
   vertical: 1
-  controlID: 24
+  controlID: 100
 --- !u!114 &4
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -126,7 +126,7 @@ MonoBehaviour:
   m_MinSize: {x: 100, y: 100}
   m_MaxSize: {x: 8096, y: 16192}
   vertical: 1
-  controlID: 26
+  controlID: 51
 --- !u!114 &6
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -146,8 +146,8 @@ MonoBehaviour:
     y: 0
     width: 411
     height: 598
-  m_MinSize: {x: 202, y: 221}
-  m_MaxSize: {x: 4002, y: 4021}
+  m_MinSize: {x: 200, y: 200}
+  m_MaxSize: {x: 4000, y: 4000}
   m_ActualView: {fileID: 20}
   m_Panes:
   - {fileID: 20}
@@ -228,7 +228,7 @@ MonoBehaviour:
   m_MinSize: {x: 300, y: 100}
   m_MaxSize: {x: 24288, y: 16192}
   vertical: 0
-  controlID: 25
+  controlID: 101
 --- !u!114 &10
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -411,7 +411,7 @@ MonoBehaviour:
     m_OverlaysVisible: 1
   m_LockTracker:
     m_IsLocked: 0
-  m_LastSelectedObjectID: 484900
+  m_LastSelectedObjectID: 347816
 --- !u!114 &16
 MonoBehaviour:
   m_ObjectHideFlags: 52
@@ -506,7 +506,7 @@ MonoBehaviour:
     m_SkipHidden: 0
     m_SearchArea: 1
     m_Folders:
-    - Packages/com.mikeee324.openputt/Runtime/Scripts
+    - Packages/com.mikeee324.openputt/Runtime/Prefabs/Components
     m_Globs: []
     m_OriginalText: 
     m_ImportLogFlags: 0
@@ -514,16 +514,16 @@ MonoBehaviour:
   m_ViewMode: 1
   m_StartGridSize: 16
   m_LastFolders:
-  - Packages/com.mikeee324.openputt/Runtime/Scripts
+  - Packages/com.mikeee324.openputt/Runtime/Prefabs/Components
   m_LastFoldersGridSize: 16
   m_LastProjectPath: D:\Users\Mike\Desktop\Unity\Prefabs\OpenPutt
   m_LockTracker:
     m_IsLocked: 0
   m_FolderTreeState:
     scrollPos: {x: 0, y: 519}
-    m_SelectedIDs: a2e30000
-    m_LastClickedID: 58274
-    m_ExpandedIDs: 00000000c85d000098e300009ae300009ce300009ee30000a0e30000a2e3000000ca9a3bffffff7f
+    m_SelectedIDs: dee30000
+    m_LastClickedID: 58334
+    m_ExpandedIDs: 00000000c85d000094e3000096e3000098e300009ae300009ce300009ee3000000ca9a3bffffff7f
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -551,7 +551,7 @@ MonoBehaviour:
     scrollPos: {x: 0, y: 0}
     m_SelectedIDs: 
     m_LastClickedID: 0
-    m_ExpandedIDs: 00000000c85d000098e300009ae300009ce300009ee30000a0e30000a2e30000
+    m_ExpandedIDs: 00000000c85d000094e3000096e3000098e300009ae300009ce300009ee30000
     m_RenameOverlay:
       m_UserAcceptedRename: 0
       m_Name: 
@@ -603,7 +603,7 @@ MonoBehaviour:
       m_Icon: {fileID: 0}
       m_ResourceFile: 
     m_NewAssetIndexInList: -1
-    m_ScrollPosition: {x: 0, y: 523}
+    m_ScrollPosition: {x: 0, y: 0}
     m_GridSize: 16
   m_SkipHiddenPackages: 0
   m_DirectoriesAreaWidth: 152
@@ -1050,9 +1050,9 @@ MonoBehaviour:
   m_PlayAudio: 0
   m_AudioPlay: 0
   m_Position:
-    m_Target: {x: -5.1716123, y: 5.030304, z: 5.347139}
+    m_Target: {x: -3.2864547, y: 4.792, z: 6.8125315}
     speed: 2
-    m_Value: {x: -5.1716123, y: 5.030304, z: 5.347139}
+    m_Value: {x: -3.2864547, y: 4.792, z: 6.8125315}
   m_RenderMode: 0
   m_CameraMode:
     drawMode: 0
@@ -1098,9 +1098,9 @@ MonoBehaviour:
     m_GridAxis: 1
     m_gridOpacity: 0.5
   m_Rotation:
-    m_Target: {x: 0.0115674045, y: -0.98809665, z: 0.12095912, w: 0.09457588}
+    m_Target: {x: -0.13001844, y: -0.72835183, z: 0.14408351, w: -0.65717894}
     speed: 2
-    m_Value: {x: 0.011567148, y: -0.9880747, z: 0.120956436, w: 0.09457379}
+    m_Value: {x: -0.13001549, y: -0.7283353, z: 0.14408025, w: -0.65716404}
   m_Size:
     m_Target: 0.8538239
     speed: 2
@@ -1169,7 +1169,7 @@ MonoBehaviour:
       scrollPos: {x: 0, y: 0}
       m_SelectedIDs: 
       m_LastClickedID: 0
-      m_ExpandedIDs: f09dfcff449efcff94d7fcff06f2fcff5af2fcff3a2efdff024bfdff584bfdff3887fdff1c0dfeff720dfeff5249feff7869feffce69feffaea5feff1ac6feff70c6feff5002ffff8022ffffd622ffffbe5effff987fffffee7fffffd0bbffffd4faffff
+      m_ExpandedIDs: 868dfbffda8dfbff2ac7fbff9ce1fbfff0e1fbffd01dfcffa63afcfffc3afcffdc76fcff5497fcffaa97fcff8ad3fcff24f7fcff7af7fcff5a33fdff42b8fdff98b8fdff78f4fdffc014feff1615feff664efeff0069feff5669feff36a5feff6ec5feffc4c5feffa401ffff2822ffff7e22ffff5e5effff5a7fffffb07fffff9abbffffd4faffffcad60500f6df0500780606009a0e0600
       m_RenameOverlay:
         m_UserAcceptedRename: 0
         m_Name: 
