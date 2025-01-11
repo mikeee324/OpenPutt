@@ -1,3 +1,9 @@
+0.8.15
+--------
+- Game state persistence default is now up to 15 minutes
+- Game state persistence can be configured now on the OpenPutt script (-1 = Forever, 0 or above is max time in seconds that data will be retained for)
+- Game state persistence no longer loads in a fully completed game
+
 0.8.14
 --------
 - Golf ball now uses VRC Pickup throw boost value for VR players when picking it up from your shoulder

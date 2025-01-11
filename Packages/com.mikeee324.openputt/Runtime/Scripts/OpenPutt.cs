@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "0.8.14";
+        public readonly string CurrentVersion = "0.8.15";
 
         #region References
 
@@ -59,6 +59,9 @@ namespace dev.mikeee324.OpenPutt
 
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
         public bool coursesCanBePlayedInAnyOrder;
+
+        [Tooltip("Maximum amount of time in seconds that a players game state will be remembered for when using persistence. This only applies to incomplete games. Completed games will not be loaded back in and treated as a fresh start. (-1 = forever)")]
+        public int scoreMaxPersistantTimeInSeconds = 900;
 
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
         public bool enableDevModeForAll;
@@ -327,26 +330,47 @@ namespace dev.mikeee324.OpenPutt
 
             if (PlayerData.HasKey(localPlayer, "OpenPuttGame-Modified"))
             {
-                if (DateTime.UtcNow.GetUnixTimestamp() - PlayerData.GetLong(localPlayer, "OpenPuttGame-Modified") < 600)
+                if (DateTime.UtcNow.GetUnixTimestamp() - PlayerData.GetLong(localPlayer, "OpenPuttGame-Modified") < scoreMaxPersistantTimeInSeconds)
                 {
+                    var atLeastOneIncompleteCourse = false;
+
                     for (var courseID = 0; courseID < courses.Length; courseID++)
                     {
-                        LocalPlayerManager.courseStates[courseID] = (CourseState)PlayerData.GetInt(localPlayer, $"OpenPuttGame-State-{courseID}");
-                        LocalPlayerManager.courseScores[courseID] = PlayerData.GetInt(localPlayer, $"OpenPuttGame-Score-{courseID}");
-                        LocalPlayerManager.courseTimes[courseID] = PlayerData.GetLong(localPlayer, $"OpenPuttGame-Time-{courseID}");
-
-                        if (LocalPlayerManager.courseStates[courseID] == CourseState.Playing)
+                        if ((CourseState)PlayerData.GetInt(localPlayer, $"OpenPuttGame-State-{courseID}") != CourseState.Completed)
                         {
-                            LocalPlayerManager.courseStates[courseID] = CourseState.NotStarted;
-                            LocalPlayerManager.courseScores[courseID] = 0;
-                            LocalPlayerManager.courseTimes[courseID] = 0;
+                            atLeastOneIncompleteCourse = true;
+                            break;
                         }
                     }
 
-                    if (debugMode)
-                        OpenPuttUtils.Log(this, $"Restored player scores - updating scoreboards");
+                    // If there is at least one course that hasn't been finished yet
+                    if (atLeastOneIncompleteCourse)
+                    {
+                        // Restore player game state
+                        for (var courseID = 0; courseID < courses.Length; courseID++)
+                        {
+                            LocalPlayerManager.courseStates[courseID] = (CourseState)PlayerData.GetInt(localPlayer, $"OpenPuttGame-State-{courseID}");
+                            LocalPlayerManager.courseScores[courseID] = PlayerData.GetInt(localPlayer, $"OpenPuttGame-Score-{courseID}");
+                            LocalPlayerManager.courseTimes[courseID] = PlayerData.GetLong(localPlayer, $"OpenPuttGame-Time-{courseID}");
 
-                    scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
+                            if (LocalPlayerManager.courseStates[courseID] == CourseState.Playing)
+                            {
+                                LocalPlayerManager.courseStates[courseID] = CourseState.NotStarted;
+                                LocalPlayerManager.courseScores[courseID] = 0;
+                                LocalPlayerManager.courseTimes[courseID] = 0;
+                            }
+                        }
+
+                        if (debugMode)
+                            OpenPuttUtils.Log(this, $"Restored player scores - updating scoreboards");
+
+                        scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
+                    }
+                    else
+                    {
+                        if (debugMode)
+                            OpenPuttUtils.Log(this, $"Not restoring game state as player completed the entire course last time");
+                    }
                 }
             }
         }
