@@ -10,7 +10,10 @@ using UnityEngine.SceneManagement;
 
 public class ScoreboardBuildProcessor : IProcessSceneWithReport
 {
-    public int callbackOrder { get { return 0; } }
+    public int callbackOrder
+    {
+        get { return 0; }
+    }
 
     public void OnProcessScene(Scene scene, BuildReport report)
     {
@@ -61,6 +64,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                 EditorUtility.ClearProgressBar();
                 return;
             }
+
             OpenPuttUtils.Log("ScoreboardBuildProcessor", $"Clearing old rows from scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
 
             while (scoreboards[scoreboardID].topRowPanel.transform.childCount > 0)
@@ -70,6 +74,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                     GameObject.DestroyImmediate(t.gameObject);
                 }
             }
+
             while (scoreboards[scoreboardID].parRowPanel.transform.childCount > 0)
             {
                 foreach (Transform t in scoreboards[scoreboardID].parRowPanel.transform)
@@ -77,6 +82,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                     GameObject.DestroyImmediate(t.gameObject);
                 }
             }
+
             while (scoreboards[scoreboardID].playerListCanvas.transform.childCount > 0)
             {
                 foreach (Transform t in scoreboards[scoreboardID].playerListCanvas.transform)
@@ -84,6 +90,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
                     GameObject.DestroyImmediate(t.gameObject);
                 }
             }
+
             scoreboards[scoreboardID].scoreboardRows = new ScoreboardPlayerRow[manager.numberOfPlayersToDisplay];
 
             if (showProgressBar && EditorUtility.DisplayCancelableProgressBar("Scoreboard Setup", $"Creating top rows for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})", (currentWork++ / totalWork)))
@@ -103,17 +110,18 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
             scoreboards[scoreboardID].parRowCanvas = row.GetComponent<Canvas>();
         }
 
-        for (int playerID = 0; playerID < manager.numberOfPlayersToDisplay; playerID++)
+        for (int scoreboardID = 0; scoreboardID < scoreboards.Count; scoreboardID++)
         {
-            for (int scoreboardID = 0; scoreboardID < scoreboards.Count; scoreboardID++)
+            if (scoreboards[scoreboardID] == null)
+                continue;
+            for (int playerID = 0; playerID < manager.numberOfPlayersToDisplay; playerID++)
             {
-                if (scoreboards[scoreboardID] == null)
-                    continue;
                 if (showProgressBar && EditorUtility.DisplayCancelableProgressBar("Scoreboard Setup", $"Creating row {playerID} for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})", (currentWork++ / totalWork)))
                 {
                     EditorUtility.ClearProgressBar();
                     return;
                 }
+
                 ScoreboardPlayerRow row = scoreboards[scoreboardID].CreateRow(playerID);
                 row.gameObject.SetActive(false);
                 OpenPuttUtils.Log("ScoreboardBuildProcessor", $"Creating row {playerID} for scoreboard ID {scoreboardID}({scoreboards[scoreboardID].name})");
@@ -148,6 +156,7 @@ public class ScoreboardBuildProcessor : IProcessSceneWithReport
             {
                 return true;
             }
+
             if (topRow == null || topRow.columns.Length != numberOfColumnsOnScoreboard)
             {
                 return true;

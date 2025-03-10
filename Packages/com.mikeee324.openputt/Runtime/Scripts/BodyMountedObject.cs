@@ -91,7 +91,6 @@ namespace dev.mikeee324.OpenPutt
                         var listeners = objectToAttach.GetComponents<UdonBehaviour>();
                         foreach (var listener in listeners)
                         {
-                            listener.SetProgramVariable("lastHeldFrameVelocity", lastFrameVelocity);
                             listener.SendCustomEvent(dropEventName);
                             listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
                         }
@@ -195,7 +194,12 @@ namespace dev.mikeee324.OpenPutt
                     currentHand = VRC_Pickup.PickupHand.None;
                 }
 
-                // Trigger event calls if this changed
+                if (currentHand != VRC_Pickup.PickupHand.None && heldInHand != currentHand)
+                {
+                    lastFramePosition = Vector3.zero;
+                    lastFrameVelocity = Vector3.zero;
+                }
+                    
                 heldInHand = currentHand;
             }
 
@@ -216,7 +220,7 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = true;
 
-                lastFramePosition = transform.position;
+                lastFramePosition = Vector3.zero;
                 lastFrameVelocity = Vector3.zero;
 
                 return;

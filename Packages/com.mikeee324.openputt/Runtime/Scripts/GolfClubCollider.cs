@@ -7,17 +7,6 @@ using VRC.SDKBase;
 namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
-    /// Different ways of tracking the vlocity of the club collider (Used for experimenting)
-    /// </summary>
-    public enum ClubColliderVelocityType
-    {
-        SingleFrame = 0,
-        SingleFrameSmoothed = 1,
-        MultiFrameAverage = 2,
-        FollowVelocity = 3
-    }
-
-    /// <summary>
     /// This is a rigidbody that follows the club head around and actually triggers the ball to move on collision<br/>
     /// This script must run after the main GolfClub script in order to function correctly. (Hence the DefaultExecutionOrder)
     /// </summary>
@@ -69,9 +58,6 @@ namespace dev.mikeee324.OpenPutt
 
         public AnimationCurve hitForceMultiplier;
 
-        [Header("Velocity / Direction Tracking Settings")] [Tooltip("Debug stuff: Used for trying various ways of getting a velocity for the ball after a hit")]
-        public ClubColliderVelocityType velocityCalculationType = ClubColliderVelocityType.SingleFrame;
-
         public CollisionDetectionMode collisionType = CollisionDetectionMode.Continuous;
         public bool enableSweepTests = true;
 
@@ -91,7 +77,7 @@ namespace dev.mikeee324.OpenPutt
         public bool smoothFollowClubHead = true; // Maybe helps with fast hit detection
 
         [Range(0, 0.99f), Tooltip("Controls how strong the Smooth Follow Clubhead option is. (Not entirely sure what the correct value is yet - 1 has bad results at low fps though)")]
-        public float followStrength = .6f;
+        public float followStrength = .9f;
 
         [Range(0, 0.99f), Tooltip("Controls how strong the rotation of the Smooth Follow Clubhead option is. (Not entirely sure what the correct value is yet)")]
         public float followRotationStrength = 0.99f;
@@ -294,7 +280,11 @@ namespace dev.mikeee324.OpenPutt
 
                 // Work out velocity needed to reach the target position
                 var deltaPos = lastPositions[0] - myRigidbody.position;
-                var newVel = deltaPos * (1f / Time.deltaTime * Mathf.Pow(followStrength, 90f * Time.deltaTime));
+
+                var frameRateFactor = 60f * Time.deltaTime; // 1.0 at 60fps, 0.5 at 120fps, 2.0 at 30fps
+                var adaptedFollowStrength = Mathf.Lerp(followStrength, followStrength * 0.9f, Mathf.Abs(1f - frameRateFactor));
+                var newVel = deltaPos * (1f / Time.deltaTime * Mathf.Pow(adaptedFollowStrength, 90f * Time.deltaTime));
+
                 if (newVel.magnitude > 0f)
                     myRigidbody.velocity = newVel;
 
@@ -350,14 +340,16 @@ namespace dev.mikeee324.OpenPutt
 
             var currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
 
-            //if (!Utilities.IsValid(golfClub.playerManager)|| !Utilities.IsValid(golfClub.playerManager.openPutt) || golfClub.playerManager.openPutt || golfClub.playerManager.openPutt.debugMode)
-            //    Utils.Log("Vel", $"CurrentFrameVel: {currFrameVelocity.magnitude} RB.vel: {myRigidbody.velocity.magnitude} LastGoodFrameVel: {FrameVelocity.magnitude}");
+            // Adjust velocity smoothing based on frame rate ratio
+            var frameRateRatio = 60f * Time.deltaTime; // 1.0 at 60fps
+            var velocityBlendFactor = Mathf.Clamp(singleFrameSmoothFactor * Mathf.Sqrt(frameRateRatio), 0.1f, 0.95f);
 
-            // Store velocity for this frame if it isn't all 0
             if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
             {
-                FrameVelocity = currFrameVelocity;
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, singleFrameSmoothFactor);
+                // At higher frame rates, trust each frame more but blend more gently
+                // At lower frame rates, be more selective but apply larger changes
+                FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, velocityBlendFactor);
+                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, velocityBlendFactor);
                 FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, .2f);
             }
 
@@ -396,8 +388,9 @@ namespace dev.mikeee324.OpenPutt
             if (framesSinceHit < 0) return;
 
             // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-            if (framesSinceHit++ < hitWaitFrames) return;
-            
+            var adaptiveWaitFrames = Mathf.CeilToInt(hitWaitFrames * Mathf.Sqrt(60f * Time.deltaTime));
+            if (framesSinceHit++ < adaptiveWaitFrames) return;
+
             // Consume the hit event
             framesSinceHit = -1;
 
@@ -491,86 +484,15 @@ namespace dev.mikeee324.OpenPutt
             var currentCourse = playerManager.CurrentCourse;
             var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
 
-            var directionOfTravel = Vector3.zero;
-            var velocityMagnitude = 0f;
+            var directionOfTravel = FrameVelocitySmoothed;
+            var velocityMagnitude = FrameVelocitySmoothed.magnitude;
 
-            switch (velocityCalculationType)
+            // Use the smoothed collider direction if we are told to
+            if (smoothedHitDirection)
             {
-                case ClubColliderVelocityType.SingleFrame:
-                    directionOfTravel = FrameVelocity;
-                    velocityMagnitude = FrameVelocity.magnitude;
-
-                    // Use the smoothed collider direction if we are told to
-                    if (smoothedHitDirection)
-                    {
-                        for (var i = 0; i < 3; i++)
-                            if (lastPositions[i] != Vector3.zero)
-                                directionOfTravel = lastPositions[0] - lastPositions[i];
-                    }
-                    break;
-                case ClubColliderVelocityType.SingleFrameSmoothed:
-                    directionOfTravel = FrameVelocitySmoothed;
-                    velocityMagnitude = FrameVelocitySmoothed.magnitude;
-
-                    // Use the smoothed collider direction if we are told to
-                    if (smoothedHitDirection)
-                    {
-                        for (var i = 0; i < 3; i++)
-                            if (lastPositions[i] != Vector3.zero)
-                                directionOfTravel = lastPositions[0] - lastPositions[i];
-                    }
-                    break;
-                case ClubColliderVelocityType.FollowVelocity:
-                {
-                    directionOfTravel = myRigidbody.velocity;
-                    velocityMagnitude = myRigidbody.velocity.magnitude;
-                    break;
-                }
-                case ClubColliderVelocityType.MultiFrameAverage:
-                {
-                    // Grab positons/time taken
-                    var latestPos = lastPositions[0];
-                    var oldestPos = lastPositions[1];
-                    var timeTaken = lastPositionTimes[0];
-
-                    // If we want to take an average velocity over the past few frames
-                    if (multiFrameAverageMaxBacksteps > 0)
-                    {
-                        var furthestDistance = Vector3.Distance(latestPos, oldestPos);
-                        var maxBacksteps = Math.Min(multiFrameAverageMaxBacksteps, lastPositions.Length);
-                        for (var currentBackstep = 1; currentBackstep < maxBacksteps; currentBackstep++)
-                        {
-                            // Ignore any empty previous positions
-                            if (lastPositions[currentBackstep] == Vector3.zero)
-                                break;
-
-                            var thisDistance = Vector3.Distance(latestPos, lastPositions[currentBackstep]);
-                            if (thisDistance > furthestDistance)
-                            {
-                                oldestPos = lastPositions[currentBackstep];
-                                timeTaken = lastPositionTimes[currentBackstep];
-                                furthestDistance = Vector3.Distance(latestPos, oldestPos);
-                                continue;
-                            }
-
-                            // We found the furthest backstep - break out and use that as the start point of the swing
-                            break;
-                        }
-                    }
-
-                    if (latestPos == Vector3.zero || oldestPos == Vector3.zero)
-                    {
-                        if (golfClub.playerManager.openPutt.debugMode)
-                            OpenPuttUtils.LogError(this, "Cannot handle ball hit as start/end pos was a Vector3.zero! Will wait 1 more frame..");
-                        framesSinceHit -= 1;
-                        return;
-                    }
-
-                    var newVel = (latestPos - oldestPos) / timeTaken;
-                    directionOfTravel = newVel;
-                    velocityMagnitude = newVel.magnitude;
-                    break;
-                }
+                for (var i = 0; i < 3; i++)
+                    if (lastPositions[i] != Vector3.zero)
+                        directionOfTravel = lastPositions[0] - lastPositions[i];
             }
 
             // If we are currently disallowing hits to go vertical
