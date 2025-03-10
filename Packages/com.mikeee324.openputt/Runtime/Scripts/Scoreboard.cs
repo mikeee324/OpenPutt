@@ -553,21 +553,6 @@ namespace dev.mikeee324.OpenPutt
             RefreshSettingsMenu();
         }
 
-        public void OnColliderVelocityTypeChanged()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-            var val = devModeColliderVelTypeDropdown.value;
-            playerManager.golfClub.putter.velocityCalculationType = (ClubColliderVelocityType)val;
-
-            devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(val == 1);
-            devModeClubBackstepSlider.transform.parent.gameObject.SetActive(val == 2);
-
-            RefreshDevModeMenu();
-        }
-
         public void OnClubColliderTypeChanged()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -949,8 +934,6 @@ namespace dev.mikeee324.OpenPutt
 
             devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
             devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
-
-            devModeColliderVelTypeDropdown.value = (int)playerManager.golfClub.putter.velocityCalculationType;
 
             devModeClubColliderTypeDropdown.value = (int)playerManager.golfClub.putter.collisionType;
             devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;

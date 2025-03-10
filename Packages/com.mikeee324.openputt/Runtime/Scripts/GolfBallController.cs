@@ -400,7 +400,10 @@ namespace dev.mikeee324.OpenPutt
             if (!pickedUpByPlayer) return;
 
             var lastVel = lastHeldFrameVelocity;
-            var newVel = (transform.position - lastHeldFramePosition) / Time.deltaTime;
+            var newVel = Vector3.zero;
+            
+            if (lastFramePosition != Vector3.zero)
+                newVel = (CurrentPosition - lastHeldFramePosition) / Time.deltaTime;
 
             numberOfPickedUpFrames++;
 
@@ -413,7 +416,8 @@ namespace dev.mikeee324.OpenPutt
                 lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .8f);
             else
                 lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .2f);
-            lastHeldFramePosition = transform.position;
+            
+            lastHeldFramePosition = CurrentPosition;
 
             if (Utilities.IsValid(openPuttSync))
                 openPuttSync.RequestFastSync();
@@ -695,11 +699,15 @@ namespace dev.mikeee324.OpenPutt
                 // Allows the ball to drop to the floor when you drop it
                 droppedByPlayer = true;
                 BallIsMoving = true;
-
+                
                 // Apply velocity of the ball that we saw last frame so players can throw the ball
                 if (Networking.LocalPlayer.IsUserInVR())
                     lastHeldFrameVelocity *= pickup.ThrowVelocityBoostScale;
+                
                 requestedBallVelocity = lastHeldFrameVelocity;
+
+                lastFramePosition = Vector3.zero;
+                lastHeldFrameVelocity = Vector3.zero;
 
                 // Allows ball to bounce
                 stepsSinceLastGrounded = 2;
