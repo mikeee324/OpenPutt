@@ -87,6 +87,8 @@ namespace dev.mikeee324.OpenPutt
 
         public AnimationCurve clubHeadDirectionInfluence;
 
+        private int bufferIndex = 0;
+
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
         /// MUST be the same length as lastPositionTimes
@@ -267,65 +269,56 @@ namespace dev.mikeee324.OpenPutt
 
                 return;
             }
-
+            
             if (smoothFollowClubHead && !positionBufferWasJustReset)
             {
-                // Smooth follow uses Rigidbody.velocity and angularVelocity to follow the target instead of MovePosition/MoveRotation
-                // This seems to allow the physics engine to register collisions better and we get less spurious velocities of 0 while the object is moving
-                // https://gist.github.com/MattRix/bd0ba767f75906b7f86cb8214a60972e
-
-                // For this to work we need a non-kinematic rigidbody with 0 drag
-                if (myRigidbody.isKinematic)
-                    myRigidbody.isKinematic = false;
-
+                // Most recent position is at the previous index
+                int previousIndex = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
+                var targetPos = lastPositions[previousIndex];
+                var targetRot = lastPositionRotations[previousIndex];
+    
                 // Work out velocity needed to reach the target position
-                var deltaPos = lastPositions[0] - myRigidbody.position;
+                var deltaPos = targetPos - myRigidbody.position;
 
-                var frameRateFactor = 60f * Time.deltaTime; // 1.0 at 60fps, 0.5 at 120fps, 2.0 at 30fps
-                var adaptedFollowStrength = Mathf.Lerp(followStrength, followStrength * 0.9f, Mathf.Abs(1f - frameRateFactor));
-                var newVel = deltaPos * (1f / Time.deltaTime * Mathf.Pow(adaptedFollowStrength, 90f * Time.deltaTime));
+                // Time-based smoothing constant
+                float smoothingTimeConstant = 0.05f;
+                float t = Mathf.Clamp01(Time.fixedDeltaTime / smoothingTimeConstant);
+                float adaptedFollowStrength = Mathf.Lerp(0.5f, 0.95f, t);
+
+                var newVel = deltaPos / Time.fixedDeltaTime * adaptedFollowStrength;
 
                 if (newVel.magnitude > 0f)
                     myRigidbody.velocity = newVel;
 
-                // Work out the angularVelocity needed to reach the same rotation as the target
-                var deltaRot = lastPositionRotations[0] * Quaternion.Inverse(transform.rotation);
+                // Similar time-based approach for rotation
+                var deltaRot = targetRot * Quaternion.Inverse(transform.rotation);
                 deltaRot.ToAngleAxis(out var angle, out var axis);
                 if (angle > 180.0f)
                     angle -= 360.0f;
+    
                 if (angle != 0 && !myRigidbody.isKinematic)
-                    myRigidbody.angularVelocity = axis * (1f / Time.fixedDeltaTime * angle * 0.01745329251994f * Mathf.Pow(followRotationStrength, 90f * Time.fixedDeltaTime));
-
-                if (enableSweepTests && framesSinceHit == -1 && !positionBufferWasJustReset && !clubIsTouchingBall)
                 {
-                    // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                    if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(newVel, out var hit, newVel.magnitude * Time.deltaTime))
-                    {
-                        // We only care if this collided with the local players ball
-                        if (Utilities.IsValid(hit.rigidbody) && hit.rigidbody.gameObject == golfBall.gameObject)
-                        {
-                            LastKnownHitType = "(F-Sweep)";
-                            framesSinceHit = 0;
-                        }
-                    }
+                    float rotSmoothingTimeConstant = 0.03f;
+                    float rotT = Mathf.Clamp01(Time.fixedDeltaTime / rotSmoothingTimeConstant);
+                    float adaptedRotationStrength = Mathf.Lerp(0.7f, 0.98f, rotT);
+        
+                    myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * adaptedRotationStrength);
                 }
             }
             else
             {
-                // Seems to work best when the RigidBody is kinematic
-                if (!myRigidbody.isKinematic)
-                    myRigidbody.isKinematic = true;
-
                 // Just use MovePosition/MoveRotation
-                myRigidbody.MovePosition(lastPositions[0]);
-
-                var targetRotation = lastPositionRotations[0] * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
-                myRigidbody.MoveRotation(targetRotation.normalized);
+                int previousIndex = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
+                var targetPos = lastPositions[previousIndex];
+                var targetRot = lastPositionRotations[previousIndex];
+    
+                myRigidbody.MovePosition(targetPos);
+                myRigidbody.MoveRotation(targetRot * Quaternion.Euler(referenceClubHeadColliderRotationOffset));
             }
 
             ResizeClubCollider();
         }
-
+        
         private void UpdateVelocity()
         {
             var currentPos = CurrentTarget.position;
@@ -338,33 +331,49 @@ namespace dev.mikeee324.OpenPutt
                 currentRot = tRB.rotation;
             }
 
-            var currFrameVelocity = (currentPos - lastPositions[0]) / Time.deltaTime;
-
-            // Adjust velocity smoothing based on frame rate ratio
-            var frameRateRatio = 60f * Time.deltaTime; // 1.0 at 60fps
-            var velocityBlendFactor = Mathf.Clamp(singleFrameSmoothFactor * Mathf.Sqrt(frameRateRatio), 0.1f, 0.95f);
-
-            if (!positionBufferWasJustReset && currFrameVelocity != Vector3.zero)
+            // Calculate velocity from the most recent position (which is at the previous index)
+            Vector3 currFrameVelocity = Vector3.zero;
+            if (!positionBufferWasJustReset)
             {
-                // At higher frame rates, trust each frame more but blend more gently
-                // At lower frame rates, be more selective but apply larger changes
-                FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, velocityBlendFactor);
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, velocityBlendFactor);
-                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, .2f);
+                // Most recent position is at the previous index
+                int previousIndex = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
+                var prevPos = lastPositions[previousIndex];
+        
+                if (prevPos != Vector3.zero)
+                {
+                    currFrameVelocity = (currentPos - prevPos) / Time.deltaTime;
+                }
             }
 
-            if (positionBufferWasJustReset || currFrameVelocity.magnitude > 0.001f)
+            // Store current position in the buffer at the current index
+            lastPositions[bufferIndex] = currentPos;
+            lastPositionRotations[bufferIndex] = currentRot;
+            lastPositionTimes[bufferIndex] = 0f; // Reset time for newest position
+    
+            // Increment all other time values
+            for (int i = 0; i < lastPositionTimes.Length; i++)
             {
-                // Push current position onto buffers
-                lastPositions = lastPositions.Push(currentPos);
-                lastPositionRotations = lastPositionRotations.Push(currentRot);
-                lastPositionTimes = lastPositionTimes.Push(Time.deltaTime);
-                for (var i = 1; i < lastPositions.Length; i++)
+                if (i != bufferIndex)
                     lastPositionTimes[i] += Time.deltaTime;
-                positionBufferWasJustReset = false;
             }
-        }
+    
+            // Move to next position in circular buffer
+            bufferIndex = (bufferIndex + 1) % lastPositions.Length;
 
+            // Improved velocity smoothing
+            if (!positionBufferWasJustReset && currFrameVelocity.magnitude > 0.001f)
+            {
+                float smoothingTimeConstant = 0.05f;
+                float t = Mathf.Clamp01(Time.deltaTime / smoothingTimeConstant);
+        
+                FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, t);
+                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t);
+                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, t * 0.4f);
+            }
+    
+            positionBufferWasJustReset = false;
+        }
+        
         public override void PostLateUpdate()
         {
             UpdateVelocity();
@@ -487,12 +496,39 @@ namespace dev.mikeee324.OpenPutt
             var directionOfTravel = FrameVelocitySmoothed;
             var velocityMagnitude = FrameVelocitySmoothed.magnitude;
 
-            // Use the smoothed collider direction if we are told to
+            // If using smoothed direction, use time-weighted sampling
             if (smoothedHitDirection)
             {
-                for (var i = 0; i < 3; i++)
-                    if (lastPositions[i] != Vector3.zero)
-                        directionOfTravel = lastPositions[0] - lastPositions[i];
+                Vector3 weightedDirection = Vector3.zero;
+                float totalWeight = 0f;
+    
+                // Get the most recent position index
+                int newestIdx = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
+                Vector3 newestPos = lastPositions[newestIdx];
+    
+                // Look back through history to get a time-weighted average direction
+                for (int i = 1; i < multiFrameAverageMaxBacksteps && i < lastPositions.Length; i++)
+                {
+                    // Calculate the older index by going backward in the circular buffer
+                    int olderIdx = (newestIdx - i + lastPositions.Length) % lastPositions.Length;
+                    Vector3 olderPos = lastPositions[olderIdx];
+                    float olderTime = lastPositionTimes[olderIdx];
+        
+                    if (olderPos != Vector3.zero && olderTime < 0.5f)
+                    {
+                        Vector3 frameDir = newestPos - olderPos;
+                        float weight = 1.0f / (1.0f + olderTime);
+            
+                        if (frameDir.magnitude > 0.001f)
+                        {
+                            weightedDirection += frameDir.normalized * weight;
+                            totalWeight += weight;
+                        }
+                    }
+                }
+    
+                if (totalWeight > 0f)
+                    directionOfTravel = (weightedDirection / totalWeight).normalized;
             }
 
             // If we are currently disallowing hits to go vertical
@@ -566,6 +602,7 @@ namespace dev.mikeee324.OpenPutt
         private void ResetPositionBuffers()
         {
             positionBufferWasJustReset = true;
+            bufferIndex = 0; // Reset the buffer index
 
             FrameVelocity = Vector3.zero;
             FrameVelocitySmoothed = Vector3.zero;

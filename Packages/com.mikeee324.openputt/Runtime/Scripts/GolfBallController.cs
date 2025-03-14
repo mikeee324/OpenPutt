@@ -399,25 +399,29 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!pickedUpByPlayer) return;
 
-            var lastVel = lastHeldFrameVelocity;
             var newVel = Vector3.zero;
+
+            if (numberOfPickedUpFrames > 1)
+            {
+                if (lastFramePosition != Vector3.zero)
+                    newVel = (CurrentPosition - lastHeldFramePosition) / Time.deltaTime;
+                
+                if (newVel.magnitude > maxBallSpeed)
+                    newVel = lastHeldFrameVelocity.normalized * maxBallSpeed;
             
-            if (lastFramePosition != Vector3.zero)
-                newVel = (CurrentPosition - lastHeldFramePosition) / Time.deltaTime;
+                var frameRateRatio = 60f * Time.deltaTime; // 1.0 at 60fps
+                var velocityBlendFactor = Mathf.Clamp(.9f * Mathf.Sqrt(frameRateRatio), 0.1f, 0.95f);
+                lastHeldFrameVelocity = Vector3.Lerp(lastHeldFrameVelocity, newVel, velocityBlendFactor);
+            
+                lastHeldFramePosition = CurrentPosition;
+            }
+            else
+            {
+                lastHeldFramePosition = CurrentPosition;
+                lastHeldFrameVelocity = Vector3.zero;
+            }
 
             numberOfPickedUpFrames++;
-
-            if (newVel.magnitude > maxBallSpeed)
-                newVel = lastHeldFrameVelocity.normalized * maxBallSpeed;
-            else if (newVel.magnitude < .5f)
-                newVel = lastVel;
-
-            if (Networking.LocalPlayer.IsUserInVR())
-                lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .8f);
-            else
-                lastHeldFrameVelocity = newVel.normalized * Mathf.Lerp(lastVel.magnitude, newVel.magnitude, .2f);
-            
-            lastHeldFramePosition = CurrentPosition;
 
             if (Utilities.IsValid(openPuttSync))
                 openPuttSync.RequestFastSync();
@@ -699,6 +703,9 @@ namespace dev.mikeee324.OpenPutt
                 // Allows the ball to drop to the floor when you drop it
                 droppedByPlayer = true;
                 BallIsMoving = true;
+                
+                if (lastFramePosition == Vector3.zero)
+                    lastHeldFrameVelocity = Vector3.zero;
                 
                 // Apply velocity of the ball that we saw last frame so players can throw the ball
                 if (Networking.LocalPlayer.IsUserInVR())
