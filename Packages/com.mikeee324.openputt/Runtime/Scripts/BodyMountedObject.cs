@@ -98,8 +98,8 @@ namespace dev.mikeee324.OpenPutt
                         if (applyVelocityAfterDrop)
                         {
                             var rb = objectToAttach.GetComponent<Rigidbody>();
-                            if (Utilities.IsValid(rb))
-                                rb.velocity = lastFrameVelocity;
+                         //   if (Utilities.IsValid(rb))
+                           //     rb.velocity = lastFrameVelocity;
                         }
                     }
                 }
