@@ -92,14 +92,10 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
         public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
-        public Image devModeExperimentalClubColliderCheckbox;
-        public Image devModeSmoothDirClubColliderCheckbox;
         public Image devModeForAllCheckbox;
         public Image footColliderCheckbox;
         public Image clubRendererCheckbox;
-        public Image clubHeadDirectionCheckbox;
         public Dropdown devModeColliderVelTypeDropdown;
-        public Dropdown devModeClubColliderTypeDropdown;
         public Dropdown devModeBallColliderTypeDropdown;
         public Transform devModeSettingsBox;
 
@@ -517,18 +513,6 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public void OnToggleExperimentalClub()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-
-            playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
-
-            RefreshDevModeMenu();
-        }
-
         public void OnToggleInvertCameraX()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -551,32 +535,6 @@ namespace dev.mikeee324.OpenPutt
             cameraManager.invertCameraY = !cameraManager.invertCameraY;
 
             RefreshSettingsMenu();
-        }
-
-        public void OnClubColliderTypeChanged()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-            var val = devModeClubColliderTypeDropdown.value;
-            switch (val)
-            {
-                case 0:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.Discrete;
-                    break;
-                case 1:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.Continuous;
-                    break;
-                case 2:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.ContinuousDynamic;
-                    break;
-                case 3:
-                    playerManager.golfClub.putter.collisionType = CollisionDetectionMode.ContinuousSpeculative;
-                    break;
-            }
-
-            RefreshDevModeMenu();
         }
 
         public void OnBallColliderTypeChanged()
@@ -616,18 +574,6 @@ namespace dev.mikeee324.OpenPutt
             var isActive = playerManager.golfClubVisualiser.gameObject.activeInHierarchy;
 
             playerManager.golfClubVisualiser.gameObject.SetActive(!isActive);
-
-            RefreshDevModeMenu();
-        }
-
-        public void OnToggleClubHeadDirection()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-
-            playerManager.golfClubHead.useClubHeadDirection = !playerManager.golfClubHead.useClubHeadDirection;
 
             RefreshDevModeMenu();
         }
@@ -740,28 +686,6 @@ namespace dev.mikeee324.OpenPutt
                 manager.openPutt.LocalPlayerManager.golfClubHead.targetOverride = manager.openPutt.footCollider.transform;
             else
                 manager.openPutt.LocalPlayerManager.golfClubHead.targetOverride = null;
-
-            RefreshDevModeMenu();
-        }
-
-        public void OnToggleExperimental()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-            playerManager.golfClub.putter.smoothFollowClubHead = !playerManager.golfClub.putter.smoothFollowClubHead;
-
-            RefreshDevModeMenu();
-        }
-
-        public void OnToggleSmoothDir()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-            playerManager.golfClub.putter.smoothedHitDirection = !playerManager.golfClub.putter.smoothedHitDirection;
 
             RefreshDevModeMenu();
         }
@@ -935,17 +859,13 @@ namespace dev.mikeee324.OpenPutt
             devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
             devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
 
-            devModeClubColliderTypeDropdown.value = (int)playerManager.golfClub.putter.collisionType;
             devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
 
             devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
             devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
-            devModeExperimentalClubColliderCheckbox.sprite = playerManager.golfClub.putter.smoothFollowClubHead ? checkboxOn : checkboxOff;
-            devModeSmoothDirClubColliderCheckbox.sprite = playerManager.golfClub.putter.smoothedHitDirection ? checkboxOn : checkboxOff;
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
-            clubHeadDirectionCheckbox.sprite = playerManager.golfClubHead.useClubHeadDirection ? checkboxOn : checkboxOff;
         }
 
         public void OnBallWeightReset()
