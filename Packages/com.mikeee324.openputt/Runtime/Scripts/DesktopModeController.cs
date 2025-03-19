@@ -150,9 +150,9 @@ namespace dev.mikeee324.OpenPutt
                     return 15;
 
                 if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode)
-                    return golfBall.BallMaxSpeed * 3;
+                    return golfBall.BallMaxSpeed;
 
-                return golfBall.BallMaxSpeed;
+                return golfBall.BallMaxSpeed * .5f;
             }
         }
 
