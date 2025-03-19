@@ -61,8 +61,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
         public bool enableAirResistance = true;
 
-        [SerializeField, Range(0f, 50f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s)")]
-        private float maxBallSpeed = 10f;
+        [SerializeField, Range(0f, 150f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s) - Bear in mind the fastest club swing recorded is 108~ m/s")]
+        private float maxBallSpeed = 100f;
 
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
         public float minBallSpeed = 0.03f;

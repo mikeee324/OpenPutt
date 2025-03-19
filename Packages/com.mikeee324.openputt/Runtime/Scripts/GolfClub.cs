@@ -84,10 +84,6 @@ namespace dev.mikeee324.OpenPutt
                         {
                             // Enable the collider for the club
                             putter.gameObject.SetActive(value);
-
-                            // Tell the collider that it was just switched back on
-                            if (value)
-                                putter.OnClubArmed();
                         }
                     }
                     else

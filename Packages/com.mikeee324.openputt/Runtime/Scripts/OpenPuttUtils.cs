@@ -196,7 +196,22 @@ namespace dev.mikeee324.OpenPutt
         {
             return new Vector3(vv.x, 0, vv.z);
         }
-
+        
+        public static Vector3 FixNaNs(Vector3 vector)
+        {
+            if (float.IsNaN(vector.x)) vector.x = 0;
+            if (float.IsNaN(vector.y)) vector.y = 0;
+            if (float.IsNaN(vector.z)) vector.z = 0;
+            return vector;
+        }
+        
+        public static float FixNans(float value)
+        {
+            if (float.IsNaN(value)) value = 0;
+            if (float.IsInfinity(value)) value = 0;
+            return value;
+        }
+        
         public static Vector3 GetDirectionTowards(this Transform start, Transform end, bool ignoreHeight)
         {
             if (ignoreHeight)

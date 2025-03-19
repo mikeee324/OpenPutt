@@ -61,7 +61,9 @@ namespace dev.mikeee324.OpenPutt
         public KeyCode desktopInputKey = KeyCode.M;
         public ControllerButtons controllerInputKey = ControllerButtons.None;
         public VRC_Pickup.PickupHand pickupHandLimit = VRC_Pickup.PickupHand.None;
-        public bool applyVelocityAfterDrop;
+
+        public Vector3 desktopHeadOffset = new Vector3(0, 0, 1);
+        public Vector3 desktopRotationOffset = new Vector3(-90, 0, 0);
 
         [HideInInspector]
         public bool pickedUpAtLeastOnce;
@@ -94,13 +96,6 @@ namespace dev.mikeee324.OpenPutt
                             listener.SendCustomEvent(dropEventName);
                             listener.SetProgramVariable(currentHandVariableName, (int)_heldInHand);
                         }
-
-                        if (applyVelocityAfterDrop)
-                        {
-                            var rb = objectToAttach.GetComponent<Rigidbody>();
-                         //   if (Utilities.IsValid(rb))
-                           //     rb.velocity = lastFrameVelocity;
-                        }
                     }
                 }
 
@@ -124,10 +119,6 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        private Quaternion originalRotation;
-
-        private Vector3 lastFramePosition = Vector3.zero;
-        private Vector3 lastFrameVelocity = Vector3.zero;
         private bool firstFrameCheck;
         private bool userIsInVR;
         private Vector3 currentOffset = Vector3.zero;
@@ -136,16 +127,14 @@ namespace dev.mikeee324.OpenPutt
 
         void Start()
         {
-            if (Utilities.IsValid(objectToAttach))
-                originalRotation = objectToAttach.transform.rotation;
             if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
+
             if (!Utilities.IsValid(mountingOffsetHeightScale) || mountingOffsetHeightScale.length == 0)
             {
-                mountingOffsetHeightScale.AddKey(0f, 0.5f);
+                mountingOffsetHeightScale.AddKey(0.2f, 0.1f);
                 mountingOffsetHeightScale.AddKey(1.5f, 1f);
                 mountingOffsetHeightScale.AddKey(5f, 3f);
-                mountingOffsetHeightScale.AddKey(100f, 10f); // Not tested!
             }
 
             currentOffset = mountingOffset;
@@ -165,6 +154,8 @@ namespace dev.mikeee324.OpenPutt
                 userIsInVR = localPlayer.IsUserInVR();
                 firstFrameCheck = true;
             }
+
+            var wasHeldLastFrame = heldInHand;
 
             var currentHand = VRC_Pickup.PickupHand.None;
             if (Utilities.IsValid(pickup))
@@ -194,12 +185,6 @@ namespace dev.mikeee324.OpenPutt
                     currentHand = VRC_Pickup.PickupHand.None;
                 }
 
-                if (currentHand != VRC_Pickup.PickupHand.None && heldInHand != currentHand)
-                {
-                    lastFramePosition = Vector3.zero;
-                    lastFrameVelocity = Vector3.zero;
-                }
-                    
                 heldInHand = currentHand;
             }
 
@@ -220,9 +205,6 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = true;
 
-                lastFramePosition = Vector3.zero;
-                lastFrameVelocity = Vector3.zero;
-
                 return;
             }
 
@@ -232,48 +214,34 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(pickup))
                 pickup.pickupable = false;
 
-            var currPos = gameObject.transform.position;
-            var currRot = gameObject.transform.rotation;
+            var currPos = transform.position;
+            var currRot = transform.rotation;
 
-            if (Utilities.IsValid(objectToAttach))
+            // Desktop users always get the object floating in front of their head
+            if (!userIsInVR)
             {
-                if (userIsInVR)
-                {
-                    objectToAttach.transform.rotation = gameObject.transform.rotation;
-                }
-                else
-                {
-                    objectToAttach.transform.eulerAngles = new Vector3(-90, 0, gameObject.transform.eulerAngles.z - 90);
-
-                    var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                    currPos = head.position + transform.TransformDirection(0, 0, 1);
-                    currRot = head.rotation;
-                }
-
-                transform.SetPositionAndRotation(currPos, currRot);
-                objectToAttach.transform.SetPositionAndRotation(currPos, currRot);
+                var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                currPos = head.position + transform.TransformDirection(desktopHeadOffset);
+                currRot = head.rotation;
             }
 
+            // Move mounted object to the correct position
+            transform.SetPositionAndRotation(currPos, currRot);
+
+            // Apply the desktop offset
+            if (!userIsInVR)
+                currRot *= Quaternion.Euler(desktopRotationOffset);
+            
+            // Move attached object to the position
             if (Utilities.IsValid(rbToAttach) && !rbToAttach.isKinematic)
             {
                 rbToAttach.position = currPos;
                 rbToAttach.rotation = currRot;
             }
-
-            var lastVel = lastFrameVelocity;
-
-            if (lastFramePosition == Vector3.zero)
-                lastFrameVelocity = Vector3.zero;
-            else
-                lastFrameVelocity = (transform.position - lastFramePosition) / Time.deltaTime;
-
-            if (lastFrameVelocity.magnitude > 15f)
-                lastFrameVelocity = lastFrameVelocity.normalized * 15f;
-
-            if (lastVel.magnitude > .01f)
-                lastFrameVelocity = Vector3.Lerp(lastVel, lastFrameVelocity, .1f);
-            
-            lastFramePosition = transform.position;
+            else if (Utilities.IsValid(objectToAttach))
+            {
+                objectToAttach.transform.SetPositionAndRotation(currPos, currRot);
+            }
         }
 
         private void ActivateAndTakeOwnership()
@@ -298,7 +266,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Allows for scaling the position offset based on the players height
         /// </summary>
-        private void UpdateObjectOffset()
+        public void UpdateObjectOffset()
         {
             if (!mountingOffsetHeightScaling)
             {
@@ -317,12 +285,18 @@ namespace dev.mikeee324.OpenPutt
             var scaleFactor = mountingOffsetHeightScale.Evaluate(lastKnownPlayerHeight);
 
             currentOffset = mountingOffset * scaleFactor;
-            pickup.proximity = 0.2f * scaleFactor;
+            pickup.proximity = defaultPickupProximity * scaleFactor;
         }
 
         void OnDisable()
         {
             pickup.Drop();
+        }
+
+        private void OnDrawGizmos()
+        {
+            Gizmos.color = Color.white;
+            Gizmos.DrawWireSphere(transform.position, pickup.proximity);
         }
     }
 }
