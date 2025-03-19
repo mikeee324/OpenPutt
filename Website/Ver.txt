@@ -1,3 +1,12 @@
+0.8.19
+--------
+- Increases the max hit speed on the golf ball to 100m/s (from 15m/s)
+- More improvements to GolfClubCollider script (Unused/unnecessary code cleaned up)
+- BodyMountedObject no longer tracks velocity - Wasn't being used anymore
+- BodyMountedObject now has an option to add a rotation offset for desktop users to help align objects better
+- BodyMountedObject has a better default curve for scaling between 0.2m and 5m player heights (The actual range of heights allowed by avatar scaling)
+- Tidied up scoreboard dev mode page
+
 0.8.18
 --------
 - Improves club collider velocity tracking - should be consistent across frame rates now

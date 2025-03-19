@@ -76,8 +76,6 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
-        public Slider devModeClubWaitSlider;
-        public Slider devModeClubBackstepSlider;
         public Slider devModeClubVelSmoothSlider;
         public Slider devModeBallWeightSlider;
         public Slider devModeBallFrictionSlider;
@@ -95,8 +93,6 @@ namespace dev.mikeee324.OpenPutt
         public Image devModeForAllCheckbox;
         public Image footColliderCheckbox;
         public Image clubRendererCheckbox;
-        public Dropdown devModeColliderVelTypeDropdown;
-        public Dropdown devModeBallColliderTypeDropdown;
         public Transform devModeSettingsBox;
 
         #endregion
@@ -537,33 +533,6 @@ namespace dev.mikeee324.OpenPutt
             RefreshSettingsMenu();
         }
 
-        public void OnBallColliderTypeChanged()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var playerManager = manager.openPutt.LocalPlayerManager;
-            var val = devModeBallColliderTypeDropdown.value;
-
-            switch (val)
-            {
-                case 0:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Discrete;
-                    break;
-                case 1:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.Continuous;
-                    break;
-                case 2:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousDynamic;
-                    break;
-                case 3:
-                    playerManager.golfBall.requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
-                    break;
-            }
-
-            RefreshDevModeMenu();
-        }
-
         public void OnToggleClubRenderer()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -850,19 +819,9 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
 
-            devModeClubWaitSlider.value = playerManager.golfClub.putter.hitWaitFrames;
-            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
-
-            devModeClubBackstepSlider.value = playerManager.golfClub.putter.multiFrameAverageMaxBacksteps;
-            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
-
             devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
             devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
 
-            devModeBallColliderTypeDropdown.value = (int)playerManager.golfBall.requestedCollisionMode;
-
-            devModeClubVelSmoothSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 1);
-            devModeClubBackstepSlider.transform.parent.gameObject.SetActive(devModeColliderVelTypeDropdown.value == 2);
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
@@ -900,16 +859,6 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
-        public void OnClubWaitFramesChanged()
-        {
-            var player = manager.openPutt.LocalPlayerManager;
-
-            if (!Utilities.IsValid(player)) return;
-
-            player.golfClub.putter.hitWaitFrames = Mathf.RoundToInt(devModeClubWaitSlider.value);
-            devModeClubWaitValueLabel.text = String.Format("{0:F0}", devModeClubWaitSlider.value);
-        }
-
         public void OnClubHitBackstepReset()
         {
             var player = manager.openPutt.LocalPlayerManager;
@@ -919,16 +868,6 @@ namespace dev.mikeee324.OpenPutt
             player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
             RefreshDevModeMenu();
-        }
-
-        public void OnClubHitBackstepChanged()
-        {
-            var player = manager.openPutt.LocalPlayerManager;
-
-            if (!Utilities.IsValid(player)) return;
-
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = Mathf.RoundToInt(devModeClubBackstepSlider.value);
-            devModeClubBackstepValueLabel.text = String.Format("{0:F0}", devModeClubBackstepSlider.value);
         }
 
         public void OnClubHitVelSmoothReset()

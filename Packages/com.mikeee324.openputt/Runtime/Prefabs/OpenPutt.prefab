@@ -1474,11 +1474,29 @@ MonoBehaviour:
   pickup: {fileID: 3340377993067903383}
   mountToBone: 10
   mountToPlayerPosition: 0
-  mountingOffset: {x: -0.07, y: 0.07, z: -0.05}
+  mountingOffset: {x: -0.1, y: 0.07, z: -0.03}
   mountingOffsetHeightScaling: 1
   mountingOffsetHeightScale:
     serializedVersion: 2
-    m_Curve: []
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.2
+      value: 0.1
+      inSlope: 0.6041667
+      outSlope: 0.6041667
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 5
+      value: 3
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -1486,7 +1504,8 @@ MonoBehaviour:
   desktopInputKey: 98
   controllerInputKey: 2
   pickupHandLimit: 0
-  applyVelocityAfterDrop: 0
+  desktopHeadOffset: {x: 0, y: 0, z: 1}
+  desktopRotationOffset: {x: -90, y: 0, z: 0}
   pickedUpAtLeastOnce: 0
   forcePickedUp: 0
 --- !u!114 &8514590022788713332
@@ -2009,7 +2028,8 @@ MonoBehaviour:
   desktopInputKey: 0
   controllerInputKey: 0
   pickupHandLimit: 0
-  applyVelocityAfterDrop: 0
+  desktopHeadOffset: {x: 0, y: 0, z: 1}
+  desktopRotationOffset: {x: -90, y: 0, z: 0}
   pickedUpAtLeastOnce: 0
   forcePickedUp: 0
 --- !u!114 &2353227290952077699
@@ -3327,11 +3347,29 @@ MonoBehaviour:
   pickup: {fileID: 906940991815505550}
   mountToBone: 10
   mountToPlayerPosition: 0
-  mountingOffset: {x: 0.07, y: 0.07, z: -0.05}
+  mountingOffset: {x: 0.1, y: 0.07, z: -0.03}
   mountingOffsetHeightScaling: 1
   mountingOffsetHeightScale:
     serializedVersion: 2
-    m_Curve: []
+    m_Curve:
+    - serializedVersion: 3
+      time: 0.2
+      value: 0.1
+      inSlope: 0.6041667
+      outSlope: 0.6041667
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 5
+      value: 3
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -3339,7 +3377,8 @@ MonoBehaviour:
   desktopInputKey: 109
   controllerInputKey: 0
   pickupHandLimit: 0
-  applyVelocityAfterDrop: 0
+  desktopHeadOffset: {x: 0, y: 0, z: 1}
+  desktopRotationOffset: {x: -170, y: 0, z: 0}
   pickedUpAtLeastOnce: 0
   forcePickedUp: 0
 --- !u!114 &7874744816656458465
@@ -4701,6 +4740,7 @@ MonoBehaviour:
   replayableCourses: 0
   enableVerticalHits: 0
   coursesCanBePlayedInAnyOrder: 0
+  scoreMaxPersistantTimeInSeconds: 900
   enableDevModeForAll: 0
   ballRenderQueueBase: -1
   devModePlayerWhitelist:

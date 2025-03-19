@@ -1053,16 +1053,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  velocityCalculationType: 1
-  collisionType: 3
-  enableSweepTests: 1
   multiFrameAverageMaxBacksteps: 3
-  singleFrameSmoothFactor: 0.5
-  smoothedHitDirection: 1
-  smoothFollowClubHead: 1
-  followStrength: 0.9
-  followRotationStrength: 0.99
-  useClubHeadDirection: 1
+  singleFrameSmoothFactor: 0.02
   clubHeadDirectionInfluence:
     serializedVersion: 2
     m_Curve:
@@ -1613,7 +1605,7 @@ MonoBehaviour:
   defaultBallDrag: 0.055
   ballDragOverride: 0.055
   enableAirResistance: 1
-  maxBallSpeed: 15
+  maxBallSpeed: 100
   minBallSpeed: 0.04
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60

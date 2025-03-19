@@ -62,8 +62,8 @@ namespace dev.mikeee324.OpenPutt
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;
 
-        [Range(0f, 1f), Tooltip("How quickly the velocity smoothing will react to changes")]
-        public float singleFrameSmoothFactor = 0.8f;
+        [Range(0f, .1f), Tooltip("How quickly the velocity smoothing will react to changes")]
+        public float singleFrameSmoothFactor = 0.01f;
 
         public AnimationCurve clubHeadDirectionInfluence;
 
@@ -91,7 +91,13 @@ namespace dev.mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
+        
+        /// <summary>
+        /// How many frames we should wait after the hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)
+        /// </summary>
+        private int framesToWaitAfterHit = 0;
 
+        [NonSerialized]
         private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
         /// <summary>
@@ -124,9 +130,10 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public string LastKnownHitType { get; private set; }
 
-        private int framesSinceClubArmed = -1;
         private bool clubIsTouchingBall;
-        private bool CanTrackHitsAndVel => framesSinceClubArmed > 5;
+
+        private bool CanTrackHitsAndVel => framesSinceClubArmed > 3;
+        private int framesSinceClubArmed = -1;
 
         private Transform CurrentTarget
         {
@@ -197,9 +204,6 @@ namespace dev.mikeee324.OpenPutt
             if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
                 speed = 0f;
 
-            if (!Utilities.IsValid(easeInOut))
-                easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
-
             if (maxSpeedForScaling <= 0f)
                 maxSpeedForScaling = 10f;
 
@@ -247,8 +251,7 @@ namespace dev.mikeee324.OpenPutt
             var deltaPos = targetPos - myRigidbody.position;
 
             // Time-based smoothing constant
-            var smoothingTimeConstant = 0.05f;
-            var t = Mathf.Clamp01(Time.fixedDeltaTime / smoothingTimeConstant);
+            var t = Mathf.Clamp01(Time.fixedDeltaTime / singleFrameSmoothFactor);
             var adaptedFollowStrength = Mathf.Lerp(0.5f, 0.95f, t);
 
             var newVel = deltaPos / Time.fixedDeltaTime * adaptedFollowStrength;
@@ -264,8 +267,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (angle != 0 && !myRigidbody.isKinematic)
             {
-                var rotSmoothingTimeConstant = 0.03f;
-                var rotT = Mathf.Clamp01(Time.fixedDeltaTime / rotSmoothingTimeConstant);
+                var rotT = Mathf.Clamp01(Time.fixedDeltaTime / .005f);
                 var adaptedRotationStrength = Mathf.Lerp(0.7f, 0.98f, rotT);
 
                 myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * adaptedRotationStrength);
@@ -307,15 +309,12 @@ namespace dev.mikeee324.OpenPutt
             // Move to next position in circular buffer
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
 
-            // Improved velocity smoothing
-            if (currFrameVelocity.magnitude > 0.001f)
-            {
-                var t = Mathf.Clamp01(Time.deltaTime / .05f);
+            var t = Mathf.Clamp01(Time.deltaTime / .05f);
 
-                FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, t);
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t);
-                FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, t * 0.4f);
-            }
+            // Improved velocity smoothing
+            FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, t);
+            FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t);
+            FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, t * 0.4f);
         }
 
         public override void PostLateUpdate()
@@ -335,6 +334,7 @@ namespace dev.mikeee324.OpenPutt
                     {
                         LastKnownHitType = "(L-Sweep)";
                         framesSinceHit = 0;
+                        framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
                     }
                 }
             }
@@ -343,8 +343,7 @@ namespace dev.mikeee324.OpenPutt
             if (framesSinceHit < 0) return;
 
             // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-            var adaptiveWaitFrames = Mathf.CeilToInt(hitWaitFrames * Mathf.Sqrt(60f * Time.deltaTime));
-            if (framesSinceHit++ < adaptiveWaitFrames) return;
+            if (framesSinceHit++ < framesToWaitAfterHit) return;
 
             // Consume the hit event
             framesSinceHit = -1;
@@ -380,6 +379,7 @@ namespace dev.mikeee324.OpenPutt
                 LastKnownHitType = "(Trigger)";
 
             framesSinceHit = 0;
+            framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
         }
 
         private void OnTriggerExit(Collider other)
@@ -416,6 +416,7 @@ namespace dev.mikeee324.OpenPutt
                 LastKnownHitType = "(Collision)";
 
             framesSinceHit = 0;
+            framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
         }
 
         private void OnCollisionExit(Collision collision)
@@ -520,6 +521,10 @@ namespace dev.mikeee324.OpenPutt
                 velocity.x = 0;
             if (float.IsNaN(velocity.z))
                 velocity.z = 0;
+
+            // Ignore nothing hits
+            if (velocity.magnitude < 0.001f)
+                return;
 
             // Clamp min velocity (we used to just return here, but maybe this is better than the ball not moving?)
             if (velocity.magnitude < golfBall.minBallSpeed)
