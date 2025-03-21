@@ -57,6 +57,9 @@ namespace dev.mikeee324.OpenPutt
         [Header("Settings")] [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
         public int hitWaitFrames = 3;
 
+        [Range(0,100), Tooltip("How much club head velocity should be smooted by. (0=V.High Smoothing 100=No smoothing)")]
+        public float velocitySmoothingValue = 50f;
+
         public AnimationCurve hitForceMultiplier;
 
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
@@ -324,10 +327,8 @@ namespace dev.mikeee324.OpenPutt
 
 
             // Improved velocity smoothing
-            var smoothSpeed = 50f;  // Higher = faster smoothing (0=V.High Smoothing 100=No smoothing)
-            var scalingSpeed = 30f; // Slightly slower for scaling (0=V.High Smoothing 100=No smoothing)
-            var t = 1f - Mathf.Exp(-smoothSpeed * Time.deltaTime);
-            var tScaling = 1f - Mathf.Exp(-scalingSpeed * Time.deltaTime);
+            var t = 1f - Mathf.Exp(-velocitySmoothingValue * Time.deltaTime);
+            var tScaling = 1f - Mathf.Exp(-30f * Time.deltaTime);
 
             FrameVelocity = currFrameVelocity.Sanitized();
             FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t).Sanitized();

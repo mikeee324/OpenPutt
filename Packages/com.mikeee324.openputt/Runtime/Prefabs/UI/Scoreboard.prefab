@@ -9835,9 +9835,9 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1542591921303788859}
   m_Direction: 0
   m_MinValue: 0
-  m_MaxValue: 1
-  m_WholeNumbers: 0
-  m_Value: 0.5
+  m_MaxValue: 100
+  m_WholeNumbers: 1
+  m_Value: 50
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls:
@@ -15235,7 +15235,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1.337, y: -0.82}
+  m_AnchoredPosition: {x: 1.337, y: -1.147}
   m_SizeDelta: {x: 0.07999998, y: 0.08}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!222 &7217509153876621617
@@ -15968,7 +15968,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.63, y: 0.435}
+  m_AnchoredPosition: {x: 0.63, y: 0.108}
   m_SizeDelta: {x: 0.94, y: 0.35}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &8136896602390004489
@@ -19698,12 +19698,12 @@ GameObject:
   - component: {fileID: 6630007749135909973}
   - component: {fileID: 355841779620607298}
   m_Layer: 17
-  m_Name: ClubHitVelSmooth
+  m_Name: ClubResponsiveness
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &2837634060124673102
 RectTransform:
   m_ObjectHideFlags: 0
@@ -19723,7 +19723,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1.3429985, y: -0.2}
+  m_AnchoredPosition: {x: 1.3429985, y: -0.5}
   m_SizeDelta: {x: 0.41300058, y: 0.24}
   m_Pivot: {x: 0, y: 1}
 --- !u!222 &6630007749135909973
@@ -19754,7 +19754,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Club Smoothing Speed
+  m_text: Club Responsiveness
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: e7901ac9d544e0642b79167a7184d6b5, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: e7901ac9d544e0642b79167a7184d6b5, type: 2}
@@ -20647,6 +20647,7 @@ MonoBehaviour:
   devModeLastClubHitDirBias: {fileID: 8854062735736691738}
   devModeBallSpeed: {fileID: 3378746374966020424}
   devModeClubSpeed: {fileID: 7636083444647865864}
+  devModeClubVelSmoothSlider: {fileID: 7282033237307361539}
   devModeBallWeightSlider: {fileID: 1116276338510763391}
   devModeBallFrictionSlider: {fileID: 633086293290642312}
   devModeBallDragSlider: {fileID: 5304595138937106358}
@@ -20654,6 +20655,7 @@ MonoBehaviour:
   devModeBallMaxSpeedSlider: {fileID: 3268411857340830812}
   devModeClubWaitValueLabel: {fileID: 0}
   devModeClubBackstepValueLabel: {fileID: 0}
+  devModeClubVelSmoothValueLabel: {fileID: 949630897230748634}
   devModeBallWeightValueLabel: {fileID: 6291725986164885317}
   devModeBallFrictionValueLabel: {fileID: 2808230246712321301}
   devModeBallDragValueLabel: {fileID: 8610644398266815146}
