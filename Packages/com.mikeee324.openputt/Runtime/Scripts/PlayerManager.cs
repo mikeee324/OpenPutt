@@ -527,6 +527,10 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(pickupHelper))
                     openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
             }
+            
+            // TODO: Instead of disabling the pickup while stood on the course, we could use the line renderer to point towards where the ball is
+            // Might be less confusing when they can't grab their ball from their shoulder is it draws a line to where their ball is
+            
 
             var ballIsOnCurrentCourse = false;
             var shouldEnableBallShoulderPickup = true;
@@ -562,7 +566,11 @@ namespace dev.mikeee324.OpenPutt
 
                 // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
                 // Could count if there has been more than 10 frames of constant collision with a non course floor
-                if (!ballIsOnCurrentCourse)
+                if (ballIsOnCurrentCourse)
+                {
+                    ballNotOnCourseCounter = 0;
+                }
+                else
                 {
                     ballNotOnCourseCounter++;
 
@@ -573,10 +581,6 @@ namespace dev.mikeee324.OpenPutt
                         ballNotOnCourseCounter = 0;
                         golfBall.BallIsMoving = false;
                     }
-                }
-                else
-                {
-                    ballNotOnCourseCounter = 0;
                 }
 
                 // Toggle pickup on/off based on where the player and ball currently are

@@ -179,7 +179,19 @@ namespace dev.mikeee324.OpenPutt
 
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
         public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
-
+        
+        /// <summary>
+        /// Returns a sanitized Vector3 with NaN and infinity values replaced with 0
+        /// </summary>
+        public static Vector3 Sanitized(this Vector3 vector)
+        {
+            return new Vector3(
+                float.IsNaN(vector.x) || float.IsInfinity(vector.x) ? 0f : vector.x,
+                float.IsNaN(vector.y) || float.IsInfinity(vector.y) ? 0f : vector.y,
+                float.IsNaN(vector.z) || float.IsInfinity(vector.z) ? 0f : vector.z
+            );
+        }
+        
         /// <summary>
         /// </summary>
         /// <typeparam name="T"></typeparam>

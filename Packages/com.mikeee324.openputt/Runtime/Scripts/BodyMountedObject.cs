@@ -71,6 +71,9 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public bool forcePickedUp;
 
+        [HideInInspector]
+        public bool tempDisableAttachment = false;
+
         #endregion
 
         #region Internal Vars
@@ -80,7 +83,7 @@ namespace dev.mikeee324.OpenPutt
         public VRC_Pickup.PickupHand heldInHand
         {
             get => _heldInHand;
-            set
+            private set
             {
                 if (_heldInHand != VRC_Pickup.PickupHand.None && value == VRC_Pickup.PickupHand.None)
                 {
@@ -101,6 +104,7 @@ namespace dev.mikeee324.OpenPutt
 
                 if (_heldInHand == VRC_Pickup.PickupHand.None && value != VRC_Pickup.PickupHand.None)
                 {
+                    tempDisableAttachment = false;
                     _heldInHand = value;
                     // Object was just pickup up by the player
                     ActivateAndTakeOwnership();
@@ -213,6 +217,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(pickup))
                 pickup.pickupable = false;
+
+            if (tempDisableAttachment)
+                return;
 
             var currPos = transform.position;
             var currRot = transform.rotation;
