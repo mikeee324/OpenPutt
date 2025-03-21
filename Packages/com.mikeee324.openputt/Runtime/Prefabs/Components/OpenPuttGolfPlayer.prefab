@@ -1020,6 +1020,7 @@ MonoBehaviour:
   maxSpeedForScaling: 10
   maxSpeedScale: {x: 5, y: 3, z: 4}
   hitWaitFrames: 0
+  velocitySmoothingValue: 50
   hitForceMultiplier:
     serializedVersion: 2
     m_Curve:
@@ -2076,7 +2077,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 26112
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
@@ -2143,7 +2144,7 @@ CapsuleCollider:
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.02
-  m_Height: 0.22
+  m_Height: 0.24
   m_Direction: 2
   m_Center: {x: 0, y: 0.0000000037252903, z: -0.125}
 --- !u!54 &1766351271834194596
@@ -2201,7 +2202,7 @@ MonoBehaviour:
   PickupEventName: 
   DropEventName: 
   ThrowVelocityBoostMinSpeed: 1
-  ThrowVelocityBoostScale: 1
+  ThrowVelocityBoostScale: 2.5
   currentlyHeldBy: {fileID: 0}
   pickupable: 0
   proximity: 1

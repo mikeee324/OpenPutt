@@ -76,6 +76,7 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
+        public Slider devModeClubVelSmoothSlider;
         public Slider devModeBallWeightSlider;
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
@@ -83,6 +84,7 @@ namespace dev.mikeee324.OpenPutt
         public Slider devModeBallMaxSpeedSlider;
         public TextMeshProUGUI devModeClubWaitValueLabel;
         public TextMeshProUGUI devModeClubBackstepValueLabel;
+        public TextMeshProUGUI devModeClubVelSmoothValueLabel;
         public TextMeshProUGUI devModeBallWeightValueLabel;
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
@@ -315,17 +317,17 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = manager.openPutt.LocalPlayerManager;
 
             clubPowerSlider.value = playerManager.golfClub.forceMultiplier;
-            clubPowerValueLabel.text = String.Format("{0:F2}x", clubPowerSlider.value);
+            clubPowerValueLabel.text = $"{clubPowerSlider.value:F2}x";
 
             sfxVolumeSlider.value = playerManager.openPutt.SFXController.Volume;
-            sfxVolumeValueLabel.text = String.Format("{0:P0}", sfxVolumeSlider.value);
+            sfxVolumeValueLabel.text = $"{sfxVolumeSlider.value:P0}";
 
             // Just use the first audio source volume
             foreach (var audioSource in manager.openPutt.BGMAudioSources)
             {
                 if (!Utilities.IsValid(audioSource)) continue;
                 bgmVolumeSlider.value = audioSource.volume;
-                bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
+                bgmVolumeValueLabel.text = $"{bgmVolumeSlider.value:P0}";
                 break;
             }
 
@@ -336,7 +338,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (!Utilities.IsValid(audioSource)) continue;
                 worldVolumeSlider.value = audioSource.volume;
-                worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
+                worldVolumeValueLabel.text = $"{worldVolumeSlider.value:P0}";
                 break;
             }
 
@@ -379,7 +381,7 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = manager.openPutt.LocalPlayerManager;
             playerManager.golfClub.forceMultiplier = clubPowerSlider.value;
 
-            clubPowerValueLabel.text = String.Format("{0:F2}x", clubPowerSlider.value);
+            clubPowerValueLabel.text = $"{clubPowerSlider.value:F2}x";
         }
 
         public void OnClubPowerReset()
@@ -400,7 +402,7 @@ namespace dev.mikeee324.OpenPutt
 
             manager.openPutt.SFXController.Volume = sfxVolumeSlider.value;
 
-            sfxVolumeValueLabel.text = String.Format("{0:P0}", sfxVolumeSlider.value);
+            sfxVolumeValueLabel.text = $"{sfxVolumeSlider.value:P0}";
         }
 
         public void OnSFXVolumeReset()
@@ -421,7 +423,7 @@ namespace dev.mikeee324.OpenPutt
             foreach (var audioSource in manager.openPutt.BGMAudioSources)
                 audioSource.volume = bgmVolumeSlider.value;
 
-            bgmVolumeValueLabel.text = String.Format("{0:P0}", bgmVolumeSlider.value);
+            bgmVolumeValueLabel.text = $"{bgmVolumeSlider.value:P0}";
         }
 
         public void OnBGMVolumeReset()
@@ -443,7 +445,7 @@ namespace dev.mikeee324.OpenPutt
             foreach (var audioSource in manager.openPutt.WorldAudioSources)
                 audioSource.volume = worldVolumeSlider.value;
 
-            worldVolumeValueLabel.text = String.Format("{0:P0}", worldVolumeSlider.value);
+            worldVolumeValueLabel.text = $"{worldVolumeSlider.value:P0}";
         }
 
         public void OnWorldVolumeReset()
@@ -803,19 +805,22 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = manager.openPutt.LocalPlayerManager;
 
             devModeBallWeightSlider.value = playerManager.golfBall.BallWeight;
-            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+            devModeBallWeightValueLabel.text = $"{devModeBallWeightSlider.value:F2}";
 
             devModeBallFrictionSlider.value = playerManager.golfBall.BallFriction;
-            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
+            devModeBallFrictionValueLabel.text = $"{devModeBallFrictionSlider.value:F2}";
 
             devModeBallDragSlider.value = playerManager.golfBall.BallDrag;
-            devModeBallDragValueLabel.text = String.Format("{0:F3}", devModeBallDragSlider.value);
+            devModeBallDragValueLabel.text = $"{devModeBallDragSlider.value:F3}";
 
             devModeBallMaxSpeedSlider.value = playerManager.golfBall.BallMaxSpeed;
-            devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
+            devModeBallMaxSpeedValueLabel.text = $"{devModeBallMaxSpeedSlider.value:F0}";
 
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
-            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
+            devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
+
+            devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.velocitySmoothingValue;
+            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
 
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
@@ -840,7 +845,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallWeight = devModeBallWeightSlider.value;
-            devModeBallWeightValueLabel.text = String.Format("{0:F2}", devModeBallWeightSlider.value);
+            devModeBallWeightValueLabel.text = $"{devModeBallWeightSlider.value:F2}";
         }
 
         public void OnClubWaitFramesReset()
@@ -876,6 +881,16 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnClubHitVelSmoothChanged()
+        {
+            var player = manager.openPutt.LocalPlayerManager;
+
+            if (!Utilities.IsValid(player)) return;
+
+            player.golfClub.putter.velocitySmoothingValue = devModeClubVelSmoothSlider.value;
+            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
+        }
+
         public void OnBallFrictionReset()
         {
             var player = manager.openPutt.LocalPlayerManager;
@@ -894,7 +909,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallFriction = devModeBallFrictionSlider.value;
-            devModeBallFrictionValueLabel.text = String.Format("{0:F2}", devModeBallFrictionSlider.value);
+            devModeBallFrictionValueLabel.text = $"{devModeBallFrictionSlider.value:F2}";
         }
 
         public void OnBallADragReset()
@@ -915,7 +930,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallAngularDrag = devModeBallADragSlider.value;
-            devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
+            devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
         }
 
         public void OnBallDragReset()
@@ -935,7 +950,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            var roundedVal = String.Format("{0:F3}", devModeBallDragSlider.value);
+            var roundedVal = $"{devModeBallDragSlider.value:F3}";
 
             player.golfBall.BallDrag = float.Parse(roundedVal);
             devModeBallDragValueLabel.text = roundedVal;
@@ -959,7 +974,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player)) return;
 
             player.golfBall.BallMaxSpeed = devModeBallMaxSpeedSlider.value;
-            devModeBallMaxSpeedValueLabel.text = String.Format("{0:F0}", devModeBallMaxSpeedSlider.value);
+            devModeBallMaxSpeedValueLabel.text = $"{devModeBallMaxSpeedSlider.value:F0}";
         }
 
         #endregion
