@@ -338,6 +338,8 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private float lastHitTravelDistance = 0;
 
+        private VRC_Pickup.PickupHand cPlayerHand = VRC_Pickup.PickupHand.None;
+
         #endregion
 
         void Start()
@@ -405,14 +407,14 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (lastFramePosition != Vector3.zero)
                     newVel = (CurrentPosition - lastHeldFramePosition) / Time.deltaTime;
-                
+
                 if (newVel.magnitude > maxBallSpeed)
                     newVel = lastHeldFrameVelocity.normalized * maxBallSpeed;
-            
+
                 var frameRateRatio = 60f * Time.deltaTime; // 1.0 at 60fps
                 var velocityBlendFactor = Mathf.Clamp(.9f * Mathf.Sqrt(frameRateRatio), 0.1f, 0.95f);
                 lastHeldFrameVelocity = Vector3.Lerp(lastHeldFrameVelocity, newVel, velocityBlendFactor);
-            
+
                 lastHeldFramePosition = CurrentPosition;
             }
             else
@@ -463,7 +465,7 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.velocity = lastFrameVelocity;
 
                 // If the ball has been hit
-                if (requestedBallVelocity != Vector3.zero)
+                if (requestedBallVelocity.magnitude > .001f)
                 {
                     // Reset velocity of ball
                     ballRigidbody.velocity = requestedBallVelocity;
@@ -624,6 +626,9 @@ namespace dev.mikeee324.OpenPutt
                 playerManager.OnCourseStarted(courseThatIsBeingStarted);
 
             UpdateBallState(this.LocalPlayerOwnsThisObject());
+
+            // Force a sync to make sure ball syncs to the pad fully
+            openPuttSync.RequestFastSync(true);
         }
 
         public override void OnPickup()
@@ -639,8 +644,15 @@ namespace dev.mikeee324.OpenPutt
             lastHeldFramePosition = CurrentPosition;
             lastHeldFrameVelocity = Vector3.zero;
 
+            if (Utilities.IsValid(pickup))
+                cPlayerHand = pickup.currentHand;
+
             numberOfPickedUpFrames = 0;
             pickedUpByPlayer = true;
+
+            var ballShoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.rightShoulderPickup : playerManager.openPutt.leftShoulderPickup;
+            if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) && cPlayerHand != VRC_Pickup.PickupHand.None && cPlayerHand != ballShoulderPickup.pickup.currentHand)
+                ballShoulderPickup.tempDisableAttachment = true;
 
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = true;
@@ -664,61 +676,86 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
                     OpenPuttUtils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
+
+                if (Utilities.IsValid(pickup))
+                    cPlayerHand = VRC_Pickup.PickupHand.None;
+                return;
+            }
+
+            // Player did not drop ball on a start pad and are currently playing a course
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.CurrentCourse))
+            {
+                if (playerManager.CurrentCourse.drivingRangeMode)
+                {
+                    if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                        OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
+                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                }
+                else if (Utilities.IsValid(respawnPosition))
+                {
+                    if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                        OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
+
+                    BallIsMoving = false;
+
+                    // Put the ball back where it last stopped on the course so the player can continue
+                    ballRigidbody.position = respawnPosition;
+
+                    // Play the reset noise
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
+                        playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+
+                    pickedUpByPlayer = false;
+                    return;
+                }
+                else
+                {
+                    // We don't know where to put the ball - skip the current course
+                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                }
+            }
+
+            if (Networking.LocalPlayer.IsUserInVR() && cPlayerHand != VRC_Pickup.PickupHand.None)
+            {
+                // Secret ball slingshot
+                var ballShoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.rightShoulderPickup : playerManager.openPutt.leftShoulderPickup;
+                if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.tempDisableAttachment)
+                {
+                    ballShoulderPickup.tempDisableAttachment = false;
+                    ballShoulderPickup.pickup.Drop();
+
+                    pickup.Drop();
+
+                    var flingDir = ballShoulderPickup.transform.position - transform.position;
+                    var playerHeight = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
+
+                    var velocityScale = Mathf.Clamp01(flingDir.magnitude / playerHeight) * BallMaxSpeed * .5f;
+                    lastHeldFrameVelocity = flingDir.normalized * velocityScale;
+                }
             }
             else
             {
-                // Player did not drop ball on a start pad and are currently playing a course
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.CurrentCourse))
-                {
-                    if (playerManager.CurrentCourse.drivingRangeMode)
-                    {
-                        if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                            OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
-                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
-                    }
-                    else if (Utilities.IsValid(respawnPosition))
-                    {
-                        if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                            OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
-
-                        BallIsMoving = false;
-
-                        // Put the ball back where it last stopped on the course so the player can continue
-                        ballRigidbody.position = respawnPosition;
-
-                        // Play the reset noise
-                        if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                            playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
-
-                        pickedUpByPlayer = false;
-                        return;
-                    }
-                    else
-                    {
-                        // We don't know where to put the ball - skip the current course
-                        playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
-                    }
-                }
-
-                // Allows the ball to drop to the floor when you drop it
-                droppedByPlayer = true;
-                BallIsMoving = true;
-                
-                if (lastFramePosition == Vector3.zero)
-                    lastHeldFrameVelocity = Vector3.zero;
-                
-                // Apply velocity of the ball that we saw last frame so players can throw the ball
+                // Normal drop behaviour
                 if (Networking.LocalPlayer.IsUserInVR())
                     lastHeldFrameVelocity *= pickup.ThrowVelocityBoostScale;
-                
-                requestedBallVelocity = lastHeldFrameVelocity;
-
-                lastFramePosition = Vector3.zero;
-                lastHeldFrameVelocity = Vector3.zero;
-
-                // Allows ball to bounce
-                stepsSinceLastGrounded = 2;
             }
+
+            // Allows the ball to drop to the floor when you drop it
+            droppedByPlayer = true;
+            BallIsMoving = true;
+
+            // Allows ball to bounce
+            stepsSinceLastGrounded = 2;
+
+            // Apply velocity of the ball that we saw last frame so players can throw the ball
+            if (lastHeldFrameVelocity.magnitude > .001f || cPlayerHand != VRC_Pickup.PickupHand.None)
+                requestedBallVelocity = lastHeldFrameVelocity.Sanitized();
+
+            lastFramePosition = Vector3.zero;
+            lastHeldFrameVelocity = Vector3.zero;
+
+            if (Utilities.IsValid(pickup))
+                cPlayerHand = pickup.currentHand;
         }
 
         /// <summary>

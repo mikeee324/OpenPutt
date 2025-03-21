@@ -62,9 +62,6 @@ namespace dev.mikeee324.OpenPutt
         [Range(0, 15), Tooltip("The max number of frames the collider can go back for an average")]
         public int multiFrameAverageMaxBacksteps = 3;
 
-        [Range(0f, .1f), Tooltip("How quickly the velocity smoothing will react to changes")]
-        public float singleFrameSmoothFactor = 0.01f;
-
         public AnimationCurve clubHeadDirectionInfluence;
 
         private int bufferIndex = 0;
@@ -91,7 +88,7 @@ namespace dev.mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
-        
+
         /// <summary>
         /// How many frames we should wait after the hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)
         /// </summary>
@@ -250,16 +247,15 @@ namespace dev.mikeee324.OpenPutt
             // Work out velocity needed to reach the target position
             var deltaPos = targetPos - myRigidbody.position;
 
-            // Time-based smoothing constant
-            var t = Mathf.Clamp01(Time.fixedDeltaTime / singleFrameSmoothFactor);
-            var adaptedFollowStrength = Mathf.Lerp(0.5f, 0.95f, t);
-
-            var newVel = deltaPos / Time.fixedDeltaTime * adaptedFollowStrength;
+            // Position following
+            const float FOLLOW_SPEED = 50f; // Higher = faster following
+            var t = 1f - Mathf.Exp(-FOLLOW_SPEED * Time.fixedDeltaTime);
+            var newVel = deltaPos / Time.fixedDeltaTime * t;
 
             if (newVel.magnitude > 0f)
                 myRigidbody.velocity = newVel;
 
-            // Similar time-based approach for rotation
+            // Rotation following
             var deltaRot = targetRot * Quaternion.Inverse(transform.rotation);
             deltaRot.ToAngleAxis(out var angle, out var axis);
             if (angle > 180.0f)
@@ -267,10 +263,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (angle != 0 && !myRigidbody.isKinematic)
             {
-                var rotT = Mathf.Clamp01(Time.fixedDeltaTime / .005f);
-                var adaptedRotationStrength = Mathf.Lerp(0.7f, 0.98f, rotT);
-
-                myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * adaptedRotationStrength);
+                const float ROT_SPEED = 200f; // Higher = faster rotation
+                var rotT = 1f - Mathf.Exp(-ROT_SPEED * Time.fixedDeltaTime);
+                myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * rotT);
             }
         }
 
@@ -292,7 +287,7 @@ namespace dev.mikeee324.OpenPutt
 
             var currFrameVelocity = Vector3.zero;
             if (prevPos != Vector3.zero)
-                currFrameVelocity = (currentPos - prevPos) / Time.deltaTime;
+                currFrameVelocity = ((currentPos - prevPos) / Time.deltaTime).Sanitized();
 
             // Store current position in the buffer at the current index
             lastPositions[bufferIndex] = currentPos;
@@ -309,12 +304,34 @@ namespace dev.mikeee324.OpenPutt
             // Move to next position in circular buffer
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
 
-            var t = Mathf.Clamp01(Time.deltaTime / .05f);
+            // Skip velocity smoothing on first frame only
+            if (framesSinceClubArmed == 0)
+            {
+                FrameVelocity = Vector3.zero;
+                FrameVelocitySmoothed = Vector3.zero;
+                FrameVelocitySmoothedForScaling = Vector3.zero;
+                return;
+            }
+
+            // On frame 1, take the velocity directly then we smooth the value from that point on
+            if (framesSinceClubArmed == 1)
+            {
+                FrameVelocity = currFrameVelocity;
+                FrameVelocitySmoothed = currFrameVelocity;
+                FrameVelocitySmoothedForScaling = currFrameVelocity;
+                return;
+            }
+
 
             // Improved velocity smoothing
-            FrameVelocity = Vector3.Lerp(FrameVelocity, currFrameVelocity, t);
-            FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t);
-            FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, t * 0.4f);
+            var smoothSpeed = 50f;  // Higher = faster smoothing (0=V.High Smoothing 100=No smoothing)
+            var scalingSpeed = 30f; // Slightly slower for scaling (0=V.High Smoothing 100=No smoothing)
+            var t = 1f - Mathf.Exp(-smoothSpeed * Time.deltaTime);
+            var tScaling = 1f - Mathf.Exp(-scalingSpeed * Time.deltaTime);
+
+            FrameVelocity = currFrameVelocity.Sanitized();
+            FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t).Sanitized();
+            FrameVelocitySmoothedForScaling = Vector3.Lerp(FrameVelocitySmoothedForScaling, currFrameVelocity, tScaling).Sanitized();
         }
 
         public override void PostLateUpdate()
@@ -458,17 +475,15 @@ namespace dev.mikeee324.OpenPutt
                 var olderPos = lastPositions[olderIdx];
                 var olderTime = lastPositionTimes[olderIdx];
 
-                if (olderPos != Vector3.zero && olderTime < 0.5f)
-                {
-                    var frameDir = newestPos - olderPos;
-                    var weight = 1.0f / (1.0f + olderTime);
+                if (olderPos == Vector3.zero || !(olderTime < 0.5f)) continue;
+                
+                var frameDir = (newestPos - olderPos).Sanitized();
+                var weight = 1.0f / (1.0f + olderTime);
 
-                    if (frameDir.magnitude > 0.001f)
-                    {
-                        weightedDirection += frameDir.normalized * weight;
-                        totalWeight += weight;
-                    }
-                }
+                if (!(frameDir.magnitude > 0.001f)) continue;
+                
+                weightedDirection += frameDir.normalized * weight;
+                totalWeight += weight;
             }
 
             if (totalWeight > 0f)
@@ -479,7 +494,7 @@ namespace dev.mikeee324.OpenPutt
                 directionOfTravel.y = 0; // Flatten the direction vector
 
             // Normalize the direction vector now it's been flattened (Apparently it has to be in this order as well!!)
-            directionOfTravel = directionOfTravel.normalized;
+            directionOfTravel = directionOfTravel.normalized.Sanitized();
 
             LastKnownHitDirBias = 0;
             var faceDirection = putterTarget.transform.right;
@@ -515,12 +530,7 @@ namespace dev.mikeee324.OpenPutt
             var velocity = directionOfTravel * velocityMagnitude;
 
             // Fix NaNs so we don't die
-            if (float.IsNaN(velocity.y))
-                velocity.y = 0;
-            if (float.IsNaN(velocity.x))
-                velocity.x = 0;
-            if (float.IsNaN(velocity.z))
-                velocity.z = 0;
+            velocity = velocity.Sanitized();
 
             // Ignore nothing hits
             if (velocity.magnitude < 0.001f)

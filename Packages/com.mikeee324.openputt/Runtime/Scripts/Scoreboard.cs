@@ -76,7 +76,6 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
-        public Slider devModeClubVelSmoothSlider;
         public Slider devModeBallWeightSlider;
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
@@ -84,7 +83,6 @@ namespace dev.mikeee324.OpenPutt
         public Slider devModeBallMaxSpeedSlider;
         public TextMeshProUGUI devModeClubWaitValueLabel;
         public TextMeshProUGUI devModeClubBackstepValueLabel;
-        public TextMeshProUGUI devModeClubVelSmoothValueLabel;
         public TextMeshProUGUI devModeBallWeightValueLabel;
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
@@ -819,9 +817,6 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = String.Format("{0:F2}", devModeBallADragSlider.value);
 
-            devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.singleFrameSmoothFactor;
-            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
-
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
@@ -879,16 +874,6 @@ namespace dev.mikeee324.OpenPutt
             player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
             RefreshDevModeMenu();
-        }
-
-        public void OnClubHitVelSmoothChanged()
-        {
-            var player = manager.openPutt.LocalPlayerManager;
-
-            if (!Utilities.IsValid(player)) return;
-
-            player.golfClub.putter.singleFrameSmoothFactor = devModeClubVelSmoothSlider.value;
-            devModeClubVelSmoothValueLabel.text = String.Format("{0:F2}", devModeClubVelSmoothSlider.value);
         }
 
         public void OnBallFrictionReset()

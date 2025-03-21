@@ -1054,7 +1054,6 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   multiFrameAverageMaxBacksteps: 3
-  singleFrameSmoothFactor: 0.02
   clubHeadDirectionInfluence:
     serializedVersion: 2
     m_Curve:
@@ -1282,7 +1281,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4887699219127935805
 Transform:
   m_ObjectHideFlags: 0
@@ -1978,12 +1977,12 @@ PrefabInstance:
     - target: {fileID: -914332758332951627, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       propertyPath: m_Layer
-      value: 14
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: -259972160606440404, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       propertyPath: m_Layer
-      value: 14
+      value: 13
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
@@ -2003,7 +2002,7 @@ PrefabInstance:
     - target: {fileID: 6089200158594790890, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       propertyPath: m_Layer
-      value: 14
+      value: 13
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2012,7 +2011,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8106322172600868202}
+      addedObject: {fileID: 5174867792008421549}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       insertIndex: -1
@@ -2124,8 +2123,8 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 4926412383973620334}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &8106322172600868202
-BoxCollider:
+--- !u!136 &5174867792008421549
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -2137,13 +2136,15 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 26112
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.0240005, y: 0.024000507, z: 0.2500005}
+  serializedVersion: 2
+  m_Radius: 0.02
+  m_Height: 0.22
+  m_Direction: 2
   m_Center: {x: 0, y: 0.0000000037252903, z: -0.125}
 --- !u!54 &1766351271834194596
 Rigidbody:
@@ -2153,9 +2154,9 @@ Rigidbody:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5232980627184682815}
   serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_Mass: 0.375
+  m_Drag: 0.5
+  m_AngularDrag: 1
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -2164,12 +2165,12 @@ Rigidbody:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 26112
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
+  m_UseGravity: 1
   m_IsKinematic: 1
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &3364887681977424718
@@ -2235,7 +2236,8 @@ MonoBehaviour:
   headMesh: {fileID: 149639404086247989}
   shaftEndPosition: {fileID: 1215706633630273412}
   pickup: {fileID: 3364887681977424718}
-  handleCollider: {fileID: 8106322172600868202}
+  clubRigidbody: {fileID: 1766351271834194596}
+  handleCollider: {fileID: 5174867792008421549}
   shaftCollider: {fileID: 2213463569754413228}
   resizeLayerMask:
     serializedVersion: 2
