@@ -819,7 +819,7 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
-            devModeClubVelSmoothSlider.value = playerManager.golfClub.putter.velocitySmoothingValue;
+            devModeClubVelSmoothSlider.value = playerManager.golfClub.velocityTrackingSmoothing;
             devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
 
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
@@ -865,7 +865,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
+            //player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
             RefreshDevModeMenu();
         }
@@ -876,7 +876,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
+            //player.golfClub.putter.multiFrameAverageMaxBacksteps = 4;
 
             RefreshDevModeMenu();
         }
@@ -887,7 +887,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.putter.velocitySmoothingValue = devModeClubVelSmoothSlider.value;
+            player.golfClub.velocityTrackingSmoothing = devModeClubVelSmoothSlider.value;
             devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
         }
 
