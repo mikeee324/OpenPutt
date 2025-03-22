@@ -24,10 +24,10 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(localPlayerManager))
                 return;
 
-            scoreboard.devModeLastClubHitSpeed.text = string.Format("{0:F2} {1}", localPlayerManager.golfClubHead.LastKnownHitVelocity, localPlayerManager.golfClubHead.LastKnownHitType);
-            scoreboard.devModeLastClubHitDirBias.text = string.Format("{0:F0}%", localPlayerManager.golfClubHead.LastKnownHitDirBias * 100f);
-            scoreboard.devModeBallSpeed.text = string.Format("{0:F2}", localPlayerManager.golfBall.BallCurrentSpeed);
-            scoreboard.devModeClubSpeed.text = string.Format("{0:F2}", localPlayerManager.golfClubHead.FrameVelocitySmoothed.magnitude);
+            scoreboard.devModeLastClubHitSpeed.text = $"{localPlayerManager.golfClubHead.LastKnownHitVelocity:F2} {localPlayerManager.golfClubHead.LastKnownHitType}";
+            scoreboard.devModeLastClubHitDirBias.text = $"{localPlayerManager.golfClubHead.LastKnownHitDirBias * 100f:F0}%";
+            scoreboard.devModeBallSpeed.text = $"{localPlayerManager.golfBall.BallCurrentSpeed:F2}";
+            scoreboard.devModeClubSpeed.text = $"{localPlayerManager.golfClub.FrameHeadSpeed.magnitude:F2}";
         }
     }
 }

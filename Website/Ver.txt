@@ -1,3 +1,9 @@
+0.8.23
+--------
+- #83 - Golf club head speed is now calculated from the hand controller speed and takes the club scale into account
+- Fixes grabbing golf club and dropping quickly resulting in the flying away at high speed
+- Stops golf club calculating its center of mass every frame (only does it when you actually throw it now)
+
 0.8.22
 --------
 - Flying golf clubs should sync until they stop moving now

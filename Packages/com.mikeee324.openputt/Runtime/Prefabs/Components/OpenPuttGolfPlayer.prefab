@@ -1020,7 +1020,6 @@ MonoBehaviour:
   maxSpeedForScaling: 10
   maxSpeedScale: {x: 5, y: 3, z: 4}
   hitWaitFrames: 0
-  velocitySmoothingValue: 50
   hitForceMultiplier:
     serializedVersion: 2
     m_Curve:
@@ -1054,7 +1053,6 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  multiFrameAverageMaxBacksteps: 3
   clubHeadDirectionInfluence:
     serializedVersion: 2
     m_Curve:
@@ -2231,15 +2229,17 @@ MonoBehaviour:
   playerManager: {fileID: 4926412382919218372}
   ball: {fileID: 4926412384239502559}
   putter: {fileID: 4926412383994304887}
-  openPuttSync: {fileID: 0}
+  openPuttSync: {fileID: 8826804128194035019}
   handleMesh: {fileID: 6025733114640705258}
   shaftMesh: {fileID: 6688118757230199481}
   headMesh: {fileID: 149639404086247989}
+  headBoxCollider: {fileID: 1811774654891117233}
   shaftEndPosition: {fileID: 1215706633630273412}
   pickup: {fileID: 3364887681977424718}
   clubRigidbody: {fileID: 1766351271834194596}
   handleCollider: {fileID: 5174867792008421549}
   shaftCollider: {fileID: 2213463569754413228}
+  velocityTrackingSmoothing: 60
   resizeLayerMask:
     serializedVersion: 2
     m_Bits: 1
