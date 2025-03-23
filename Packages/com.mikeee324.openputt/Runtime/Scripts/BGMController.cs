@@ -59,7 +59,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             // We can only start the next track if this one finished
-            if (audioSource.isPlaying || audioClips.Length == 0)
+            if (!audioSource.enabled || audioSource.isPlaying || audioClips.Length == 0)
                 return;
 
             // Move to the next track in the list
