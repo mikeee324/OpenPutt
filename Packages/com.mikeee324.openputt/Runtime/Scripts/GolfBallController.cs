@@ -475,6 +475,10 @@ namespace dev.mikeee324.OpenPutt
 
                     lastHitMaxDistance = 0;
                     lastHitTravelDistance = 0;
+
+                    // Reset time counters
+                    timeNotMoving = 0f;
+                    timeMoving = 0f;
                 }
                 else
                 {

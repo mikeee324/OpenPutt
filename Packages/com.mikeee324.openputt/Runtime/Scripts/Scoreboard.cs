@@ -82,8 +82,7 @@ namespace dev.mikeee324.OpenPutt
         public Slider devModeBallDragSlider;
         public Slider devModeBallADragSlider;
         public Slider devModeBallMaxSpeedSlider;
-        public TextMeshProUGUI devModeClubWaitValueLabel;
-        public TextMeshProUGUI devModeClubBackstepValueLabel;
+        public TMP_Dropdown devModeVelocityTypeDropdown;
         public TextMeshProUGUI devModeClubVelSmoothValueLabel;
         public TextMeshProUGUI devModeBallWeightValueLabel;
         public TextMeshProUGUI devModeBallFrictionValueLabel;
@@ -102,6 +101,7 @@ namespace dev.mikeee324.OpenPutt
         public Image verticalHitsCheckbox;
         public Image isPlayingCheckbox;
         public Image leftHandModeCheckbox;
+        public Image clubThrowCheckbox;
         public Image enableBigShaftCheckbox;
         public Image courseReplaysCheckbox;
         public Image invertCameraXCheckbox;
@@ -358,6 +358,7 @@ namespace dev.mikeee324.OpenPutt
             isPlayingCheckbox.sprite = playerManager.isPlaying ? checkboxOff : checkboxOn;
             leftHandModeCheckbox.sprite = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.sprite = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
+            clubThrowCheckbox.sprite = playerManager.golfClub.throwEnabled ? checkboxOn : checkboxOff;
 
             var cameraManager = manager.openPutt.desktopModeCameraController;
             invertCameraXCheckbox.sprite = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
@@ -545,6 +546,18 @@ namespace dev.mikeee324.OpenPutt
             playerManager.golfClubVisualiser.gameObject.SetActive(!isActive);
 
             RefreshDevModeMenu();
+        }
+
+        public void OnToggleClubThrow()
+        {
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
+                return;
+
+            var playerManager = manager.openPutt.LocalPlayerManager;
+
+            playerManager.golfClub.throwEnabled = !playerManager.golfClub.throwEnabled;
+
+            RefreshSettingsMenu();
         }
 
         public void OnTogglePlayerManager()
@@ -820,7 +833,9 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
             devModeClubVelSmoothSlider.value = playerManager.golfClub.velocityTrackingSmoothing;
-            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
+            devModeClubVelSmoothValueLabel.text = $"{(devModeClubVelSmoothSlider.value / 400f) * 100f:F0}%";
+            
+            devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
@@ -881,6 +896,17 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnVelocityTrackingChanged()
+        {
+            var player = manager.openPutt.LocalPlayerManager;
+
+            if (!Utilities.IsValid(player)) return;
+            
+            player.golfClub.velocityTrackingType = devModeVelocityTypeDropdown.value;
+            
+            RefreshDevModeMenu();
+        }
+
         public void OnClubHitVelSmoothChanged()
         {
             var player = manager.openPutt.LocalPlayerManager;
@@ -888,7 +914,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player)) return;
 
             player.golfClub.velocityTrackingSmoothing = devModeClubVelSmoothSlider.value;
-            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value:F0}%";
+            devModeClubVelSmoothValueLabel.text = $"{(devModeClubVelSmoothSlider.value / 400f) * 100f:F0}%";
         }
 
         public void OnBallFrictionReset()

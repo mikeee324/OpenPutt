@@ -55,7 +55,7 @@ namespace dev.mikeee324.OpenPutt
         public Vector3 maxSpeedScale = new Vector3(3, 1, 1);
 
         [Header("Settings")] [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
-        public int hitWaitFrames = 3;
+        public int hitWaitFrames = 1;
 
         public AnimationCurve hitForceMultiplier;
 
@@ -245,7 +245,7 @@ namespace dev.mikeee324.OpenPutt
             var deltaPos = targetPos - myRigidbody.position;
 
             // Position following
-            const float FOLLOW_SPEED = 80f; // Higher = faster following
+            const float FOLLOW_SPEED = 400f; // Higher = faster following
             var t = 1f - Mathf.Exp(-FOLLOW_SPEED * Time.fixedDeltaTime);
             var newVel = deltaPos / Time.fixedDeltaTime * t;
 
@@ -260,7 +260,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (angle != 0 && !myRigidbody.isKinematic)
             {
-                const float ROT_SPEED = 200f; // Higher = faster rotation
+                const float ROT_SPEED = 400f; // Higher = faster rotation
                 var rotT = 1f - Mathf.Exp(-ROT_SPEED * Time.fixedDeltaTime);
                 myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * rotT);
             }
@@ -346,7 +346,7 @@ namespace dev.mikeee324.OpenPutt
                     {
                         LastKnownHitType = "(L-Sweep)";
                         framesSinceHit = 0;
-                        framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+                        framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
                     }
                 }
             }
@@ -391,7 +391,7 @@ namespace dev.mikeee324.OpenPutt
                 LastKnownHitType = "(Trigger)";
 
             framesSinceHit = 0;
-            framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+            framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
         }
 
         private void OnTriggerExit(Collider other)
@@ -428,7 +428,7 @@ namespace dev.mikeee324.OpenPutt
                 LastKnownHitType = "(Collision)";
 
             framesSinceHit = 0;
-            framesToWaitAfterHit = Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+            framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
         }
 
         private void OnCollisionExit(Collision collision)
@@ -455,7 +455,51 @@ namespace dev.mikeee324.OpenPutt
             var headVelocity = golfClub.FrameHeadSpeed.Sanitized();
             var directionOfTravel = headVelocity;
             var velocityMagnitude = headVelocity.magnitude;
+
+            // 0 = Use collider smoothed velocity
+            if (golfClub.velocityTrackingType == 0)
+                velocityMagnitude = FrameVelocitySmoothed.magnitude;
             
+            // if < 2 We are using collider direction vector
+            if (golfClub.velocityTrackingType < 2)
+            {
+                var weightedDirection = Vector3.zero;
+                var totalWeight = 0f;
+
+                // Get the most recent position index
+                var newestIdx = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
+                var newestPos = lastPositions[newestIdx];
+
+                // Look back through history to get a time-weighted average direction
+                for (var i = 1; i < 3 && i < lastPositions.Length; i++)
+                {
+                    // Calculate the older index by going backward in the circular buffer
+                    var olderIdx = (newestIdx - i + lastPositions.Length) % lastPositions.Length;
+                    var olderPos = lastPositions[olderIdx];
+                    var olderTime = lastPositionTimes[olderIdx];
+
+                    if (olderPos == Vector3.zero || !(olderTime < 0.5f)) continue;
+
+                    var frameDir = (newestPos - olderPos).Sanitized();
+                    var weight = 1.0f / (1.0f + olderTime);
+
+                    if (!(frameDir.magnitude > 0.001f)) continue;
+
+                    weightedDirection += frameDir.normalized * weight;
+                    totalWeight += weight;
+                }
+
+                if (totalWeight > 0f)
+                    directionOfTravel = (weightedDirection / totalWeight).normalized;
+            }
+
+            // If the collider is following something other than the club - override normal operation
+            if (Utilities.IsValid(targetOverride))
+            {
+                directionOfTravel = FrameVelocitySmoothed;
+                velocityMagnitude = FrameVelocitySmoothed.magnitude;
+            }
+
             // If we are currently disallowing hits to go vertical
             if (!openPutt.enableVerticalHits && !currentCourseIsDrivingRange)
                 directionOfTravel.y = 0; // Flatten the direction vector
@@ -495,7 +539,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Put the direction and magnitude back together
             var velocity = directionOfTravel * velocityMagnitude;
-            
+
             // Fix NaNs so we don't die
             velocity = velocity.Sanitized();
 

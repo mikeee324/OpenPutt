@@ -1,3 +1,14 @@
+0.8.24
+--------
+- (Dev mode) Adds in option to toggle between a couple of different velocity tracking methods for the golf club
+- Adds toggle for golf club throwing
+- Left Handed + Club Throwing settings are now persistent
+- Golf club throwing min speed is higher, also removes player speed from the calculation
+- Golf club cannot be thrown immediately, you must hold it for a few frames now
+- Golf ball default hit speed reduced to 15m/s (where it used to be, doesn't actually make much sense for mini golf lol)
+- Removes hit speed multiplier from main settings menu - not required any more
+- HitWaitFrames reduced to 1 - Might help with getting a good direction for hits
+
 0.8.23
 --------
 - #83 - Golf club head speed is now calculated from the hand controller speed and takes the club scale into account

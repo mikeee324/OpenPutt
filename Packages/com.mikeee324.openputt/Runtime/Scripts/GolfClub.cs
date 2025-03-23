@@ -27,14 +27,18 @@ namespace dev.mikeee324.OpenPutt
         public Collider handleCollider;
         public BoxCollider shaftCollider;
 
-        [Range(0, 200), Tooltip("How much club head velocity should be smoothed by. ")]
+        [Range(0, 400), Tooltip("0 = More Smoothing | 400 = Less Smoothing")]
         public float velocityTrackingSmoothing = 60f;
+
+        public bool throwEnabled = true;
+        public float minThrowSpeed = 3f;
 
         public MaterialPropertyBlock headPB;
         public MaterialPropertyBlock shaftPB;
 
         public LayerMask resizeLayerMask;
 
+        public int velocityTrackingType = 0;
         public float forceMultiplier = 1f;
 
         private Vector3 lastFramePos = Vector3.zero;
@@ -435,7 +439,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void OnScriptDrop()
         {
-            if (framesHeld > 0)
+            if (framesHeld > 10)
             {
                 heldByPlayer = false;
                 ThrowClub();
@@ -482,7 +486,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnDrop()
         {
-            if (framesHeld > 0)
+            if (framesHeld > 10)
             {
                 heldByPlayer = false;
                 ThrowClub();
@@ -514,9 +518,12 @@ namespace dev.mikeee324.OpenPutt
 
         private void ThrowClub()
         {
+            if (!throwEnabled) return;
             if (heldByPlayer) return;
 
-            if (FrameVelocitySmoothed.magnitude < pickup.ThrowVelocityBoostMinSpeed) return;
+            var speed = FrameVelocitySmoothed.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
+
+            if (speed < minThrowSpeed) return;
             
             if (Utilities.IsValid(clubRigidbody) && Utilities.IsValid(shaftEndPosition))
             {
@@ -535,7 +542,7 @@ namespace dev.mikeee324.OpenPutt
                 clubRigidbody.velocity = FrameVelocitySmoothed * pickup.ThrowVelocityBoostScale;
             else
                 clubRigidbody.velocity = FrameVelocitySmoothed;
-            clubRigidbody.angularVelocity = FrameAngularVelocitySmoothed;
+            clubRigidbody.angularVelocity = FrameAngularVelocitySmoothed * .7f;
         }
 
         private void ResetClubThrow()

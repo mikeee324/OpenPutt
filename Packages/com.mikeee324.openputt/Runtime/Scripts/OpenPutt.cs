@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "0.8.23";
+        public readonly string CurrentVersion = "0.8.24";
 
         #region References
 
@@ -286,6 +286,8 @@ namespace dev.mikeee324.OpenPutt
 
             // Save players ball colour
             PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
+            PlayerData.SetBool("OpenPutt-LeftHanded", LocalPlayerManager.IsInLeftHandedMode);
+            PlayerData.SetBool("OpenPutt-ThrowEnabled", LocalPlayerManager.golfClub.throwEnabled);
 
             // Save volume settings
             PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);
@@ -310,6 +312,11 @@ namespace dev.mikeee324.OpenPutt
             var localPlayer = Networking.LocalPlayer;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColor"))
                 LocalPlayerManager.BallColor = PlayerData.GetColor(localPlayer, "OpenPutt-BallColor");
+
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-ThrowEnabled"))
+                LocalPlayerManager.golfClub.throwEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ThrowEnabled");
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-LeftHanded"))
+                LocalPlayerManager.IsInLeftHandedMode = PlayerData.GetBool(localPlayer, "OpenPutt-LeftHanded");
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
                 SFXController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");

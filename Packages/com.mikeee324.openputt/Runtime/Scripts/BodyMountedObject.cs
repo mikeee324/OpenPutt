@@ -238,7 +238,7 @@ namespace dev.mikeee324.OpenPutt
             // Apply the desktop offset
             if (!userIsInVR)
                 currRot *= Quaternion.Euler(desktopRotationOffset);
-            
+
             // Move attached object to the position
             if (Utilities.IsValid(rbToAttach) && !rbToAttach.isKinematic)
             {
@@ -292,11 +292,13 @@ namespace dev.mikeee324.OpenPutt
             var scaleFactor = mountingOffsetHeightScale.Evaluate(lastKnownPlayerHeight);
 
             currentOffset = mountingOffset * scaleFactor;
-            pickup.proximity = defaultPickupProximity * scaleFactor;
+            if (Utilities.IsValid(pickup))
+                pickup.proximity = defaultPickupProximity * scaleFactor;
         }
 
         void OnDisable()
         {
+            if (!Utilities.IsValid(pickup)) return;
             pickup.Drop();
         }
 
