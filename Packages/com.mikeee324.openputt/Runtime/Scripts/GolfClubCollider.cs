@@ -582,9 +582,12 @@ namespace dev.mikeee324.OpenPutt
 
             // Reset position buffers
             bufferIndex = 0;
-            lastPositions = new Vector3[lastPositions.Length];
-            lastPositionRotations = new Quaternion[lastPositions.Length];
-            lastPositionTimes = new float[lastPositions.Length];
+            for (var i = 0; i < lastPositions.Length; i++)
+            {
+                lastPositions[i] = target.position;
+                lastPositionRotations[i] = target.rotation;
+                lastPositionTimes[i] = 0f;
+            }
 
             // Reset stored velocities
             FrameVelocity = Vector3.zero;
