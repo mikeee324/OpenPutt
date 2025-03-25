@@ -1,4 +1,5 @@
-﻿using UdonSharp;
+﻿using System;
+using UdonSharp;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Varneon.VUdon.ArrayExtensions;
@@ -31,6 +32,9 @@ namespace dev.mikeee324.OpenPutt
         public PlayerManager playerManager;
 
         [SerializeField]
+        private TrailRenderer trail;
+
+        [SerializeField]
         private Rigidbody ballRigidbody;
 
         [SerializeField]
@@ -53,7 +57,7 @@ namespace dev.mikeee324.OpenPutt
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody by default (Can be overriden by other scripts for sand pits and things)")]
-        public float defaultBallDrag = .02f;
+        public float defaultBallDrag = .055f;
 
         [Range(0, 1), Tooltip("The amount of drag to apply to the balls RigidBody (Overrides the default drag above)")]
         public float ballDragOverride;
@@ -82,14 +86,17 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField, Range(0f, 100f)]
         float groundSnappingMaxSpeed = 100f;
 
-        [SerializeField, Min(0f)]
-        float groundSnappingProbeDistance = 1f;
+        [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
+        float groundRaycastDistance = 0.02f;
+
+        [SerializeField, Min(0f), Tooltip("The distance to check for the ground snapping probe. This helps keep the ball from bouncing weird on certain floor edges. (in meters)")]
+        float groundSnappingProbeDistance = 0.05f;
 
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
-        [Space] [Range(0, 2), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
-        public float wallBounceSpeedMultiplier = 0.7f;
+        [Space] [Range(0.1f, 2f), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
+        public float wallBounceSpeedMultiplier = 0.8f;
 
         [Range(0, 0.5f)] [Tooltip("Controls how the ball reflects off walls. 0=Perfect reflection 0.5=Half the direction is lost 1=Runs along the wall it hits")]
         public float wallBounceDeflection = .1f;
@@ -134,7 +141,6 @@ namespace dev.mikeee324.OpenPutt
                     resetBallTimers = true;
                 }
 
-                ClearPhysicsState();
                 UpdateBallState(localPlayerIsOwner);
 
                 // Tells the players golf club to update its current state
@@ -303,20 +309,13 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField]
         public Vector3 requestedBallVelocity = Vector3.zero;
 
-        Vector3 velocity;
-
-        Vector3 contactNormal, steepNormal;
-
-        public int groundContactCount, steepContactCount;
-
-        public bool OnGround => groundContactCount > 0;
-
-        bool OnSteep => steepContactCount > 0;
+        public bool OnGround => stepsOnGround > 1;
 
         float minGroundDotProduct;
 
         private Vector3 lastGroundContactNormal = Vector3.up;
-        int stepsSinceLastGrounded;
+        private float timeFlying = 0;
+        int stepsOnGround, stepsInAir;
         private bool resetBallTimers = true;
 
         /// Stores the last known dynamic friction value of the surface the ball was last on top of
@@ -378,7 +377,12 @@ namespace dev.mikeee324.OpenPutt
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
-            SetEnabled(false);
+            SendCustomEventDelayedSeconds(nameof(Disable), 1f);
+        }
+
+        public void Disable()
+        {
+            enabled = false;
         }
 
         public void SetEnabled(bool enabled)
@@ -431,8 +435,6 @@ namespace dev.mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
-            ClearPhysicsState();
-
             // If ball is picked up by player - we do stuff in PostLateUpdate instead
             if (pickedUpByPlayer)
                 return;
@@ -480,10 +482,8 @@ namespace dev.mikeee324.OpenPutt
                     timeNotMoving = 0f;
                     timeMoving = 0f;
                 }
-                else
-                {
-                    UpdatePhysicsState();
-                }
+
+                UpdatePhysicsState();
 
                 if (Utilities.IsValid(playerManager.CurrentCourse))
                     timeMoving += Time.deltaTime;
@@ -497,14 +497,12 @@ namespace dev.mikeee324.OpenPutt
                 var ballRollingForTooLong = timeMoving > maxBallRollingTime;
                 var ballRollingTooSlowForTooLong = timeNotMoving >= minBallSpeedMaxTime;
 
-                var onGround = Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, groundSnappingProbeDistance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
-
                 if (ballRollingForTooLong || ballRollingTooSlowForTooLong)
                 {
-                    if (onGround)
+                    if (OnGround)
                     {
                         // If the ball is currently rolling down a slope
-                        if (hit.normal.y < .99f)
+                        if (lastGroundContactNormal.y < .99f)
                         {
                             // If we have been stuck on this slope for too long force ball stop so player can hit it
                             if (timeNotMoving > minBallSpeedMaxTime * 2f)
@@ -522,7 +520,7 @@ namespace dev.mikeee324.OpenPutt
                                 BallIsMoving = true;
 
                                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                                    OpenPuttUtils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={hit.normal.y})");
+                                    OpenPuttUtils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Y={lastGroundContactNormal.y})");
                             }
                         }
                         else
@@ -535,11 +533,11 @@ namespace dev.mikeee324.OpenPutt
                         BallIsMoving = false;
                     }
                 }
-                else
+                else if (!pickedUpByPlayer)
                 {
                     var velMagnitude = ballRigidbody.velocity.magnitude;
                     // Apply drag force based on curve as long as the ball is rolling faster than the threshold and is grounded
-                    if (velMagnitude > 0.01f && onGround)
+                    if (velMagnitude > 0.01f && OnGround)
                     {
                         var currDrag = defaultBallDrag;
 
@@ -552,7 +550,7 @@ namespace dev.mikeee324.OpenPutt
                         ballRigidbody.AddForce(-ballRigidbody.velocity.normalized * currDrag);
                     }
 
-                    // Fake ball roll base on speed
+                    // Fake ball roll based on speed
                     var directionOfTravel = ballRigidbody.position - lastFramePosition;
                     var angle = directionOfTravel.magnitude * 1f * (180f / Mathf.PI) / ballCollider.radius;
                     var rotationAxis = Vector3.Cross(Vector3.up, directionOfTravel).normalized;
@@ -726,15 +724,20 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.tempDisableAttachment)
                 {
                     ballShoulderPickup.tempDisableAttachment = false;
-                    ballShoulderPickup.pickup.Drop();
+                    if (Utilities.IsValid(ballShoulderPickup.pickup))
+                        ballShoulderPickup.pickup.Drop();
 
-                    pickup.Drop();
+                    if (Utilities.IsValid(pickup))
+                        pickup.Drop();
 
                     var flingDir = ballShoulderPickup.transform.position - transform.position;
                     var playerHeight = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
 
-                    var velocityScale = Mathf.Clamp01(flingDir.magnitude / playerHeight) * BallMaxSpeed * .5f;
+                    var velocityScale = Mathf.Clamp01(flingDir.magnitude / playerHeight) * 50f;
                     lastHeldFrameVelocity = flingDir.normalized * velocityScale;
+
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
+                        playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (lastHeldFrameVelocity.magnitude * 14.28571428571429f) / 4f);
                 }
             }
             else
@@ -749,7 +752,7 @@ namespace dev.mikeee324.OpenPutt
             BallIsMoving = true;
 
             // Allows ball to bounce
-            stepsSinceLastGrounded = 2;
+            stepsInAir = -1;
 
             // Apply velocity of the ball that we saw last frame so players can throw the ball
             if (lastHeldFrameVelocity.magnitude > .001f || cPlayerHand != VRC_Pickup.PickupHand.None)
@@ -837,8 +840,6 @@ namespace dev.mikeee324.OpenPutt
             if (withVelocity.magnitude == 0)
                 return;
 
-            ClearPhysicsState();
-
             // Set the lastFrameVelocity to this, so if we collide with a wall straight away we bounce off it properly
             lastFrameVelocity = withVelocity;
 
@@ -889,8 +890,6 @@ namespace dev.mikeee324.OpenPutt
                         // Just reset the timers
                         timeNotMoving = 0f;
                         timeMoving = 0f;
-
-                        ClearPhysicsState();
                     }
                     else
                     {
@@ -908,8 +907,6 @@ namespace dev.mikeee324.OpenPutt
             // Hit something from the side or above the ball
             if (Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.StartsWith(wallMaterial.name))
                 ReflectCollision(collision);
-
-            EvaluateCollision(collision);
         }
 
         void OnCollisionStay(Collision collision)
@@ -929,8 +926,6 @@ namespace dev.mikeee324.OpenPutt
                         // Just reset the timers
                         timeNotMoving = 0f;
                         timeMoving = 0f;
-
-                        ClearPhysicsState();
                     }
                     else
                     {
@@ -938,8 +933,6 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
             }
-
-            EvaluateCollision(collision);
         }
 
         /// <summary>
@@ -949,13 +942,14 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="collision">The collision that happened</param>
         private void ReflectCollision(Collision collision)
         {
-            if (!Utilities.IsValid(ballRigidbody) || collision.contacts.Length == 0)
+            if (!Utilities.IsValid(ballRigidbody) || !Utilities.IsValid(collision) || collision.contacts.Length == 0 || collision.contactCount == 0)
                 return;
 
             // Work out which direction we need to bounce off the wall
             var contact = collision.contacts[0];
+            if (!Utilities.IsValid(contact)) return;
 
-            var collisionNormal = contact.normal;
+            var collisionNormal = contact.normal.Sanitized();
 
             // Checks if the collision was from "below" and ignores it
             if (collisionNormal.y > wallBounceHeightIgnoreAmount)
@@ -970,197 +964,116 @@ namespace dev.mikeee324.OpenPutt
                 lastFrameVelocity = ballRigidbody.velocity;
 
             // Reflect the current vector off the wall
-            var newDirection = Vector3.Reflect(lastFrameVelocity.normalized, collisionNormal);
+            var newDirection = Vector3.Reflect(lastFrameVelocity.normalized, collisionNormal).Sanitized();
 
             // If we still don't have a velocity don't do anything else as we might get stuck against the wall
             if (newDirection == Vector3.zero)
                 return;
 
-            var v = Vector3.Project(newDirection, collisionNormal);
+            var v = Vector3.Project(newDirection, collisionNormal).Sanitized();
 
             // How bouncy is this wall?
-            var bounceMultiplier = Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.Length == 0 ? wallBounceSpeedMultiplier : collision.collider.material.bounciness;
+            var bounceMultiplier = wallBounceSpeedMultiplier;
+            if (Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.Length == 0)
+                bounceMultiplier = collision.collider.material.bounciness;
+            if (bounceMultiplier < .01f)
+                bounceMultiplier = wallBounceSpeedMultiplier;
+            if (bounceMultiplier < .01f)
+                bounceMultiplier = .8f;
 
             var speedAfterBounce = lastFrameVelocity.magnitude * bounceMultiplier;
 
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
+            if (newDirection.y > .001f)
+            {
+                OpenPuttUtils.Log(this, $"Ball should bounce up here");
+                stepsOnGround = 0;
+                stepsInAir = -1;
+            }
+
             // Set the ball velocity so it bounces the right way
-            lastFrameVelocity = velocity = ballRigidbody.velocity = newDirection;
+            lastFrameVelocity = ballRigidbody.velocity = newDirection.Sanitized();
 
             // Play a hit sound because we bounced off something
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
                 playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
         }
 
-        void ClearPhysicsState()
-        {
-            groundContactCount = steepContactCount = 0;
-            contactNormal = steepNormal = Vector3.zero;
-            //  lastGroundContactNormal = 1f;
-        }
-
         void UpdatePhysicsState()
         {
-            stepsSinceLastGrounded += 1;
-            velocity = ballRigidbody.velocity;
-            var wasNotGrounded = stepsSinceLastGrounded > 30;
+            var isGrounded = Physics.Raycast(CurrentPosition, Vector3.down, out var groundingHit, ballCollider.radius + groundRaycastDistance, groundSnappingProbeMask);
+            // playerManager.BallColor = isGrounded ? Color.green : Color.red; // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
 
-            if (SnapToGround() || OnGround || CheckSteepContacts())
+            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 1 && stepsInAir == 0;
+
+            var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
+
+            if (isGrounded)
             {
-                stepsSinceLastGrounded = 0;
-                if (groundContactCount > 1)
-                {
-                    contactNormal.Normalize();
-                }
-
-                if (wasNotGrounded && OnGround && audioWhenBallHitsFloor)
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                        playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (velocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
+                stepsOnGround += 1;
+                stepsInAir = 0;
+                timeFlying = 0;
             }
             else
             {
-                contactNormal = Vector3.up;
+                stepsOnGround = 0;
+                stepsInAir += 1;
+                timeFlying += Time.deltaTime;
             }
 
-            ApplyAirResistance();
-        }
-
-        /// <summary>
-        /// Supposed to make things slow down better than the built in linear drag - but I think I did something wrong as it either doesn't slow down to a stop or just launches the ball at a ridiculous speed
-        /// </summary>
-        private void ApplyQuadraticDrag()
-        {
-            var vel = -ballRigidbody.velocity;
-            var dragForceMagnitude = .1f * vel.sqrMagnitude;
-            var dragForceVector = dragForceMagnitude * vel.normalized;
-
-            ballRigidbody.AddForce(dragForceVector);
-        }
-
-        private void ApplyAirResistance()
-        {
-            if (!enableAirResistance)
-                return;
-
-            /*float coef = 0.47f;                        // drag coefficient of a golf ball
-            float objectArea = (float)(Math.PI * ballCollider.radius * ballCollider.radius);              // crossSectionalArea of sphere in [m^2]
-            float airDensity = 1.225f;                     // air density in [kg/m^3]
-            Vector3 vel = ballRigidbody.velocity;
-
-            vel.x = 0.5f * coef * objectArea * vel.x * vel.x * airDensity;
-            vel.y = 0.5f * coef * objectArea * vel.y * vel.y * airDensity;
-            vel.z = 0.5f * coef * objectArea * vel.z * vel.z * airDensity;
-
-            Utils.Log(this, $"{ballRigidbody.velocity} --- {-vel}");
-
-            ballRigidbody.AddForce(-vel);*/
-
-
-            // Old try to do this using the mass etc
-            var air_density = 1.225f;
-            //var drag_coeff = .47f;
-            var drag_coeff = .35f;
-            var ball_cross_section = Mathf.PI * ballCollider.radius * ballCollider.radius;
-            var drag_vel = ballRigidbody.velocity;
-            var drag_accel = 0.5f * air_density * ball_cross_section * drag_coeff * drag_vel.magnitude * drag_vel;
-            //Vector3 drag_accel = drag_vel * drag_vel.magnitude * 0.5f * air_density * drag_coeff * ball_cross_section / ballRigidbody.mass;
-
-            ballRigidbody.AddForce(-drag_accel);
-        }
-
-
-        /// <summary>
-        /// Tries to keep the ball from bouncing off edges on flat meshes (also works when ball is travelling up hills)
-        /// </summary>
-        /// <returns>True if the ball velocity was corrected, false if nothing was done</returns>
-        bool SnapToGround()
-        {
-            if (stepsSinceLastGrounded > 1)
-                return false;
-
-            if (!Physics.Raycast(ballRigidbody.position, Vector3.down, out var hit, groundSnappingProbeDistance, groundSnappingProbeMask))
-                return false;
-
-            var lastNormalY = lastGroundContactNormal.y;
-            lastGroundContactNormal = hit.normal;
-
-            var speed = velocity.magnitude;
-            if (speed < groundSnappingMinSpeed || speed > groundSnappingMaxSpeed)
-                return false;
-
-            if (hit.normal.y < minGroundDotProduct || hit.normal.y > lastNormalY)
-                return false;
-
-            groundContactCount = 1;
-            contactNormal = hit.normal;
-
-            // If we have a velocity from the previous frame use that as it will be our velocity before the bounce
-            if (lastFrameVelocity.magnitude > 0)
-                velocity = lastFrameVelocity;
-
-            var dot = Vector3.Dot(velocity, hit.normal);
-
-            if (dot < 0f)
+            // Unity sphere colliders seem to have this thing when traversing over edges where they can register a collision even on a flat floor and bounce upwards
+            // This code tries to correct the balls trajectory in places where it can happen
+            // It will work on flat floors and ramps... except it will stop snapping when the ramp flattens out (so the ball can fly at the top if it's going fast enough)
+            if (shouldSnapToGround)
             {
-                ballRigidbody.velocity = (velocity - hit.normal * dot).normalized * speed;
-                lastFrameVelocity = ballRigidbody.velocity;
-            }
+                var lastNormalY = lastGroundContactNormal.y;
+                var foundFloor = Physics.Raycast(CurrentPosition, Vector3.down, out var snapHit, ballCollider.radius + groundSnappingProbeDistance, groundSnappingProbeMask);
 
-            return true;
-        }
+                if (foundFloor)
+                    lastGroundContactNormal = snapHit.normal;
 
-        bool CheckSteepContacts()
-        {
-            if (steepContactCount > 1)
-            {
-                steepNormal.Normalize();
-                if (steepNormal.y >= minGroundDotProduct)
+                var velocity = ballRigidbody.velocity;
+                var speed = velocity.magnitude;
+
+                if (speed < groundSnappingMinSpeed || speed > groundSnappingMaxSpeed)
+                    shouldSnapToGround = false;
+
+                // Don't bother on things that are too steep
+                if (lastGroundContactNormal.y < minGroundDotProduct)
+                    shouldSnapToGround = false;
+
+                // Don't snap if the slope is backing off
+                if (lastGroundContactNormal.y > lastNormalY)
+                    shouldSnapToGround = false;
+
+                // If we still are allowed to snap the ball to the ground...
+                // Redirect ball so it follows the face it's currently sat on
+                if (shouldSnapToGround)
                 {
-                    steepContactCount = 0;
-                    groundContactCount = 1;
-                    contactNormal = steepNormal;
-                    return true;
+                    var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, lastGroundContactNormal).normalized * speed;
+
+                    // Only snap if the ball velocity is going up a ramp
+                    if (newVelocity.y > 0.001f)
+                        ballRigidbody.velocity = lastFrameVelocity = newVelocity;
                 }
             }
 
-            return false;
-        }
-
-        /// <summary>
-        /// Keeps track of the angle of the floor that the ball is currently on (Used for snapping the ball to the floor when travelling on flat or upward slopes<br/>
-        /// This is needed as sometimes the ball can jump on flat surfaces when travelling over edges in meshes
-        /// </summary>
-        /// <param name="collision">The collision that happened</param>
-        void EvaluateCollision(Collision collision)
-        {
-            if (droppedByPlayer || !Utilities.IsValid(ballRigidbody) || !BallIsMoving) return;
-
-            var minDot = minGroundDotProduct;
-            for (var i = 0; i < collision.contactCount; i++)
+            if (audioWhenBallHitsFloor && canPlayHitGroundSound)
             {
-                var normal = collision.GetContact(i).normal;
-                if (normal.y >= minDot)
-                {
-                    groundContactCount += 1;
-                    contactNormal += normal;
-                }
-                else if (normal.y > -0.01f)
-                {
-                    steepContactCount += 1;
-                    steepNormal += normal;
-                }
+                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
+                    playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (lastFrameVelocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
             }
-        }
 
-        /// <summary>
-        /// Not used for anything.. just here in case I need it ever
-        /// </summary>
-        /// <param name="vector"></param>
-        /// <returns></returns>
-        private Vector3 ProjectOnContactPlane(Vector3 vector)
-        {
-            return vector - contactNormal * Vector3.Dot(vector, contactNormal);
+            if (!enableAirResistance) return;
+
+            // Apply air resistance to the ball
+            const float airDensity = 1.225f;
+            const float dragCoeff = .35f;
+            var ballCrossSection = Mathf.PI * ballCollider.radius * ballCollider.radius;
+            var dragVel = ballRigidbody.velocity.Sanitized();
+            var dragAccel = (0.5f * airDensity * ballCrossSection * dragCoeff * dragVel.magnitude * dragVel).Sanitized();
+            ballRigidbody.AddForce(-dragAccel);
         }
 
         public void OnRespawn()

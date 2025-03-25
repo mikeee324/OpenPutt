@@ -2,21 +2,28 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!21 &2100000
 Material:
-  serializedVersion: 6
+  serializedVersion: 8
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: BallMat
   m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
-  m_ShaderKeywords: _BICUBIC_SAMPLING_ON _EMISSION _INVERSEMATRIX_APPROXIMATE
-  m_LightmapFlags: 2
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _NORMALMAP
+  m_InvalidKeywords:
+  - _BICUBIC_SAMPLING_ON
+  - _INVERSEMATRIX_APPROXIMATE
+  m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses:
   - ALWAYS
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -29,7 +36,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 2dfcc04f3762a434e9bc32929a7a18e2, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAOMap:
@@ -168,6 +175,7 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    m_Ints: []
     m_Floats:
     - BAKERY_META_ALPHA_ENABLE: 1
     - _ACES: 0
@@ -229,7 +237,7 @@ Material:
     - _GSAA: 0
     - _GSAAStrength: 1
     - _GlossMapScale: 1
-    - _Glossiness: 0.739
+    - _Glossiness: 0.7
     - _GlossyReflections: 1
     - _HDRReflShad: 0
     - _HeightChannel: 3
@@ -244,7 +252,7 @@ Material:
     - _LTCGI_DIFFUSE_OFF: 0
     - _LTCGI_SPECULAR_OFF: 0
     - _MetaCull: 0
-    - _Metallic: 0.6
+    - _Metallic: 0
     - _MetallicChannel: 2
     - _MetallicMult: 0
     - _MirrorToggle: 0
@@ -317,9 +325,9 @@ Material:
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 0.235, b: 0, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DetailColor: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 1, g: 0.235, b: 0, a: 1}
+    - _EmissionColor: {r: 0.509434, g: 0.509434, b: 0.509434, a: 1}
     - _RimCol: {r: 1, g: 1, b: 1, a: 1}
     - _ScatterCol: {r: 1, g: 1, b: 1, a: 1}
     - _TintReflShad: {r: 1, g: 1, b: 1, a: 1}
@@ -330,3 +338,4 @@ Material:
     - _UV4Scroll: {r: 0, g: 0, b: 0, a: 0}
     - _UV5Scroll: {r: 0, g: 0, b: 0, a: 0}
     - _UVRimMaskScroll: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []

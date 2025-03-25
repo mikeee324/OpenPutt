@@ -49,6 +49,8 @@ namespace dev.mikeee324.OpenPutt
         {
             set
             {
+                if (_ballColor == value) return;
+                
                 _ballColor = value;
                 if (!Utilities.IsValid(golfBall)) return;
 

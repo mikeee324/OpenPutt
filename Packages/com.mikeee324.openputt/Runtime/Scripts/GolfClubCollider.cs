@@ -173,12 +173,17 @@ namespace dev.mikeee324.OpenPutt
         private void OnEnable()
         {
             framesSinceClubArmed = 0;
+            golfClubHeadCollider.isTrigger = true;
+            clubIsTouchingBall = false;
+
             MoveToClubWithoutVelocity();
         }
 
         private void OnDisable()
         {
             framesSinceClubArmed = 0;
+            golfClubHeadCollider.isTrigger = true;
+            clubIsTouchingBall = false;
         }
 
         /// <summary>
@@ -227,14 +232,13 @@ namespace dev.mikeee324.OpenPutt
             golfBall.Wakeup();
 
             // We can assume if FixedUpdate is running, the club is armed
-            framesSinceClubArmed += 1;
+            if (clubIsTouchingBall)
+                framesSinceClubArmed = 0;
+            else
+                framesSinceClubArmed += 1;
 
-            // If the club is not allowed to track hits and velocity, we just move the collider to the club head
-            if (!CanTrackHitsAndVel)
-            {
-                MoveToClubWithoutVelocity();
-                return;
-            }
+            // Non-trigger colliders can actually track fast hits
+            golfClubHeadCollider.isTrigger = !CanTrackHitsAndVel || clubIsTouchingBall;
 
             // Most recent position is at the previous index
             var previousIndex = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
@@ -302,23 +306,13 @@ namespace dev.mikeee324.OpenPutt
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
 
             // Skip velocity smoothing on first frame only
-            if (framesSinceClubArmed == 0)
+            if (!CanTrackHitsAndVel)
             {
                 FrameVelocity = Vector3.zero;
                 FrameVelocitySmoothed = Vector3.zero;
                 FrameVelocitySmoothedForScaling = Vector3.zero;
                 return;
             }
-
-            // On frame 1, take the velocity directly then we smooth the value from that point on
-            if (framesSinceClubArmed == 1)
-            {
-                FrameVelocity = currFrameVelocity;
-                FrameVelocitySmoothed = currFrameVelocity;
-                FrameVelocitySmoothedForScaling = currFrameVelocity;
-                return;
-            }
-
 
             // Improved velocity smoothing
             var t = 1f - Mathf.Exp(-60f * Time.deltaTime);
@@ -369,29 +363,15 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(other))
                 return;
 
-            // Ignore extra hits to the ball until we have processed the first
-            if (framesSinceHit >= 0)
-                return;
-
             // We only care if this collided with the local players ball
             if (other.gameObject != golfBall.gameObject)
                 return;
 
-            // Stops players from launching the ball by placing the club inside the ball and arming it
-            if (!CanTrackHitsAndVel)
-            {
-                if (golfClub.playerManager.openPutt.debugMode)
-                    OpenPuttUtils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
-                return;
-            }
-
             clubIsTouchingBall = true;
 
-            if (framesSinceHit < 0)
-                LastKnownHitType = "(Trigger)";
-
-            framesSinceHit = 0;
-            framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+            // Stops players from launching the ball by placing the club inside the ball and arming it
+            if (!CanTrackHitsAndVel && golfClub.playerManager.openPutt.debugMode)
+                OpenPuttUtils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
         }
 
         private void OnTriggerExit(Collider other)
@@ -399,9 +379,16 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(other) || other.gameObject != golfBall.gameObject)
                 return;
 
-            clubIsTouchingBall = false;
+            SendCustomEventDelayedSeconds(nameof(ResetClubTouchingBall), .5f);
+            framesSinceClubArmed = 0;
+
             if (golfClub.playerManager.openPutt.debugMode)
                 OpenPuttUtils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
+        }
+
+        public void ResetClubTouchingBall()
+        {
+            clubIsTouchingBall = false;
         }
 
         private void OnCollisionEnter(Collision collision)
@@ -437,6 +424,8 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             clubIsTouchingBall = false;
+            framesSinceClubArmed = 0;
+
             if (golfClub.playerManager.openPutt.debugMode)
                 OpenPuttUtils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
         }
@@ -459,7 +448,7 @@ namespace dev.mikeee324.OpenPutt
             // 0 = Use collider smoothed velocity
             if (golfClub.velocityTrackingType == 0)
                 velocityMagnitude = FrameVelocitySmoothed.magnitude;
-            
+
             // if < 2 We are using collider direction vector
             if (golfClub.velocityTrackingType < 2)
             {
