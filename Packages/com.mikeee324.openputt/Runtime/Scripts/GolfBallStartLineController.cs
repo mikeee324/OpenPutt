@@ -11,6 +11,7 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Setting/References
 
+        public PlayerManager PlayerManager;
         public GolfBallController golfBall;
 
         [Tooltip("A reference to the LineRenderer (Should be on the same GameObject)")]
@@ -107,13 +108,23 @@ namespace dev.mikeee324.OpenPutt
         /// <returns></returns>
         public bool StartDropAnimation(Vector3 ballWorldPosition)
         {
-            if (!gameObject.activeSelf || !Utilities.IsValid(closestBallStart))
+            if (!gameObject.activeSelf) return false;
+
+            var hasBallStartPad = Utilities.IsValid(closestBallStart);
+            var isPlayingACourse = false;
+            if (Utilities.IsValid(PlayerManager) && Utilities.IsValid(PlayerManager.CurrentCourse))
+                isPlayingACourse = PlayerManager.courseStates[PlayerManager.CurrentCourse.holeNumber] == CourseState.Playing;
+
+            if (!hasBallStartPad && !isPlayingACourse)
                 return false;
 
             lerpStartPosition = ballWorldPosition;
-            lerpStopPosition = closestBallStart.transform.position;
+            if (hasBallStartPad)
+                lerpStopPosition = closestBallStart.transform.position;
+            else
+                lerpStopPosition = golfBall.respawnPosition;
             lerpToStartTime = 0;
-            
+
             golfBall.transform.rotation = Quaternion.identity;
 
             return true;
@@ -206,10 +217,8 @@ namespace dev.mikeee324.OpenPutt
         {
             if (lerpToStartTime >= 0f)
             {
-                if (!Utilities.IsValid(closestBallStart) || golfBall.pickedUpByPlayer)
-                {
+                if (golfBall.pickedUpByPlayer)
                     return;
-                }
 
                 var lerpMaxTime = 0.5f;
                 var lerpProgress = Mathf.Clamp(lerpToStartTime / lerpMaxTime, 0, 1);
@@ -221,8 +230,10 @@ namespace dev.mikeee324.OpenPutt
                 }
                 else
                 {
-                    golfBall.SetPosition(closestBallStart.transform.position);
-                    golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
+                    golfBall.SetPosition(lerpStopPosition);
+
+                    if (Utilities.IsValid(closestBallStart))
+                        golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
 
                     ResetDropAnimation();
                 }
@@ -230,19 +241,53 @@ namespace dev.mikeee324.OpenPutt
             else if (!golfBall.pickedUpByPlayer)
             {
                 SetEnabled(false);
+                return;
             }
 
-            if (!Utilities.IsValid(closestBallStart))
+            if (!Utilities.IsValid(PlayerManager))
             {
-                // Can't see a ball spawn nearby - hide line renderer
-                lineRenderer.SetPosition(0, Vector3.zero);
-                lineRenderer.SetPosition(1, Vector3.zero);
+                if (Utilities.IsValid(closestBallStart))
+                {
+                    // We have a ball spawn nearby - draw a line to it
+                    lineRenderer.SetPosition(0, golfBall.transform.position);
+                    lineRenderer.SetPosition(1, closestBallStart.transform.position);
+                }
+                else
+                {
+                    // Can't see a ball spawn nearby - hide line renderer
+                    lineRenderer.SetPosition(0, Vector3.zero);
+                    lineRenderer.SetPosition(1, Vector3.zero);
+                }
             }
-            else
+
+            var ballShoulderPickup = PlayerManager.IsInLeftHandedMode ? PlayerManager.openPutt.rightShoulderPickup : PlayerManager.openPutt.leftShoulderPickup;
+
+            if (Utilities.IsValid(closestBallStart))
             {
                 // We have a ball spawn nearby - draw a line to it
                 lineRenderer.SetPosition(0, golfBall.transform.position);
                 lineRenderer.SetPosition(1, closestBallStart.transform.position);
+            }
+            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.tempDisableAttachment)
+            {
+                lineRenderer.SetPosition(0, golfBall.CurrentPosition);
+                lineRenderer.SetPosition(1, ballShoulderPickup.transform.position);
+            }
+            else if (Utilities.IsValid(PlayerManager.CurrentCourse))
+            {
+                var currentCourse = PlayerManager.CurrentCourse;
+
+                var currentState = PlayerManager.courseStates[currentCourse.holeNumber];
+                if (currentState != CourseState.Playing) return;
+
+                lineRenderer.SetPosition(0, golfBall.CurrentPosition);
+                lineRenderer.SetPosition(1, golfBall.respawnPosition);
+            }
+            else
+            {
+                // Can't see a ball spawn nearby - hide line renderer
+                lineRenderer.SetPosition(0, Vector3.zero);
+                lineRenderer.SetPosition(1, Vector3.zero);
             }
         }
     }

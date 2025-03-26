@@ -434,7 +434,8 @@ namespace dev.mikeee324.OpenPutt
 
                 if (shouldDropPickup && (int)pickup.currentHand != (int)VRC_Pickup.PickupHand.None)
                 {
-                    pickup.Drop();
+                    if (Utilities.IsValid(pickup))
+                        pickup.Drop();
                     return;
                 }
 
@@ -457,7 +458,8 @@ namespace dev.mikeee324.OpenPutt
         public void ForceDrop()
         {
             if (this.LocalPlayerOwnsThisObject()) return;
-            pickup.Drop();
+            if (Utilities.IsValid(pickup))
+                pickup.Drop();
         }
 
         public override void OnDrop()

@@ -28,10 +28,10 @@ namespace dev.mikeee324.OpenPutt
         public BoxCollider shaftCollider;
 
         [Range(0, 400), Tooltip("0 = More Smoothing | 400 = Less Smoothing")]
-        public float velocityTrackingSmoothing = 60f;
+        public float velocityTrackingSmoothing = 200f;
 
         public bool throwEnabled = true;
-        public float minThrowSpeed = 3f;
+        public float minThrowSpeed = 4f;
 
         public MaterialPropertyBlock headPB;
         public MaterialPropertyBlock shaftPB;
@@ -520,10 +520,16 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!throwEnabled) return;
             if (heldByPlayer) return;
+            if (!Utilities.IsValid(Networking.LocalPlayer)) return;
+            
+            // Get raw velocity without player velocity
+            var rawSpeed = FrameVelocitySmoothed.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
 
-            var speed = FrameVelocitySmoothed.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
+            // Normalize speed based on player height (Using 1.7m as reference height)
+            var heightRatio = 1.7f / Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f);
+            var normalizedSpeed = rawSpeed * heightRatio;
 
-            if (speed < minThrowSpeed) return;
+            if (normalizedSpeed < minThrowSpeed) return;
             
             if (Utilities.IsValid(clubRigidbody) && Utilities.IsValid(shaftEndPosition))
             {
