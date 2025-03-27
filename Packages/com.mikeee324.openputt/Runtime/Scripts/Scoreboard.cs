@@ -92,6 +92,7 @@ namespace dev.mikeee324.OpenPutt
         public Image devModeForAllCheckbox;
         public Image footColliderCheckbox;
         public Image clubRendererCheckbox;
+        public Image balLGroundedCheckbox;
         public Transform devModeSettingsBox;
 
         #endregion
@@ -548,6 +549,18 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnToggleBallGrounded()
+        {
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
+                return;
+
+            var playerManager = manager.openPutt.LocalPlayerManager;
+
+            playerManager.golfBall.ballGroundedDebug = !playerManager.golfBall.ballGroundedDebug;
+
+            RefreshDevModeMenu();
+        }
+
         public void OnToggleClubThrow()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -834,9 +847,10 @@ namespace dev.mikeee324.OpenPutt
 
             devModeClubVelSmoothSlider.value = playerManager.golfClub.velocityTrackingSmoothing;
             devModeClubVelSmoothValueLabel.text = $"{(devModeClubVelSmoothSlider.value / 400f) * 100f:F0}%";
-            
+
             devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
+            balLGroundedCheckbox.sprite = playerManager.golfBall.ballGroundedDebug ? checkboxOn : checkboxOff;
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;
@@ -901,9 +915,9 @@ namespace dev.mikeee324.OpenPutt
             var player = manager.openPutt.LocalPlayerManager;
 
             if (!Utilities.IsValid(player)) return;
-            
+
             player.golfClub.velocityTrackingType = devModeVelocityTypeDropdown.value;
-            
+
             RefreshDevModeMenu();
         }
 

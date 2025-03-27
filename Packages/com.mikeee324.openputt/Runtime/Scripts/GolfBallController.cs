@@ -81,10 +81,7 @@ namespace dev.mikeee324.OpenPutt
         float groundSnappingMaxGroundAngle = 45f;
 
         [SerializeField, Range(0f, 100f)]
-        float groundSnappingMinSpeed = 15f;
-
-        [SerializeField, Range(0f, 100f)]
-        float groundSnappingMaxSpeed = 100f;
+        float groundSnappingMinSpeed = 3f;
 
         [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
         float groundRaycastDistance = 0.02f;
@@ -284,6 +281,8 @@ namespace dev.mikeee324.OpenPutt
             get => ballRigidbody.collisionDetectionMode;
             set => ballRigidbody.collisionDetectionMode = value;
         }
+
+        public bool ballGroundedDebug = false;
 
         #endregion
 
@@ -985,9 +984,10 @@ namespace dev.mikeee324.OpenPutt
 
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
+            // If we reflected off a wall and the resulting bounce is going upwards
             if (newDirection.y > .001f)
             {
-                OpenPuttUtils.Log(this, $"Ball should bounce up here");
+                // Pretend we're in the air for the next frame so the snapping is switched off
                 stepsOnGround = 0;
                 stepsInAir = -1;
             }
@@ -1000,14 +1000,11 @@ namespace dev.mikeee324.OpenPutt
                 playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
         }
 
+        private bool lastGrounded = false;
+
         void UpdatePhysicsState()
         {
             var isGrounded = Physics.Raycast(CurrentPosition, Vector3.down, out var groundingHit, ballCollider.radius + groundRaycastDistance, groundSnappingProbeMask);
-            // playerManager.BallColor = isGrounded ? Color.green : Color.red; // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
-
-            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 1 && stepsInAir == 0;
-
-            var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
 
             if (isGrounded)
             {
@@ -1022,6 +1019,19 @@ namespace dev.mikeee324.OpenPutt
                 timeFlying += Time.deltaTime;
             }
 
+            if (isGrounded != lastGrounded)
+            {
+                if (playerManager.openPutt.debugMode)
+                    OpenPuttUtils.Log(this, $"Is Grounded: {isGrounded}");
+                if (ballGroundedDebug)
+                    playerManager.BallColor = isGrounded ? Color.green : Color.red; // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
+            }
+
+            lastGrounded = isGrounded;
+
+            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
+            var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
+
             // Unity sphere colliders seem to have this thing when traversing over edges where they can register a collision even on a flat floor and bounce upwards
             // This code tries to correct the balls trajectory in places where it can happen
             // It will work on flat floors and ramps... except it will stop snapping when the ramp flattens out (so the ball can fly at the top if it's going fast enough)
@@ -1035,8 +1045,11 @@ namespace dev.mikeee324.OpenPutt
 
                 var velocity = ballRigidbody.velocity;
                 var speed = velocity.magnitude;
-
-                if (speed < groundSnappingMinSpeed || speed > groundSnappingMaxSpeed)
+                
+                // Disable velocity correction if we're going up a ramp and don't have the speed to go up it
+                var rampAngle = Mathf.Acos(Vector3.Dot(lastGroundContactNormal, Vector3.up)) * Mathf.Rad2Deg;
+                var minimumClimbVelocity = Mathf.Sin(rampAngle * Mathf.Deg2Rad) * Physics.gravity.magnitude;
+                if (speed < minimumClimbVelocity)
                     shouldSnapToGround = false;
 
                 // Don't bother on things that are too steep
@@ -1052,9 +1065,8 @@ namespace dev.mikeee324.OpenPutt
                 if (shouldSnapToGround)
                 {
                     var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, lastGroundContactNormal).normalized * speed;
-
-                    // Only snap if the ball velocity is going up a ramp
-                    if (newVelocity.y > 0.001f)
+                    
+                    if (newVelocity.y > .001f)
                         ballRigidbody.velocity = lastFrameVelocity = newVelocity;
                 }
             }
