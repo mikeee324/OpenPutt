@@ -27,6 +27,7 @@ namespace dev.mikeee324.OpenPutt
         {
             originalPosition = transform.position;
             ballController.playerManager.openPutt = openPutt;
+            ballController.SetRespawnPosition(ballController.CurrentPosition);
         }
 
         void Update()
@@ -83,8 +84,7 @@ namespace dev.mikeee324.OpenPutt
 
         public void RespawnBall()
         {
-            ballController.BallIsMoving = false;
-            transform.position = originalPosition;
+            ballController.RespawnBall();
         }
     }
 }
