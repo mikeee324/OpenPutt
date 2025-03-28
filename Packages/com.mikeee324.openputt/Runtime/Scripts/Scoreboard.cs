@@ -93,6 +93,7 @@ namespace dev.mikeee324.OpenPutt
         public Image footColliderCheckbox;
         public Image clubRendererCheckbox;
         public Image balLGroundedCheckbox;
+        public Image ballSnappingCheckbox;
         public Transform devModeSettingsBox;
 
         #endregion
@@ -561,6 +562,18 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
+        public void OnToggleBallSnap()
+        {
+            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
+                return;
+
+            var playerManager = manager.openPutt.LocalPlayerManager;
+
+            playerManager.golfBall.enableBallSnap = !playerManager.golfBall.enableBallSnap;
+
+            RefreshDevModeMenu();
+        }
+
         public void OnToggleClubThrow()
         {
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
@@ -851,6 +864,7 @@ namespace dev.mikeee324.OpenPutt
             devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
             balLGroundedCheckbox.sprite = playerManager.golfBall.ballGroundedDebug ? checkboxOn : checkboxOff;
+            ballSnappingCheckbox.sprite = playerManager.golfBall.enableBallSnap ? checkboxOn : checkboxOff;
             devModeForAllCheckbox.sprite = manager.openPutt.enableDevModeForAll ? checkboxOn : checkboxOff;
             footColliderCheckbox.sprite = manager.openPutt.footCollider.gameObject.activeSelf ? checkboxOn : checkboxOff;
             clubRendererCheckbox.sprite = playerManager.golfClubVisualiser.gameObject.activeSelf ? checkboxOn : checkboxOff;

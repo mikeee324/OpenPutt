@@ -80,9 +80,6 @@ namespace dev.mikeee324.OpenPutt
         [Space] [SerializeField, Range(0, 90)]
         float groundSnappingMaxGroundAngle = 45f;
 
-        [SerializeField, Range(0f, 100f)]
-        float groundSnappingMinSpeed = 3f;
-
         [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
         float groundRaycastDistance = 0.02f;
 
@@ -314,6 +311,7 @@ namespace dev.mikeee324.OpenPutt
 
         private Vector3 lastGroundContactNormal = Vector3.up;
         private float timeFlying = 0;
+        public bool enableBallSnap = true;
         int stepsOnGround, stepsInAir;
         private bool resetBallTimers = true;
 
@@ -1019,57 +1017,15 @@ namespace dev.mikeee324.OpenPutt
                 timeFlying += Time.deltaTime;
             }
 
-            if (isGrounded != lastGrounded)
-            {
-                if (playerManager.openPutt.debugMode)
-                    OpenPuttUtils.Log(this, $"Is Grounded: {isGrounded}");
-                if (ballGroundedDebug)
-                    playerManager.BallColor = isGrounded ? Color.green : Color.red; // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
-            }
+            // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
+            if (ballGroundedDebug && isGrounded != lastGrounded)
+                playerManager.BallColor = isGrounded ? Color.green : Color.red;
 
             lastGrounded = isGrounded;
 
-            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
             var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
 
-            // Unity sphere colliders seem to have this thing when traversing over edges where they can register a collision even on a flat floor and bounce upwards
-            // This code tries to correct the balls trajectory in places where it can happen
-            // It will work on flat floors and ramps... except it will stop snapping when the ramp flattens out (so the ball can fly at the top if it's going fast enough)
-            if (shouldSnapToGround)
-            {
-                var lastNormalY = lastGroundContactNormal.y;
-                var foundFloor = Physics.Raycast(CurrentPosition, Vector3.down, out var snapHit, ballCollider.radius + groundSnappingProbeDistance, groundSnappingProbeMask);
-
-                if (foundFloor)
-                    lastGroundContactNormal = snapHit.normal;
-
-                var velocity = ballRigidbody.velocity;
-                var speed = velocity.magnitude;
-                
-                // Disable velocity correction if we're going up a ramp and don't have the speed to go up it
-                var rampAngle = Mathf.Acos(Vector3.Dot(lastGroundContactNormal, Vector3.up)) * Mathf.Rad2Deg;
-                var minimumClimbVelocity = Mathf.Sin(rampAngle * Mathf.Deg2Rad) * Physics.gravity.magnitude;
-                if (speed < minimumClimbVelocity)
-                    shouldSnapToGround = false;
-
-                // Don't bother on things that are too steep
-                if (lastGroundContactNormal.y < minGroundDotProduct)
-                    shouldSnapToGround = false;
-
-                // Don't snap if the slope is backing off
-                if (lastGroundContactNormal.y > lastNormalY)
-                    shouldSnapToGround = false;
-
-                // If we still are allowed to snap the ball to the ground...
-                // Redirect ball so it follows the face it's currently sat on
-                if (shouldSnapToGround)
-                {
-                    var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, lastGroundContactNormal).normalized * speed;
-                    
-                    if (newVelocity.y > .001f)
-                        ballRigidbody.velocity = lastFrameVelocity = newVelocity;
-                }
-            }
+            HandleGroundSnapping(isGrounded);
 
             if (audioWhenBallHitsFloor && canPlayHitGroundSound)
             {
@@ -1086,6 +1042,47 @@ namespace dev.mikeee324.OpenPutt
             var dragVel = ballRigidbody.velocity.Sanitized();
             var dragAccel = (0.5f * airDensity * ballCrossSection * dragCoeff * dragVel.magnitude * dragVel).Sanitized();
             ballRigidbody.AddForce(-dragAccel);
+        }
+
+        private void HandleGroundSnapping(bool isGrounded)
+        {
+            if (!enableBallSnap) return;
+
+            var shouldSnapToGround = enableBallSnap && !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
+            if (!shouldSnapToGround) return;
+
+            var velocity = ballRigidbody.velocity;
+            var speed = velocity.magnitude;
+
+            // Ground surface detection
+            var foundFloor = Physics.Raycast(CurrentPosition, Vector3.down, out var snapHit, ballCollider.radius + groundSnappingProbeDistance, groundSnappingProbeMask);
+
+            if (!foundFloor) return;
+
+            // Update ground contact normal
+            var currentGroundNormal = snapHit.normal;
+            var lastNormalY = lastGroundContactNormal.y;
+            lastGroundContactNormal = currentGroundNormal;
+
+            // Ramp angle and steepness checks
+            var rampAngle = Mathf.Acos(Vector3.Dot(currentGroundNormal, Vector3.up)) * Mathf.Rad2Deg;
+
+            // Disable snapping for steep surfaces or flattening slopes
+            if (currentGroundNormal.y < minGroundDotProduct || currentGroundNormal.y >= lastNormalY)
+                return;
+
+            // Project velocity onto ground plane
+            var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, currentGroundNormal).normalized * speed;
+
+            // Apply gravity influence
+            var gravityInfluence = Mathf.Sin(rampAngle * Mathf.Deg2Rad);
+            newVelocity.y -= gravityInfluence * Time.deltaTime * Physics.gravity.magnitude;
+
+            // Apply velocity correction if vertical velocity is above threshold
+            if (newVelocity.y > .001f)
+            {
+                ballRigidbody.velocity = lastFrameVelocity = newVelocity;
+            }
         }
 
         public void OnRespawn()
