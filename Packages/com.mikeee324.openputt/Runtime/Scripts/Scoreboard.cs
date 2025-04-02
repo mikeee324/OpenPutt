@@ -858,8 +858,8 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
-            devModeClubVelSmoothSlider.value = playerManager.golfClub.velocityTrackingSmoothing;
-            devModeClubVelSmoothValueLabel.text = $"{(devModeClubVelSmoothSlider.value / 400f) * 100f:F0}%";
+            //devModeClubVelSmoothSlider.value = manager.openPutt.controllerTracker.smoothing;
+            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value * 100f:F0}%";
 
             devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
@@ -941,8 +941,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.velocityTrackingSmoothing = devModeClubVelSmoothSlider.value;
-            devModeClubVelSmoothValueLabel.text = $"{(devModeClubVelSmoothSlider.value / 400f) * 100f:F0}%";
+            //player.openPutt.controllerTracker.smoothing = devModeClubVelSmoothSlider.value;
+            
+            RefreshDevModeMenu();
         }
 
         public void OnBallFrictionReset()

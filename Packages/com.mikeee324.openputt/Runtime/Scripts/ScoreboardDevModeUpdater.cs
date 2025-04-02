@@ -27,7 +27,20 @@ namespace dev.mikeee324.OpenPutt
             scoreboard.devModeLastClubHitSpeed.text = $"{localPlayerManager.golfClubHead.LastKnownHitVelocity:F2} {localPlayerManager.golfClubHead.LastKnownHitType}";
             scoreboard.devModeLastClubHitDirBias.text = $"{localPlayerManager.golfClubHead.LastKnownHitDirBias * 100f:F0}%";
             scoreboard.devModeBallSpeed.text = $"{localPlayerManager.golfBall.BallCurrentSpeed:F2}";
-            scoreboard.devModeClubSpeed.text = $"{localPlayerManager.golfClub.FrameHeadSpeed.magnitude:F2}";
+
+
+            var clubHand = localPlayerManager.golfClub.CurrentHand;
+            if (clubHand == VRC_Pickup.PickupHand.None)
+            {
+                scoreboard.devModeClubSpeed.text = $"Not Holding";
+            }
+            else
+            {
+                var headCollider = localPlayerManager.golfClub.headBoxCollider;
+                var headCenter = headCollider.transform.TransformPoint(headCollider.center);
+               // var headVelocity = openPutt.controllerTracker.GetVelocityAtPosition(localPlayerManager.golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand, headCenter);
+               // scoreboard.devModeClubSpeed.text = $"{headVelocity.magnitude:F2}";
+            }
         }
     }
 }

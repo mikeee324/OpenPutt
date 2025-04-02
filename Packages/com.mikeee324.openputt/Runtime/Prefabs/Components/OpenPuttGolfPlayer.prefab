@@ -1189,8 +1189,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1323,8 +1323,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1639,8 +1639,8 @@ Rigidbody:
   m_GameObject: {fileID: 5232980627184682815}
   serializedVersion: 4
   m_Mass: 0.375
-  m_Drag: 0.5
-  m_AngularDrag: 1
+  m_Drag: 0.4
+  m_AngularDrag: 0.3
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -1724,7 +1724,6 @@ MonoBehaviour:
   clubRigidbody: {fileID: 1766351271834194596}
   handleCollider: {fileID: 5174867792008421549}
   shaftCollider: {fileID: 2213463569754413228}
-  velocityTrackingSmoothing: 200
   throwEnabled: 1
   minThrowSpeed: 4
   resizeLayerMask:
@@ -1737,7 +1736,6 @@ MonoBehaviour:
   onColour: {r: 1, g: 0, b: 0, a: 1}
   offEmission: {r: 0, g: 0, b: 0, a: 1}
   onEmission: {r: 1, g: 0, b: 0, a: 1}
-  heldByPlayer: 0
 --- !u!114 &4653548927913328732
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2270,8 +2268,6 @@ MonoBehaviour:
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60
   groundSnappingMaxGroundAngle: 90
-  groundSnappingMinSpeed: 2
-  groundSnappingMaxSpeed: 100
   groundRaycastDistance: 0.02
   groundSnappingProbeDistance: 0.02
   groundSnappingProbeMask:
@@ -2284,7 +2280,9 @@ MonoBehaviour:
   respawnPosition: {x: 0, y: -99, z: 0}
   _ballMoving: 0
   currentOwnerHideOverride: 0
+  ballGroundedDebug: 0
   requestedBallVelocity: {x: 0, y: 0, z: 0}
+  enableBallSnap: 1
   requestedCollisionMode: 3
 --- !u!114 &1722553624231066590
 MonoBehaviour:

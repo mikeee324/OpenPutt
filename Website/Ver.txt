@@ -1,3 +1,8 @@
+0.8.28
+--------
+- Adds new ControllerTracker object - Tracks velocity of controllers at all times and makes the info available to stuff that needs it (Ball/Club)
+- ControllerTracker provides a smoothed velocity output that is averaged over a few frames - Should result in better velocity output when hitting the ball? (I hope, seems better in my testing... but also tried this before)
+
 0.8.27
 --------
 - Golf Ball - More ground snapping work (Should roll back down ramps better now)
