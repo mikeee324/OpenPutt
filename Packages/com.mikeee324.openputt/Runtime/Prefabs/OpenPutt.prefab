@@ -2240,9 +2240,9 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 8300309948629615924}
-  smoothing: 0.8
-  flickResponseFactor: 1
-  velocityChangeThreshold: 1
+  bufferSize: 5
+  startOffset: 1
+  endOffset: 4
 --- !u!114 &8300309948629615924
 MonoBehaviour:
   m_ObjectHideFlags: 0
