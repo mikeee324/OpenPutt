@@ -7,15 +7,15 @@ public class ControllerTracker : UdonSharpBehaviour
 {
     [Tooltip("Number of frames to store in history for velocity calculations")]
     [Range(2, 20)]
-    public int bufferSize = 2;
+    public int bufferSize = 5;
     
     [Tooltip("Frames to look back for start point (0 = use newest frame)")]
     [Range(0, 5)]
-    public int startOffset = 0;
+    public int startOffset = 1;
     
     [Tooltip("Frames to look back for end point (1 = use previous frame)")]
     [Range(1, 19)]
-    public int endOffset = 1;
+    public int endOffset = 4;
     
     // History arrays for each tracking point
     private Vector3[] headPositions;
