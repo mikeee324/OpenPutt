@@ -126,7 +126,7 @@ namespace dev.mikeee324.OpenPutt
 
         private bool clubIsTouchingBall;
 
-        private bool CanTrackHitsAndVel => framesSinceClubArmed > 3;
+        private bool CanTrackHitsAndVel => framesSinceClubArmed > 3 && framesSinceHit < 0;
         private int framesSinceClubArmed = -1;
 
         private Transform CurrentTarget
@@ -268,6 +268,23 @@ namespace dev.mikeee324.OpenPutt
                 var rotT = 1f - Mathf.Exp(-ROT_SPEED * Time.fixedDeltaTime);
                 myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * rotT);
             }
+
+            if (CanTrackHitsAndVel && !clubIsTouchingBall)
+            {
+                var sweepDir = -newVel;
+                
+                // Perform a sweep test to see if we'll be hitting the ball in the next frame
+                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.deltaTime))
+                {
+                    // We only care if this collided with the local players ball
+                    if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
+                    {
+                        LastKnownHitType = "(B-Sweep)";
+                        framesSinceHit = 0;
+                        framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+                    }
+                }
+            }
         }
 
         private void UpdateVelocity()
@@ -329,21 +346,6 @@ namespace dev.mikeee324.OpenPutt
 
             // Scale club collider based on current smoothed speed
             ResizeClubCollider();
-
-            if (framesSinceHit < 0 && CanTrackHitsAndVel && !clubIsTouchingBall)
-            {
-                // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(FrameVelocity, out var hit, FrameVelocity.magnitude * Time.deltaTime))
-                {
-                    // We only care if this collided with the local players ball
-                    if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
-                    {
-                        LastKnownHitType = "(L-Sweep)";
-                        framesSinceHit = 0;
-                        framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
-                    }
-                }
-            }
 
             // If the ball has not been hit, we do nothing
             if (framesSinceHit < 0) return;
@@ -441,7 +443,8 @@ namespace dev.mikeee324.OpenPutt
             var currentCourse = playerManager.CurrentCourse;
             var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
 
-            var headVelocity = golfClub.FrameHeadSpeed.Sanitized();
+            var hand = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+            var headVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtPoint(hand, golfClubHeadCollider.transform.position);
             var directionOfTravel = headVelocity;
             var velocityMagnitude = headVelocity.magnitude;
 
@@ -533,12 +536,12 @@ namespace dev.mikeee324.OpenPutt
             velocity = velocity.Sanitized();
 
             // Ignore nothing hits
-            if (velocity.magnitude < 0.001f)
+            if (velocity.magnitude < golfBall.minBallHitSpeed)
                 return;
 
             // Clamp min velocity (we used to just return here, but maybe this is better than the ball not moving?)
-            if (velocity.magnitude < golfBall.minBallSpeed)
-                velocity = directionOfTravel * golfBall.minBallSpeed;
+            //if (velocity.magnitude < golfBall.minBallSpeed)
+            //    velocity = directionOfTravel * golfBall.minBallSpeed;
 
             if (openPutt.debugMode)
                 OpenPuttUtils.Log(this, $"Ball has been hit! Velocity:{velocity.magnitude}{LastKnownHitType} DirectionOfTravel({directionOfTravel})");

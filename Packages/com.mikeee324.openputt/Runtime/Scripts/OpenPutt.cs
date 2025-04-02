@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "0.8.27";
+        public readonly string CurrentVersion = "0.8.28";
 
         #region References
 
@@ -37,6 +37,7 @@ namespace dev.mikeee324.OpenPutt
 
         public BodyMountedObject rightShoulderPickup;
         public BodyMountedObject footCollider;
+        public ControllerTracker controllerTracker;
         public PortableMenu portableScoreboard;
         public SFXController SFXController;
         public AudioSource[] BGMAudioSources;

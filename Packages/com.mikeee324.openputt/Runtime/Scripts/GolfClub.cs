@@ -27,9 +27,6 @@ namespace dev.mikeee324.OpenPutt
         public Collider handleCollider;
         public BoxCollider shaftCollider;
 
-        [Range(0, 400), Tooltip("0 = More Smoothing | 400 = Less Smoothing")]
-        public float velocityTrackingSmoothing = 200f;
-
         public bool throwEnabled = true;
         public float minThrowSpeed = 4f;
 
@@ -41,41 +38,7 @@ namespace dev.mikeee324.OpenPutt
         public int velocityTrackingType = 0;
         public float forceMultiplier = 1f;
 
-        private Vector3 lastFramePos = Vector3.zero;
-        private Vector3 FrameVelocitySmoothed = Vector3.zero;
-        private Quaternion lastFrameRot = Quaternion.identity;
-        private Vector3 FrameAngularVelocitySmoothed = Vector3.zero;
-        public Vector3 FrameHeadSpeed { get; private set; }
-
-        public VRC_Pickup.PickupHand CurrentHand
-        {
-            get
-            {
-                var hand = CurrentHandFromBodyMount;
-                if (hand != VRC_Pickup.PickupHand.None)
-                    return hand;
-
-                if (Utilities.IsValid(pickup))
-                    hand = pickup.currentHand;
-
-                return hand;
-            }
-        }
-
-        private VRC_Pickup.PickupHand CurrentHandFromBodyMount
-        {
-            get
-            {
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
-                {
-                    var shoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.leftShoulderPickup : playerManager.openPutt.rightShoulderPickup;
-                    if (Utilities.IsValid(shoulderPickup) && shoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
-                        return shoulderPickup.heldInHand;
-                }
-
-                return VRC_Pickup.PickupHand.None;
-            }
-        }
+        public VRC_Pickup.PickupHand CurrentHand => shoulderClubHeldInHand != VRC_Pickup.PickupHand.None ? shoulderClubHeldInHand : clubHeldInHand;
 
         [UdonSynced, FieldChangeCallback(nameof(ClubIsArmed))]
         private bool _clubArmed;
@@ -137,8 +100,9 @@ namespace dev.mikeee324.OpenPutt
         public Color offEmission = Color.black;
         public Color onEmission = Color.red;
 
-        [HideInInspector]
-        public bool heldByPlayer;
+        public BodyMountedObject shoulderPickup => playerManager.IsInLeftHandedMode ? playerManager.openPutt.leftShoulderPickup : playerManager.openPutt.rightShoulderPickup;
+        private VRC_Pickup.PickupHand clubHeldInHand = VRC_Pickup.PickupHand.None;
+        private VRC_Pickup.PickupHand shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
 
         private int framesHeld = -1;
 
@@ -174,8 +138,6 @@ namespace dev.mikeee324.OpenPutt
             // Update the collider states
             RefreshState();
 
-            enabled = false;
-
             LocalPlayerCheck();
         }
 
@@ -188,6 +150,8 @@ namespace dev.mikeee324.OpenPutt
             }
 
             localPlayerIsInVR = Networking.LocalPlayer.IsUserInVR();
+
+            enabled = false;
         }
 
         public override void PostLateUpdate()
@@ -196,58 +160,27 @@ namespace dev.mikeee324.OpenPutt
 
             if (isOwner)
             {
-                var localPlayer = Networking.LocalPlayer;
-
                 // Player is rescaling club
                 if (LeftUseButtonDown && RightUseButtonDown)
                     RescaleClub(false);
-                else if (!localPlayer.IsUserInVR() && RightUseButtonDown)
+                else if (!localPlayerIsInVR && RightUseButtonDown)
                     RescaleClub(false);
 
-                if (framesHeld == 0)
+                if (CurrentHand == VRC_Pickup.PickupHand.None)
                 {
-                    lastFramePos = transform.position;
-                    lastFrameRot = transform.rotation;
-                }
-
-                if (CurrentHand != VRC_Pickup.PickupHand.None)
-                    framesHeld += 1;
-
-                var position = transform.position;
-                var rotation = transform.rotation;
-
-                if (localPlayer.IsUserInVR())
-                {
-                    position = localPlayer.GetTrackingData(CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand).position;
-                    rotation = localPlayer.GetTrackingData(CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand).rotation;
-                }
-
-                // Track club velocity for throwing
-                var t = 1f - Mathf.Exp(-50f * Time.deltaTime);
-                var currFrameVelocity = (position - lastFramePos) / Time.deltaTime;
-                FrameVelocitySmoothed = Vector3.Lerp(FrameVelocitySmoothed, currFrameVelocity, t).Sanitized();
-
-                // Track club angular velocity for throwing
-                var deltaRot = rotation * Quaternion.Inverse(lastFrameRot);
-                deltaRot.ToAngleAxis(out var angle, out var axis);
-                if (angle > 180f) angle -= 360f;
-                var currAngularVelocity = (axis * angle * Mathf.Deg2Rad / Time.deltaTime).Sanitized();
-                FrameAngularVelocitySmoothed = Vector3.Lerp(FrameAngularVelocitySmoothed, currAngularVelocity, t).Sanitized();
-
-                // Calculate head velocity by combining linear and angular velocities
-                var halfHeadHeight = Utilities.IsValid(headBoxCollider) ? headBoxCollider.bounds.size.z * 0.5f : 0f;
-                var radiusVector = (headMesh.transform.position + headMesh.transform.forward * halfHeadHeight) - transform.position;
-                FrameHeadSpeed = FrameVelocitySmoothed + Vector3.Cross(FrameAngularVelocitySmoothed, radiusVector);
-
-                lastFramePos = position;
-                lastFrameRot = rotation;
-
-                if (!heldByPlayer)
-                {
-                    if (FrameVelocitySmoothed.magnitude > 0.001f)
+                    if (clubRigidbody.velocity.magnitude > 0.001f)
+                    {
                         openPuttSync.RequestFastSync(true);
+                    }
                     else
+                    {
                         enabled = false;
+                        ResetClubThrow();
+                    }
+                }
+                else
+                {
+                    framesHeld += 1;
                 }
             }
 
@@ -343,7 +276,7 @@ namespace dev.mikeee324.OpenPutt
 
         public void UpdateClubState()
         {
-            var clubCanBePickedUp = this.LocalPlayerOwnsThisObject() && CurrentHandFromBodyMount == VRC_Pickup.PickupHand.None;
+            var clubCanBePickedUp = this.LocalPlayerOwnsThisObject() && shoulderClubHeldInHand == VRC_Pickup.PickupHand.None;
 
             if (Utilities.IsValid(pickup))
                 pickup.pickupable = clubCanBePickedUp;
@@ -415,10 +348,13 @@ namespace dev.mikeee324.OpenPutt
 
             framesHeld = 0;
 
+            var ballShoulderPickup = shoulderPickup;
+            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+
             ResetClubThrow();
 
             enabled = true;
-            heldByPlayer = true;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
 
@@ -440,14 +376,9 @@ namespace dev.mikeee324.OpenPutt
         public void OnScriptDrop()
         {
             if (framesHeld > 10)
-            {
-                heldByPlayer = false;
                 ThrowClub();
-            }
-            
-            framesHeld = -1;
 
-            heldByPlayer = false;
+            framesHeld = -1;
 
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
@@ -464,20 +395,27 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
                 openPuttSync.RequestFastSync();
 
-            UpdateClubState();
+            var ballShoulderPickup = shoulderPickup;
+            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) ? ballShoulderPickup.pickup.currentHand : VRC_Pickup.PickupHand.None;
 
             RefreshState();
+
+            UpdateClubState();
         }
 
         public override void OnPickup()
         {
+            var ballShoulderPickup = shoulderPickup;
+            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+
             framesHeld = 0;
-            
+
             ResetClubThrow();
 
             enabled = true;
 
-            heldByPlayer = true;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
 
@@ -487,22 +425,23 @@ namespace dev.mikeee324.OpenPutt
         public override void OnDrop()
         {
             if (framesHeld > 10)
-            {
-                heldByPlayer = false;
                 ThrowClub();
-            }
 
             framesHeld = -1;
-            
+
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
 
-            heldByPlayer = false;
-            
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
 
+            var ballShoulderPickup = shoulderPickup;
+            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) ? ballShoulderPickup.pickup.currentHand : VRC_Pickup.PickupHand.None;
+
             RefreshState();
+
+            UpdateClubState();
         }
 
         public override void InputUse(bool value, UdonInputEventArgs args)
@@ -519,51 +458,50 @@ namespace dev.mikeee324.OpenPutt
         private void ThrowClub()
         {
             if (!throwEnabled) return;
-            if (heldByPlayer) return;
             if (!Utilities.IsValid(Networking.LocalPlayer)) return;
-            
+
+            // Update center of mass
+            if (Utilities.IsValid(clubRigidbody) && Utilities.IsValid(shaftEndPosition))
+            {
+                var localShaftEnd = clubRigidbody.transform.InverseTransformPoint(shaftEndPosition.transform.position);
+                clubRigidbody.centerOfMass = Vector3.Lerp(Vector3.zero, localShaftEnd, 0.7f);
+            }
+
+            var hand = CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+            var controllerVel = playerManager.openPutt.controllerTracker.GetLinearVelocity(hand);
+
             // Get raw velocity without player velocity
-            var rawSpeed = FrameVelocitySmoothed.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
+            var rawSpeed = controllerVel.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
 
             // Normalize speed based on player height (Using 1.7m as reference height)
             var heightRatio = 1.7f / Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f);
             var normalizedSpeed = rawSpeed * heightRatio;
 
             if (normalizedSpeed < minThrowSpeed) return;
-            
-            if (Utilities.IsValid(clubRigidbody) && Utilities.IsValid(shaftEndPosition))
-            {
-                var localShaftEnd = clubRigidbody.transform.InverseTransformPoint(shaftEndPosition.transform.position);
-                clubRigidbody.centerOfMass = Vector3.Lerp(Vector3.zero, localShaftEnd, 0.5f);
-            }
-            
-            clubRigidbody.isKinematic = false;
 
+            clubRigidbody.isKinematic = false;
             handleCollider.isTrigger = false;
             shaftCollider.isTrigger = false;
-
             clubRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
 
-            if (Networking.LocalPlayer.IsUserInVR())
-                clubRigidbody.velocity = FrameVelocitySmoothed * pickup.ThrowVelocityBoostScale;
-            else
-                clubRigidbody.velocity = FrameVelocitySmoothed;
-            clubRigidbody.angularVelocity = FrameAngularVelocitySmoothed * .7f;
+            var tracker = playerManager.openPutt.controllerTracker;
+
+            var linearVel = tracker.GetLinearVelocity(hand);
+            var angularVel = tracker.GetAngularVelocity(hand);
+        
+            var r = Networking.LocalPlayer.GetTrackingData(hand).position - clubRigidbody.worldCenterOfMass;
+            var worldAngularVelocity = Networking.LocalPlayer.GetTrackingData(hand).rotation * angularVel;
+
+            clubRigidbody.velocity = linearVel * pickup.ThrowVelocityBoostScale;
+            clubRigidbody.angularVelocity = worldAngularVelocity * .3f;
         }
 
         private void ResetClubThrow()
         {
+            clubRigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
             clubRigidbody.isKinematic = true;
             handleCollider.isTrigger = true;
             shaftCollider.isTrigger = true;
-            clubRigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
-
-            lastFramePos = transform.position;
-            lastFrameRot = transform.rotation;
-
-            FrameHeadSpeed = Vector3.zero;
-            FrameVelocitySmoothed = Vector3.zero;
-            FrameAngularVelocitySmoothed = Vector3.zero;
         }
     }
 }

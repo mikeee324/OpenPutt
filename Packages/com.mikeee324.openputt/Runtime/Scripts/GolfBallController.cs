@@ -71,6 +71,9 @@ namespace dev.mikeee324.OpenPutt
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
         public float minBallSpeed = 0.03f;
 
+        [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
+        public float minBallHitSpeed = 0.1f;
+
         [Range(0f, 1f), Tooltip("Defines how long the ball can keep rolling for when it goes below the minimum speed")]
         public float minBallSpeedMaxTime = 1f;
 
@@ -119,11 +122,6 @@ namespace dev.mikeee324.OpenPutt
 
                 // Store the new value
                 _ballMoving = value;
-
-                if (!_ballMoving && _ballMoving != ballWasMoving)
-                {
-                    droppedByPlayer = false;
-                }
 
                 if (resetBallTimers)
                 {
@@ -229,11 +227,6 @@ namespace dev.mikeee324.OpenPutt
 
         public bool pickedUpByPlayer { get; private set; }
 
-        /// <summary>
-        /// Used to ignore the first collision after we drop the ball - hopefully stops it flying away on flat surfaces
-        /// </summary>
-        private bool droppedByPlayer;
-
         [HideInInspector]
         public int currentOwnerHideOverride;
 
@@ -296,11 +289,6 @@ namespace dev.mikeee324.OpenPutt
 
         private Vector3 lastFramePosition;
 
-        /// Tracks the velocity of the ball in the last frame when the player was holding it
-        private Vector3 lastHeldFrameVelocity;
-
-        private Vector3 lastHeldFramePosition;
-
         /// Stores the velocity of the club that needs to be applied in the next FixedUpdate() frame
         [SerializeField]
         public Vector3 requestedBallVelocity = Vector3.zero;
@@ -334,7 +322,11 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private float lastHitTravelDistance = 0;
 
-        private VRC_Pickup.PickupHand cPlayerHand = VRC_Pickup.PickupHand.None;
+        public BodyMountedObject shoulderPickup => playerManager.IsInLeftHandedMode ? playerManager.openPutt.rightShoulderPickup : playerManager.openPutt.leftShoulderPickup;
+
+        private VRC_Pickup.PickupHand ballHeldInHand = VRC_Pickup.PickupHand.None;
+
+        private VRC_Pickup.PickupHand shoulderBallHeldInHand = VRC_Pickup.PickupHand.None;
 
         #endregion
 
@@ -403,26 +395,6 @@ namespace dev.mikeee324.OpenPutt
             if (!pickedUpByPlayer) return;
 
             var newVel = Vector3.zero;
-
-            if (numberOfPickedUpFrames > 1)
-            {
-                if (lastFramePosition != Vector3.zero)
-                    newVel = (CurrentPosition - lastHeldFramePosition) / Time.deltaTime;
-
-                if (newVel.magnitude > maxBallSpeed)
-                    newVel = lastHeldFrameVelocity.normalized * maxBallSpeed;
-
-                var frameRateRatio = 60f * Time.deltaTime; // 1.0 at 60fps
-                var velocityBlendFactor = Mathf.Clamp(.9f * Mathf.Sqrt(frameRateRatio), 0.1f, 0.95f);
-                lastHeldFrameVelocity = Vector3.Lerp(lastHeldFrameVelocity, newVel, velocityBlendFactor);
-
-                lastHeldFramePosition = CurrentPosition;
-            }
-            else
-            {
-                lastHeldFramePosition = CurrentPosition;
-                lastHeldFrameVelocity = Vector3.zero;
-            }
 
             numberOfPickedUpFrames++;
 
@@ -632,6 +604,10 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPickup()
         {
+            var ballShoulderPickup = shoulderPickup;
+            ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+
             if (!ballRigidbody.isKinematic)
             {
                 ballRigidbody.velocity = Vector3.zero;
@@ -640,18 +616,15 @@ namespace dev.mikeee324.OpenPutt
 
             lastFramePosition = CurrentPosition;
             lastFrameVelocity = Vector3.zero;
-            lastHeldFramePosition = CurrentPosition;
-            lastHeldFrameVelocity = Vector3.zero;
-
-            if (Utilities.IsValid(pickup))
-                cPlayerHand = pickup.currentHand;
 
             numberOfPickedUpFrames = 0;
             pickedUpByPlayer = true;
 
-            var ballShoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.rightShoulderPickup : playerManager.openPutt.leftShoulderPickup;
-            if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) && cPlayerHand != VRC_Pickup.PickupHand.None && cPlayerHand != ballShoulderPickup.pickup.currentHand)
-                ballShoulderPickup.tempDisableAttachment = true;
+            if (ballHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != shoulderBallHeldInHand)
+            {
+                if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup))
+                    ballShoulderPickup.tempDisableAttachment = true;
+            }
 
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = true;
@@ -667,6 +640,8 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnDrop()
         {
+            var ballShoulderPickup = shoulderPickup;
+
             pickedUpByPlayer = false;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
                 playerManager.openPutt.portableScoreboard.golfBallHeldByPlayer = false;
@@ -675,9 +650,8 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
                     OpenPuttUtils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
-
-                if (Utilities.IsValid(pickup))
-                    cPlayerHand = VRC_Pickup.PickupHand.None;
+                ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
                 return;
             }
 
@@ -705,6 +679,9 @@ namespace dev.mikeee324.OpenPutt
                         playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
 
                     pickedUpByPlayer = false;
+
+                    ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                    shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
                     return;
                 }
                 else
@@ -714,11 +691,17 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (Networking.LocalPlayer.IsUserInVR() && cPlayerHand != VRC_Pickup.PickupHand.None)
+            if (ballHeldInHand == VRC_Pickup.PickupHand.None && shoulderBallHeldInHand == VRC_Pickup.PickupHand.None)
+                return;
+
+            var pickupHand = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? shoulderBallHeldInHand : ballHeldInHand;
+            var hand = pickupHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+
+            var lastHeldFrameVelocity = playerManager.openPutt.controllerTracker.GetLinearVelocity(hand);
+
+            if (Networking.LocalPlayer.IsUserInVR() && ballHeldInHand != VRC_Pickup.PickupHand.None)
             {
-                // Secret ball slingshot
-                var ballShoulderPickup = playerManager.IsInLeftHandedMode ? playerManager.openPutt.rightShoulderPickup : playerManager.openPutt.leftShoulderPickup;
-                if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.tempDisableAttachment)
+                if (shoulderBallHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != VRC_Pickup.PickupHand.None)
                 {
                     ballShoulderPickup.tempDisableAttachment = false;
                     if (Utilities.IsValid(ballShoulderPickup.pickup))
@@ -744,22 +727,19 @@ namespace dev.mikeee324.OpenPutt
                     lastHeldFrameVelocity *= pickup.ThrowVelocityBoostScale;
             }
 
-            // Allows the ball to drop to the floor when you drop it
-            droppedByPlayer = true;
+            // Switch ball physics on
             BallIsMoving = true;
 
             // Allows ball to bounce
             stepsInAir = -1;
 
             // Apply velocity of the ball that we saw last frame so players can throw the ball
-            if (lastHeldFrameVelocity.magnitude > .001f || cPlayerHand != VRC_Pickup.PickupHand.None)
+            if (lastHeldFrameVelocity.magnitude > .001f || ballHeldInHand != VRC_Pickup.PickupHand.None)
+            {
                 requestedBallVelocity = lastHeldFrameVelocity.Sanitized();
-
-            lastFramePosition = Vector3.zero;
-            lastHeldFrameVelocity = Vector3.zero;
-
-            if (Utilities.IsValid(pickup))
-                cPlayerHand = pickup.currentHand;
+                ballHeldInHand = VRC_Pickup.PickupHand.None;
+                shoulderBallHeldInHand = VRC_Pickup.PickupHand.None;
+            }
         }
 
         /// <summary>
@@ -1141,28 +1121,23 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 // Only allow the local player to pick up their ball when it has stopped
-                if (Utilities.IsValid(pickup))
+                var newPickupState = false;
+
+                if (!BallIsMoving)
                 {
-                    var newPickupState = false;
+                    newPickupState = allowBallPickup;
 
-                    if (!BallIsMoving)
+                    if (Utilities.IsValid(playerManager) && allowBallPickupWhenNotPlaying)
                     {
-                        newPickupState = allowBallPickup;
+                        newPickupState = !Utilities.IsValid(playerManager.CurrentCourse);
 
-                        if (Utilities.IsValid(playerManager))
-                        {
-                            if (allowBallPickupWhenNotPlaying)
-                            {
-                                newPickupState = !Utilities.IsValid(playerManager.CurrentCourse);
-
-                                if (!newPickupState && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.courseScores[playerManager.CurrentCourse.holeNumber] == 0)
-                                    newPickupState = true; // Should let players pick the ball up from the start pad
-                            }
-                        }
+                        if (!newPickupState && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.courseScores[playerManager.CurrentCourse.holeNumber] == 0)
+                            newPickupState = true; // Should let players pick the ball up from the start pad
                     }
-
-                    pickup.pickupable = newPickupState;
                 }
+
+                if (Utilities.IsValid(pickup))
+                    pickup.pickupable = newPickupState;
 
                 if (Utilities.IsValid(ballCollider))
                     ballCollider.enabled = true;
