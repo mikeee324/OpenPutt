@@ -13,10 +13,19 @@ using VRC.Udon.Common;
 public class PortableMenu : UdonSharpBehaviour
 {
     [SerializeField]
+    public ControllerTracker controllerTracker;
+
+    [Range(0f, 10f), Tooltip("Minimum speed required to initiate a throw (Normalised against a person that is 1.7m tall)")]
+    public float minThrowSpeed = 1f;
+
+    [SerializeField]
     private KeyCode menuKey = KeyCode.N;
 
     [SerializeField]
     private GameObject visibleMenuObject;
+
+    [SerializeField]
+    private Rigidbody rigidBody;
 
     [SerializeField]
     private VRCPickup pickup;
@@ -27,42 +36,16 @@ public class PortableMenu : UdonSharpBehaviour
     [SerializeField]
     private float hideDistance = 3f;
 
-    [SerializeField, Range(0f, 1f), Tooltip("How small the menu can get before it is hidden (relative to the initial opening size)")]
-    private float closeThreshold = 0.4f;
-
     [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")]
     private float openThreshold = 2f;
 
-    public bool AllowMenuToOpen
-    {
-        get => _allowMenuToOpen;
-        set
-        {
-            _allowMenuToOpen = value;
-            if (AllowMenuToOpen)
-            {
-                var wasEnabled = enabled;
-
-                enabled = leftUseButtonDown && rightUseButtonDown;
-
-                if (enabled != wasEnabled)
-                {
-                    if (enabled)
-                    {
-                        originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftHand), Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightHand));
-                    }
-                }
-            }
-        }
-    }
-
     public bool golfClubHeldByPlayer;
     public bool golfBallHeldByPlayer;
-    private bool _allowMenuToOpen = true;
     private bool leftUseButtonDown;
     private bool rightUseButtonDown;
     private float originalHandDistance = -1f;
     private bool userIsInVR;
+    private VRC_Pickup.PickupHand currentHand = VRC_Pickup.PickupHand.None;
 
     void Start()
     {
@@ -103,34 +86,34 @@ public class PortableMenu : UdonSharpBehaviour
                 return;
             }
 
-            if (originalHandDistance != -1f && leftUseButtonDown && rightUseButtonDown)
+            var bothTriggersHeld = leftUseButtonDown && rightUseButtonDown;
+
+            if (!bothTriggersHeld) return;
+            if (originalHandDistance < 0f) return;
+
+            // Maybe this crashes if an avatar doesn't have finger bones? - No idea
+            var leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
+            var rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
+            var currentDistance = Vector3.Distance(leftHand, rightHand);
+
+            var isVisibleNow = currentDistance > (originalHandDistance * openThreshold);
+
+            if (!isVisibleNow)
             {
-                // Maybe this crashes if an avatar doesn't have finger bones? - No idea
-                var leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
-                var rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
-                var currentDistance = Vector3.Distance(leftHand, rightHand);
-
-                var newIsVisible = false;
-                if (currentDistance > (originalHandDistance * openThreshold))
-                    newIsVisible = true;
-                else if (closeThreshold > 0.0f && currentDistance < (originalHandDistance * closeThreshold))
-                    newIsVisible = false;
-
-                var directionBetweenHands = leftHand - rightHand;
-                var menuScale = Vector3.one * directionBetweenHands.magnitude;
-                var menuPosition = (directionBetweenHands * 0.5f) + rightHand;
-
-                if (newIsVisible)
-                {
-                    visibleMenuObject.transform.SetPositionAndRotation(menuPosition, Quaternion.LookRotation(directionBetweenHands) * Quaternion.Euler(0, 90, 0));
-                    visibleMenuObject.transform.localScale = menuScale;
-                }
-                else
-                {
-                    visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                    visibleMenuObject.transform.localScale = Vector3.zero;
-                }
+                visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                visibleMenuObject.transform.localScale = Vector3.zero;
+                return;
             }
+
+            var directionBetweenHands = leftHand - rightHand;
+            var menuScale = Vector3.one * directionBetweenHands.magnitude;
+            var menuPosition = (directionBetweenHands * 0.5f) + rightHand;
+
+            if (Utilities.IsValid(rigidBody))
+                rigidBody.isKinematic = true;
+
+            visibleMenuObject.transform.SetPositionAndRotation(menuPosition, Quaternion.LookRotation(directionBetweenHands) * Quaternion.Euler(0, 90, 0));
+            visibleMenuObject.transform.localScale = menuScale;
         }
         else if (Input.GetKey(menuKey))
         {
@@ -138,6 +121,9 @@ public class PortableMenu : UdonSharpBehaviour
             var headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
             var menuPosition = headPosition + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
             var menuRotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
+
+            if (Utilities.IsValid(rigidBody))
+                rigidBody.isKinematic = true;
 
             visibleMenuObject.transform.SetPositionAndRotation(menuPosition, menuRotation);
             visibleMenuObject.transform.localScale = menuScale;
@@ -160,6 +146,8 @@ public class PortableMenu : UdonSharpBehaviour
 
         if (shouldHideMenu)
         {
+            if (Utilities.IsValid(rigidBody))
+                rigidBody.isKinematic = true;
             visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             visibleMenuObject.transform.localScale = Vector3.zero;
         }
@@ -205,5 +193,47 @@ public class PortableMenu : UdonSharpBehaviour
                 originalHandDistance = -1;
             }
         }
+    }
+
+    public override void OnPickup()
+    {
+        if (Utilities.IsValid(pickup))
+            currentHand = pickup.currentHand;
+    }
+
+    public override void OnDrop()
+    {
+        if (!Utilities.IsValid(controllerTracker)) return;
+        if (!Utilities.IsValid(rigidBody)) return;
+        
+        var hand = currentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+        var controllerVel = controllerTracker.GetLinearVelocity(hand);
+
+        // Get raw velocity without player velocity
+        var rawSpeed = controllerVel.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
+
+        // Normalize speed based on player height (Using 1.7m as reference height)
+        var heightRatio = 1.7f / Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f);
+        var normalizedSpeed = rawSpeed * heightRatio;
+
+        if (normalizedSpeed < minThrowSpeed)
+        {
+            rigidBody.isKinematic = true;
+            return;
+        }
+
+        rigidBody.isKinematic = false;
+
+        var linearVel = controllerTracker.GetLinearVelocity(hand);
+        var angularVel = controllerTracker.GetAngularVelocity(hand);
+
+        var r = Networking.LocalPlayer.GetTrackingData(hand).position - rigidBody.worldCenterOfMass;
+        var worldAngularVelocity = Networking.LocalPlayer.GetTrackingData(hand).rotation * angularVel;
+
+        rigidBody.velocity = linearVel * pickup.ThrowVelocityBoostScale;
+        rigidBody.angularVelocity = worldAngularVelocity * .3f;
+
+        if (Utilities.IsValid(pickup))
+            currentHand = pickup.currentHand;
     }
 }
