@@ -179,7 +179,7 @@ QualitySettings:
     billboardsFaceCameraPosition: 1
     useLegacyDetailDistribution: 1
     vSyncCount: 0
-    realtimeGICPUUsage: 25
+    realtimeGICPUUsage: 50
     lodBias: 2
     maximumLODLevel: 0
     enableLODCrossFade: 1
@@ -207,4 +207,7 @@ QualitySettings:
     excludedTargetPlatforms:
     - Standalone
   m_TextureMipmapLimitGroupNames: []
-  m_PerPlatformDefaultQuality: {}
+  m_PerPlatformDefaultQuality:
+    Android: 0
+    Server: 0
+    Standalone: 0
