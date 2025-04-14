@@ -1189,8 +1189,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1323,8 +1323,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1495,10 +1495,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5174867792008421549}
-    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
-        type: 3}
-      insertIndex: -1
       addedObject: {fileID: 1766351271834194596}
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
@@ -1520,6 +1516,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 8100327062597957270}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: f32016ddb68bb9b45a58f63aba1f08a8,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8525178841866724229}
     - targetCorrespondingSourceObject: {fileID: -259972160606440404, guid: f32016ddb68bb9b45a58f63aba1f08a8,
         type: 3}
       insertIndex: -1
@@ -1554,7 +1554,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3968096529827924443}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: e03209be48099124db81997cb63a2861, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -1607,29 +1607,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 4926412383973620334}
   m_PrefabAsset: {fileID: 0}
---- !u!136 &5174867792008421549
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5232980627184682815}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 26112
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 1
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.02
-  m_Height: 0.24
-  m_Direction: 2
-  m_Center: {x: 0, y: 0.0000000037252903, z: -0.125}
 --- !u!54 &1766351271834194596
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -1656,7 +1633,7 @@ Rigidbody:
   m_IsKinematic: 1
   m_Interpolate: 1
   m_Constraints: 0
-  m_CollisionDetection: 0
+  m_CollisionDetection: 3
 --- !u!114 &3364887681977424718
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1722,7 +1699,7 @@ MonoBehaviour:
   shaftEndPosition: {fileID: 1215706633630273412}
   pickup: {fileID: 3364887681977424718}
   clubRigidbody: {fileID: 1766351271834194596}
-  handleCollider: {fileID: 5174867792008421549}
+  handleCollider: {fileID: 8525178841866724229}
   shaftCollider: {fileID: 2213463569754413228}
   throwEnabled: 1
   minThrowSpeed: 4
@@ -1908,6 +1885,27 @@ MonoBehaviour:
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
   publicVariablesUnityEngineObjects: []
   publicVariablesSerializationDataFormat: 0
+--- !u!65 &8525178841866724229
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5232980627184682815}
+  m_Material: {fileID: 13400000, guid: e03209be48099124db81997cb63a2861, type: 2}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 26112
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.0240005, y: 0.024000507, z: 0.2500005}
+  m_Center: {x: 0, y: 0.0000000037252903, z: -0.125}
 --- !u!23 &6025733114640705258 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: -7511558181221131132, guid: f32016ddb68bb9b45a58f63aba1f08a8,
@@ -2265,6 +2263,7 @@ MonoBehaviour:
   enableAirResistance: 1
   maxBallSpeed: 15
   minBallSpeed: 0.04
+  minBallHitSpeed: 0.1
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60
   groundSnappingMaxGroundAngle: 90
