@@ -6,11 +6,18 @@ using VRC.SDKBase;
 public class ControllerTracker : UdonSharpBehaviour
 {
     [Tooltip("Number of frames to store in history for velocity calculations")]
-    [Range(2, 20)]
-    public int bufferSize = 5;
+    [Range(2, 60)]
+    public int bufferSize = 20;
     
     [Tooltip("Whether to use smoothing (multiple frames) or just use single frame for velocity")]
     public bool useSmoothing = true;
+
+    [Range(0,5), Tooltip("How many frames to backtrack")]
+    public int defaultFrameOffset = 1;
+    
+    [Tooltip("Default number of frames to use for smoothing")]
+    [Range(2, 20)]
+    public int defaultSmoothingFrames = 5;
     
     // History arrays for each tracking point
     private Vector3[] headPositions;
@@ -44,13 +51,11 @@ public class ControllerTracker : UdonSharpBehaviour
         // Reset tracking
         currentIndex = 0;
         framesFilled = 0;
-        initialized = true;
+        initialized = false;
     }
 
     void Update()
     {
-        if (!initialized) return;
-        
         var player = Networking.LocalPlayer;
         if (player == null) return;
         
@@ -70,31 +75,36 @@ public class ControllerTracker : UdonSharpBehaviour
         rightHandPositions[currentIndex] = player.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).position;
         rightHandRotations[currentIndex] = player.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).rotation;
         
-        // Increment frames filled if needed
         if (framesFilled < bufferSize)
-        {
             framesFilled++;
-        }
+        else
+            initialized = true;
     }
 
-    // Helper method to get previous index safely
-    private int GetPreviousIndex()
+    // Helper method to get index with offset
+    private int GetIndexWithOffset(int offset)
     {
-        return (currentIndex - 1 + bufferSize) % bufferSize;
-    }
-
-    // Helper method to get smooth offset index 
-    private int GetSmoothIndex()
-    {
-        // When smoothing, use the maximum available frames up to buffer size
-        return (currentIndex - (bufferSize - 1) + framesFilled) % bufferSize;
+        return (currentIndex - offset + bufferSize) % bufferSize;
     }
 
     // Get linear velocity at the tracking point's position
     public Vector3 GetLinearVelocity(VRCPlayerApi.TrackingDataType trackingPoint)
     {
-        // Make sure we have enough frames
-        if (!initialized || framesFilled < 2) return Vector3.zero;
+        // Use default settings (no offset, default smoothing frames)
+        return GetLinearVelocityWithOffset(trackingPoint, defaultFrameOffset, useSmoothing ? defaultSmoothingFrames : 1);
+    }
+
+    // Get linear velocity with frame offset and frame count
+    public Vector3 GetLinearVelocityWithOffset(VRCPlayerApi.TrackingDataType trackingPoint, int frameOffset, int frameCount)
+    {
+        // Make sure we have enough frames and valid parameters
+        if (!initialized) return Vector3.zero;
+        
+        // Clamp frameOffset to valid range
+        frameOffset = Mathf.Clamp(frameOffset, 0, framesFilled - 1);
+        
+        // Clamp frameCount to ensure we don't exceed available frames
+        frameCount = Mathf.Clamp(frameCount, 1, framesFilled - frameOffset);
         
         Vector3[] positions;
         
@@ -115,24 +125,13 @@ public class ControllerTracker : UdonSharpBehaviour
                 break;
         }
         
-        // Get indices based on smoothing preference
-        int startIndex = currentIndex;
-        int endIndex;
-        
-        if (useSmoothing && framesFilled >= bufferSize)
-        {
-            // Use full buffer for smoothing
-            endIndex = GetSmoothIndex();
-        }
-        else
-        {
-            // Use just previous frame
-            endIndex = GetPreviousIndex();
-        }
+        // Get indices based on offset and frame count
+        var startIndex = GetIndexWithOffset(frameOffset);
+        var endIndex = GetIndexWithOffset(frameOffset + frameCount - 1);
         
         // Calculate delta time
         var deltaTime = timestamps[startIndex] - timestamps[endIndex];
-        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime; // Fallback
+        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime * frameCount; // Fallback
         
         // Calculate velocity
         return (positions[startIndex] - positions[endIndex]) / deltaTime;
@@ -141,8 +140,21 @@ public class ControllerTracker : UdonSharpBehaviour
     // Get angular velocity for a specified tracking point
     public Vector3 GetAngularVelocity(VRCPlayerApi.TrackingDataType trackingPoint)
     {
-        // Make sure we have enough frames
-        if (!initialized || framesFilled < 2) return Vector3.zero;
+        // Use default settings (no offset, default smoothing frames)
+        return GetAngularVelocityWithOffset(trackingPoint, defaultFrameOffset, useSmoothing ? defaultSmoothingFrames : 1);
+    }
+
+    // Get angular velocity with frame offset and frame count
+    public Vector3 GetAngularVelocityWithOffset(VRCPlayerApi.TrackingDataType trackingPoint, int frameOffset, int frameCount)
+    {
+        // Make sure we have enough frames and valid parameters
+        if (!initialized) return Vector3.zero;
+        
+        // Clamp frameOffset to valid range
+        frameOffset = Mathf.Clamp(frameOffset, 0, framesFilled - 1);
+        
+        // Clamp frameCount to ensure we don't exceed available frames
+        frameCount = Mathf.Clamp(frameCount, 1, framesFilled - frameOffset);
         
         Quaternion[] rotations;
         
@@ -162,23 +174,13 @@ public class ControllerTracker : UdonSharpBehaviour
                 break;
         }
         
-        // Get indices based on smoothing preference
-        int startIndex = currentIndex;
-        int endIndex;
-        
-        if (useSmoothing && framesFilled >= bufferSize)
-        {
-            // Use full buffer for smoothing
-            endIndex = GetSmoothIndex();
-        }
-        else
-        {
-            // Use just previous frame
-            endIndex = GetPreviousIndex();
-        }
+        // Get indices based on offset and frame count
+        var startIndex = GetIndexWithOffset(frameOffset);
+        var endIndex = GetIndexWithOffset(frameOffset + frameCount - 1);
         
         var deltaTime = timestamps[startIndex] - timestamps[endIndex];
-        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime;
+        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime * frameCount;
+        
         var deltaRotation = Quaternion.Inverse(rotations[endIndex]) * rotations[startIndex];
         deltaRotation.ToAngleAxis(out var angle, out var axis);
         angle *= Mathf.Deg2Rad;
@@ -196,8 +198,21 @@ public class ControllerTracker : UdonSharpBehaviour
     // Calculate the velocity at a world position as if it was attached to the tracking point
     public Vector3 GetVelocityAtPoint(VRCPlayerApi.TrackingDataType trackingPoint, Vector3 worldPosition)
     {
-        // Make sure we have enough frames
-        if (!initialized || framesFilled < 2) return Vector3.zero;
+        // Use default settings (no offset, default smoothing frames)
+        return GetVelocityAtPointWithOffset(trackingPoint, worldPosition, defaultFrameOffset, useSmoothing ? defaultSmoothingFrames : 1);
+    }
+    
+    // Calculate the velocity at a world position with frame offset and frame count
+    public Vector3 GetVelocityAtPointWithOffset(VRCPlayerApi.TrackingDataType trackingPoint, Vector3 worldPosition, int frameOffset, int frameCount)
+    {
+        // Make sure we have enough frames and valid parameters
+        if (!initialized) return Vector3.zero;
+        
+        // Clamp frameOffset to valid range
+        frameOffset = Mathf.Clamp(frameOffset, 0, framesFilled - 1);
+        
+        // Clamp frameCount to ensure we don't exceed available frames
+        frameCount = Mathf.Clamp(frameCount, 1, framesFilled - frameOffset);
         
         Vector3[] positions;
         Quaternion[] rotations;
@@ -221,26 +236,60 @@ public class ControllerTracker : UdonSharpBehaviour
                 break;
         }
         
-        // Get indices based on smoothing preference
-        int startIndex = currentIndex;
-        int endIndex;
-        
-        if (useSmoothing && framesFilled >= bufferSize)
-        {
-            // Use full buffer for smoothing
-            endIndex = GetSmoothIndex();
-        }
-        else
-        {
-            // Use just previous frame
-            endIndex = GetPreviousIndex();
-        }
+        // Get indices based on offset and frame count
+        var startIndex = GetIndexWithOffset(frameOffset);
+        var endIndex = GetIndexWithOffset(frameOffset + frameCount - 1);
         
         var deltaTime = timestamps[startIndex] - timestamps[endIndex];
-        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime;
+        if (deltaTime <= 0.0001f) deltaTime = Time.deltaTime * frameCount;
         
         var localOffset = Quaternion.Inverse(rotations[startIndex]) * (worldPosition - positions[startIndex]);
         var endWorldPos = positions[endIndex] + rotations[endIndex] * localOffset;
         return (worldPosition - endWorldPos) / deltaTime;
+    }
+    
+    // Get angular velocity at a specific world position relative to a tracking point
+    public Vector3 GetAngularVelocityAtPoint(VRCPlayerApi.TrackingDataType trackingPoint, Vector3 worldPosition)
+    {
+        // Use default settings (no offset, default smoothing frames)
+        return GetAngularVelocityAtPointWithOffset(trackingPoint, worldPosition, defaultFrameOffset, useSmoothing ? defaultSmoothingFrames : 1);
+    }
+    
+    // Get angular velocity at a specific world position with frame offset and frame count
+    public Vector3 GetAngularVelocityAtPointWithOffset(VRCPlayerApi.TrackingDataType trackingPoint, Vector3 worldPosition, int frameOffset, int frameCount)
+    {
+        // Make sure we have enough frames and valid parameters
+        if (!initialized) return Vector3.zero;
+        
+        // Get the angular velocity vector
+        var angularVelocity = GetAngularVelocityWithOffset(trackingPoint, frameOffset, frameCount);
+        
+        // Get the current position of the tracking point
+        Vector3 trackingPointPosition;
+        
+        var currentFrameIndex = GetIndexWithOffset(frameOffset);
+        
+        switch (trackingPoint)
+        {
+            case VRCPlayerApi.TrackingDataType.LeftHand:
+                trackingPointPosition = leftHandPositions[currentFrameIndex];
+                break;
+                
+            case VRCPlayerApi.TrackingDataType.RightHand:
+                trackingPointPosition = rightHandPositions[currentFrameIndex];
+                break;
+                
+            case VRCPlayerApi.TrackingDataType.Head:
+            default:
+                trackingPointPosition = headPositions[currentFrameIndex];
+                break;
+        }
+        
+        // Get the direction from the tracking point to the world position
+        var directionToPoint = worldPosition - trackingPointPosition;
+        
+        // Return the cross product of the angular velocity vector and the direction vector
+        // This gives us the tangential velocity vector that would be caused by the angular velocity at the specified point
+        return Vector3.Cross(angularVelocity, directionToPoint);
     }
 }

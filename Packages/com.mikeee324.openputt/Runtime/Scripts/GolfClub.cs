@@ -486,14 +486,11 @@ namespace dev.mikeee324.OpenPutt
 
             var tracker = playerManager.openPutt.controllerTracker;
 
-            var linearVel = tracker.GetLinearVelocity(hand);
-            var angularVel = tracker.GetAngularVelocity(hand);
-        
-            var r = Networking.LocalPlayer.GetTrackingData(hand).position - clubRigidbody.worldCenterOfMass;
-            var worldAngularVelocity = Networking.LocalPlayer.GetTrackingData(hand).rotation * angularVel;
+            var linearVel = tracker.GetVelocityAtPoint(hand, clubRigidbody.worldCenterOfMass);
+            var angularVel = tracker.GetAngularVelocityAtPoint(hand, clubRigidbody.worldCenterOfMass);
 
             clubRigidbody.velocity = linearVel * pickup.ThrowVelocityBoostScale;
-            clubRigidbody.angularVelocity = worldAngularVelocity * .3f;
+            clubRigidbody.angularVelocity = angularVel;
         }
 
         private void ResetClubThrow()

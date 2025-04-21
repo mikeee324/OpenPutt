@@ -2,6 +2,7 @@
 using TMPro;
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Components;
@@ -76,14 +77,18 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
-        public Slider devModeClubVelSmoothSlider;
+        [FormerlySerializedAs("devModeClubVelSmoothSlider")] public Slider devModeVelOffsetFrameSlider;
+        public Slider devModeVelSmoothingFrameSlider;
         public Slider devModeBallWeightSlider;
+        public Slider devModeHitWaitFramesSlider;
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
         public Slider devModeBallADragSlider;
         public Slider devModeBallMaxSpeedSlider;
         public TMP_Dropdown devModeVelocityTypeDropdown;
-        public TextMeshProUGUI devModeClubVelSmoothValueLabel;
+        public TextMeshProUGUI devModeOffsetFrameValueLabel;
+        public TextMeshProUGUI devModeHitWaitFrameValueLabel;
+        public TextMeshProUGUI devModeSmoothingFrameValueLabel;
         public TextMeshProUGUI devModeBallWeightValueLabel;
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
@@ -859,7 +864,10 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
             //devModeClubVelSmoothSlider.value = manager.openPutt.controllerTracker.smoothing;
-            devModeClubVelSmoothValueLabel.text = $"{devModeClubVelSmoothSlider.value * 100f:F0}%";
+            devModeOffsetFrameValueLabel.text = $"{devModeVelOffsetFrameSlider.value:F0}";
+            devModeSmoothingFrameValueLabel.text = $"{devModeVelSmoothingFrameSlider.value:F0}";
+            
+            devModeHitWaitFrameValueLabel.text = $"{devModeHitWaitFramesSlider.value:F0}";
 
             devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
@@ -891,13 +899,24 @@ namespace dev.mikeee324.OpenPutt
             devModeBallWeightValueLabel.text = $"{devModeBallWeightSlider.value:F2}";
         }
 
+        public void OnHitWaitFramesChanged()
+        {
+            var player = manager.openPutt.LocalPlayerManager;
+
+            if (!Utilities.IsValid(player)) return;
+
+            player.golfClub.putter.hitWaitFrames = (int)devModeHitWaitFramesSlider.value;
+
+            RefreshDevModeMenu();
+        }
+
         public void OnClubWaitFramesReset()
         {
             var player = manager.openPutt.LocalPlayerManager;
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.putter.hitWaitFrames = 2;
+            player.golfClub.putter.hitWaitFrames = 0;
 
             RefreshDevModeMenu();
         }
@@ -935,13 +954,24 @@ namespace dev.mikeee324.OpenPutt
             RefreshDevModeMenu();
         }
 
-        public void OnClubHitVelSmoothChanged()
+        public void OnVelocityOffsetFrameChanged()
         {
             var player = manager.openPutt.LocalPlayerManager;
 
             if (!Utilities.IsValid(player)) return;
 
-            //player.openPutt.controllerTracker.smoothing = devModeClubVelSmoothSlider.value;
+            player.openPutt.controllerTracker.defaultFrameOffset = (int)devModeVelOffsetFrameSlider.value;
+            
+            RefreshDevModeMenu();
+        }
+
+        public void OnVelocitySmoothingFrameChanged()
+        {
+            var player = manager.openPutt.LocalPlayerManager;
+
+            if (!Utilities.IsValid(player)) return;
+
+            player.openPutt.controllerTracker.defaultSmoothingFrames = (int)devModeVelSmoothingFrameSlider.value;
             
             RefreshDevModeMenu();
         }

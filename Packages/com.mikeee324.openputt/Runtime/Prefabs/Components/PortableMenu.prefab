@@ -82,7 +82,7 @@ Rigidbody:
   m_ImplicitTensor: 1
   m_UseGravity: 1
   m_IsKinematic: 1
-  m_Interpolate: 0
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 3
 --- !u!114 &3775264514086523236
@@ -148,6 +148,7 @@ MonoBehaviour:
   desktopHeadOffset: {x: 0, y: 0.5, z: 1.5}
   hideDistance: 20
   openThreshold: 2
+  hideOnStart: 1
   golfClubHeldByPlayer: 0
   golfBallHeldByPlayer: 0
 --- !u!114 &7183949428739605820
