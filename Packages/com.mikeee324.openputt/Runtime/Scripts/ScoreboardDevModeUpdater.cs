@@ -35,11 +35,9 @@ namespace dev.mikeee324.OpenPutt
                 scoreboard.devModeClubSpeed.text = $"Not Holding";
             }
             else
-            {
-                var headCollider = localPlayerManager.golfClub.headBoxCollider;
-                var headCenter = headCollider.transform.TransformPoint(headCollider.center);
-               // var headVelocity = openPutt.controllerTracker.GetVelocityAtPosition(localPlayerManager.golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand, headCenter);
-               // scoreboard.devModeClubSpeed.text = $"{headVelocity.magnitude:F2}";
+            {;
+                var headVelocity = openPutt.controllerTracker.GetVelocityAtPoint(localPlayerManager.golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand, localPlayerManager.golfClubHead.transform.position);
+                scoreboard.devModeClubSpeed.text = $"{headVelocity.magnitude:F2}";
             }
         }
     }

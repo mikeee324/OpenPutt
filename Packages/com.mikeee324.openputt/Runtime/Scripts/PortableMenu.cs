@@ -39,6 +39,7 @@ public class PortableMenu : UdonSharpBehaviour
     [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")]
     private float openThreshold = 2f;
 
+    public bool hideOnStart = true;
     public bool golfClubHeldByPlayer;
     public bool golfBallHeldByPlayer;
     private bool leftUseButtonDown;
@@ -49,8 +50,11 @@ public class PortableMenu : UdonSharpBehaviour
 
     void Start()
     {
-        visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-        visibleMenuObject.transform.localScale = Vector3.zero;
+        if (hideOnStart)
+        {
+            visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            visibleMenuObject.transform.localScale = Vector3.zero;
+        }
 
         SendCustomEventDelayedSeconds(nameof(IsUserInVRCheck), 1);
         SendCustomEventDelayedSeconds(nameof(ShouldHideMenu), 5);
