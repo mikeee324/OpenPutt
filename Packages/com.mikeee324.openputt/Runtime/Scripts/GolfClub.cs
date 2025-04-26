@@ -7,6 +7,13 @@ using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
+    public enum GolfClubTrackingType
+    {
+        ColliderDirAndColliderVel,
+        ColliderDirAndClubVel,
+        ClubDirAndClubVel
+    }
+    
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
@@ -35,7 +42,7 @@ namespace dev.mikeee324.OpenPutt
 
         public LayerMask resizeLayerMask;
 
-        public int velocityTrackingType = 0;
+        public GolfClubTrackingType velocityTrackingType = GolfClubTrackingType.ClubDirAndClubVel;
         public float forceMultiplier = 1f;
 
         public VRC_Pickup.PickupHand CurrentHand => shoulderClubHeldInHand != VRC_Pickup.PickupHand.None ? shoulderClubHeldInHand : clubHeldInHand;

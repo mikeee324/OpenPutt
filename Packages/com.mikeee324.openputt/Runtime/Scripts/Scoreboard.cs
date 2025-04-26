@@ -867,6 +867,7 @@ namespace dev.mikeee324.OpenPutt
             devModeOffsetFrameValueLabel.text = $"{devModeVelOffsetFrameSlider.value:F0}";
             devModeSmoothingFrameValueLabel.text = $"{devModeVelSmoothingFrameSlider.value:F0}";
             
+            devModeHitWaitFramesSlider.value = playerManager.golfClubHead.hitWaitFrames;
             devModeHitWaitFrameValueLabel.text = $"{devModeHitWaitFramesSlider.value:F0}";
 
             devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
@@ -949,7 +950,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.velocityTrackingType = devModeVelocityTypeDropdown.value;
+            player.golfClub.velocityTrackingType = (GolfClubTrackingType)devModeVelocityTypeDropdown.value;
 
             RefreshDevModeMenu();
         }

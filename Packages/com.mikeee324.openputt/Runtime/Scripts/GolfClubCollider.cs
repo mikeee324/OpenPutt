@@ -449,11 +449,11 @@ namespace dev.mikeee324.OpenPutt
             var velocityMagnitude = headVelocity.magnitude;
 
             // 0 = Use collider smoothed velocity
-            if (golfClub.velocityTrackingType == 0)
+            if ((int)golfClub.velocityTrackingType == 0)
                 velocityMagnitude = FrameVelocitySmoothed.magnitude;
 
             // if < 2 We are using collider direction vector
-            if (golfClub.velocityTrackingType < 2)
+            if ((int)golfClub.velocityTrackingType < 2)
             {
                 var weightedDirection = Vector3.zero;
                 var totalWeight = 0f;

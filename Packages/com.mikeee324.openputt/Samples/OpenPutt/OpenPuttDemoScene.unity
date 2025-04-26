@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 1332381501}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
+  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -51101,6 +51101,11 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 2100000, guid: 35630e38b4e5ffb40b44ec5348b4333f, type: 2}
+    - target: {fileID: 447474243975893464, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 447653197108120280, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_fontAsset
@@ -51623,6 +51628,11 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 2100000, guid: 35630e38b4e5ffb40b44ec5348b4333f, type: 2}
+    - target: {fileID: 1009764933134904446, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1009806458351595023, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_Material
@@ -54310,6 +54320,11 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 2100000, guid: 35630e38b4e5ffb40b44ec5348b4333f, type: 2}
+    - target: {fileID: 3535835679222669979, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3544319842098533323, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_Material
@@ -54713,6 +54728,11 @@ PrefabInstance:
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 2100000, guid: 35630e38b4e5ffb40b44ec5348b4333f, type: 2}
+    - target: {fileID: 4118286215802724157, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4136779279917889577, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_sharedMaterial
@@ -56832,42 +56852,42 @@ PrefabInstance:
         type: 3}
       propertyPath: DynamicMaterials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 092664d0c896ec24c8631279eeeab9a3, type: 2}
+      objectReference: {fileID: 2100000, guid: 798fc6253864cc042819ae82cc260f82, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[1]
       value: 
-      objectReference: {fileID: 2100000, guid: 35601b7126028534987ec2e953613b72, type: 2}
+      objectReference: {fileID: 2100000, guid: fd20e45036ef323459e8286e9c23c02c, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[2]
       value: 
-      objectReference: {fileID: 2100000, guid: ee55d53a9ee72144d8b9dcbb0c470aa5, type: 2}
+      objectReference: {fileID: 2100000, guid: 8b3eb6f206690b44280740122c968c0e, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[3]
       value: 
-      objectReference: {fileID: 2100000, guid: 4874bfe8c1eb4a74782a17968acd4a81, type: 2}
+      objectReference: {fileID: 2100000, guid: 092664d0c896ec24c8631279eeeab9a3, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[4]
       value: 
-      objectReference: {fileID: 2100000, guid: 3a5177985499d5e4685f6e13b18fed79, type: 2}
+      objectReference: {fileID: 2100000, guid: 35601b7126028534987ec2e953613b72, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[5]
       value: 
-      objectReference: {fileID: 2100000, guid: 798fc6253864cc042819ae82cc260f82, type: 2}
+      objectReference: {fileID: 2100000, guid: ee55d53a9ee72144d8b9dcbb0c470aa5, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[6]
       value: 
-      objectReference: {fileID: 2100000, guid: fd20e45036ef323459e8286e9c23c02c, type: 2}
+      objectReference: {fileID: 2100000, guid: 4874bfe8c1eb4a74782a17968acd4a81, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: DynamicMaterials.Array.data[7]
       value: 
-      objectReference: {fileID: 2100000, guid: 8b3eb6f206690b44280740122c968c0e, type: 2}
+      objectReference: {fileID: 2100000, guid: 3a5177985499d5e4685f6e13b18fed79, type: 2}
     - target: {fileID: 4430535767106831730, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: PlayerPersistence.Array.data[0]
@@ -63722,6 +63742,11 @@ PrefabInstance:
       propertyPath: m_hasFontAssetChanged
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4640183832936444127, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4673419679260886396, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_Material
@@ -69440,6 +69465,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 9176371344181232833, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
+    - target: {fileID: 9184975536583163450, guid: 0829e148c3552b94186305ecdc75f9b6,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 9192260375336199815, guid: 0829e148c3552b94186305ecdc75f9b6,
         type: 3}
       propertyPath: m_Material
