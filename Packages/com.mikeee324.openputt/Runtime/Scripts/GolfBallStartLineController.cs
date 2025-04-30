@@ -268,7 +268,7 @@ namespace dev.mikeee324.OpenPutt
                 lineRenderer.SetPosition(0, golfBall.transform.position);
                 lineRenderer.SetPosition(1, closestBallStart.transform.position);
             }
-            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.tempDisableAttachment)
+            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None && ballShoulderPickup.tempDisableAttachment)
             {
                 lineRenderer.SetPosition(0, golfBall.CurrentPosition);
                 lineRenderer.SetPosition(1, ballShoulderPickup.transform.position);

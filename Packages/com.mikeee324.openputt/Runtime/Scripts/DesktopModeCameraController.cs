@@ -42,9 +42,6 @@ namespace dev.mikeee324.OpenPutt
         [Range(0, 5), Tooltip("How fast the camera moves vertically")]
         public float cameraYSpeed = 1f;
 
-        public bool invertCameraX;
-        public bool invertCameraY;
-
         [Range(-89.9f, 89.9f)]
         public float cameraMinY = -40f;
 
@@ -74,6 +71,8 @@ namespace dev.mikeee324.OpenPutt
         #endregion
 
         #region Private Vars
+
+        private VRCInputMethod currentInputMethod = VRCInputMethod.Mouse;
 
         /// <summary>
         /// Current rotation angle for horizontal orbit around the target
@@ -160,6 +159,13 @@ namespace dev.mikeee324.OpenPutt
                 currentVerticalDelta = args.floatValue;
         }
 
+        public override void OnInputMethodChanged(VRCInputMethod inputMethod)
+        {
+            // Used to toggle camera inversion for controllers
+            // This event is not called just by moving a mouse! - Player has to click a button for it to count
+            currentInputMethod = inputMethod;
+        }
+
         /// <summary>
         /// Using FixedUpdate for tracking the ball because it is a rigidbody
         /// </summary>
@@ -180,13 +186,18 @@ namespace dev.mikeee324.OpenPutt
             if (Input.GetKey(KeyCode.LeftArrow))
                 currentKeyboardHorizontalDelta -= .8f;
 
-            if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
-            {
-                // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
-                //currentVerticalDelta = -currentMoveVertical;
-                //currentHorizontalDelta = currentMoveHorizontal;
-            }
-            else if (!currentMoveVertical.IsNearZero())
+            // Force currentInputMethod back to mouse - OnInputMethodChanged is not called just by moving mouse (Only changes when a click happens)
+            if (currentInputMethod != VRCInputMethod.Mouse && (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.0001f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.0001f))
+                currentInputMethod = VRCInputMethod.Mouse;
+            
+            // if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
+            // {
+            //     // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
+            //     //currentVerticalDelta = -currentMoveVertical;
+            //     //currentHorizontalDelta = currentMoveHorizontal;
+            // }
+            // else
+            if (!currentMoveVertical.IsNearZero())
             {
                 distance = Mathf.Clamp(distance - (currentMoveVertical * .4f), minDistance, maxDistance);
             }
@@ -203,11 +214,6 @@ namespace dev.mikeee324.OpenPutt
 
             var horizontalDelta = currentKeyboardHorizontalDelta != 0 ? currentKeyboardHorizontalDelta : currentHorizontalDelta;
             var verticalDelta = currentKeyboardVerticalDelta != 0 ? currentKeyboardVerticalDelta : currentVerticalDelta;
-
-            if (invertCameraX)
-                horizontalDelta *= -1f;
-            if (invertCameraY)
-                verticalDelta *= -1f;
 
             // Unity editor reports mouse movements higher so lower the speed to make it usable in editor
 #if UNITY_EDITOR

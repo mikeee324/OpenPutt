@@ -1,4 +1,5 @@
 ﻿using UdonSharp;
+using UnityEngine.XR;
 using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
@@ -35,8 +36,10 @@ namespace dev.mikeee324.OpenPutt
                 scoreboard.devModeClubSpeed.text = $"Not Holding";
             }
             else
-            {;
-                var headVelocity = openPutt.controllerTracker.GetVelocityAtPoint(localPlayerManager.golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand, localPlayerManager.golfClubHead.transform.position);
+            {
+                var hand = localPlayerManager.golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+                var offset = openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, localPlayerManager.golfClubHead.transform.position);
+                var headVelocity = openPutt.controllerTracker.GetVelocityAtOffset(hand, offset);
                 scoreboard.devModeClubSpeed.text = $"{headVelocity.magnitude:F2}";
             }
         }

@@ -77,7 +77,10 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeLastClubHitDirBias;
         public TextMeshProUGUI devModeBallSpeed;
         public TextMeshProUGUI devModeClubSpeed;
-        [FormerlySerializedAs("devModeClubVelSmoothSlider")] public Slider devModeVelOffsetFrameSlider;
+
+        [FormerlySerializedAs("devModeClubVelSmoothSlider")]
+        public Slider devModeVelOffsetFrameSlider;
+
         public Slider devModeVelSmoothingFrameSlider;
         public Slider devModeBallWeightSlider;
         public Slider devModeHitWaitFramesSlider;
@@ -366,10 +369,6 @@ namespace dev.mikeee324.OpenPutt
             leftHandModeCheckbox.sprite = playerManager.IsInLeftHandedMode ? checkboxOn : checkboxOff;
             enableBigShaftCheckbox.sprite = playerManager.golfClub.enableBigShaft ? checkboxOn : checkboxOff;
             clubThrowCheckbox.sprite = playerManager.golfClub.throwEnabled ? checkboxOn : checkboxOff;
-
-            var cameraManager = manager.openPutt.desktopModeCameraController;
-            invertCameraXCheckbox.sprite = cameraManager.invertCameraX ? checkboxOn : checkboxOff;
-            invertCameraYCheckbox.sprite = cameraManager.invertCameraY ? checkboxOn : checkboxOff;
         }
 
         public void UpdateBallColorPreview()
@@ -505,38 +504,8 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            if (Networking.LocalPlayer.isMaster)
-            {
-                var playerManager = manager.openPutt.LocalPlayerManager;
-
-                playerManager.openPutt.enableVerticalHits = !playerManager.openPutt.enableVerticalHits;
-
-                manager.openPutt.RequestSerialization();
-
-                RefreshSettingsMenu();
-            }
-        }
-
-        public void OnToggleInvertCameraX()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var cameraManager = manager.openPutt.desktopModeCameraController;
-
-            cameraManager.invertCameraX = !cameraManager.invertCameraX;
-
-            RefreshSettingsMenu();
-        }
-
-        public void OnToggleInvertCameraY()
-        {
-            if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
-                return;
-
-            var cameraManager = manager.openPutt.desktopModeCameraController;
-
-            cameraManager.invertCameraY = !cameraManager.invertCameraY;
+            var playerManager = manager.openPutt.LocalPlayerManager;
+            playerManager.openPutt.enableVerticalHits = !playerManager.openPutt.enableVerticalHits;
 
             RefreshSettingsMenu();
         }
@@ -708,14 +677,9 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            if (Networking.LocalPlayer.isMaster)
-            {
-                manager.openPutt.replayableCourses = !manager.openPutt.replayableCourses;
+            manager.openPutt.replayableCourses = !manager.openPutt.replayableCourses;
 
-                manager.openPutt.RequestSerialization();
-
-                RefreshSettingsMenu();
-            }
+            RefreshSettingsMenu();
         }
 
         public void OnToggleSettings()
@@ -863,14 +827,16 @@ namespace dev.mikeee324.OpenPutt
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
-            //devModeClubVelSmoothSlider.value = manager.openPutt.controllerTracker.smoothing;
+            devModeVelOffsetFrameSlider.value = manager.openPutt.controllerTracker.endOffset;
             devModeOffsetFrameValueLabel.text = $"{devModeVelOffsetFrameSlider.value:F0}";
+
+            devModeVelSmoothingFrameSlider.value = manager.openPutt.controllerTracker.lookbackFrames;
             devModeSmoothingFrameValueLabel.text = $"{devModeVelSmoothingFrameSlider.value:F0}";
-            
+
             devModeHitWaitFramesSlider.value = playerManager.golfClubHead.hitWaitFrames;
             devModeHitWaitFrameValueLabel.text = $"{devModeHitWaitFramesSlider.value:F0}";
 
-            devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
+            //devModeVelocityTypeDropdown.value = (int)playerManager.golfClub.velocityTrackingType;
 
             balLGroundedCheckbox.sprite = playerManager.golfBall.ballGroundedDebug ? checkboxOn : checkboxOff;
             ballSnappingCheckbox.sprite = playerManager.golfBall.enableBallSnap ? checkboxOn : checkboxOff;
@@ -950,7 +916,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.golfClub.velocityTrackingType = (GolfClubTrackingType)devModeVelocityTypeDropdown.value;
+            //player.golfClub.velocityTrackingType = (GolfClubTrackingType)devModeVelocityTypeDropdown.value;
 
             RefreshDevModeMenu();
         }
@@ -961,8 +927,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.openPutt.controllerTracker.defaultFrameOffset = (int)devModeVelOffsetFrameSlider.value;
-            
+            player.openPutt.controllerTracker.endOffset = (int)devModeVelOffsetFrameSlider.value;
+
             RefreshDevModeMenu();
         }
 
@@ -972,8 +938,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(player)) return;
 
-            player.openPutt.controllerTracker.defaultSmoothingFrames = (int)devModeVelSmoothingFrameSlider.value;
-            
+            player.openPutt.controllerTracker.lookbackFrames = (int)devModeVelSmoothingFrameSlider.value;
+
             RefreshDevModeMenu();
         }
 

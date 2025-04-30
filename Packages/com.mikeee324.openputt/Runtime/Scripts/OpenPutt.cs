@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "0.8.34";
+        public readonly string CurrentVersion = "0.8.35";
 
         #region References
 
@@ -55,7 +55,7 @@ namespace dev.mikeee324.OpenPutt
         [Header("Game Settings")] [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
         public bool replayableCourses;
 
-        [UdonSynced, Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
+        [Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
         public bool enableVerticalHits;
 
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
