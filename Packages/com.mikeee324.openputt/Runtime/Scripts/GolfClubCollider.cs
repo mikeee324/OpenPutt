@@ -59,7 +59,11 @@ namespace dev.mikeee324.OpenPutt
 
         public AnimationCurve hitForceMultiplier;
 
-        public AnimationCurve clubHeadDirectionInfluence;
+        [NonSerialized]
+        private AnimationCurve clubHeadDirectionInfluence;
+
+        [NonSerialized]
+        private AnimationCurve momentumLossByAngle;
 
         private int bufferIndex = 0;
 
@@ -85,6 +89,8 @@ namespace dev.mikeee324.OpenPutt
         /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
         /// </summary>
         private int framesSinceHit = -1;
+
+        private Vector3 lastHitWorldPos = Vector3.zero;
 
         /// <summary>
         /// How many frames we should wait after the hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)
@@ -158,13 +164,23 @@ namespace dev.mikeee324.OpenPutt
                 hitForceMultiplier.AddKey(10, 2);
             }
 
-            if (clubHeadDirectionInfluence.length == 0)
-            {
-                clubHeadDirectionInfluence.AddKey(0f, .83f);
-                clubHeadDirectionInfluence.AddKey(5f, 0f);
-                clubHeadDirectionInfluence.AddKey(50f, 0f);
-                clubHeadDirectionInfluence.SmoothTangents(0, 0.5f);
-            }
+            clubHeadDirectionInfluence = new AnimationCurve();
+            clubHeadDirectionInfluence.AddKey(0f, 0.95f);       // High influence for very slow speeds (near perfect putts)
+            clubHeadDirectionInfluence.AddKey(3f, 0.6f);        // Influence drops significantly by faster putting/slow chipping speeds
+            clubHeadDirectionInfluence.AddKey(10f, 0.2f);       // Influence is lower for chipping/pitching speeds
+            clubHeadDirectionInfluence.AddKey(30f, 0.05f);      // Influence is very low but not zero for iron/drive speeds
+            clubHeadDirectionInfluence.AddKey(40f, 0.0f);      // Influence is none for very fast speeds
+            clubHeadDirectionInfluence.AddKey(200f, 0.0f);      // Influence is none for very fast speeds
+            clubHeadDirectionInfluence.SmoothTangents(0, 0.5f); // Smooth the transition
+            clubHeadDirectionInfluence.SmoothTangents(1, 0.5f);
+            clubHeadDirectionInfluence.SmoothTangents(2, 0.5f);
+            clubHeadDirectionInfluence.SmoothTangents(3, 0.5f);
+
+            momentumLossByAngle = new AnimationCurve();
+            momentumLossByAngle.AddKey(0f, 1.0f);
+            momentumLossByAngle.AddKey(45f, 0.9f);
+            momentumLossByAngle.AddKey(90f, 0.5f);
+            momentumLossByAngle.AddKey(180f, 0.0f);
         }
 
         /// <summary>
@@ -272,7 +288,7 @@ namespace dev.mikeee324.OpenPutt
             if (CanTrackHitsAndVel && !clubIsTouchingBall)
             {
                 var sweepDir = -newVel;
-                
+
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame
                 if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.deltaTime))
                 {
@@ -282,6 +298,16 @@ namespace dev.mikeee324.OpenPutt
                         LastKnownHitType = "(B-Sweep)";
                         framesSinceHit = 0;
                         framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+                        lastHitWorldPos = playerManager.golfClubHead.transform.position;
+
+                        if (framesToWaitAfterHit == 0)
+                        {
+                            // Consume the hit event
+                            framesSinceHit = -1;
+
+                            // Send the velocity to the ball
+                            HandleBallHit();
+                        }
                     }
                 }
             }
@@ -360,34 +386,6 @@ namespace dev.mikeee324.OpenPutt
             HandleBallHit();
         }
 
-        private void OnTriggerEnter(Collider other)
-        {
-            if (!Utilities.IsValid(other))
-                return;
-
-            // We only care if this collided with the local players ball
-            if (other.gameObject != golfBall.gameObject)
-                return;
-
-            clubIsTouchingBall = true;
-
-            // Stops players from launching the ball by placing the club inside the ball and arming it
-            if (!CanTrackHitsAndVel && golfClub.playerManager.openPutt.debugMode)
-                OpenPuttUtils.Log(this, "Player armed the club and instantly hit the ball (trigger).. ignoring this collision");
-        }
-
-        private void OnTriggerExit(Collider other)
-        {
-            if (!Utilities.IsValid(other) || other.gameObject != golfBall.gameObject)
-                return;
-
-            SendCustomEventDelayedSeconds(nameof(ResetClubTouchingBall), .5f);
-            framesSinceClubArmed = 0;
-
-            if (golfClub.playerManager.openPutt.debugMode)
-                OpenPuttUtils.Log(this, "Club head is no longer in contact with the ball. Allowing collisions!");
-        }
-
         public void ResetClubTouchingBall()
         {
             clubIsTouchingBall = false;
@@ -416,8 +414,24 @@ namespace dev.mikeee324.OpenPutt
             if (framesSinceHit < 0)
                 LastKnownHitType = "(Collision)";
 
+            if (collision.contactCount > 0)
+            {
+                var contact = collision.GetContact(0);
+                if (Utilities.IsValid(contact))
+                    lastHitWorldPos = contact.point;
+            }
+
             framesSinceHit = 0;
             framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
+
+            if (framesToWaitAfterHit == 0)
+            {
+                // Consume the hit event
+                framesSinceHit = -1;
+
+                // Send the velocity to the ball
+                HandleBallHit();
+            }
         }
 
         private void OnCollisionExit(Collision collision)
@@ -444,46 +458,10 @@ namespace dev.mikeee324.OpenPutt
             var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
 
             var hand = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
-            var headVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtPoint(hand, golfClubHeadCollider.transform.position);
+            var headOffset = playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, golfClubHeadCollider.transform.TransformPoint(golfClubHeadCollider.center));
+            var headVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtOffset(hand, headOffset);
             var directionOfTravel = headVelocity;
             var velocityMagnitude = headVelocity.magnitude;
-
-            // 0 = Use collider smoothed velocity
-            if ((int)golfClub.velocityTrackingType == 0)
-                velocityMagnitude = FrameVelocitySmoothed.magnitude;
-
-            // if < 2 We are using collider direction vector
-            if ((int)golfClub.velocityTrackingType < 2)
-            {
-                var weightedDirection = Vector3.zero;
-                var totalWeight = 0f;
-
-                // Get the most recent position index
-                var newestIdx = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
-                var newestPos = lastPositions[newestIdx];
-
-                // Look back through history to get a time-weighted average direction
-                for (var i = 1; i < 3 && i < lastPositions.Length; i++)
-                {
-                    // Calculate the older index by going backward in the circular buffer
-                    var olderIdx = (newestIdx - i + lastPositions.Length) % lastPositions.Length;
-                    var olderPos = lastPositions[olderIdx];
-                    var olderTime = lastPositionTimes[olderIdx];
-
-                    if (olderPos == Vector3.zero || !(olderTime < 0.5f)) continue;
-
-                    var frameDir = (newestPos - olderPos).Sanitized();
-                    var weight = 1.0f / (1.0f + olderTime);
-
-                    if (!(frameDir.magnitude > 0.001f)) continue;
-
-                    weightedDirection += frameDir.normalized * weight;
-                    totalWeight += weight;
-                }
-
-                if (totalWeight > 0f)
-                    directionOfTravel = (weightedDirection / totalWeight).normalized;
-            }
 
             // If the collider is following something other than the club - override normal operation
             if (Utilities.IsValid(targetOverride))
@@ -499,10 +477,13 @@ namespace dev.mikeee324.OpenPutt
             // Normalize the direction vector now it's been flattened (IMPORTANT - Apparently it has to be in this order as well!!)
             directionOfTravel = directionOfTravel.normalized.Sanitized();
 
+            var rawDirectionOfTravel = directionOfTravel;
+
             LastKnownHitDirBias = 0;
+            
+            // Work out which way the club head is facing (And correct if player is holding it backwards)
             var faceDirection = putterTarget.transform.right;
             faceDirection = new Vector3(faceDirection.x, 0, faceDirection.z);
-
             if (Vector3.Angle(-faceDirection, directionOfTravel) < Vector3.Angle(faceDirection, directionOfTravel))
                 faceDirection = -faceDirection;
 
@@ -511,6 +492,12 @@ namespace dev.mikeee324.OpenPutt
                 LastKnownHitDirBias = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
                 directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, LastKnownHitDirBias);
             }
+
+            var velocityDirection = headVelocity.normalized;
+            var faceAngleToVelocity = Vector3.Angle(velocityDirection, faceDirection);
+            var retentionFactor = momentumLossByAngle.Evaluate(faceAngleToVelocity);
+            // Apply the momentum loss due to angle
+            velocityMagnitude *= retentionFactor;
 
             // Scale the velocity back up a bit
             velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);
@@ -548,12 +535,12 @@ namespace dev.mikeee324.OpenPutt
 
             LastKnownHitVelocity = velocity.magnitude;
 
-            // Register the hit with the ball
-            golfBall.OnBallHit(velocity);
-
             // A debug line renderer to show the resulting hit direction
             if (Utilities.IsValid(visual))
-                visual.OnBallHit(golfBall.transform.position, velocity);
+                visual.OnBallHit(golfBall.transform.position, lastHitWorldPos, velocity, rawDirectionOfTravel);
+
+            // Register the hit with the ball
+            golfBall.OnBallHit(velocity);
         }
 
         private void MoveToClubWithoutVelocity()

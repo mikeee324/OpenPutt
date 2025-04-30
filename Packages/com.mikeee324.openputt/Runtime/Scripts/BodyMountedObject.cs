@@ -228,7 +228,7 @@ namespace dev.mikeee324.OpenPutt
             if (!userIsInVR)
             {
                 var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                currPos = head.position + transform.TransformDirection(desktopHeadOffset);
+                currPos = head.position + head.rotation * desktopHeadOffset;
                 currRot = head.rotation;
             }
 

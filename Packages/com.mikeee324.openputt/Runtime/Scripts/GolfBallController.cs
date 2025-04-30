@@ -697,7 +697,8 @@ namespace dev.mikeee324.OpenPutt
             var pickupHand = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? shoulderBallHeldInHand : ballHeldInHand;
             var hand = pickupHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
 
-            var lastHeldFrameVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtPoint(hand, ballRigidbody.worldCenterOfMass);
+            var offset = playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, ballRigidbody.worldCenterOfMass);
+            var lastHeldFrameVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtOffset(hand, offset);
 
             if (Networking.LocalPlayer.IsUserInVR() && ballHeldInHand != VRC_Pickup.PickupHand.None)
             {

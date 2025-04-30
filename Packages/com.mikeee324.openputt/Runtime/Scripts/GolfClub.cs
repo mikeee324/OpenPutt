@@ -7,13 +7,6 @@ using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
-    public enum GolfClubTrackingType
-    {
-        ColliderDirAndColliderVel,
-        ColliderDirAndClubVel,
-        ClubDirAndClubVel
-    }
-    
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
@@ -42,7 +35,6 @@ namespace dev.mikeee324.OpenPutt
 
         public LayerMask resizeLayerMask;
 
-        public GolfClubTrackingType velocityTrackingType = GolfClubTrackingType.ClubDirAndClubVel;
         public float forceMultiplier = 1f;
 
         public VRC_Pickup.PickupHand CurrentHand => shoulderClubHeldInHand != VRC_Pickup.PickupHand.None ? shoulderClubHeldInHand : clubHeldInHand;
@@ -261,15 +253,15 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfBall))
                     {
-                        var playerIsPlayingCourse = Utilities.IsValid(playerManager.CurrentCourse);
+                        //var playerIsPlayingCourse = Utilities.IsValid(playerManager.CurrentCourse);
 
-                        if (playerIsPlayingCourse)
-                        {
-                            var allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
-                            var ballIsMoving = playerManager.golfBall.BallIsMoving;
-                            if (ballIsMoving && !allowHitWhileMoving)
-                                newArmedState = false;
-                        }
+                        //if (playerIsPlayingCourse)
+                        //{
+                        var allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
+                        var ballIsMoving = playerManager.golfBall.BallIsMoving;
+                        if (ballIsMoving && !allowHitWhileMoving)
+                            newArmedState = false;
+                        //}
                     }
                 }
 
@@ -466,6 +458,8 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!throwEnabled) return;
             if (!Utilities.IsValid(Networking.LocalPlayer)) return;
+            if (!Utilities.IsValid(playerManager)) return;
+            if (!Utilities.IsValid(playerManager.openPutt)) return;
 
             // Update center of mass
             if (Utilities.IsValid(clubRigidbody) && Utilities.IsValid(shaftEndPosition))
@@ -475,7 +469,9 @@ namespace dev.mikeee324.OpenPutt
             }
 
             var hand = CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
-            var controllerVel = playerManager.openPutt.controllerTracker.GetLinearVelocity(hand);
+            if (!localPlayerIsInVR)
+                hand = VRCPlayerApi.TrackingDataType.Head;
+            var controllerVel = playerManager.openPutt.controllerTracker.GetVelocity(hand);
 
             // Get raw velocity without player velocity
             var rawSpeed = controllerVel.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
@@ -491,13 +487,31 @@ namespace dev.mikeee324.OpenPutt
             shaftCollider.isTrigger = false;
             clubRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
 
-            var tracker = playerManager.openPutt.controllerTracker;
+            var controllerTracker = playerManager.openPutt.controllerTracker;
 
-            var linearVel = tracker.GetVelocityAtPoint(hand, clubRigidbody.worldCenterOfMass);
-            var angularVel = tracker.GetAngularVelocityAtPoint(hand, clubRigidbody.worldCenterOfMass);
+            var offsetForCentreMass = controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, clubRigidbody.worldCenterOfMass);
+            var linearVelocity = controllerTracker.GetVelocityAtOffset(hand, offsetForCentreMass);
+            clubRigidbody.velocity = linearVelocity;
 
-            clubRigidbody.velocity = linearVel * pickup.ThrowVelocityBoostScale;
-            clubRigidbody.angularVelocity = angularVel;
+            if (localPlayerIsInVR)
+            {
+                var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
+                var handAngularVelocityRad = handAngularVelocityDeg * Mathf.Deg2Rad;
+
+                // *** Proposed correction for VR angular velocity ***
+                Vector3 transformedAngularVelocity;
+                transformedAngularVelocity.x = handAngularVelocityRad.y;  // Removed negation - Fixes flipped up/down
+                transformedAngularVelocity.y = -handAngularVelocityRad.x; // Kept negation - Left/right is correct
+                transformedAngularVelocity.z = handAngularVelocityRad.z;  // Kept as is (assuming Z is correct)
+                clubRigidbody.angularVelocity = transformedAngularVelocity;
+                // *************************************************
+            }
+            else
+            {
+                var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
+                var handAngularVelocityRad = handAngularVelocityDeg * Mathf.Deg2Rad;
+                clubRigidbody.angularVelocity = handAngularVelocityRad;
+            }
         }
 
         private void ResetClubThrow()

@@ -40,12 +40,25 @@ public class PortableMenu : UdonSharpBehaviour
     private float openThreshold = 2f;
 
     public bool hideOnStart = true;
+    
+    [Tooltip("The duration of the vibration in seconds.")]
+    public float vibrationDuration = 0.1f;
+
+    [Tooltip("The strength of the vibration (0.0 to 1.0).")]
+    [Range(0f, 1f)]
+    public float vibrationStrength = 0.5f;
+
+    [Tooltip("The frequency of the vibration (roughly how many pulses per second).")]
+    public float vibrationFrequency = 30f;
+    
+    
     public bool golfClubHeldByPlayer;
     public bool golfBallHeldByPlayer;
     private bool leftUseButtonDown;
     private bool rightUseButtonDown;
     private float originalHandDistance = -1f;
     private bool userIsInVR;
+    private bool isCurrentlyVisible = false;
     private VRC_Pickup.PickupHand currentHand = VRC_Pickup.PickupHand.None;
 
     void Start()
@@ -102,6 +115,13 @@ public class PortableMenu : UdonSharpBehaviour
 
             var isVisibleNow = currentDistance > (originalHandDistance * openThreshold);
 
+            if (isCurrentlyVisible != isVisibleNow)
+            {
+                Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Left, vibrationStrength, vibrationFrequency, vibrationDuration);
+                Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Right, vibrationStrength, vibrationFrequency, vibrationDuration);
+            }
+            isCurrentlyVisible = isVisibleNow;
+
             if (!isVisibleNow)
             {
                 visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -122,14 +142,14 @@ public class PortableMenu : UdonSharpBehaviour
         else if (Input.GetKey(menuKey))
         {
             var menuScale = Vector3.one * 1.7f;
-            var headPosition = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
-            var menuPosition = headPosition + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
-            var menuRotation = Networking.LocalPlayer.GetBoneRotation(HumanBodyBones.Head);
+
+            var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+            var menuPosition = head.position + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
 
             if (Utilities.IsValid(rigidBody))
                 rigidBody.isKinematic = true;
 
-            visibleMenuObject.transform.SetPositionAndRotation(menuPosition, menuRotation);
+            visibleMenuObject.transform.SetPositionAndRotation(menuPosition, head.rotation);
             visibleMenuObject.transform.localScale = menuScale;
         }
     }
@@ -211,7 +231,8 @@ public class PortableMenu : UdonSharpBehaviour
         if (!Utilities.IsValid(rigidBody)) return;
         
         var hand = currentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
-        var controllerVel = controllerTracker.GetLinearVelocity(hand);
+        var offset = controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, rigidBody.worldCenterOfMass);
+        var controllerVel = controllerTracker.GetVelocityAtOffset(hand, offset);
 
         // Get raw velocity without player velocity
         var rawSpeed = controllerVel.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
@@ -228,14 +249,16 @@ public class PortableMenu : UdonSharpBehaviour
 
         rigidBody.isKinematic = false;
 
-        var linearVel = controllerTracker.GetLinearVelocity(hand);
-        var angularVel = controllerTracker.GetAngularVelocity(hand);
+        // Get the linear velocity of the Rigidbody's center of mass using the stored offset
+        var throwLinearVelocity = controllerTracker.GetVelocityAtOffset(hand, offset);
 
-        var r = Networking.LocalPlayer.GetTrackingData(hand).position - rigidBody.worldCenterOfMass;
-        var worldAngularVelocity = Networking.LocalPlayer.GetTrackingData(hand).rotation * angularVel;
+        // Get the angular velocity of the hand. This is the angular velocity of the rigid body.
+        var throwAngularVelocity = controllerTracker.GetAngularVelocity(hand, 5);
 
-        rigidBody.velocity = linearVel * pickup.ThrowVelocityBoostScale;
-        rigidBody.angularVelocity = worldAngularVelocity * .3f;
+        // Apply the calculated velocities to the rigidbody
+        rigidBody.velocity = throwLinearVelocity * pickup.ThrowVelocityBoostScale;
+        rigidBody.angularVelocity = throwAngularVelocity * Mathf.Deg2Rad; // Convert degrees/sec to radians/sec for Rigidbody.angularVelocity
+
 
         if (Utilities.IsValid(pickup))
             currentHand = pickup.currentHand;

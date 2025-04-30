@@ -2241,9 +2241,8 @@ MonoBehaviour:
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 8300309948629615924}
   bufferSize: 30
-  useSmoothing: 1
-  defaultFrameOffset: 1
-  defaultSmoothingFrames: 2
+  lookbackFrames: 2
+  endOffset: 0
 --- !u!114 &8300309948629615924
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8894,6 +8893,11 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1054184374720795390, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
+    - target: {fileID: 2947258982885957471, guid: f475c74e151ed7741aa70f32e655690c,
+        type: 3}
+      propertyPath: ControllerTracker
+      value: 
+      objectReference: {fileID: 1047285168694093744}
     - target: {fileID: 2947258982885957471, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
       propertyPath: serializationData.Prefab

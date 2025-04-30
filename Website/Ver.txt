@@ -1,3 +1,16 @@
+0.8.35
+--------
+- Reworks ControllerTracker - Ball hits should be much better now!
+- GolfBallColliderVisualiser - More useful debug info and lines that overdraw everything
+- Scoreboard UI reworks
+    - Settings screen tidied up
+    - Removed a few settings that didn't really need to exist anymore
+    - Info screen re-arranged and text updated
+    - Info screen now has a little glowing animation to help point users to the menu at the top
+- GolfBallStartLineController - No longer draws a white line to your shoulder if you pick the ball up from the floor
+- BodyMountedObject - Fixes position being slightly wrong when tapping the assigned button fast on desktop
+- GolfBallController - Club can not be armed while ball is in motion anymore while not playing a course (Prevents weird things - quick fix for now)
+
 0.8.34
 --------
 - More fiddling with club collider settings
