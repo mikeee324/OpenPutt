@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "0.8.35";
+        public readonly string CurrentVersion = "0.9.0";
 
         #region References
 
