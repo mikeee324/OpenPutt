@@ -197,17 +197,26 @@ namespace dev.mikeee324.OpenPutt
                 Respawn();
             }
 
-            // Sync local pos/rot
-            syncPosition = transform.localPosition;
-            syncRotation = transform.localRotation;
-
             // If player is holding this object and PuttSync is tracking pickup stuff
             if (monitorPickupEvents && currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
             {
                 if (disableSyncWhileHeld)
-                    UpdatePickupHandOffsets(); // Attaches the object to local space of the players hand on remote clients
+                {
+                    _UpdatePickupHandOffsets();
+                }
                 else
+                {
+                    // Sync local pos/rot
+                    syncPosition = transform.localPosition;
+                    syncRotation = transform.localRotation;
                     RequestFastSync(); // Just syncs the position/rotation normally
+                }
+            }
+            else
+            {
+                // Sync local pos/rot
+                syncPosition = transform.localPosition;
+                syncRotation = transform.localRotation;
             }
 
             // Send a network sync if enough time has passed and the object has moved/rotated (seems to work fine if the parent of this object moves also)
@@ -219,7 +228,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // If we still have time left to sync, schedule in the next sync
-            if (fastSyncStopTime > Time.timeSinceLevelLoad)
+            if (fastSyncStopTime > Time.timeSinceLevelLoad || (disableSyncWhileHeld && currentOwnerHandInt > 0))
             {
                 SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
             }
@@ -274,8 +283,11 @@ namespace dev.mikeee324.OpenPutt
                     var handPosition = owner.GetBonePosition(currentTrackedBone);
                     var handRotation = owner.GetBoneRotation(currentTrackedBone);
 
-                    var newPosition = handPosition + syncPosition;
-                    var newOffsetRot = handRotation * syncRotation;
+                    var posOffset = syncPosition;
+                    var rotOffset = syncRotation;
+
+                    var newPosition = handPosition + (handRotation * posOffset);
+                    var newOffsetRot = handRotation * rotOffset;
 
                     if (Utilities.IsValid(localPlayer))
                     {
@@ -286,21 +298,16 @@ namespace dev.mikeee324.OpenPutt
                         lastKnownDistanceUpdateValue = Mathf.Clamp(remoteUpdateDistanceCurve.Evaluate(distance), 0f, 30f);
                     }
 
-                    // If offsets have changed enough then smooth out the movement
                     if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue <= 0f)
                     {
-                        if (Vector3.Distance(lastSyncPos, syncPosition) > .01f || Quaternion.Dot(lastSyncRot, syncRotation) < .999f)
-                        {
-                            newPosition = Vector3.Lerp(transform.position, newPosition, Time.deltaTime * 15f);
-                            newOffsetRot = Quaternion.Slerp(transform.rotation, newOffsetRot, Time.deltaTime * 15f);
-                        }
+                        posOffset = Vector3.Lerp(lastSyncPos, syncPosition, Time.deltaTime * 5f);
+                        rotOffset = Quaternion.Slerp(lastSyncRot, syncRotation, Time.deltaTime * 5f);
 
-                        // When we get super close to the target offset - log this as the last set of offsets so we can stop smoothing things
-                        if (Vector3.Distance(transform.position, newPosition) < .001f && Quaternion.Dot(transform.rotation, newOffsetRot) > .9999f)
-                        {
-                            lastSyncPos = syncPosition;
-                            lastSyncRot = syncRotation;
-                        }
+                        lastSyncPos = posOffset;
+                        lastSyncRot = rotOffset;
+
+                        newPosition = handPosition + (handRotation * posOffset);
+                        newOffsetRot = handRotation * rotOffset;
                     }
 
                     transform.SetPositionAndRotation(newPosition, newOffsetRot);
@@ -315,13 +322,13 @@ namespace dev.mikeee324.OpenPutt
                 {
                     var newPosition = syncPosition;
                     var newRotation = syncRotation;
+                    var distance = 0f;
 
                     if (Utilities.IsValid(localPlayer))
                     {
                         var t = !Utilities.IsValid(transform.parent) ? transform : transform.parent.transform;
 
-                        var distance = Vector3.Distance(t.TransformPoint(newPosition), localPlayer.GetPosition());
-
+                        distance = Vector3.Distance(t.TransformPoint(newPosition), localPlayer.GetPosition());
                         lastKnownDistanceUpdateValue = Mathf.Clamp(remoteUpdateDistanceCurve.Evaluate(distance), 0f, 30f);
                     }
 
@@ -449,7 +456,7 @@ namespace dev.mikeee324.OpenPutt
                 // Keep a track of which hand the player is holding the pickup in
                 UpdatePickupCurrentHand();
 
-                SendCustomEventDelayedSeconds(nameof(UpdatePickupHandOffsets), .3f);
+                _UpdatePickupHandOffsets();
 
                 SendCustomNetworkEvent(NetworkEventTarget.All, nameof(ForceDrop));
             }
@@ -626,8 +633,11 @@ namespace dev.mikeee324.OpenPutt
                 pickup.pickupable = isPickupable;
         }
 
-        private void UpdatePickupHandOffsets()
+        private void _UpdatePickupHandOffsets()
         {
+            if (currentOwnerHandInt == (int)VRC_Pickup.PickupHand.None)
+                return;
+
             // Cache old values so we can check for changes that need syncing
             var oldOffset = syncPosition;
             var oldRotationOffset = syncRotation;
@@ -637,13 +647,12 @@ namespace dev.mikeee324.OpenPutt
             var offsetPosDiff = (oldOffset - newOwnerHandOffset).magnitude;
             var offsetRotDiff = Quaternion.Angle(oldRotationOffset, newOwnerHandOffsetRotation);
 
-            syncPosition = newOwnerHandOffset;
-            syncRotation = newOwnerHandOffsetRotation;
-
             // If the offsets from the players hand change - send a sync
-            if (offsetPosDiff > 0.1f || offsetRotDiff > 1f)
+            if (offsetPosDiff > 0.02f || offsetRotDiff > 1f)
             {
-                //Utils.Log(this, $"Sending update for offset change {offsetPosDiff} {offsetRotDiff}");
+                syncPosition = newOwnerHandOffset;
+                syncRotation = newOwnerHandOffsetRotation;
+
                 RequestFastSync();
             }
         }
@@ -662,7 +671,7 @@ namespace dev.mikeee324.OpenPutt
             var handPosition = player.GetBonePosition(currentTrackedBone);
             var handRotation = player.GetBoneRotation(currentTrackedBone);
 
-            posOffset = transform.position - handPosition;
+            posOffset = Quaternion.Inverse(handRotation) * (transform.position - handPosition);
             rotOffset = Quaternion.Inverse(handRotation) * transform.rotation;
         }
     }

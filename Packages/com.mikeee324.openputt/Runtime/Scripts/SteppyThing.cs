@@ -1,5 +1,6 @@
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
@@ -7,10 +8,14 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SteppyThing : UdonSharpBehaviour
     {
+        [Tooltip("The colliders for each step in SteppyThing")]
         public Collider[] steps;
+        [Tooltip("Used for debug purposes to make it easier to see if SteppyThing is working properly")]
         public bool toggleBallHolderRenderers;
+        [Tooltip("A list of colliders that hold the ball from rolling off each step")]
         public Collider[] stepBallHolders;
-        public Collider[] stepBallHolderNS;
+        [FormerlySerializedAs("stepBallHolderNS")] [Tooltip("A list of colliders that reference the collider of the next step or the floor at the end of the staircase. If the ball holder for each step is in contact with the next step the ball holder will be enabled. When they no longer contact each each the holder is disabled so the ball can roll off.")]
+        public Collider[] stepBallHolderNextStepCollider;
 
         [Range(1, 10f), Tooltip("Time in seconds for each full up/down cycle of the steps")]
         public float stepCycleTime = 1f;
@@ -100,10 +105,10 @@ namespace dev.mikeee324.OpenPutt
                         startPos = new Vector3(stepRestLocations[i].x, stepRestLocations[i + 1].y, stepRestLocations[i].z);
                 }
 
-                if (stepBallHolderNS.Length > i)
-                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNS[i].bounds);
+                if (stepBallHolderNextStepCollider.Length > i)
+                    stepBallHolders[i].isTrigger = !stepBallHolders[i].bounds.Intersects(stepBallHolderNextStepCollider[i].bounds);
 
-                if (toggleBallHolderRenderers && stepBallHolderNS.Length > i)
+                if (toggleBallHolderRenderers && stepBallHolderNextStepCollider.Length > i)
                     stepBallHolders[i].GetComponent<MeshRenderer>().enabled = !stepBallHolders[i].isTrigger;
 
                 stepRBs[i].MovePosition(Vector3.Lerp(startPos, targetPos, cycleProgress));
