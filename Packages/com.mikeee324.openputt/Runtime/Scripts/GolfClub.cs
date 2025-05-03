@@ -1,3 +1,4 @@
+using System;
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -85,6 +86,9 @@ namespace dev.mikeee324.OpenPutt
                     // Apply the MaterialPropertyBlock to the GameObject
                     headMesh.SetPropertyBlock(headPB);
                     shaftMesh.SetPropertyBlock(shaftPB);
+
+                    if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                        openPuttSync.RequestFastSync(forceSync: true);
                 }
 
                 _clubArmed = value;
@@ -169,7 +173,8 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (clubRigidbody.velocity.magnitude > 0.001f)
                     {
-                        openPuttSync.RequestFastSync(true);
+                        if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                            openPuttSync.RequestFastSync(forceSync: true);
                     }
                     else
                     {
@@ -303,6 +308,7 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
         public void RescaleClub(bool resetToDefault)
         {
+            var oldShaftScale = shaftScale;
             if (resetToDefault)
             {
                 // Reset all mesh scaling and work out actual default bounds
@@ -333,8 +339,8 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync();
+            if (Math.Abs(oldShaftScale - shaftScale) > .01f && Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                openPuttSync.RequestFastSync(forceSync: true);
         }
 
         /// <summary>
@@ -364,7 +370,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync();
+                openPuttSync.RequestFastSync(forceSync: true);
 
             UpdateClubState();
         }
@@ -392,7 +398,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync();
+                openPuttSync.RequestFastSync(forceSync: true);
 
             var ballShoulderPickup = shoulderPickup;
             clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;

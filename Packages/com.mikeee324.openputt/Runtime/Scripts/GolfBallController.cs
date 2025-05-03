@@ -388,20 +388,6 @@ namespace dev.mikeee324.OpenPutt
             this.enabled = enabled;
         }
 
-        private int numberOfPickedUpFrames;
-
-        public override void PostLateUpdate()
-        {
-            if (!pickedUpByPlayer) return;
-
-            var newVel = Vector3.zero;
-
-            numberOfPickedUpFrames++;
-
-            if (Utilities.IsValid(openPuttSync))
-                openPuttSync.RequestFastSync();
-        }
-
         private void FixedUpdate()
         {
             // If ball is picked up by player - we do stuff in PostLateUpdate instead
@@ -568,7 +554,7 @@ namespace dev.mikeee324.OpenPutt
             // Tell PuttSync to sync position if it's attached
             var sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (Utilities.IsValid(startLine) && startLine.gameObject.activeSelf);
             if (Utilities.IsValid(openPuttSync) && sendFastPositionSync)
-                openPuttSync.RequestFastSync();
+                openPuttSync.RequestFastSync(forceSync: true);
         }
 
         public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
@@ -599,7 +585,7 @@ namespace dev.mikeee324.OpenPutt
             UpdateBallState(this.LocalPlayerOwnsThisObject());
 
             // Force a sync to make sure ball syncs to the pad fully
-            openPuttSync.RequestFastSync(true);
+            openPuttSync.RequestFastSync(forceSync: true);
         }
 
         public override void OnPickup()
@@ -617,7 +603,6 @@ namespace dev.mikeee324.OpenPutt
             lastFramePosition = CurrentPosition;
             lastFrameVelocity = Vector3.zero;
 
-            numberOfPickedUpFrames = 0;
             pickedUpByPlayer = true;
 
             if (ballHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != shoulderBallHeldInHand)
