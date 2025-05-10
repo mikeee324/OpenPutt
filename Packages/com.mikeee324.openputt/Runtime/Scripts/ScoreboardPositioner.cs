@@ -38,23 +38,29 @@ namespace dev.mikeee324.OpenPutt
                 CanvasWasEnabledAtStart = backgroundCanvas.enabled;
         }
 
-        public bool ShouldBeVisible(Vector3 playerPosition)
+        public bool ShouldBeVisible(Vector3 playerPosition, VRCPlayerApi.TrackingData head)
         {
             var isNowActive = false;
 
-            var scoreboardDistance = Vector3.Distance(playerPosition, Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position);
-            var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
+            var scoreboardPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
 
+            var scoreboardDistance = Vector3.Distance(playerPosition, scoreboardPos);
+            var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
+            
+            var normalizedDirectionToScoreboard = (scoreboardPos - head.position).normalized;
+            var normalizedHeadForward = (head.rotation * Vector3.forward).normalized;
+            var playerIsLookingToward = Vector3.Dot(normalizedHeadForward, normalizedDirectionToScoreboard) > .5f;
+            
             switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:
                     isNowActive = true;
                     break;
                 case ScoreboardVisibility.NearbyOnly:
-                    isNowActive = playerIsNearby;
+                    isNowActive = playerIsNearby && playerIsLookingToward;
                     break;
                 case ScoreboardVisibility.NearbyAndCourseFinished:
-                    isNowActive = playerIsNearby;
+                    isNowActive = playerIsNearby && playerIsLookingToward;
 
                     if (isNowActive && attachedToCourse >= 0)
                     {

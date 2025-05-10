@@ -97,6 +97,9 @@ namespace dev.mikeee324.OpenPutt
 
                 var playerIsPlayingACourse = Utilities.IsValid(playerManager.CurrentCourse);
 
+                if (golfBall.isHeldInTeleporter)
+                    return false;
+
                 // Discard any hits while the ball is already moving and the player is playing a course (allows them to hit the ball as much as they want otherwise)
                 if (playerIsPlayingACourse && !golfBall.allowBallHitWhileMoving && golfBall.BallIsMoving)
                     return false;
@@ -186,11 +189,10 @@ namespace dev.mikeee324.OpenPutt
                     // If player stopped aiming and there is a speed, hit the ball with it
                     if (!value && currentShotSpeed > 0.1f)
                     {
-                        var currentCourseIsDrivingRange = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode;
-                        var ballDirection = desktopCamera.transform.position.GetDirectionTowards(golfBall.transform.position, ignoreHeight: !openPutt.enableVerticalHits && !currentCourseIsDrivingRange);
-
+                        var ballDirection = desktopCamera.transform.GetDirectionTowards(golfBall.transform, gravityDirection: golfBall.gravityDirection, ignoreHeight: golfBall.gravityMagnitude > 0.01f);
+                        
                         playerManager.golfClubHead.OverrideLastHitVelocity(currentShotSpeed);
-                        golfBall.OnBallHit(ballDirection * currentShotSpeed);
+                        golfBall.OnBallHit(ballDirection * currentShotSpeed, Vector3.zero);
 
                         UpdateUI(CurrentShotSpeedNormalised, noSmooth: true);
                         UpdateBallLineRenderer(CurrentShotSpeedNormalised, noSmooth: true);
@@ -536,27 +538,27 @@ namespace dev.mikeee324.OpenPutt
 
             // Toggle state on/off
             var newLineState = CanAimBallNow;
+            
             if (directionLine.gameObject.activeInHierarchy != newLineState)
                 directionLine.gameObject.SetActive(newLineState);
 
             if (newLineState)
             {
-                var currentCourseIsDrivingRange = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode;
-                var ballDirection = desktopCamera.transform.GetDirectionTowards(golfBall.transform, ignoreHeight: !openPutt.enableVerticalHits && !currentCourseIsDrivingRange);
+                var ballDirection = desktopCamera.transform.GetDirectionTowards(golfBall.transform, gravityDirection: -golfBall.gravityDirection, ignoreHeight: golfBall.gravityMagnitude > 0.01f);
+                
+                if (golfBall.gravityMagnitude < 0.01f)
+                {
+                    var rotationAxis = Vector3.Cross(ballDirection, Vector3.up);
+                    if (rotationAxis.sqrMagnitude == 0)
+                        rotationAxis = Vector3.Cross(Vector3.up, Vector3.Cross(Vector3.forward, Vector3.up).normalized).normalized;
 
+                    var loftRotation = Quaternion.AngleAxis(2f, rotationAxis);
+                    ballDirection = loftRotation * ballDirection;
+                }
+                
                 var distance = (lineMaxLength * currentUISpeed) + 0.1f;
-
-                var r = new Ray(origin: golfBall.transform.position, direction: ballDirection);
-
-                Vector3 endPoint;
-
-                if (golfBall.BallIsMoving)
-                    endPoint = r.GetPoint(distance);
-                else if (Physics.Raycast(r, out var endHit, distance, directionLineMask))
-                    endPoint = endHit.point;
-                else
-                    endPoint = r.GetPoint(distance);
-
+                var endPoint = golfBall.transform.position + (ballDirection * distance);
+                
                 directionLinePoints[0] = golfBall.transform.position;
                 directionLinePoints[1] = Vector3.Lerp(directionLinePoints[0], endPoint, .9f);
                 directionLinePoints[1] = Vector3.Lerp(directionLinePoints[0], endPoint, .95f);
@@ -682,7 +684,7 @@ namespace dev.mikeee324.OpenPutt
                     var bestScore = playerManager.courseScores[currentCourse.holeNumber];
                     if (maxDist > bestScore)
                         bestScore = Mathf.FloorToInt(maxDist);
-                    
+
                     courseParLabel.text = "BEST";
                     courseParValueLabel.text = $"{bestScore:F0}m";
                 }

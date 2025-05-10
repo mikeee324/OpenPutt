@@ -1,6 +1,7 @@
 ﻿using System;
 using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Varneon.VUdon.ArrayExtensions;
 using VRC.SDK3.Persistence;
 using VRC.SDK3.StringLoading;
@@ -38,7 +39,7 @@ namespace dev.mikeee324.OpenPutt
         public BodyMountedObject rightShoulderPickup;
         public BodyMountedObject footCollider;
         public ControllerTracker controllerTracker;
-        public PortableMenu portableScoreboard;
+        [FormerlySerializedAs("portableScoreboard")] public OpenPuttPortableMenu openPuttPortableScoreboard;
         public SFXController SFXController;
         public AudioSource[] BGMAudioSources;
         public AudioSource[] WorldAudioSources;
@@ -63,6 +64,9 @@ namespace dev.mikeee324.OpenPutt
 
         [Tooltip("Maximum amount of time in seconds that a players game state will be remembered for when using persistence. This only applies to incomplete games. Completed games will not be loaded back in and treated as a fresh start. (-1 = forever)")]
         public int scoreMaxPersistantTimeInSeconds = 900;
+
+        [Tooltip("Only allows players to use the putter. Turn this off so they can swap to other club types (for proper golf)")]
+        public bool puttingOnlyMode = true;
 
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
         public bool enableDevModeForAll;

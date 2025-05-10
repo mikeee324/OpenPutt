@@ -1,5 +1,6 @@
 ﻿using UdonSharp;
 using UnityEngine;
+using UnityEngine.Serialization;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -10,8 +11,6 @@ namespace dev.mikeee324.OpenPutt
     {
         [Header("This component automatically toggles the shoulder pickups and portable menu depending on whether the player is inside this collider")]
         public OpenPutt openPutt;
-        
-        public Collider collider;
 
         public bool enabledAtStart = false;
         
@@ -19,8 +18,6 @@ namespace dev.mikeee324.OpenPutt
 
         private void Start()
         {
-            collider = GetComponent<Collider>();
-
             if (!Utilities.IsValid(openPutt))
             {
                 enabled = false;

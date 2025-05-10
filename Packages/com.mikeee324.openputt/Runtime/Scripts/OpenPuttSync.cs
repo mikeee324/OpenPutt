@@ -168,6 +168,8 @@ namespace dev.mikeee324.OpenPutt
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
+
+            localPlayer = Networking.LocalPlayer;
         }
 
         /// <summary>
@@ -204,7 +206,7 @@ namespace dev.mikeee324.OpenPutt
                 // Nobody is holding the object, sync normal pos/rot
                 syncPosition = transform.localPosition;
                 syncRotation = transform.localRotation;
-                
+
                 // If the object has moved since last time reset the flag
                 canSync = transform.hasChanged;
                 transform.hasChanged = false;
@@ -234,7 +236,7 @@ namespace dev.mikeee324.OpenPutt
         public void HandleRemoteUpdate()
         {
             var owner = Networking.GetOwner(gameObject);
-            if (owner == Networking.LocalPlayer)
+            if (owner == localPlayer)
             {
                 isHandlingRemoteUpdates = false;
                 return;
@@ -358,9 +360,6 @@ namespace dev.mikeee324.OpenPutt
             {
                 isHandlingRemoteUpdates = true;
 
-                if (!Utilities.IsValid(localPlayer) && OpenPuttUtils.LocalPlayerIsValid())
-                    localPlayer = Networking.LocalPlayer;
-
                 HandleRemoteUpdate();
             }
 
@@ -417,16 +416,11 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPickup()
         {
-            if (!Utilities.IsValid(pickup) || !Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid()) return;
+            if (!Utilities.IsValid(pickup) || !Utilities.IsValid(localPlayer) || !localPlayer.IsValid()) return;
 
             returnAfterDropEndTime = -1;
 
-            var shouldDropPickup = false;
-            if (pickup.DisallowTheft && !this.LocalPlayerOwnsThisObject() && currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
-                shouldDropPickup = true;
-            if (!pickup.pickupable)
-                shouldDropPickup = true;
-
+            var shouldDropPickup = !pickup.pickupable || (pickup.DisallowTheft && currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None && !this.LocalPlayerOwnsThisObject());
             if (shouldDropPickup && (int)pickup.currentHand != (int)VRC_Pickup.PickupHand.None)
             {
                 if (Utilities.IsValid(pickup))
@@ -434,7 +428,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
+            OpenPuttUtils.SetOwner(localPlayer, gameObject);
 
             currentOwnerHand = VRC_Pickup.PickupHand.None;
 
@@ -460,7 +454,7 @@ namespace dev.mikeee324.OpenPutt
         {
             isBeingHeldByExternalScript = false;
 
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
 
             if (returnAfterDrop && returnAfterDropEndTime < 0)
             {
@@ -477,7 +471,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
-            if (Networking.GetOwner(gameObject) != Networking.LocalPlayer) return;
+            if (Networking.GetOwner(gameObject) != localPlayer) return;
             RequestFastSync(true);
         }
 
@@ -538,7 +532,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void Respawn()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !localPlayer.IsOwner(gameObject))
                 return;
 
             returnAfterDropEndTime = -1;
@@ -574,7 +568,7 @@ namespace dev.mikeee324.OpenPutt
             if (!returnAfterDrop)
                 return;
 
-            OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
+            OpenPuttUtils.SetOwner(localPlayer, gameObject);
 
             // If there isn't a timer running, start one
             if (returnAfterDropEndTime < 0)
@@ -591,7 +585,7 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="rotation">The new spawn rotation for this object</param>
         public void SetSpawnPosition(Vector3 position, Quaternion rotation)
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !localPlayer.IsOwner(gameObject))
                 return;
 
 
@@ -613,7 +607,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
-            var localPlayerIsOwner = Networking.LocalPlayer == player;
+            var localPlayerIsOwner = localPlayer == player;
             var isPickupable = OpenPuttUtils.LocalPlayerIsValid() && localPlayerIsOwner;
             // Enable pickup for the owner
             if (canManagePickupable && Utilities.IsValid(pickup) && !pickup.pickupable)
@@ -629,38 +623,28 @@ namespace dev.mikeee324.OpenPutt
             var oldOffset = syncPosition;
             var oldRotationOffset = syncRotation;
 
-            GetPickupHandOffsets(Networking.LocalPlayer, out var newOwnerHandOffset, out var newOwnerHandOffsetRotation);
-
-            var offsetPosDiff = (oldOffset - newOwnerHandOffset).magnitude;
-            var offsetRotDiff = Quaternion.Angle(oldRotationOffset, newOwnerHandOffsetRotation);
-
-            // If the offsets from the players hand change - send a sync
-            if (offsetPosDiff > 0.02f || offsetRotDiff > 1f)
-            {
-                syncPosition = newOwnerHandOffset;
-                syncRotation = newOwnerHandOffsetRotation;
-                return true;
-            }
-
-            return false;
-        }
-
-        private void GetPickupHandOffsets(VRCPlayerApi player, out Vector3 posOffset, out Quaternion rotOffset)
-        {
-            if (!Utilities.IsValid(player) || !player.IsValid())
-            {
-                posOffset = Vector3.zero;
-                rotOffset = Quaternion.identity;
-                return;
-            }
-
             var currentTrackedBone = currentOwnerHand == VRC_Pickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
-            var handPosition = player.GetBonePosition(currentTrackedBone);
-            var handRotation = player.GetBoneRotation(currentTrackedBone);
+            var handPosition = localPlayer.GetBonePosition(currentTrackedBone);
+            var handRotation = localPlayer.GetBoneRotation(currentTrackedBone);
 
-            posOffset = Quaternion.Inverse(handRotation) * (transform.position - handPosition);
-            rotOffset = Quaternion.Inverse(handRotation) * transform.rotation;
+            var posOffset = Quaternion.Inverse(handRotation) * (transform.position - handPosition);
+            var rotOffset = Quaternion.Inverse(handRotation) * transform.rotation;
+
+            var offsetPosDiff = (oldOffset - posOffset).magnitude;
+            var offsetRotDiff = Quaternion.Angle(oldRotationOffset, rotOffset);
+
+            // If it hasn't moved far enough, don't sync a change
+            if (offsetPosDiff < .05f)
+                return false;
+            
+            // If on desktop and they haven't rotated it while holding enough - send no sync
+            if (!localPlayer.IsUserInVR() && offsetRotDiff < 1f)
+                return false;
+
+            syncPosition = posOffset;
+            syncRotation = rotOffset;
+            return true;
         }
     }
 }

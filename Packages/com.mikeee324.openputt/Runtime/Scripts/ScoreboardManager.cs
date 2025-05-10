@@ -321,11 +321,12 @@ namespace dev.mikeee324.OpenPutt
             var currentVisibleScoreboardID = 0;
 
             var localPlayerPos = Networking.LocalPlayer.GetPosition();
+            var localPlayerHead = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
 
             for (var i = 0; i < scoreboardPositions.Length; i++)
             {
                 var position = scoreboardPositions[i];
-                var isVisibleHere = position.ShouldBeVisible(localPlayerPos);
+                var isVisibleHere = position.ShouldBeVisible(localPlayerPos, localPlayerHead);
 
                 // We ran out of scoreboards in the pool so just show the positioner canvases if needed
                 if (currentVisibleScoreboardID >= scoreboards.Length)

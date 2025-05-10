@@ -8,6 +8,34 @@ using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
+    public enum GolfClubType
+    {
+        // Putters (used for putting on the green)
+        Putter,
+
+        // Woods (typically used for longer shots)
+        Driver,
+        Wood3,
+        Wood5,
+
+        // Irons (used for a variety of shots from the fairway or rough)
+        Iron4,
+        Iron5,
+        Iron6,
+        Iron7,
+        Iron8,
+        Iron9,
+
+        // Wedges (used for shorter, higher shots, and shots around the green)
+        PitchingWedge, // PW
+        GapWedge,      // GW or AW (Approach Wedge)
+        SandWedge,     // SW
+        LobWedge,      // LW
+
+        // Hybrids (combine characteristics of woods and irons)
+        Hybrid, // Can represent a typical hybrid, or you might specify by number/loft
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
@@ -95,6 +123,18 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [UdonSynced, FieldChangeCallback(nameof(ClubType))]
+        private GolfClubType _clubType = GolfClubType.Putter;
+
+        public GolfClubType ClubType
+        {
+            get => _clubType;
+            set
+            {
+                _clubType = value;
+            }
+        }
+
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft;
 
@@ -103,7 +143,16 @@ namespace dev.mikeee324.OpenPutt
         public Color offEmission = Color.black;
         public Color onEmission = Color.red;
 
-        public BodyMountedObject shoulderPickup => playerManager.IsInLeftHandedMode ? playerManager.openPutt.leftShoulderPickup : playerManager.openPutt.rightShoulderPickup;
+        public BodyMountedObject shoulderPickup
+        {
+            get
+            {
+                if (!Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.openPutt))
+                    return null;
+                return playerManager.IsInLeftHandedMode ? playerManager.openPutt.leftShoulderPickup : playerManager.openPutt.rightShoulderPickup;
+            }
+        }
+
         private VRC_Pickup.PickupHand clubHeldInHand = VRC_Pickup.PickupHand.None;
         private VRC_Pickup.PickupHand shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
 
@@ -116,6 +165,18 @@ namespace dev.mikeee324.OpenPutt
         private bool RightUseButtonDown;
         private bool clubColliderIsTempDisabled;
         private bool localPlayerIsInVR;
+        private float lookUpPressed = -1, lookDownPressed = -1;
+
+
+        [Tooltip("The duration of the vibration in seconds.")]
+        private float vibrationDuration = 0.1f;
+
+        [Tooltip("The strength of the vibration (0.0 to 1.0).")] [Range(0f, 1f)]
+        private float vibrationStrength = 0.5f;
+
+        [Tooltip("The frequency of the vibration (roughly how many pulses per second).")]
+        private float vibrationFrequency = 30f;
+
 
         private void Start()
         {
@@ -163,6 +224,36 @@ namespace dev.mikeee324.OpenPutt
 
             if (isOwner)
             {
+                if (!playerManager.openPutt.puttingOnlyMode)
+                {
+                    if (lookUpPressed > 0f && (Time.time - lookUpPressed) > .5f)
+                    {
+                        if ((int)ClubType >= (int)GolfClubType.Hybrid)
+                            ClubType = GolfClubType.Putter;
+                        else
+                            ClubType = (GolfClubType)((int)ClubType + 1);
+
+                        if (CurrentHand != VRC_Pickup.PickupHand.None)
+                            Networking.LocalPlayer.PlayHapticEventInHand(CurrentHand, vibrationDuration, vibrationStrength, vibrationFrequency);
+
+                        playerManager.wristUI._UpdateUI();
+                        lookUpPressed = Time.time;
+                    }
+                    else if (lookDownPressed > 0 && (Time.time - lookDownPressed) > .5f)
+                    {
+                        if ((int)ClubType <= (int)GolfClubType.Putter)
+                            ClubType = GolfClubType.Hybrid;
+                        else
+                            ClubType = (GolfClubType)((int)ClubType - 1);
+
+                        if (CurrentHand != VRC_Pickup.PickupHand.None)
+                            Networking.LocalPlayer.PlayHapticEventInHand(CurrentHand, vibrationDuration, vibrationStrength, vibrationFrequency);
+
+                        playerManager.wristUI._UpdateUI();
+                        lookDownPressed = Time.time;
+                    }
+                }
+
                 // Player is rescaling club
                 if (LeftUseButtonDown && RightUseButtonDown)
                     RescaleClub(false);
@@ -258,15 +349,16 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfBall))
                     {
-                        //var playerIsPlayingCourse = Utilities.IsValid(playerManager.CurrentCourse);
+                        var playerIsPlayingCourse = Utilities.IsValid(playerManager.CurrentCourse);
+                        var golfBall = playerManager.golfBall;
+                        var allowHitWhileMoving = golfBall.allowBallHitWhileMoving;
+                        var ballIsMoving = golfBall.BallIsMoving;
 
-                        //if (playerIsPlayingCourse)
-                        //{
-                        var allowHitWhileMoving = playerManager.golfBall.allowBallHitWhileMoving;
-                        var ballIsMoving = playerManager.golfBall.BallIsMoving;
-                        if (ballIsMoving && !allowHitWhileMoving)
-                            newArmedState = false;
-                        //}
+                        if (playerIsPlayingCourse)
+                        {
+                            if (ballIsMoving && !allowHitWhileMoving)
+                                newArmedState = false;
+                        }
                     }
                 }
 
@@ -354,14 +446,22 @@ namespace dev.mikeee324.OpenPutt
             framesHeld = 0;
 
             var ballShoulderPickup = shoulderPickup;
-            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
-            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            if (Utilities.IsValid(ballShoulderPickup))
+            {
+                clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            }
+            else
+            {
+                clubHeldInHand = VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
+            }
 
             ResetClubThrow();
 
             enabled = true;
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
-                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
+                playerManager.openPutt.openPuttPortableScoreboard.golfClubHeldByPlayer = true;
 
             if (!playerManager.ClubVisible)
             {
@@ -385,8 +485,8 @@ namespace dev.mikeee324.OpenPutt
 
             framesHeld = -1;
 
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
-                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
+                playerManager.openPutt.openPuttPortableScoreboard.golfClubHeldByPlayer = false;
 
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
@@ -401,8 +501,16 @@ namespace dev.mikeee324.OpenPutt
                 openPuttSync.RequestFastSync(forceSync: true);
 
             var ballShoulderPickup = shoulderPickup;
-            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
-            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) ? ballShoulderPickup.pickup.currentHand : VRC_Pickup.PickupHand.None;
+            if (Utilities.IsValid(ballShoulderPickup))
+            {
+                clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            }
+            else
+            {
+                clubHeldInHand = VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
+            }
 
             RefreshState();
 
@@ -412,8 +520,16 @@ namespace dev.mikeee324.OpenPutt
         public override void OnPickup()
         {
             var ballShoulderPickup = shoulderPickup;
-            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
-            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            if (Utilities.IsValid(ballShoulderPickup))
+            {
+                clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            }
+            else
+            {
+                clubHeldInHand = VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
+            }
 
             framesHeld = 0;
 
@@ -421,8 +537,8 @@ namespace dev.mikeee324.OpenPutt
 
             enabled = true;
 
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
-                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = true;
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
+                playerManager.openPutt.openPuttPortableScoreboard.golfClubHeldByPlayer = true;
 
             RefreshState();
         }
@@ -437,12 +553,20 @@ namespace dev.mikeee324.OpenPutt
             LeftUseButtonDown = false;
             RightUseButtonDown = false;
 
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.portableScoreboard))
-                playerManager.openPutt.portableScoreboard.golfClubHeldByPlayer = false;
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
+                playerManager.openPutt.openPuttPortableScoreboard.golfClubHeldByPlayer = false;
 
             var ballShoulderPickup = shoulderPickup;
-            clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
-            shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) ? ballShoulderPickup.pickup.currentHand : VRC_Pickup.PickupHand.None;
+            if (Utilities.IsValid(ballShoulderPickup))
+            {
+                clubHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
+            }
+            else
+            {
+                clubHeldInHand = VRC_Pickup.PickupHand.None;
+                shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
+            }
 
             RefreshState();
 
@@ -458,6 +582,26 @@ namespace dev.mikeee324.OpenPutt
                 RightUseButtonDown = value;
 
             RefreshState();
+        }
+
+        public override void InputLookVertical(float value, UdonInputEventArgs args)
+        {
+            if (!localPlayerIsInVR) return;
+
+            if (value.IsNearZero())
+            {
+                lookUpPressed = -1;
+                lookDownPressed = -1;
+            }
+
+            if (lookUpPressed < 0 && value > .8f)
+            {
+                lookUpPressed = Time.time;
+            }
+            else if (lookDownPressed < 0 && value < -.8f)
+            {
+                lookDownPressed = Time.time;
+            }
         }
 
         private void ThrowClub()

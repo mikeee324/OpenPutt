@@ -22,7 +22,9 @@ namespace dev.mikeee324.OpenPutt
         public GameObject desktopCamera;
         public GolfClubColliderVisualiser golfClubVisualiser;
         public Renderer ballRenderer;
+        public Renderer ballGhostRenderer;
         public TrailRenderer trailRenderer;
+        public WristUI wristUI;
 
         [Header("Game Settings")] [UdonSynced]
         public bool isPlaying = true;
@@ -65,6 +67,18 @@ namespace dev.mikeee324.OpenPutt
 
                 // Apply the MaterialPropertyBlock to the GameObject
                 ballRenderer.SetPropertyBlock(golfBall.materialPropertyBlock);
+                
+                if (Utilities.IsValid(ballGhostRenderer))
+                {
+                    if (!Utilities.IsValid(golfBall.ghostMaterialPropertyBlock))
+                        golfBall.ghostMaterialPropertyBlock = new MaterialPropertyBlock();
+                    ballGhostRenderer.GetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
+                    
+                    golfBall.ghostMaterialPropertyBlock.SetColor("_Color", _ballColor);
+                    
+                    // Apply the MaterialPropertyBlock to the GameObject
+                    ballGhostRenderer.SetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
+                }
 
                 // A simple 2 color gradient with a fixed alpha of 1.0f.
                 var alpha = 1.0f;
@@ -900,7 +914,7 @@ namespace dev.mikeee324.OpenPutt
                 return false;
 
             // Check what is underneath the ball
-            if (Physics.Raycast(position, Vector3.down, out var hit, maxDistance) && Utilities.IsValid(hit.collider))
+            if (Physics.Raycast(position, golfBall.gravityDirection, out var hit, maxDistance) && Utilities.IsValid(hit.collider))
             {
                 // Is it the kind of floor we are looking for?
                 // Collider col = hit.collider;

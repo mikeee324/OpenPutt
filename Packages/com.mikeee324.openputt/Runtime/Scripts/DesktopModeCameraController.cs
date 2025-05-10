@@ -1,5 +1,6 @@
 ﻿using UdonSharp;
 using UnityEngine;
+using Varneon.VUdon.ArrayExtensions;
 using VRC.SDKBase;
 using VRC.Udon.Common;
 
@@ -97,11 +98,17 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private float lastKnownRealDistance;
 
+        private Vector3 worldUp = Vector3.up;
+        private Vector3 worldUpSmoothed = Vector3.up;
+        private GolfBallController golfBall;
+
         #endregion
 
         private void OnEnable()
         {
             if (!Utilities.IsValid(target))
+                return;
+            if (!Utilities.IsValid(golfBall))
                 return;
 
             // Set initial camera angle to look away from the player - as long as they are stood near the ball (otherwise just re-use last rotation)
@@ -109,7 +116,10 @@ namespace dev.mikeee324.OpenPutt
             if (Vector3.Distance(localPlayerPos, target.transform.position) < 2)
                 currentCameraX = GetCameraAngle(localPlayerPos, target.position);
 
-            currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+            if (golfBall.gravityMagnitude > .01f)
+                currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+            else
+                currentCameraY = Mathf.Clamp(currentCameraY, -89.9f, cameraMaxY);
 
             lastKnownRealDistance = distance;
 
@@ -173,6 +183,9 @@ namespace dev.mikeee324.OpenPutt
         {
             // Early out if we don't have a target
             if (!target) return;
+            if (!Utilities.IsValid(golfBall) && Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager))
+                golfBall = openPutt.LocalPlayerManager.golfBall;
+            if (!Utilities.IsValid(golfBall)) return;
 
             currentKeyboardVerticalDelta = 0;
             if (Input.GetKey(KeyCode.UpArrow))
@@ -189,7 +202,7 @@ namespace dev.mikeee324.OpenPutt
             // Force currentInputMethod back to mouse - OnInputMethodChanged is not called just by moving mouse (Only changes when a click happens)
             if (currentInputMethod != VRCInputMethod.Mouse && (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.0001f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.0001f))
                 currentInputMethod = VRCInputMethod.Mouse;
-            
+
             // if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
             // {
             //     // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
@@ -215,22 +228,31 @@ namespace dev.mikeee324.OpenPutt
             var horizontalDelta = currentKeyboardHorizontalDelta != 0 ? currentKeyboardHorizontalDelta : currentHorizontalDelta;
             var verticalDelta = currentKeyboardVerticalDelta != 0 ? currentKeyboardVerticalDelta : currentVerticalDelta;
 
-            // Unity editor reports mouse movements higher so lower the speed to make it usable in editor
-#if UNITY_EDITOR
-            var localSpeedModifier = 0.5f;
-#else
-            float localSpeedModifier = 0.5f;
-#endif
-
             // Player can always rotate camera horizontally
+            var localSpeedModifier = 0.5f;
             currentCameraX += (cameraXSpeed * localSpeedModifier) * horizontalDelta;
             if (!LockCamera)
                 currentCameraY -= (cameraYSpeed * localSpeedModifier) * verticalDelta;
 
-            currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
 
-            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (lastKnownRealDistance * Vector3.forward);
-            transform.LookAt(target.transform.position);
+            if (golfBall.gravityMagnitude > .01f)
+            {
+                worldUp = -golfBall.gravityDirection;
+                currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+            }
+            else
+            {
+                worldUp = Vector3.up;
+                currentCameraY = Mathf.Clamp(currentCameraY, -89.9f, cameraMaxY);
+            }
+
+            worldUpSmoothed = Vector3.Lerp(worldUpSmoothed, worldUp, Time.deltaTime * 5f);
+
+            var baseRotation = Quaternion.FromToRotation(Vector3.up, worldUpSmoothed);
+            var orbitRotation = Quaternion.Euler(currentCameraY, currentCameraX, 0);
+            var desiredRelativePosition = baseRotation * orbitRotation * Vector3.back * distance;
+            transform.position = target.position + desiredRelativePosition;
+            transform.rotation = Quaternion.LookRotation(target.position - transform.position, worldUpSmoothed);
         }
     }
 }

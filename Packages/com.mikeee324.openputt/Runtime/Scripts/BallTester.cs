@@ -78,7 +78,7 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(ballController) && ballController.enabled)
                 ballController.requestedBallVelocity = currentVelocity;
             else
-                ballController.OnBallHit(currentVelocity);
+                ballController.OnBallHit(currentVelocity, Vector3.zero);
         }
 
 

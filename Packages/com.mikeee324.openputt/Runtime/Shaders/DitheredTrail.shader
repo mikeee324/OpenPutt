@@ -9,7 +9,7 @@ Shader "Custom/DitheredTrailCutout"
     }
     SubShader
     {
-        Tags { "Queue"="AlphaTest" "RenderType"="Opaque" }
+        Tags { "Queue"="Transparent" "RenderType"="Opaque" }
         Cull Off
         ZWrite On
         AlphaToMask On // Enables MSAA-based transparency

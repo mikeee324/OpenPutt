@@ -2,40 +2,43 @@
 using UnityEngine;
 using VRC.SDKBase;
 
-public class SteppyThingHolder : UdonSharpBehaviour
+namespace dev.mikeee324.OpenPutt
 {
-    public Collider myCollider;
-    public MeshRenderer myRenderer;
-
-    void Start()
+    public class SteppyThingHolder : UdonSharpBehaviour
     {
-        if (!Utilities.IsValid(myCollider))
-            myCollider = GetComponent<Collider>();
-        if (!Utilities.IsValid(myRenderer))
-            myRenderer = GetComponent<MeshRenderer>();
-    }
+        public Collider myCollider;
+        public MeshRenderer myRenderer;
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        myCollider.isTrigger = false;
-        myRenderer.enabled = true;
-    }
+        void Start()
+        {
+            if (!Utilities.IsValid(myCollider))
+                myCollider = GetComponent<Collider>();
+            if (!Utilities.IsValid(myRenderer))
+                myRenderer = GetComponent<MeshRenderer>();
+        }
 
-    private void OnCollisionExit(Collision collision)
-    {
-        myCollider.isTrigger = true;
-        myRenderer.enabled = false;
-    }
+        private void OnCollisionEnter(Collision collision)
+        {
+            myCollider.isTrigger = false;
+            myRenderer.enabled = true;
+        }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        myCollider.isTrigger = false;
-        myRenderer.enabled = true;
-    }
+        private void OnCollisionExit(Collision collision)
+        {
+            myCollider.isTrigger = true;
+            myRenderer.enabled = false;
+        }
 
-    void OnTriggerExit(Collider other)
-    {
-        myCollider.isTrigger = true;
-        myRenderer.enabled = false;
+        private void OnTriggerEnter(Collider other)
+        {
+            myCollider.isTrigger = false;
+            myRenderer.enabled = true;
+        }
+
+        void OnTriggerExit(Collider other)
+        {
+            myCollider.isTrigger = true;
+            myRenderer.enabled = false;
+        }
     }
 }
