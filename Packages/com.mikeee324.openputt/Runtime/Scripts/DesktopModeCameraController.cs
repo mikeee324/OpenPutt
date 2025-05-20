@@ -6,20 +6,16 @@ using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(98)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(5)]
     public class DesktopModeCameraController : UdonSharpBehaviour
     {
         #region References
 
         [Header("References")]
         public OpenPutt openPutt;
-
         public DesktopModeController desktopModeController;
-
         public Camera thisCam;
-
-        // The target we are following
-        public Rigidbody target;
+        public Rigidbody target; // The target we are following
 
         #endregion
 
@@ -51,8 +47,17 @@ namespace dev.mikeee324.OpenPutt
 
         [Header("Camera Masks")]
         public LayerMask defaultCullingMask;
-
         public LayerMask noPlayersCullingMask;
+
+        [Header("Collision Settings")]
+        [Tooltip("The layer mask for objects the camera should collide with.")]
+        public LayerMask collisionLayerMask;
+        [Tooltip("The radius of the sphere used for collision detection (roughly camera size).")]
+        public float cameraSphereRadius = 0.3f;
+        [Tooltip("How far the camera should stay from obstacles.")]
+        public float collisionOffset = 0.1f;
+        [Tooltip("How fast the camera snaps to the collision point.")]
+        public float collisionSnapSpeed = 10f;
 
         #endregion
 
@@ -74,65 +79,48 @@ namespace dev.mikeee324.OpenPutt
         #region Private Vars
 
         private VRCInputMethod currentInputMethod = VRCInputMethod.Mouse;
+        private float _currentCameraX;
+        private float _currentCameraY = 10f;
 
-        /// <summary>
-        /// Current rotation angle for horizontal orbit around the target
-        /// </summary>
-        private float currentCameraX;
+        private float _inputLookHorizontalDelta;
+        private float _inputLookVerticalDelta;
+        private float _inputMoveHorizontal;
+        private float _inputMoveVertical;
 
-        /// <summary>
-        /// Current rotation angle for vertical orbit around the target
-        /// </summary>
-        private float currentCameraY = 10;
+        private float _lastKnownRealDistance;
+        private float _currentCollisionDistance; // Stores the distance from the target based on collisions
 
-        private float currentHorizontalDelta;
-        private float currentVerticalDelta;
-        private float currentKeyboardHorizontalDelta;
-        private float currentKeyboardVerticalDelta;
-
-        private float currentMoveVertical;
-        private float currentMoveHorizontal;
-
-        /// <summary>
-        /// Stores the cameras distance from the target from the last frame, used to lerping the camera distance
-        /// </summary>
-        private float lastKnownRealDistance;
-
-        private Vector3 worldUp = Vector3.up;
-        private Vector3 worldUpSmoothed = Vector3.up;
-        private GolfBallController golfBall;
+        private Vector3 _worldUp = Vector3.up;
+        private Vector3 _worldUpSmoothed = Vector3.up;
+        private GolfBallController _golfBall;
 
         #endregion
 
         private void OnEnable()
         {
-            if (!Utilities.IsValid(target))
-                return;
-            if (!Utilities.IsValid(golfBall))
+            if (!Utilities.IsValid(target) || !Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.LocalPlayerManager))
                 return;
 
-            // Set initial camera angle to look away from the player - as long as they are stood near the ball (otherwise just re-use last rotation)
+            _golfBall = openPutt.LocalPlayerManager.golfBall;
+            if (!Utilities.IsValid(_golfBall))
+                return;
+
             var localPlayerPos = Networking.LocalPlayer.GetPosition();
-            if (Vector3.Distance(localPlayerPos, target.transform.position) < 2)
-                currentCameraX = GetCameraAngle(localPlayerPos, target.position);
+            if (Vector3.Distance(localPlayerPos, target.transform.position) < 2f)
+                _currentCameraX = GetCameraAngle(localPlayerPos, target.position);
 
-            if (golfBall.gravityMagnitude > .01f)
-                currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+            if (_golfBall.gravityMagnitude > .01f)
+                _currentCameraY = Mathf.Clamp(_currentCameraY, cameraMinY, cameraMaxY);
             else
-                currentCameraY = Mathf.Clamp(currentCameraY, -89.9f, cameraMaxY);
+                _currentCameraY = Mathf.Clamp(_currentCameraY, -89.9f, cameraMaxY);
 
-            lastKnownRealDistance = distance;
+            _lastKnownRealDistance = distance;
+            _currentCollisionDistance = distance;
 
-            transform.position = target.transform.position - Quaternion.Euler(currentCameraY, currentCameraX, 0f) * (distance * Vector3.forward);
+            transform.position = target.transform.position - Quaternion.Euler(_currentCameraY, _currentCameraX, 0f) * (distance * Vector3.forward);
             transform.LookAt(target.transform.position);
         }
 
-        /// <summary>
-        /// Works out which way to point the camera so it faces in the direction we want
-        /// </summary>
-        /// <param name="from">The starting point (player or ball pos)</param>
-        /// <param name="to">A poisiton that we want to look at</param>
-        /// <returns>The camera angle that should point the camera in the correct direction to face the target</returns>
         private float GetCameraAngle(Vector3 from, Vector3 to)
         {
             var direction = to - from;
@@ -145,7 +133,7 @@ namespace dev.mikeee324.OpenPutt
         {
             if (args.eventType == UdonInputEventType.AXIS)
             {
-                currentMoveHorizontal = value;
+                _inputMoveHorizontal = value;
             }
         }
 
@@ -153,106 +141,113 @@ namespace dev.mikeee324.OpenPutt
         {
             if (args.eventType == UdonInputEventType.AXIS)
             {
-                currentMoveVertical = value;
+                _inputMoveVertical = value;
             }
         }
 
         public override void InputLookHorizontal(float value, UdonInputEventArgs args)
         {
             if (args.eventType == UdonInputEventType.AXIS)
-                currentHorizontalDelta = args.floatValue;
+                _inputLookHorizontalDelta = args.floatValue;
         }
 
         public override void InputLookVertical(float value, UdonInputEventArgs args)
         {
             if (args.eventType == UdonInputEventType.AXIS)
-                currentVerticalDelta = args.floatValue;
+                _inputLookVerticalDelta = args.floatValue;
         }
 
         public override void OnInputMethodChanged(VRCInputMethod inputMethod)
         {
-            // Used to toggle camera inversion for controllers
-            // This event is not called just by moving a mouse! - Player has to click a button for it to count
             currentInputMethod = inputMethod;
         }
 
-        /// <summary>
-        /// Using FixedUpdate for tracking the ball because it is a rigidbody
-        /// </summary>
-        public override void PostLateUpdate()
+        private void LateUpdate()
         {
-            // Early out if we don't have a target
             if (!target) return;
-            if (!Utilities.IsValid(golfBall) && Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager))
-                golfBall = openPutt.LocalPlayerManager.golfBall;
-            if (!Utilities.IsValid(golfBall)) return;
+            if (!Utilities.IsValid(_golfBall) && Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager))
+                _golfBall = openPutt.LocalPlayerManager.golfBall;
+            if (!Utilities.IsValid(_golfBall)) return;
 
-            currentKeyboardVerticalDelta = 0;
+            // Handle Keyboard Input for camera movement
+            var keyboardVerticalDelta = 0f;
             if (Input.GetKey(KeyCode.UpArrow))
-                currentKeyboardVerticalDelta += .8f;
+                keyboardVerticalDelta += .8f;
             if (Input.GetKey(KeyCode.DownArrow))
-                currentKeyboardVerticalDelta -= .8f;
+                keyboardVerticalDelta -= .8f;
 
-            currentKeyboardHorizontalDelta = 0;
+            var keyboardHorizontalDelta = 0f;
             if (Input.GetKey(KeyCode.RightArrow))
-                currentKeyboardHorizontalDelta += .8f;
+                keyboardHorizontalDelta += .8f;
             if (Input.GetKey(KeyCode.LeftArrow))
-                currentKeyboardHorizontalDelta -= .8f;
+                keyboardHorizontalDelta -= .8f;
 
-            // Force currentInputMethod back to mouse - OnInputMethodChanged is not called just by moving mouse (Only changes when a click happens)
+            // Force currentInputMethod back to mouse if mouse movement detected
             if (currentInputMethod != VRCInputMethod.Mouse && (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.0001f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.0001f))
                 currentInputMethod = VRCInputMethod.Mouse;
 
-            // if (desktopModeController.localPlayerPlatform == DevicePlatform.AndroidMobile)
-            // {
-            //     // Workaround for InputLookHorizontal/InputlookVertical doing nothing in the mobile alpha
-            //     //currentVerticalDelta = -currentMoveVertical;
-            //     //currentHorizontalDelta = currentMoveHorizontal;
-            // }
-            // else
-            if (!currentMoveVertical.IsNearZero())
+            // Handle Camera Zoom (Move Vertical or Scroll Wheel)
+            if (!_inputMoveVertical.IsNearZero())
             {
-                distance = Mathf.Clamp(distance - (currentMoveVertical * .4f), minDistance, maxDistance);
+                distance = Mathf.Clamp(distance - (_inputMoveVertical * .4f), minDistance, maxDistance);
             }
             else
             {
-                // Scroll wheel zoom
                 var scrollWheel = Input.GetAxis("Mouse ScrollWheel");
                 distance = Mathf.Clamp(distance - scrollWheel, minDistance, maxDistance);
             }
 
-            // Scale zoom level depending on targets speed
-            var targetScaledDistance = distance * Mathf.Clamp(target.velocity.magnitude / 3, 1, distance < 1 ? 5 : 2);
-            lastKnownRealDistance = Mathf.Lerp(lastKnownRealDistance, targetScaledDistance, cameraZoomSpeed * Time.deltaTime);
+            // Scale zoom level depending on target's speed
+            var targetScaledDistance = distance * Mathf.Clamp(target.velocity.magnitude / 3f, 1f, distance < 1f ? 5f : 2f);
+            _lastKnownRealDistance = Mathf.Lerp(_lastKnownRealDistance, targetScaledDistance, cameraZoomSpeed * Time.deltaTime);
 
-            var horizontalDelta = currentKeyboardHorizontalDelta != 0 ? currentKeyboardHorizontalDelta : currentHorizontalDelta;
-            var verticalDelta = currentKeyboardVerticalDelta != 0 ? currentKeyboardVerticalDelta : currentVerticalDelta;
+            var horizontalDelta = keyboardHorizontalDelta != 0f ? keyboardHorizontalDelta : _inputLookHorizontalDelta;
+            var verticalDelta = keyboardVerticalDelta != 0f ? keyboardVerticalDelta : _inputLookVerticalDelta;
 
-            // Player can always rotate camera horizontally
-            var localSpeedModifier = 0.5f;
-            currentCameraX += (cameraXSpeed * localSpeedModifier) * horizontalDelta;
+            const float localSpeedModifier = 0.5f;
+            _currentCameraX += (cameraXSpeed * localSpeedModifier) * horizontalDelta;
+            
             if (!LockCamera)
-                currentCameraY -= (cameraYSpeed * localSpeedModifier) * verticalDelta;
-
-
-            if (golfBall.gravityMagnitude > .01f)
             {
-                worldUp = -golfBall.gravityDirection;
-                currentCameraY = Mathf.Clamp(currentCameraY, cameraMinY, cameraMaxY);
+                _currentCameraY += (cameraYSpeed * localSpeedModifier) * verticalDelta; 
+            }
+
+            float clampedRawCameraY; 
+            if (_golfBall.gravityMagnitude > .01f)
+            {
+                _worldUp = -_golfBall.gravityDirection;
+                clampedRawCameraY = -Mathf.Clamp(-_currentCameraY, cameraMinY, cameraMaxY);
             }
             else
             {
-                worldUp = Vector3.up;
-                currentCameraY = Mathf.Clamp(currentCameraY, -89.9f, cameraMaxY);
+                _worldUp = Vector3.up;
+                clampedRawCameraY = -Mathf.Clamp(-_currentCameraY, -89.9f, cameraMaxY);
             }
+            _currentCameraY = clampedRawCameraY;
 
-            worldUpSmoothed = Vector3.Lerp(worldUpSmoothed, worldUp, Time.deltaTime * 5f);
+            // Complicated stuff to account for gravity
+            _worldUpSmoothed = Vector3.Lerp(_worldUpSmoothed, _worldUp, Time.deltaTime * 5f);
+            var orbitBaseDirection = Vector3.forward;
+            if (Vector3.Dot(orbitBaseDirection, _worldUpSmoothed).IsNear(1f) || Vector3.Dot(orbitBaseDirection, _worldUpSmoothed).IsNear(-1f))
+                orbitBaseDirection = Vector3.right;
+            orbitBaseDirection = Vector3.ProjectOnPlane(orbitBaseDirection, _worldUpSmoothed).normalized;
+            var yawRotation = Quaternion.AngleAxis(_currentCameraX, _worldUpSmoothed);
+            var rotatedBaseDirection = yawRotation * orbitBaseDirection;
+            var horizontalRight = Vector3.Cross(_worldUpSmoothed, rotatedBaseDirection).normalized;
+            var pitchRotation = Quaternion.AngleAxis(_currentCameraY, horizontalRight);
+            var finalOrbitDirection = pitchRotation * rotatedBaseDirection;
 
-            var baseRotation = Quaternion.FromToRotation(Vector3.up, worldUpSmoothed);
-            var orbitRotation = Quaternion.Euler(currentCameraY, currentCameraX, 0);
-            var desiredRelativePosition = baseRotation * orbitRotation * Vector3.back * distance;
-            transform.position = target.position + desiredRelativePosition;
-            transform.rotation = Quaternion.LookRotation(target.position - transform.position, worldUpSmoothed);
+            // Camera collision stuff
+            var targetLerpDistance = _lastKnownRealDistance;
+            if (Physics.SphereCast(target.transform.position, cameraSphereRadius, finalOrbitDirection, out var hit, _lastKnownRealDistance, collisionLayerMask))
+                targetLerpDistance = Mathf.Max(minDistance, hit.distance - cameraSphereRadius - collisionOffset);
+            _currentCollisionDistance = Mathf.Lerp(_currentCollisionDistance, targetLerpDistance, collisionSnapSpeed * Time.deltaTime);
+            _currentCollisionDistance = Mathf.Min(_currentCollisionDistance, _lastKnownRealDistance);
+
+            var finalCamPos = target.transform.position + finalOrbitDirection * _currentCollisionDistance;
+            var desiredCamRot = Quaternion.LookRotation(target.transform.position - finalCamPos, _worldUpSmoothed);
+            transform.position = finalCamPos;
+            transform.rotation = desiredCamRot;
         }
     }
 }

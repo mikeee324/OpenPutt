@@ -488,12 +488,19 @@ namespace dev.mikeee324.OpenPutt
 
             var gravityUp = -golfBall.gravityDirection;
 
+            var isAttachedToClub = !Utilities.IsValid(targetOverride);
+
             if (golfBall.gravityMagnitude > 0f)
                 directionOfTravel = directionOfTravel.FlattenDirection(gravityUp);
 
-            // Determine the 'horizontal' swing path direction relative to gravity
-            var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? headVelocity : headVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
-
+            // Collider is following something that isn't the club - use the velocity of this rigidbody instead for stuff
+            // We also disable side spin and stuff because it's not the normal golf club
+            if (!isAttachedToClub)
+            {
+                directionOfTravel = FrameVelocitySmoothed;
+                velocityMagnitude = FrameVelocitySmoothed.magnitude;
+            }
+            
             if (hasGravity)
             {
                 // Apply loft
@@ -509,72 +516,72 @@ namespace dev.mikeee324.OpenPutt
             directionOfTravel = directionOfTravel.normalized.Sanitized();
 
             var rawDirectionOfTravel = directionOfTravel;
+            var faceAngleDiffToDirection = 1f;
             LastKnownHitDirBias = 0;
 
-            // Work out which way the club head is facing (And correct if player is holding it backwards)
-            var faceDirection = Vector3.zero;
-            switch (golfClub.CurrentHand)
+            if (isAttachedToClub)
             {
-                case VRC_Pickup.PickupHand.Left:
+                // Work out which way the club head is facing (And correct if player is holding it backwards)
+                var faceDirection = Vector3.zero;
+                switch (golfClub.CurrentHand)
                 {
-                    // Flatten the club's right vector relative to gravity
-                    if (hasGravity)
-                        faceDirection = putterTarget.transform.right.FlattenDirection(gravityUp).normalized;
-                    else
-                        faceDirection = putterTarget.transform.right.normalized;
-                    break;
+                    case VRC_Pickup.PickupHand.Left:
+                    {
+                        // Flatten the club's right vector relative to gravity
+                        if (hasGravity)
+                            faceDirection = putterTarget.transform.right.FlattenDirection(gravityUp).normalized;
+                        else
+                            faceDirection = putterTarget.transform.right.normalized;
+                        break;
+                    }
+                    case VRC_Pickup.PickupHand.Right:
+                    {
+                        // Flatten the club's *negative* right vector relative to gravity
+                        if (hasGravity)
+                            faceDirection = (-putterTarget.transform.right).FlattenDirection(gravityUp).normalized;
+                        else
+                            faceDirection = (-putterTarget.transform.right).normalized;
+                        break;
+                    }
                 }
-                case VRC_Pickup.PickupHand.Right:
+
+                faceAngleDiffToDirection = Vector3.Dot(faceDirection, directionOfTravel.normalized);
+                if (golfClub.ClubType == GolfClubType.Putter || !hasGravity)
                 {
-                    // Flatten the club's *negative* right vector relative to gravity
-                    if (hasGravity)
-                        faceDirection = (-putterTarget.transform.right).FlattenDirection(gravityUp).normalized;
-                    else
-                        faceDirection = (-putterTarget.transform.right).normalized;
-                    break;
-                }
-            }
-            
-            var faceAngleDiffToDirection = Vector3.Dot(faceDirection, directionOfTravel.normalized);
-            if (golfClub.ClubType == GolfClubType.Putter || !hasGravity)
-            {
-                // Putter can hit with both sides - check if the player used the "backside"
-                var oppositeAngle = Vector3.Dot(-faceDirection, directionOfTravel.normalized);
+                    // Putter can hit with both sides - check if the player used the "backside"
+                    var oppositeAngle = Vector3.Dot(-faceDirection, directionOfTravel.normalized);
 
-                if (oppositeAngle > faceAngleDiffToDirection)
+                    if (oppositeAngle > faceAngleDiffToDirection)
+                    {
+                        faceDirection = -faceDirection;
+                        faceAngleDiffToDirection = oppositeAngle;
+                    }
+                }
+
+                // Stuff we can only do if people aren't hitting balls at stupid angles
+                if (faceAngleDiffToDirection > .2f)
                 {
-                    faceDirection = -faceDirection;
-                    faceAngleDiffToDirection = oppositeAngle;
+                    // Face direction bias based on speed
+                    LastKnownHitDirBias = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
+                    directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, LastKnownHitDirBias);
                 }
-            }
 
-            // Stuff we can only do if people aren't hitting balls at stupid angles
-            if (faceAngleDiffToDirection > .2f)
-            {
-                // Face direction bias based on speed
-                LastKnownHitDirBias = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
-                directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, LastKnownHitDirBias);
-            }
+                // Apply the momentum loss due to angle
+                velocityMagnitude *= momentumLossByAngle.Evaluate(faceAngleDiffToDirection);
 
-            // Apply the momentum loss due to angle
-            velocityMagnitude *= momentumLossByAngle.Evaluate(faceAngleDiffToDirection);
+                // Side spin
+                if (hasGravity && golfClub.ClubType != GolfClubType.Putter)
+                {
+                    // Determine the 'horizontal' swing path direction relative to gravity
+                    var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? headVelocity : headVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
 
-            // Side spin
-            if (hasGravity && golfClub.ClubType != GolfClubType.Putter)
-            {
-                // More angle difference => Faster side spin
-                var rawSpinMagnitude = sideSpinMagnitudeCurve.Evaluate(faceAngleDiffToDirection);
-                var sideSpinSpeed = rawSpinMagnitude * velocityMagnitude * sideSpinMultiplier;
-                var crossProduct = Vector3.Cross(swingPathHorizontalDirection, faceDirection);
-                var sideSpinAxis = Vector3.Dot(crossProduct, gravityUp) < 0 ? gravityUp : -gravityUp;
-                sideSpin = sideSpinAxis * sideSpinSpeed;
-            }
-
-            // If the collider is following something other than the club - override normal operation
-            if (Utilities.IsValid(targetOverride))
-            {
-                directionOfTravel = FrameVelocitySmoothed;
-                velocityMagnitude = FrameVelocitySmoothed.magnitude;
+                    // More angle difference => Faster side spin
+                    var rawSpinMagnitude = sideSpinMagnitudeCurve.Evaluate(faceAngleDiffToDirection);
+                    var sideSpinSpeed = rawSpinMagnitude * velocityMagnitude * sideSpinMultiplier;
+                    var crossProduct = Vector3.Cross(swingPathHorizontalDirection, faceDirection);
+                    var sideSpinAxis = Vector3.Dot(crossProduct, gravityUp) < 0 ? gravityUp : -gravityUp;
+                    sideSpin = sideSpinAxis * sideSpinSpeed;
+                }
             }
 
             // Scale the velocity back up a bit

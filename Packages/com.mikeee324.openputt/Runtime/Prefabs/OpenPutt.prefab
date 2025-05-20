@@ -1029,7 +1029,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 60
   orthographic: 0
@@ -1081,7 +1081,7 @@ MonoBehaviour:
   cameraZoomSpeed: 2
   cameraXSpeed: 5
   cameraYSpeed: 5
-  cameraMinY: -40
+  cameraMinY: 0
   cameraMaxY: 89.9
   defaultCullingMask:
     serializedVersion: 2
@@ -1089,6 +1089,12 @@ MonoBehaviour:
   noPlayersCullingMask:
     serializedVersion: 2
     m_Bits: 256307
+  collisionLayerMask:
+    serializedVersion: 2
+    m_Bits: 131073
+  cameraSphereRadius: 0.2
+  collisionOffset: 0.2
+  collisionSnapSpeed: 10
   LockCamera: 0
 --- !u!114 &3872630369063328416
 MonoBehaviour:
@@ -6868,7 +6874,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3749139905453364571
 Transform:
   m_ObjectHideFlags: 0
