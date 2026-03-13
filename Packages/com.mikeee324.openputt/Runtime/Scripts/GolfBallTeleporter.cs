@@ -117,72 +117,20 @@ namespace dev.mikeee324.OpenPutt
         {
             if (targetPosition == null || launchPosition == null || localCollider == null) return; // Added null check for localCollider
 
-            // Draw the transparent box for the collider
-            Gizmos.color = new Color(0f, 1f, 0f, 0.3f);                 // Green and semi-transparent
-            Gizmos.matrix = localCollider.transform.localToWorldMatrix; // Apply the collider's transform
-            Gizmos.DrawCube(localCollider.center, localCollider.size);
-            Gizmos.color = Color.green; // Reset color for the wireframe
-            Gizmos.DrawWireCube(localCollider.center, localCollider.size);
-
-            Gizmos.matrix = Matrix4x4.identity;
+            OpenPuttGizmoUtils.DrawSolidAndWireBoxCollider(localCollider, new Color(0f, 1f, 0f, 0.3f), Color.green);
 
             // Draw transparent cube from the center of the collider to the target position
-            DrawCubeArrow(localCollider.transform.TransformPoint(localCollider.center), targetPosition.position, Color.yellow);
+            OpenPuttGizmoUtils.DrawCubeArrow(localCollider.transform.TransformPoint(localCollider.center), targetPosition.position, Color.yellow, 0.0225f);
 
             // Draw transparent cube at the target position to show the direction the ball will roll out
             var directionStart = targetPosition.position;
             var directionEnd = launchPosition.position;
 
-            DrawCubeArrow(directionStart, directionEnd, new Color(.4f, .4f, 0.4f, 0.5f));
+            OpenPuttGizmoUtils.DrawCubeArrow(directionStart, directionEnd, new Color(.4f, .4f, 0.4f, 0.5f), 0.0225f);
 
             // Draw spheres at target and launch positions
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawSphere(targetPosition.position, 0.0225f);
-            Gizmos.DrawWireSphere(targetPosition.position, 0.0225f);
-
-            Gizmos.color = Color.gray;
-            Gizmos.DrawSphere(launchPosition.position, 0.0225f);
-            Gizmos.DrawWireSphere(launchPosition.position, 0.0225f);
-        }
-
-        private void DrawCubeArrow(Vector3 directionStart, Vector3 directionEnd, Color color)
-        {
-            DrawTransparentCubeLine(directionStart, directionEnd, color, 0.0225f); // Yellow and semi-transparent, thin cube
-
-            // Draw the arrowhead using thin transparent cubes
-            var arrowDir = (directionEnd - directionStart).normalized;
-            var arrowHeadLength = 0.2f;
-            var arrowHeadAngle = 30f;
-
-            // Calculate directions for the arrowhead lines
-            var left = Quaternion.LookRotation(arrowDir) * Quaternion.Euler(0, 180 + arrowHeadAngle, 0) * Vector3.forward;
-            var right = Quaternion.LookRotation(arrowDir) * Quaternion.Euler(0, 180 - arrowHeadAngle, 0) * Vector3.forward;
-
-            DrawTransparentCubeLine(directionEnd, directionEnd + left * arrowHeadLength, color, 0.0225f);  // Cyan and semi-transparent, thin cube
-            DrawTransparentCubeLine(directionEnd, directionEnd + right * arrowHeadLength, color, 0.0225f); // Cyan and semi-transparent, thin cube
-        }
-
-        // Helper method to draw a transparent cube representing a line segment
-        private void DrawTransparentCubeLine(Vector3 start, Vector3 end, Color color, float thickness)
-        {
-            var direction = end - start;
-            var distance = direction.magnitude;
-            if (distance <= 0.0001f) return; // Avoid drawing tiny or zero-length cubes
-
-            var center = (start + end) / 2f;
-            var rotation = Quaternion.LookRotation(direction);
-            var scale = new Vector3(thickness, thickness, distance);
-
-            Gizmos.color = color;
-
-            // Apply position, rotation, and scale
-            Gizmos.matrix = Matrix4x4.TRS(center, rotation, scale);
-
-            // Draw the cube
-            Gizmos.DrawCube(Vector3.zero, Vector3.one);
-
-            // Reset the matrix
-            Gizmos.matrix = Matrix4x4.identity;
+            OpenPuttGizmoUtils.DrawSphereMarker(targetPosition.position, 0.0225f, Color.yellow);
+            OpenPuttGizmoUtils.DrawSphereMarker(launchPosition.position, 0.0225f, Color.gray);
         }
     }
 }

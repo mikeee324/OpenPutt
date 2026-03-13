@@ -7,6 +7,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using VRC.Udon;
 using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
@@ -46,21 +47,29 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("The duration of the vibration in seconds.")]
         public float vibrationDuration = 0.1f;
 
-        [Tooltip("The strength of the vibration (0.0 to 1.0).")] [Range(0f, 1f)]
+        [Tooltip("The strength of the vibration (0.0 to 1.0).")]
+        [Range(0f, 1f)]
         public float vibrationStrength = 0.5f;
 
         [Tooltip("The frequency of the vibration (roughly how many pulses per second).")]
         public float vibrationFrequency = 30f;
 
+        public UdonBehaviour eventReceiver;
+        public string eventToSendOnMenuOpen;
+        public string eventToSendOnMenuClose;
 
         public bool golfClubHeldByPlayer;
         public bool golfBallHeldByPlayer;
+
         private bool leftUseButtonDown;
         private bool rightUseButtonDown;
         private float originalHandDistance = -1f;
         private bool userIsInVR;
         private bool isCurrentlyVisible = false;
         private VRC_Pickup.PickupHand currentHand = VRC_Pickup.PickupHand.None;
+        private Vector3 menuSpawnPosition = Vector3.zero;
+        private Quaternion menuSpawnRotation = Quaternion.identity;
+        private Vector3 menuSpawnScale = Vector3.one;
 
         void Start()
         {
@@ -68,6 +77,12 @@ namespace dev.mikeee324.OpenPutt
             {
                 visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
                 visibleMenuObject.transform.localScale = Vector3.zero;
+            }
+            else
+            {
+                menuSpawnPosition = visibleMenuObject.transform.position;
+                menuSpawnRotation = visibleMenuObject.transform.rotation;
+                menuSpawnScale = visibleMenuObject.transform.localScale;
             }
 
             SendCustomEventDelayedSeconds(nameof(IsUserInVRCheck), 1);
@@ -109,9 +124,9 @@ namespace dev.mikeee324.OpenPutt
                 if (!bothTriggersHeld) return;
                 if (originalHandDistance < 0f) return;
 
-                // Maybe this crashes if an avatar doesn't have finger bones? - No idea
-                var leftHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftIndexProximal);
-                var rightHand = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightIndexProximal);
+                // Use controller tracking positions instead of avatar finger bones
+                var leftHand = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.LeftHand).position;
+                var rightHand = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).position;
                 var currentDistance = Vector3.Distance(leftHand, rightHand);
 
                 var isVisibleNow = currentDistance > (originalHandDistance * openThreshold);
@@ -120,14 +135,30 @@ namespace dev.mikeee324.OpenPutt
                 {
                     Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Left, vibrationStrength, vibrationFrequency, vibrationDuration);
                     Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Right, vibrationStrength, vibrationFrequency, vibrationDuration);
+                    
+                    if (Utilities.IsValid(eventReceiver))
+                    {
+                        if (isVisibleNow)
+                            eventReceiver.SendCustomEvent(eventToSendOnMenuOpen);
+                        else if (!isVisibleNow)
+                            eventReceiver.SendCustomEvent(eventToSendOnMenuClose);
+                    }
                 }
 
                 isCurrentlyVisible = isVisibleNow;
 
                 if (!isVisibleNow)
                 {
-                    visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                    visibleMenuObject.transform.localScale = Vector3.zero;
+                    if (hideOnStart)
+                    {
+                        visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                        visibleMenuObject.transform.localScale = Vector3.zero;
+                    }
+                    else
+                    {
+                        visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
+                        visibleMenuObject.transform.localScale = menuSpawnScale;
+                    }
                     return;
                 }
 
@@ -138,15 +169,54 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
 
-                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, Quaternion.LookRotation(directionBetweenHands) * Quaternion.Euler(0, 90, 0));
-                visibleMenuObject.transform.localScale = menuScale;
+                // Orient the menu so it spans between the hands (menu right axis follows hand direction),
+                // but pitch it up/down so it faces the player's head instead of being flat to world Y.
+                var headPos = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+
+                Quaternion finalRot;
+                // Fallback to the original simple rotation if vectors are degenerate
+                if (directionBetweenHands.sqrMagnitude < 1e-6f || (headPos - menuPosition).sqrMagnitude < 1e-6f)
+                {
+                    finalRot = Quaternion.LookRotation(directionBetweenHands) * Quaternion.Euler(0, 90, 0);
+                }
+                else
+                {
+                        // Compute a forward vector that looks at the head but is orthogonal to the
+                        // hand direction (so the menu plane spans the hands while facing the head).
+                        var desiredRight = directionBetweenHands.normalized;
+                        var toHead = headPos - menuPosition;
+
+                        // Project the head direction onto the plane orthogonal to the hand axis
+                        var forward = toHead - Vector3.Project(toHead, desiredRight);
+
+                        // If projection is degenerate (hands line up with head), pick a fallback forward
+                        if (forward.sqrMagnitude < 1e-6f)
+                        {
+                            forward = Vector3.Cross(Vector3.up, desiredRight);
+                            if (forward.sqrMagnitude < 1e-6f)
+                                forward = Vector3.Cross(Vector3.forward, desiredRight);
+                        }
+
+                        forward.Normalize();
+
+                        // Ensure the forward is pointing toward the head (not away)
+                        if (Vector3.Dot(forward, toHead) < 0f)
+                            forward = -forward;
+
+                        var up = Vector3.Cross(forward, desiredRight).normalized;
+                        finalRot = Quaternion.LookRotation(forward, up);
+                }
+
+                // Flip the menu by 180 degrees so it faces the player correctly
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, finalRot * Quaternion.Euler(0f, 180f, 0f));
+                visibleMenuObject.transform.localScale = menuScale * 1.2f;
             }
             else if (Input.GetKey(menuKey))
             {
                 var menuScale = Vector3.one * 1.7f;
 
                 var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                var menuPosition = head.position + visibleMenuObject.transform.TransformDirection(desktopHeadOffset);
+                var menuPosition = head.position + head.rotation * desktopHeadOffset;
 
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
@@ -163,19 +233,28 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!OpenPuttUtils.LocalPlayerIsValid()) return;
 
-            var playerPos = Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head);
+            var playerPos = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
             var menuPos = visibleMenuObject.transform.position;
 
             var distanceToMenu = Vector3.Distance(playerPos, menuPos);
 
-            var shouldHideMenu = distanceToMenu > hideDistance;
+            var shouldHideMenu = hideDistance > 0f && distanceToMenu > hideDistance;
 
             if (shouldHideMenu)
             {
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
-                visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                visibleMenuObject.transform.localScale = Vector3.zero;
+                    
+                if (hideOnStart)
+                {
+                    visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                    visibleMenuObject.transform.localScale = Vector3.zero;
+                }
+                else
+                {
+                    visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
+                    visibleMenuObject.transform.localScale = menuSpawnScale;
+                }
             }
 
             SendCustomEventDelayedSeconds(nameof(ShouldHideMenu), 5);
@@ -211,7 +290,7 @@ namespace dev.mikeee324.OpenPutt
                     pickup.pickupable = false;
 
                     if (originalHandDistance < 0)
-                        originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.LeftHand), Networking.LocalPlayer.GetBonePosition(HumanBodyBones.RightHand));
+                        originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.LeftHand).position, Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).position);
                 }
                 else
                 {

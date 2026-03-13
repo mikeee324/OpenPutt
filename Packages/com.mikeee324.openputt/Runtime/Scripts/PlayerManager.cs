@@ -24,9 +24,9 @@ namespace dev.mikeee324.OpenPutt
         public Renderer ballRenderer;
         public Renderer ballGhostRenderer;
         public TrailRenderer trailRenderer;
-        public WristUI wristUI;
 
-        [Header("Game Settings")] [UdonSynced]
+        [Header("Game Settings")]
+        [UdonSynced]
         public bool isPlaying = true;
 
         [UdonSynced]
@@ -52,7 +52,7 @@ namespace dev.mikeee324.OpenPutt
             set
             {
                 if (_ballColor == value) return;
-                
+
                 _ballColor = value;
                 if (!Utilities.IsValid(golfBall)) return;
 
@@ -67,15 +67,15 @@ namespace dev.mikeee324.OpenPutt
 
                 // Apply the MaterialPropertyBlock to the GameObject
                 ballRenderer.SetPropertyBlock(golfBall.materialPropertyBlock);
-                
+
                 if (Utilities.IsValid(ballGhostRenderer))
                 {
                     if (!Utilities.IsValid(golfBall.ghostMaterialPropertyBlock))
                         golfBall.ghostMaterialPropertyBlock = new MaterialPropertyBlock();
                     ballGhostRenderer.GetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
-                    
+
                     golfBall.ghostMaterialPropertyBlock.SetColor("_Color", _ballColor);
-                    
+
                     // Apply the MaterialPropertyBlock to the GameObject
                     ballGhostRenderer.SetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
                 }
@@ -114,6 +114,9 @@ namespace dev.mikeee324.OpenPutt
 
         [UdonSynced, FieldChangeCallback(nameof(BallVisible))]
         private bool _ballVisible;
+
+        [UdonSynced]
+        private bool _weirdThingHappened = false;
 
         public int PlayerID => transform.GetSiblingIndex();
 
@@ -206,6 +209,11 @@ namespace dev.mikeee324.OpenPutt
             {
                 openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
                 openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+
+                golfClub.ClubType = golfClub.ClubType; // Just re-set the club type to update the head meshes to the correct hand
+
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+                    openPutt.eventHandler.OnPlayerHandednessChanged(Networking.LocalPlayer, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }
         }
 
@@ -221,13 +229,19 @@ namespace dev.mikeee324.OpenPutt
             {
                 var ownerIsValid = Utilities.IsValid(Owner) && Owner.IsValid();
 
+                if (!ownerIsValid)
+                {
+                    _isImmobilized = false;
+                    return;
+                }
+
                 _isImmobilized = value;
 
                 if (!freezePlayerWhileClubIsArmed)
                     _isImmobilized = false;
 
                 // Don't freeze desktop players (they can just not press any keys to not move anyway)
-                if (ownerIsValid && !canFreezeDesktopPlayers && !Owner.IsUserInVR())
+                if (!canFreezeDesktopPlayers && !Owner.IsUserInVR())
                     _isImmobilized = false;
 
                 if (Owner.isLocal)
@@ -279,8 +293,8 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(openPutt))
                 {
-                    foreach (var eventListener in openPutt.eventListeners)
-                        eventListener.OnLocalPlayerBallHit(speed);
+                    if (Utilities.IsValid(openPutt.eventHandler))
+                        openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
                 }
 
                 return;
@@ -352,8 +366,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(openPutt))
             {
-                foreach (var eventListener in openPutt.eventListeners)
-                    eventListener.OnLocalPlayerBallHit(speed);
+                if (Utilities.IsValid(openPutt.eventHandler))
+                    openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
             }
         }
 
@@ -441,9 +455,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(hole))
                 {
-                    if (courseScores[course.holeNumber] <= 1)
-                        hole.localPlayerHoleInOneEvent = true;
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, "OnHoleInOne");
+                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), courseScores[course.holeNumber]);
                 }
             }
 
@@ -458,8 +470,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(hole))
                 {
-                    hole.localPlayerBallEnteredEvent = true;
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, "OnBallEntered");
+                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), courseScores[course.holeNumber]);
                 }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync
@@ -536,21 +547,25 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
-            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.rightShoulderPickup) && Utilities.IsValid(openPutt.rightShoulderPickup.ObjectToAttach))
-            {
-                var pickupHelper = openPutt.rightShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
-                if (Utilities.IsValid(pickupHelper))
-                    openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
-            }
-            
+            var hasValidShoulderPickups = Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup) && Utilities.IsValid(openPutt.rightShoulderPickup);
+            var isLeftHanded = hasValidShoulderPickups && IsInLeftHandedMode;
+            var ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
+            var clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup : openPutt.rightShoulderPickup;
+
             // TODO: Instead of disabling the pickup while stood on the course, we could use the line renderer to point towards where the ball is
             // Might be less confusing when they can't grab their ball from their shoulder is it draws a line to where their ball is
-            
+
 
             var ballIsOnCurrentCourse = false;
             var shouldEnableBallShoulderPickup = true;
             var shouldEnableClubShoulderPickup = isPlaying;
+
+            if (Utilities.IsValid(clubShoulderPickup) && Utilities.IsValid(clubShoulderPickup.ObjectToAttach))
+            {
+                var pickupHelper = clubShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
+                if (Utilities.IsValid(pickupHelper))
+                    shouldEnableClubShoulderPickup = isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None;
+            }
 
             if (Utilities.IsValid(CurrentCourse))
             {
@@ -606,21 +621,23 @@ namespace dev.mikeee324.OpenPutt
                     shouldEnableBallShoulderPickup = !ballIsOnCurrentCourse;
             }
 
-            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup))
+            if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(clubShoulderPickup))
             {
                 if (!isPlaying)
                     shouldEnableBallShoulderPickup = false;
                 else if (golfBall.pickedUpByPlayer)
                     shouldEnableBallShoulderPickup = true;
 
-                // Toggle the shoulder pickups if needed
-                var isLeftHanded = IsInLeftHandedMode;
-                var ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup.gameObject : openPutt.leftShoulderPickup.gameObject;
-                var clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup.gameObject : openPutt.rightShoulderPickup.gameObject;
-                if (shouldEnableBallShoulderPickup != ballShoulderPickup.activeInHierarchy)
-                    ballShoulderPickup.SetActive(shouldEnableBallShoulderPickup);
-                if (shouldEnableClubShoulderPickup != clubShoulderPickup.activeInHierarchy)
-                    clubShoulderPickup.SetActive(shouldEnableClubShoulderPickup);
+                var keepBallShoulderActive = ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None;
+                var keepClubShoulderActive = clubShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None;
+
+                var targetBallShoulderActive = shouldEnableBallShoulderPickup || keepBallShoulderActive;
+                var targetClubShoulderActive = shouldEnableClubShoulderPickup || keepClubShoulderActive;
+
+                if (targetBallShoulderActive != ballShoulderPickup.gameObject.activeInHierarchy)
+                    ballShoulderPickup.gameObject.SetActive(targetBallShoulderActive);
+                if (targetClubShoulderActive != clubShoulderPickup.gameObject.activeInHierarchy)
+                    clubShoulderPickup.gameObject.SetActive(targetClubShoulderActive);
             }
 
             // If the local player still owns this PlayerManager check for their location again in another second
@@ -715,8 +732,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (localPlayerIsNowOwner)
             {
-                openPutt.leftShoulderPickup.ObjectToAttach = golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = golfClub.gameObject;
+                var isLeftHanded = IsInLeftHandedMode;
+                openPutt.leftShoulderPickup.ObjectToAttach = isLeftHanded ? golfClub.gameObject : golfBall.gameObject;
+                openPutt.rightShoulderPickup.ObjectToAttach = isLeftHanded ? golfBall.gameObject : golfClub.gameObject;
 
                 openPutt.leftShoulderPickup.gameObject.SetActive(true);
                 openPutt.rightShoulderPickup.gameObject.SetActive(true);
@@ -963,5 +981,12 @@ namespace dev.mikeee324.OpenPutt
 
             return courseState;
         }
+
+        public void _OnWeirdThingHappened()
+        {
+            _weirdThingHappened = true;
+        }
+
+        public bool DidWeirdThingHappen() => _weirdThingHappened;
     }
 }

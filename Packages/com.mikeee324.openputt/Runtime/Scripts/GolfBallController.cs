@@ -3,6 +3,7 @@ using UdonSharp;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.Dynamics;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 
@@ -41,7 +42,9 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField]
         private SphereCollider ballCollider;
 
-        [Space] [Header("General Settings")] [Tooltip("Allows players to pick up their ball at any time as long as the ball is not moving")]
+        [Space]
+        [Header("General Settings")]
+        [Tooltip("Allows players to pick up their ball at any time as long as the ball is not moving")]
         public bool allowBallPickup;
 
         [Tooltip("Allows players to pick up their ball if they are not currently playing a course AND the ball is not moving")]
@@ -53,7 +56,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Should the ball hit noise be played if the ball falls onto a floor?")]
         public bool audioWhenBallHitsFloor = true;
 
-        [Space] [Header("Ball Physics")] [Tooltip("The direction of the gravity that will be applied to the ball")]
+        [Space]
+        [Header("Ball Physics")]
+        [Tooltip("The direction of the gravity that will be applied to the ball")]
         public Vector3 gravityDirection = Vector3.down;
 
         public float gravityMagnitude = 9.87f;
@@ -69,7 +74,7 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Toggles air resistance on the ball, helps it slow down while in the air and on ground better")]
         public bool enableAirResistance = true;
 
-        [SerializeField, Range(0f, 150f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s) - Bear in mind the fastest club swing recorded is 108~ m/s")]
+        [SerializeField, Range(0f, 200f), Tooltip("This defines the fastest this ball can travel after being hit by a club (m/s) - Bear in mind the fastest club swing recorded is 108~ m/s")]
         private float maxBallSpeed = 100f;
 
         [Range(0f, .2f), Tooltip("If the ball goes below this speed it will be counted as 'not moving' and will be stopped after the amount of time defined below")]
@@ -84,7 +89,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("How long a ball can roll before being stopped automatically (in seconds)")]
         public float maxBallRollingTime = 30f;
 
-        [Space] [SerializeField, Range(0, 90)]
+        [Space]
+        [SerializeField, Range(0, 90)]
         float groundSnappingMaxGroundAngle = 45f;
 
         [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
@@ -96,13 +102,17 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
-        [Space] [Range(0.1f, 2f), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
+        [Space]
+        [Range(0.1f, 2f), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
         public float wallBounceSpeedMultiplier = 0.8f;
 
-        [Range(0, 0.5f)] [Tooltip("Controls how the ball reflects off walls. 0=Perfect reflection 0.5=Half the direction is lost 1=Runs along the wall it hits")]
+        [Range(0, 0.5f)]
+        [Tooltip("Controls how the ball reflects off walls. 0=Perfect reflection 0.5=Half the direction is lost 1=Runs along the wall it hits")]
         public float wallBounceDeflection = .1f;
 
-        [Space] [Header("Respawn Settings")] [Tooltip("Toggles whether the ball is sent to the respawn position if it stops outside a course")]
+        [Space]
+        [Header("Respawn Settings")]
+        [Tooltip("Toggles whether the ball is sent to the respawn position if it stops outside a course")]
         public bool respawnAutomatically = true;
 
         [Tooltip("If the ball stops outside of a course, this is where it will respawn to in world space")]
@@ -154,8 +164,8 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
                     {
-                        foreach (var listener in playerManager.openPutt.eventListeners)
-                            listener.OnLocalPlayerBallStopped();
+                        if (Utilities.IsValid(playerManager.openPutt.eventHandler))
+                            playerManager.openPutt.eventHandler.OnPlayerBallStopped(playerManager.Owner);
                     }
 
                     if (playerManager.openPutt.debugMode)
@@ -334,7 +344,8 @@ namespace dev.mikeee324.OpenPutt
 
         private VRC_Pickup.PickupHand shoulderBallHeldInHand = VRC_Pickup.PickupHand.None;
 
-        [Header("Spin and Magnus Effect")] [Tooltip("The current angular velocity vector of the ball's spin.")]
+        [Header("Spin and Magnus Effect")]
+        [Tooltip("The current angular velocity vector of the ball's spin.")]
         private Vector3 _currentSpin = Vector3.zero; // Private variable to store spin
 
         public bool isHeldInTeleporter { get; set; }
@@ -345,6 +356,11 @@ namespace dev.mikeee324.OpenPutt
         {
             gravityMagnitude = Physics.gravity.magnitude;
             defaultGravityMagnitude = Physics.gravity.magnitude;
+
+            // Initialise gravity direction from Physics.gravity so runtime gravity changes
+            // are reflected unless a force zone overrides the ball's gravity.
+            gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
+            gravityDirection = gravityDirection.normalized;
 
             pickedUpByPlayer = false;
             BallIsMoving = false;
@@ -404,6 +420,10 @@ namespace dev.mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
+            // Ensure gravityDirection is normalized each physics step so external
+            // assignments (force zones, runtime changes) don't break calculations.
+            gravityDirection = gravityDirection.sqrMagnitude > 0f ? gravityDirection.normalized : Vector3.down;
+
             // If ball is picked up by player - we do stuff in PostLateUpdate instead
             if (pickedUpByPlayer)
                 return;
@@ -590,6 +610,11 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPickup()
         {
+            if (Utilities.IsValid(playerManager) && !playerManager.BallVisible)
+                playerManager.BallVisible = true;
+
+            playerManager.RequestSync(syncNow: true);
+
             var ballShoulderPickup = shoulderPickup;
             ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
             shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
@@ -611,8 +636,18 @@ namespace dev.mikeee324.OpenPutt
                     ballShoulderPickup.tempDisableAttachment = true;
             }
 
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
-                playerManager.openPutt.openPuttPortableScoreboard.golfBallHeldByPlayer = true;
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
+            {
+                if (!playerManager.openPutt.hasUsedGolfBall)
+                {
+                    playerManager.openPutt.hasUsedGolfBall = true;
+                    if (Utilities.IsValid(playerManager.openPutt.uiController))
+                        playerManager.openPutt.uiController.UpdateButtonStates();
+                }
+
+                if (Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
+                    playerManager.openPutt.openPuttPortableScoreboard.golfBallHeldByPlayer = true;
+            }
 
             BallIsMoving = false;
 
@@ -625,7 +660,14 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnDrop()
         {
+            if (Utilities.IsValid(playerManager) && !playerManager.BallVisible)
+                playerManager.BallVisible = true;
+
+            playerManager.RequestSync();
+
             var ballShoulderPickup = shoulderPickup;
+            var currentBallHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
+            var currentShoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
 
             pickedUpByPlayer = false;
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
@@ -679,7 +721,10 @@ namespace dev.mikeee324.OpenPutt
             if (ballHeldInHand == VRC_Pickup.PickupHand.None && shoulderBallHeldInHand == VRC_Pickup.PickupHand.None)
                 return;
 
-            var pickupHand = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? shoulderBallHeldInHand : ballHeldInHand;
+            var pickupHand = currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? currentShoulderBallHeldInHand : currentBallHeldInHand;
+            if (pickupHand == VRC_Pickup.PickupHand.None)
+                pickupHand = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? shoulderBallHeldInHand : ballHeldInHand;
+
             var hand = pickupHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
 
             var offset = playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, ballRigidbody.worldCenterOfMass);
@@ -687,13 +732,17 @@ namespace dev.mikeee324.OpenPutt
 
             if (Networking.LocalPlayer.IsUserInVR() && ballHeldInHand != VRC_Pickup.PickupHand.None)
             {
-                if (shoulderBallHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != VRC_Pickup.PickupHand.None)
+                var bothSidesWereHeld = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != VRC_Pickup.PickupHand.None;
+                var oneSideStillHeld = (currentBallHeldInHand != VRC_Pickup.PickupHand.None) != (currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None);
+
+                if (bothSidesWereHeld && oneSideStillHeld)
                 {
                     ballShoulderPickup.tempDisableAttachment = false;
-                    if (Utilities.IsValid(ballShoulderPickup.pickup))
+
+                    if (Utilities.IsValid(ballShoulderPickup.pickup) && currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None)
                         ballShoulderPickup.pickup.Drop();
 
-                    if (Utilities.IsValid(pickup))
+                    if (Utilities.IsValid(pickup) && currentBallHeldInHand != VRC_Pickup.PickupHand.None)
                         pickup.Drop();
 
                     var flingDir = ballShoulderPickup.transform.position - transform.position;
@@ -734,11 +783,6 @@ namespace dev.mikeee324.OpenPutt
         public void OnScriptPickup()
         {
             OnPickup();
-
-            if (Utilities.IsValid(playerManager))
-                playerManager.BallVisible = true;
-
-            playerManager.RequestSync(syncNow: true);
         }
 
         /// <summary>
@@ -747,11 +791,6 @@ namespace dev.mikeee324.OpenPutt
         public void OnScriptDrop()
         {
             OnDrop();
-
-            if (Utilities.IsValid(playerManager))
-                playerManager.BallVisible = true;
-
-            playerManager.RequestSync();
         }
 
         public void RespawnBall()
@@ -903,6 +942,29 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        public override void OnContactEnter(ContactEnterInfo contactInfo)
+        {
+            ContactSenderProxy sender = contactInfo.contactSender;
+
+            if (!Utilities.IsValid(sender) || !sender.isValid)
+                return;
+
+            if (sender.player != Networking.GetOwner(gameObject))
+                return;
+
+            if (!allowBallHitWhileMoving && BallIsMoving)
+                return;
+
+            Vector3 swingVelocity = contactInfo.enterVelocity;
+            Quaternion clubRotation = sender.rotation;
+            Vector3 clubFaceDirection = clubRotation * Vector3.forward;
+
+            club.putter.HandleBallHit(swingVelocity, clubFaceDirection);
+
+            if (Utilities.IsValid(playerManager))
+                playerManager._OnWeirdThingHappened();
+        }
+
         /// <summary>
         /// Actually calculates where the ball should bounce when it contacts a wall<br/>
         /// Default Unity physics has an issue where the ball won't bounce under a certain speed and just rolls along it instead.
@@ -957,7 +1019,7 @@ namespace dev.mikeee324.OpenPutt
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
             // If we reflected off a wall and the resulting bounce is going upwards
-            if (newDirection.y > .001f)
+            if (Vector3.Dot(newDirection, -gravityDirection) > .001f)
             {
                 // Pretend we're in the air for the next frame so the snapping is switched off
                 stepsOnGround = 0;
@@ -1022,7 +1084,7 @@ namespace dev.mikeee324.OpenPutt
                 stepsOnGround = 0;
                 stepsInAir += 1;
                 timeFlying += Time.deltaTime;
-                
+
                 if (velMagnitude > 0.01f)
                 {
                     // Use default drag if in a no gravity zone
@@ -1030,7 +1092,7 @@ namespace dev.mikeee324.OpenPutt
                     {
                         // Ball surface drag force stuff
                         var currDrag = defaultBallDrag;
-                        
+
                         // A script is overriding the ball friction/drag
                         if (ballDragOverride > 0f)
                             currDrag = ballDragOverride;
@@ -1041,15 +1103,32 @@ namespace dev.mikeee324.OpenPutt
 
                         ballRigidbody.AddForce(-ballVelocity.normalized * currDrag);
                     }
-                    
+
                     if (_currentSpin.sqrMagnitude > .001f)
                     {
                         var magnusCoefficient = 0.001f;
-                        var spinDecayRate = 0.4f;
-                        // Sidespin
-                        var magnusForceDirection = Vector3.Cross(ballRigidbody.velocity, _currentSpin).normalized;
+
+                        // Increase spin decay slightly with ball speed to help avoid
+                        // sustained high-spin situations that produce upward spirals
+                        var baseSpinDecayRate = 0.4f;
+                        var speedDecayFactor = Mathf.Clamp(ballRigidbody.velocity.magnitude * 0.05f, 0f, 2f);
+                        var spinDecayRate = baseSpinDecayRate + speedDecayFactor;
+
+                        // Project spin onto plane perpendicular to gravity so sidespin
+                        // behaves relative to the current gravity direction
+                        var spinAxisRelativeToGravity = Vector3.ProjectOnPlane(_currentSpin, gravityDirection).normalized;
+                        if (spinAxisRelativeToGravity == Vector3.zero)
+                            spinAxisRelativeToGravity = _currentSpin.normalized;
+
+                        var magnusForceDirection = Vector3.Cross(ballRigidbody.velocity, spinAxisRelativeToGravity).normalized;
                         var magnusForceMagnitude = _currentSpin.magnitude * ballRigidbody.velocity.magnitude * magnusCoefficient;
                         var magnusForce = magnusForceDirection * magnusForceMagnitude;
+
+                        // Prevent Magnus from producing sustained vertical lift by
+                        // removing any component along the gravity direction. This
+                        // ensures sidespin curves horizontally relative to gravity.
+                        magnusForce = Vector3.ProjectOnPlane(magnusForce, gravityDirection);
+
                         ballRigidbody.AddForce(magnusForce, ForceMode.Force);
 
                         // --- Spin Decay ---
@@ -1110,14 +1189,15 @@ namespace dev.mikeee324.OpenPutt
 
             // Update ground contact normal
             var currentGroundNormal = snapHit.normal;
-            var lastNormalY = lastGroundContactNormal.y;
+            var lastGroundDot = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
+            var currentGroundDot = Vector3.Dot(currentGroundNormal, -gravityDirection);
             lastGroundContactNormal = currentGroundNormal;
 
-            // Ramp angle and steepness checks
-            var rampAngle = Mathf.Acos(Vector3.Dot(currentGroundNormal, -gravityDirection)) * Mathf.Rad2Deg;
+            // Ramp angle and steepness checks (use gravity-relative dot)
+            var rampAngle = Mathf.Acos(currentGroundDot) * Mathf.Rad2Deg;
 
             // Disable snapping for steep surfaces or flattening slopes
-            if (currentGroundNormal.y < minGroundDotProduct || currentGroundNormal.y >= lastNormalY)
+            if (currentGroundDot < minGroundDotProduct || currentGroundDot >= lastGroundDot)
                 return;
 
             // Project velocity onto ground plane
@@ -1125,7 +1205,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Apply gravity influence
             var gravityInfluence = Mathf.Sin(rampAngle * Mathf.Deg2Rad);
-            newVelocity.y -= gravityInfluence * Time.deltaTime * Physics.gravity.magnitude;
+            newVelocity += gravityDirection.normalized * (gravityInfluence * Time.deltaTime * gravityMagnitude);
 
             // Apply velocity correction if vertical velocity is above threshold
             if (newVelocity.y > .001f)
@@ -1172,7 +1252,7 @@ namespace dev.mikeee324.OpenPutt
             gravityDirection = Vector3.down;
             gravityMagnitude = defaultGravityMagnitude;
         }
-        
+
         public SphereCollider GetBallCollider() => ballCollider;
 
         /// <summary>

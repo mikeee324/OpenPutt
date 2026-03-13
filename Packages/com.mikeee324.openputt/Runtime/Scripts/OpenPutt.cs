@@ -17,8 +17,15 @@ namespace dev.mikeee324.OpenPutt
         public readonly string CurrentVersion = "0.9.1";
 
         #region References
+        public OpenPuttEventHandler eventHandler;
 
-        [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")] [Header("Internal References")] [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
+        public OpenPuttUIController uiController;
+
+        public OpenPuttBallCam ballCam;
+
+        [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
+        [Header("Internal References")]
+        [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
         public PlayerListManager playerListManager;
 
         [Tooltip("The ScoreboardManager looks after all scoreboards in the world (Moving them between positions and refreshing them)")]
@@ -43,8 +50,6 @@ namespace dev.mikeee324.OpenPutt
         public SFXController SFXController;
         public AudioSource[] BGMAudioSources;
         public AudioSource[] WorldAudioSources;
-        public DesktopModeController desktopModeController;
-        public DesktopModeCameraController desktopModeCameraController;
 
         [Header("External References")]
         public OpenPuttEventListener[] eventListeners;
@@ -53,7 +58,8 @@ namespace dev.mikeee324.OpenPutt
 
         #region Game Settings
 
-        [Header("Game Settings")] [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
+        [Header("Game Settings")]
+        [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
         public bool replayableCourses;
 
         [Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
@@ -75,7 +81,8 @@ namespace dev.mikeee324.OpenPutt
 
         #region Other Settings
 
-        [Header("Other Settings")] [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
+        [Header("Other Settings")]
+        [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
         public int ballRenderQueueBase = 2000;
 
         [Tooltip("A list of players that can access the dev mode tab by default")]
@@ -193,6 +200,35 @@ namespace dev.mikeee324.OpenPutt
         public string latestOpenPuttVer = "";
         public string openPuttChangelog = "";
 
+        [HideInInspector]
+        public bool hasUsedPortableScoreboard = false, hasUsedGolfClub = false, hasUsedGolfBall = false, hasChangedClubType = false;
+
+        #endregion
+
+        #region API Methods
+
+        /// <summary>
+        /// Registers an event listener if it's not already registered
+        /// </summary>
+        /// <param name="listener">The event listener to register</param>
+        public void RegisterEventListener(OpenPuttEventListener listener)
+        {
+            if (!eventListeners.Contains(listener))
+            {
+                eventListeners = eventListeners.Add(listener);
+
+                // If we already have a local player manager, notify the new listener
+                if (Utilities.IsValid(LocalPlayerManager))
+                    listener.OnPlayerInitialised(Networking.LocalPlayer, LocalPlayerManager);
+            }
+        }
+
+        /// <summary>
+        /// Deregisters an event listener if it's currently registered
+        /// </summary>
+        /// <param name="listener">The event listener to deregister</param>
+        public void DeregisterEventListener(OpenPuttEventListener listener) => eventListeners = eventListeners.Remove(listener);
+
         #endregion
 
         void Start()
@@ -266,9 +302,8 @@ namespace dev.mikeee324.OpenPutt
             OpenPuttUtils.Log(this, $"Local player init");
             LocalPlayerManager = playerManager;
 
-            // Only call this for the first time we see it
-            foreach (var listener in eventListeners)
-                listener.OnLocalPlayerInitialised(LocalPlayerManager);
+            if (Utilities.IsValid(eventHandler))
+                eventHandler.OnPlayerInitialised(Networking.LocalPlayer, LocalPlayerManager);
         }
 
         public void OnPlayerUpdate(PlayerManager playerManager)
@@ -293,6 +328,7 @@ namespace dev.mikeee324.OpenPutt
             PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
             PlayerData.SetBool("OpenPutt-LeftHanded", LocalPlayerManager.IsInLeftHandedMode);
             PlayerData.SetBool("OpenPutt-ThrowEnabled", LocalPlayerManager.golfClub.throwEnabled);
+            PlayerData.SetBool("OpenPutt-ClubAutoHold", LocalPlayerManager.golfClub.pickup.AutoHold == VRC_Pickup.AutoHoldMode.Yes);
 
             // Save volume settings
             PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);
@@ -322,6 +358,8 @@ namespace dev.mikeee324.OpenPutt
                 LocalPlayerManager.golfClub.throwEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ThrowEnabled");
             if (PlayerData.HasKey(localPlayer, "OpenPutt-LeftHanded"))
                 LocalPlayerManager.IsInLeftHandedMode = PlayerData.GetBool(localPlayer, "OpenPutt-LeftHanded");
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-ClubAutoHold"))
+                LocalPlayerManager.golfClub.AutoHoldEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ClubAutoHold");
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
                 SFXController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");

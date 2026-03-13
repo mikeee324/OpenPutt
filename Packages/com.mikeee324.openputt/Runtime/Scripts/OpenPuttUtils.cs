@@ -370,5 +370,33 @@ namespace dev.mikeee324.OpenPutt
                 default: return 0.0f;
             }
         }
+
+        /// <summary>
+        /// Gets the typical maximum hit speed (m/s) for a club type.
+        /// These values are gameplay-tuned and can be adjusted later or
+        /// exposed as per-club overrides in `GolfClub`.
+        /// </summary>
+        public static float GetTypicalMaxSpeed(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 80f;
+                case GolfClubType.Wood3: return 75f;
+                case GolfClubType.Wood5: return 69f;
+                case GolfClubType.Iron4: return 64f;
+                case GolfClubType.Iron5: return 59f;
+                case GolfClubType.Iron6: return 53f;
+                case GolfClubType.Iron7: return 48f;
+                case GolfClubType.Iron8: return 43f;
+                case GolfClubType.Iron9: return 37f;
+                case GolfClubType.PitchingWedge: return 32f;
+                case GolfClubType.GapWedge: return 32f;
+                case GolfClubType.SandWedge: return 27f;
+                case GolfClubType.LobWedge: return 27f;
+                case GolfClubType.Hybrid: return 59f;
+                case GolfClubType.Putter: return 15f;
+                default: return 80f;
+            }
+        }
     }
 }

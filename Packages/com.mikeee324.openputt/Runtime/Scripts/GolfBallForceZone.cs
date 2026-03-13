@@ -34,7 +34,7 @@ namespace dev.mikeee324.OpenPutt
         CapsuleGravity
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-500)] // Ensure a BoxCollider is always attached
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-500)]
     public class GolfBallForceZone : UdonSharpBehaviour
     {
         [Tooltip("The magnitude of the force to apply in the forward direction of this object.")]

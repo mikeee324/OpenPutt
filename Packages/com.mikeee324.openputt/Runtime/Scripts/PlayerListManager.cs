@@ -107,9 +107,22 @@ namespace dev.mikeee324.OpenPutt
         {
             PlayersSortedByScore = TempPlayersSortedByScore;
             PlayersSortedByTime = TempPlayersSortedByTime;
-            
+
+            // var maxLen = Mathf.Max(PlayersSortedByScore.Length, PlayersSortedByTime.Length);
+            // for (var i = 0; i < maxLen; i++)
+            // {
+            //     var pm = PlayersSortedByScore[i];
+            //     if (Utilities.IsValid(pm)) pm.ScoreboardPositionByScore = i;
+
+            //     pm = PlayersSortedByTime[i];
+            //     if (Utilities.IsValid(pm)) pm.ScoreboardPositionByTime = i;
+            // }
+
+            // if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+            //     openPutt.eventHandler.OnPlayerListUpdated();
+
             ScoreboardManager.RequestRefresh();
-            
+
             updatesRequested -= 1;
             if (updatesRequested <= 0)
             {

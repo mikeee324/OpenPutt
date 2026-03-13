@@ -1,6 +1,7 @@
 ﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
@@ -44,6 +45,9 @@ namespace dev.mikeee324.OpenPutt
         public float autoRespawnHeight = -100f;
 
         public bool canManagePickupable = true;
+
+        [Tooltip("Experimental: Tries to keep a dynamic rigidbody synced between players, haven't tested this much")]
+        public bool syncDynamicRigidbody = false;
 
         #endregion
 
@@ -130,6 +134,7 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 lastSyncVelocity = Vector3.zero;
         private Vector3 lastSyncPos = Vector3.zero;
         private Quaternion lastSyncRot = Quaternion.identity;
+        private bool isKinematic;
 
         #endregion
 
@@ -139,6 +144,9 @@ namespace dev.mikeee324.OpenPutt
                 pickup = GetComponent<VRCPickup>();
             if (!Utilities.IsValid(objectRB))
                 objectRB = GetComponent<Rigidbody>();
+
+            if (Utilities.IsValid(objectRB))
+                isKinematic = objectRB.isKinematic;
 
             if (grabOriginalPosOnStart)
             {
@@ -209,6 +217,13 @@ namespace dev.mikeee324.OpenPutt
 
                 // If the object has moved since last time reset the flag
                 canSync = transform.hasChanged;
+
+                if (Utilities.IsValid(objectRB) && !objectRB.IsSleeping())
+                {
+                    RequestFastSync(true);
+                    canSync = true;
+                }
+
                 transform.hasChanged = false;
             }
 
@@ -225,9 +240,21 @@ namespace dev.mikeee324.OpenPutt
 
             // If we still have time left to sync or player is holding object (so we can check if the offsets have changed), schedule in the next sync
             if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt > 0)
+            {
                 SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
+            }
             else
+            {
                 fastSyncStopTime = -1f;
+                SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnStopSendingSync));
+            }
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 1)]
+        public void OnStopSendingSync()
+        {
+            if (syncDynamicRigidbody && Utilities.IsValid(objectRB) && !isKinematic)
+                objectRB.isKinematic = false;
         }
 
         /// <summary>
@@ -302,6 +329,9 @@ namespace dev.mikeee324.OpenPutt
                         newOffsetRot = handRotation * rotOffset;
                     }
 
+                    if (syncDynamicRigidbody && Utilities.IsValid(objectRB))
+                        objectRB.isKinematic = true;
+
                     transform.SetPositionAndRotation(newPosition, newOffsetRot);
 
                     // Run this for the next frame too
@@ -359,6 +389,9 @@ namespace dev.mikeee324.OpenPutt
             if (!isHandlingRemoteUpdates)
             {
                 isHandlingRemoteUpdates = true;
+
+                if (!Utilities.IsValid(localPlayer) && OpenPuttUtils.LocalPlayerIsValid())
+                    localPlayer = Networking.LocalPlayer;
 
                 HandleRemoteUpdate();
             }
@@ -612,6 +645,8 @@ namespace dev.mikeee324.OpenPutt
             // Enable pickup for the owner
             if (canManagePickupable && Utilities.IsValid(pickup) && !pickup.pickupable)
                 pickup.pickupable = isPickupable;
+            if (syncDynamicRigidbody && !isKinematic && Utilities.IsValid(objectRB))
+                objectRB.isKinematic = false;
         }
 
         private bool _UpdatePickupHandOffsets()
