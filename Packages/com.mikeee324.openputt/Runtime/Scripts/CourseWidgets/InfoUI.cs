@@ -174,7 +174,7 @@ namespace dev.mikeee324.OpenPutt
             golfClubCollider = playerManager.golfClubHead;
         }
 
-        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
         }
 

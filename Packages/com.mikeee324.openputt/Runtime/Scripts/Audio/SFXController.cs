@@ -9,7 +9,8 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Settings
 
-        [Header("References")] [Tooltip("A reference back to the game manager")]
+        [Header("References")]
+        [Tooltip("A reference back to the game manager")]
         public OpenPutt openPutt;
 
         [Tooltip("The audio source to use when the ball is hitby/hits something")]
@@ -24,13 +25,15 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("A small pool of audio sources that play sounds for remote players")]
         public AudioSource[] remotePlayerAudioSources;
 
-        [Header("Settings")] [Tooltip("Toggles whether hole noises are randomised or if each hole with have it's own unique sound")]
+        [Header("Settings")]
+        [Tooltip("Toggles whether hole noises are randomised or if each hole with have it's own unique sound")]
         public bool randomiseHoleSounds = true;
 
         [Tooltip("Toggles the use of PlayOneShot instead of Play on the AudioSource (Use carefully!)")]
         public bool usePlayOneShot;
 
-        [Header("General Sounds")] [Tooltip("List of sounds to play when the player hits the ball (randomised on each hit)")]
+        [Header("General Sounds")]
+        [Tooltip("List of sounds to play when the player hits the ball (randomised on each hit)")]
         public AudioClip[] ballHitSounds;
 
         [Tooltip("List of sounds to play when the players ball gets reset (randomised)")]
@@ -42,7 +45,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("List of sounds to play when the players ball enters a hole (If randomise hole sounds is off, this list picks a sound from this list by using the course number)")]
         public AudioClip[] ballHoleSounds;
 
-        [Header("Score Related Sounds")] [Tooltip("List of sounds to play when the playersgets a hole in one (randomised)")]
+        [Header("Score Related Sounds")]
+        [Tooltip("List of sounds to play when the playersgets a hole in one (randomised)")]
         public AudioClip[] holeInOneSounds;
 
         [Tooltip("List of sounds to play when the player finishes a course with a score 4 or below par (randomised)"),]
@@ -139,15 +143,27 @@ namespace dev.mikeee324.OpenPutt
                 PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds.GetRandom(), at: position, canInterrupt: false);
         }
 
-        public void PlayScoreSoundAtPosition(Vector3 position, int scoreRelativeToPar, bool isRemote = false)
+        /// <summary>
+        /// Plays a sound at the given position based on how well the player scored compared to par. If the player scored a hole in one, the hole in one sound will be played instead, regardless of how that score relates to par
+        /// </summary>
+        /// <param name="position"></param>
+        /// <param name="totalHits"></param>
+        /// <param name="scoreRelativeToPar"></param>
+        /// <param name="isRemote"></param>
+        public void PlayScoreSoundAtPosition(Vector3 position, int totalHits, int scoreRelativeToPar, bool isRemote = false)
         {
             if (holeInOneSounds.Length == 0) return;
 
             AudioClip clipToPlay = null;
 
-            // Check special cases first
-            if (scoreRelativeToPar <= -4)
+            if (totalHits == 1)
             {
+                // Hole in one!
+                clipToPlay = holeInOneSounds.GetRandom();
+            }
+            else if (scoreRelativeToPar <= -4)
+            {
+                // Reaaaaaally good init bruv
                 clipToPlay = condorSounds.GetRandom();
             }
             else

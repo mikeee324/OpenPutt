@@ -427,7 +427,9 @@ namespace dev.mikeee324.OpenPutt
 
         public void CheckForUpdate()
         {
+            #if !UNITY_EDITOR
             VRCStringDownloader.LoadUrl(versionURL, (IUdonEventReceiver)this);
+            #endif
         }
 
         public void RemoveInvalidPlayerManagers()

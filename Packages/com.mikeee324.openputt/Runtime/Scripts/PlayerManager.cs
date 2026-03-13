@@ -202,6 +202,9 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public CourseManager CurrentCourse { get; private set; }
 
+        [HideInInspector]
+        public int hitsOnCurrentCourse = 0;
+
         public bool IsInLeftHandedMode
         {
             get => Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup) && Utilities.IsValid(openPutt.leftShoulderPickup.ObjectToAttach) && openPutt.leftShoulderPickup.ObjectToAttach == golfClub.gameObject;
@@ -311,6 +314,8 @@ namespace dev.mikeee324.OpenPutt
                     if (!CurrentCourse.drivingRangeMode)
                         courseScores[CurrentCourse.holeNumber] = 1;
                     courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
+
+                    hitsOnCurrentCourse += 1;
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
@@ -349,6 +354,8 @@ namespace dev.mikeee324.OpenPutt
                             courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
                         }
                     }
+
+                    hitsOnCurrentCourse += 1;
 
                     break;
             }
@@ -404,6 +411,8 @@ namespace dev.mikeee324.OpenPutt
             }
 
             CurrentCourse = newCourse;
+
+            hitsOnCurrentCourse = 0;
         }
 
         public void OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
@@ -455,7 +464,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(hole))
                 {
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), courseScores[course.holeNumber]);
+                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
                 }
             }
 
@@ -470,7 +479,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(hole))
                 {
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), courseScores[course.holeNumber]);
+                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
                 }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync

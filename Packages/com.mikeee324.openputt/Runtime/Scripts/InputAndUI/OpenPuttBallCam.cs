@@ -310,15 +310,7 @@ namespace dev.mikeee324.OpenPutt
             _inputMoveHorizontal = 0f;
         }
 
-        /// <summary>
-        /// Called when a player ball drops into a course hole
-        /// </summary>
-        /// <param name="player">The player who finished the course</param>
-        /// <param name="course">Which course the player was playing on</param>
-        /// <param name="hole">The hole that the ball entered</param>
-        /// <param name="score">The absolute score that the player got on the course</param>
-        /// <param name="scoreRelativeToPar">The score relative to the par on this course</param>
-        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
             if (player.isLocal && BallCamActive)
             {

@@ -42,7 +42,8 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="hole">The hole that the ball entered</param>
         /// <param name="score">The absolute score that the player got on the course</param>
         /// <param name="scoreRelativeToPar">The score relative to the par on this course</param>
-        public virtual void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        /// <param name="totalHits">The total number of hits the player took on this course</param>
+        public virtual void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
 
         }

@@ -57,12 +57,13 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="hole">The hole that the ball entered</param>
         /// <param name="score">The absolute score that the player got on the course</param>
         /// <param name="scoreRelativeToPar">The score relative to the par on this course</param>
-        public virtual void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar)
+        /// <param name="totalHits">The total number of hits the player took on this course</param>
+        public virtual void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
             if (Utilities.IsValid(openPutt.SFXController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
                 openPutt.SFXController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, !player.isLocal);
 
-            if (score == 1)
+            if (totalHits == 1)
             {
                 if (Utilities.IsValid(openPutt.SFXController) && Utilities.IsValid(hole))
                     openPutt.SFXController.PlayHoleInOneSoundAtPosition(hole.transform.position, !player.isLocal);
@@ -70,12 +71,12 @@ namespace dev.mikeee324.OpenPutt
             else
             {
                 if (Utilities.IsValid(openPutt.SFXController) && Utilities.IsValid(hole))
-                    openPutt.SFXController.PlayScoreSoundAtPosition(hole.transform.position, scoreRelativeToPar);
+                    openPutt.SFXController.PlayScoreSoundAtPosition(hole.transform.position, totalHits, scoreRelativeToPar, !player.isLocal);
             }
 
             foreach (var listener in openPutt.eventListeners)
                 if (Utilities.IsValid(listener))
-                    listener.OnPlayerFinishCourse(player, course, hole, score, scoreRelativeToPar);
+                    listener.OnPlayerFinishCourse(player, course, hole, score, scoreRelativeToPar, totalHits);
         }
 
         /// <summary>
