@@ -133,16 +133,6 @@ namespace dev.mikeee324.OpenPutt
             PlayLocalSoundAtPosition(localExtraSoundSource, maxScoreReachSounds.GetRandom(), at: position, canInterrupt: false);
         }
 
-        public void PlayHoleInOneSoundAtPosition(Vector3 position, bool isRemote = false)
-        {
-            if (holeInOneSounds.Length == 0) return;
-
-            if (isRemote)
-                PlayRemoteSoundAtPosition(holeInOneSounds.GetRandom(), at: position, maxRange: 100f, canInterrupt: false);
-            else
-                PlayLocalSoundAtPosition(localBallEnteredHoleSource, holeInOneSounds.GetRandom(), at: position, canInterrupt: false);
-        }
-
         /// <summary>
         /// Plays a sound at the given position based on how well the player scored compared to par. If the player scored a hole in one, the hole in one sound will be played instead, regardless of how that score relates to par
         /// </summary>

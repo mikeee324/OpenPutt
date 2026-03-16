@@ -115,6 +115,9 @@ namespace dev.mikeee324.OpenPutt
         [UdonSynced, FieldChangeCallback(nameof(BallVisible))]
         private bool _ballVisible;
 
+        [UdonSynced, FieldChangeCallback(nameof(IsInLeftHandedMode))]
+        private bool _isInLeftHandedMode;
+
         [UdonSynced]
         private bool _weirdThingHappened = false;
 
@@ -207,16 +210,21 @@ namespace dev.mikeee324.OpenPutt
 
         public bool IsInLeftHandedMode
         {
-            get => Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup) && Utilities.IsValid(openPutt.leftShoulderPickup.ObjectToAttach) && openPutt.leftShoulderPickup.ObjectToAttach == golfClub.gameObject;
+            get => _isInLeftHandedMode;
             set
             {
+                if (_isInLeftHandedMode == value)
+                    return;
+
+                _isInLeftHandedMode = value;
+
                 openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
                 openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
 
                 golfClub.ClubType = golfClub.ClubType; // Just re-set the club type to update the head meshes to the correct hand
 
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
-                    openPutt.eventHandler.OnPlayerHandednessChanged(Networking.LocalPlayer, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
+                    openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }
         }
 
@@ -294,11 +302,8 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(CurrentCourse) || courseStates.Length != openPutt.courses.Length)
             {
-                if (Utilities.IsValid(openPutt))
-                {
-                    if (Utilities.IsValid(openPutt.eventHandler))
-                        openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
-                }
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+                    openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
 
                 return;
             }
@@ -338,14 +343,23 @@ namespace dev.mikeee324.OpenPutt
                     if (!CurrentCourse.drivingRangeMode)
                     {
                         courseScores[CurrentCourse.holeNumber] += 1;
+
                         if (courseScores[CurrentCourse.holeNumber] > CurrentCourse.maxScore)
-                            courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
+                        {
+
+                        }
 
                         if (openPutt.debugMode)
                             OpenPuttUtils.Log(this, $"Player hit ball on course {CurrentCourse.holeNumber}. Score is now {courseScores[CurrentCourse.holeNumber]}. (OnBallHit)");
 
-                        if (courseScores[CurrentCourse.holeNumber] == CurrentCourse.maxScore)
+                        if (courseScores[CurrentCourse.holeNumber] >= CurrentCourse.maxScore)
                         {
+                            // Clamp score to the max
+                            courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
+
+                            // Tell everybody this player hit the max score on this course
+                            CurrentCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
+
                             // Play max score reached sound
                             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.SFXController))
                                 openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
@@ -371,11 +385,8 @@ namespace dev.mikeee324.OpenPutt
             if (sendSync)
                 RequestSync();
 
-            if (Utilities.IsValid(openPutt))
-            {
-                if (Utilities.IsValid(openPutt.eventHandler))
-                    openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
-            }
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+                openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
         }
 
         public void OnCourseStarted(CourseManager newCourse)
@@ -460,14 +471,6 @@ namespace dev.mikeee324.OpenPutt
             // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
 
-            if (newCourseState == CourseState.Completed && courseScores[course.holeNumber] == 1)
-            {
-                if (Utilities.IsValid(hole))
-                {
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
-                }
-            }
-
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.scoreboardManager))
             {
                 openPutt.scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
@@ -477,10 +480,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (newCourseState == CourseState.Completed)
             {
+                // Send the finish course event to everybody
                 if (Utilities.IsValid(hole))
-                {
                     hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
-                }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync
                 RequestSync();

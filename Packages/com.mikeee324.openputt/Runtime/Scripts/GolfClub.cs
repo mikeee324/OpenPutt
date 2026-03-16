@@ -172,11 +172,9 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
                 {
                     playerManager.openPutt.hasChangedClubType = true;
-                    if (Utilities.IsValid(playerManager.openPutt.uiController))
-                        playerManager.openPutt.uiController.UpdateButtonStates();
 
                     if (Utilities.IsValid(playerManager.openPutt.eventHandler))
-                        playerManager.openPutt.eventHandler.OnPlayerClubTypeChanged(Networking.LocalPlayer, _clubType);
+                        playerManager.openPutt.eventHandler.OnPlayerClubTypeChanged(playerManager.Owner, _clubType);
                 }
 
                 if (CurrentHand != VRC_Pickup.PickupHand.None)

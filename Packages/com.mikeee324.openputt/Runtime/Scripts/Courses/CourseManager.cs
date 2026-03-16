@@ -1,5 +1,6 @@
 ﻿using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
@@ -124,7 +125,13 @@ namespace dev.mikeee324.OpenPutt
                 ballSpawns = new CourseStartPosition[0];
         }
 
-        public void OnBallEnterHole(CourseHole hole, Collider collider)
+        /// <summary>
+        /// Called by a CourseHole when something enters it, if it is the local players ball then we will trigger the course completion process for the player.<br/>
+        /// The players player manager will then send out network events etc
+        /// </summary>
+        /// <param name="hole">The hole that received a trigger collision</param>
+        /// <param name="collider">The collider that entered the hole</param>
+        public void OnLocalPlayerBallEnterHole(CourseHole hole, Collider collider)
         {
             // If this is the local players ball - tell their player manager the hole is now completed (Locks in the score etc)
             var golfBall = collider.gameObject.GetComponent<GolfBallController>();
@@ -137,6 +144,12 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [NetworkCallable]
+        public void OnPlayerHitMaxScore()
+        {
+            if (Utilities.IsValid(openPutt.eventHandler))
+                openPutt.eventHandler.OnPlayerHitCourseMaxScore(NetworkCalling.CallingPlayer, this);
+        }
 
         private void OnDrawGizmosSelected()
         {

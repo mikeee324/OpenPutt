@@ -161,6 +161,24 @@ namespace dev.mikeee324.OpenPutt
     public static class Extensions
     {
         /// <summary>
+        /// Gets the OpenPutt PlayerManager for a particular player (Contains scores and other player-specific info)
+        /// </summary>
+        /// <returns>
+        /// The PlayerManager for this player
+        /// </returns>
+        public static PlayerManager GetOpenPuttPlayerManager(this VRCPlayerApi player)
+        {
+            var objects = Networking.GetPlayerObjects(player);
+            for (int i = 0; i < objects.Length; i++)
+            {
+                if (!Utilities.IsValid(objects[i])) continue;
+                PlayerManager foundScript = objects[i].GetComponentInChildren<PlayerManager>();
+                if (Utilities.IsValid(foundScript)) return foundScript;
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Checks if a float is within the deadzone near 0
         /// </summary>
         /// <param name="f"></param>
