@@ -170,9 +170,9 @@ namespace dev.mikeee324.OpenPutt
             {
                 remoteUpdateDistanceCurve = new AnimationCurve();
                 remoteUpdateDistanceCurve.AddKey(0f, 0);
-                remoteUpdateDistanceCurve.AddKey(30f, 0);
-                remoteUpdateDistanceCurve.AddKey(100f, 1f);
-                remoteUpdateDistanceCurve.AddKey(200f, 5f);
+                remoteUpdateDistanceCurve.AddKey(100f, 0);
+                remoteUpdateDistanceCurve.AddKey(200f, 1f);
+                remoteUpdateDistanceCurve.AddKey(500f, 5f);
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());

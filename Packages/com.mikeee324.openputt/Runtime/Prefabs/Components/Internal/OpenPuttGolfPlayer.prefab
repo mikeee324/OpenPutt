@@ -1032,6 +1032,7 @@ MonoBehaviour:
   ballOffCourseRespawnTime: 5
   PlayerTotalScore: 999999
   PlayerTotalTime: 999999
+  hitsOnCurrentCourse: 0
   canFreezeDesktopPlayers: 0
   ScoreboardPositionByScore: -1
   ScoreboardPositionByTime: -1
@@ -2794,7 +2795,7 @@ MonoBehaviour:
   ExactGrip: {fileID: 0}
   allowManipulationWhenEquipped: 1
   orientation: 0
-  AutoHold: 1
+  AutoHold: 3
   InteractionText: 
   UseText: Use
   useEventBroadcastType: 0
@@ -2808,7 +2809,7 @@ MonoBehaviour:
   currentlyHeldBy: {fileID: 0}
   pickupable: 0
   proximity: 1
-  version: 0
+  version: 1
 --- !u!114 &234486930054562862
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3508,7 +3509,7 @@ MonoBehaviour:
   ExactGrip: {fileID: 0}
   allowManipulationWhenEquipped: 0
   orientation: 0
-  AutoHold: 0
+  AutoHold: 2
   InteractionText: 
   UseText: Use
   useEventBroadcastType: 0
@@ -3522,7 +3523,7 @@ MonoBehaviour:
   currentlyHeldBy: {fileID: 0}
   pickupable: 0
   proximity: 2
-  version: 0
+  version: 1
 --- !u!114 &3843631105412776836
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3636,85 +3637,13 @@ MonoBehaviour:
   fastSyncTimeout: 0.25
   fastSyncIntervalCurve:
     serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0.03
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 10
-      value: 0.03
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 20
-      value: 0.1
-      inSlope: 0.003888889
-      outSlope: 0.003888889
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 82
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
+    m_Curve: []
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   remoteUpdateDistanceCurve:
     serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 30
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 100
-      value: 1
-      inSlope: 0.023529412
-      outSlope: 0.023529412
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 200
-      value: 5
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 136
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
+    m_Curve: []
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4

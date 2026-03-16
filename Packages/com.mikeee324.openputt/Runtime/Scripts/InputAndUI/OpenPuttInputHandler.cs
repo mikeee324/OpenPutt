@@ -225,22 +225,21 @@ namespace dev.mikeee324.OpenPutt
                 }
 #endif
 
-                // Zoom on vertical move
-                if (Utilities.IsValid(ballCam))
-                {
-                    ballCam.OnBallCameraZoom(-moveVerticalAxis, moveHorizontalAxis);
-                }
-
                 // Zoom - +/- keys
-                if (Input.GetKeyDown(KeyCode.Equals) || Input.GetKeyDown(KeyCode.KeypadPlus))
+                if (Input.GetKey(KeyCode.Equals) || Input.GetKey(KeyCode.KeypadPlus))
                 {
                     if (Utilities.IsValid(ballCam))
-                        ballCam.OnBallCameraZoom(1f, 0f);
+                        ballCam.OnBallCameraZoom(.08f, 0f);
                 }
-                else if (Input.GetKeyDown(KeyCode.Minus) || Input.GetKeyDown(KeyCode.KeypadMinus))
+                else if (Input.GetKey(KeyCode.Minus) || Input.GetKey(KeyCode.KeypadMinus))
                 {
                     if (Utilities.IsValid(ballCam))
-                        ballCam.OnBallCameraZoom(-1f, 0f);
+                        ballCam.OnBallCameraZoom(-.08f, 0f);
+                }
+                else
+                {
+                    if (Utilities.IsValid(ballCam))
+                        ballCam.OnBallCameraZoom(0f, 0f);
                 }
 
                 // Movement on horizontal and vertical look

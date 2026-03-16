@@ -120,9 +120,8 @@ namespace dev.mikeee324.OpenPutt
             Rigidbody target = ball.GetComponent<Rigidbody>();
             // Handle Camera Zoom (Move Vertical)
             if (!_inputMoveVertical.IsNearZero())
-            {
                 currentDistance = Mathf.Clamp(currentDistance - (_inputMoveVertical * .4f), minDistance, maxDistance);
-            }
+
             // Scale zoom level depending on target's speed
             var targetScaledDistance = currentDistance * Mathf.Clamp(target.velocity.magnitude / 3f, 1f, currentDistance < 1f ? 5f : 2f);
             _lastKnownRealDistance = Mathf.Lerp(_lastKnownRealDistance, targetScaledDistance, cameraZoomSpeed * Time.deltaTime);
