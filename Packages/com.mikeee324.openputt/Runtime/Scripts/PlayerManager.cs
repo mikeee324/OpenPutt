@@ -222,14 +222,14 @@ namespace dev.mikeee324.OpenPutt
                 // Just re-set the club type to update the head meshes (automatically picks which orientation)
                 golfClub.ClubType = golfClub.ClubType;
 
-                if (Owner == Networking.LocalPlayer)
-                {
-                    // Swap shoulder pickups automatically
-                    openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                    openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+                if (Owner != Networking.LocalPlayer)
+                    return;
 
-                    RequestSync();
-                }
+                // Swap shoulder pickups automatically
+                openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
+                openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+
+                RequestSync(syncNow: true);
 
                 // Tell everybody that this player changed which hand they use
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
