@@ -126,6 +126,13 @@ namespace dev.mikeee324.OpenPutt
             var targetScaledDistance = currentDistance * Mathf.Clamp(target.velocity.magnitude / 3f, 1f, currentDistance < 1f ? 5f : 2f);
             _lastKnownRealDistance = Mathf.Lerp(_lastKnownRealDistance, targetScaledDistance, cameraZoomSpeed * Time.deltaTime);
 
+#if UNITY_EDITOR
+            if (!_inputLookHorizontalDelta.IsNearZero())
+                _inputLookHorizontalDelta = _inputLookHorizontalDelta * .5f;
+            if (!_inputLookVerticalDelta.IsNearZero())
+                _inputLookVerticalDelta = _inputLookVerticalDelta * .5f;
+#endif
+
 #if UNITY_ANDROID || UNITY_IOS
             // InputLook on mobile keeps going to 0 while moving and make the camera move really badly
             if (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.0001f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.0001f)
@@ -193,12 +200,12 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="playerManager">The PlayerManager that was assigned</param>
         public override void OnPlayerInitialised(VRCPlayerApi player, PlayerManager playerManager)
         {
-            if (player.isLocal)
-            {
-                localPlayerManager = playerManager;
-                ball = localPlayerManager.golfBall;
-                UpdateLocalBallLabelLookTarget();
-            }
+            if (!player.isLocal)
+                return;
+
+            localPlayerManager = playerManager;
+            ball = localPlayerManager.golfBall;
+            UpdateLocalBallLabelLookTarget();
         }
 
         private void UpdateLocalBallLabelLookTarget()

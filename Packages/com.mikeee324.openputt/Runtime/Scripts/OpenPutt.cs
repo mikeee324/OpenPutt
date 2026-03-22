@@ -356,10 +356,13 @@ namespace dev.mikeee324.OpenPutt
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-ThrowEnabled"))
                 LocalPlayerManager.golfClub.throwEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ThrowEnabled");
+            else LocalPlayerManager.golfClub.throwEnabled = true;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-LeftHanded"))
                 LocalPlayerManager.IsInLeftHandedMode = PlayerData.GetBool(localPlayer, "OpenPutt-LeftHanded");
+            else LocalPlayerManager.IsInLeftHandedMode = false;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-ClubAutoHold"))
                 LocalPlayerManager.golfClub.AutoHoldEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ClubAutoHold");
+            else LocalPlayerManager.golfClub.AutoHoldEnabled = true;
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
                 SFXController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");
@@ -427,9 +430,9 @@ namespace dev.mikeee324.OpenPutt
 
         public void CheckForUpdate()
         {
-            #if !UNITY_EDITOR
+#if !UNITY_EDITOR
             VRCStringDownloader.LoadUrl(versionURL, (IUdonEventReceiver)this);
-            #endif
+#endif
         }
 
         public void RemoveInvalidPlayerManagers()

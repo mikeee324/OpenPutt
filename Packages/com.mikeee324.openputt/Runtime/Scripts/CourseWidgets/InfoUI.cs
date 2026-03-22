@@ -61,7 +61,6 @@ namespace dev.mikeee324.OpenPutt
         private GolfBallController golfBall;
         private GolfClubCollider golfClubCollider;
         private bool monitoringChanges;
-        private float topValue;
 
         void Start()
         {
@@ -166,16 +165,15 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPlayerInitialised(VRCPlayerApi player, PlayerManager playerManager)
         {
+            if (!player.isLocal)
+                return;
+
             this.playerManager = playerManager;
 
             if (!Utilities.IsValid(playerManager)) return;
 
             golfBall = playerManager.golfBall;
             golfClubCollider = playerManager.golfClubHead;
-        }
-
-        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
-        {
         }
 
         public override void OnPlayerBallStopped(VRCPlayerApi player)

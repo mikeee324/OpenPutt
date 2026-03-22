@@ -12,7 +12,8 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("Sync Settings")] [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
+        [Header("Sync Settings")]
+        [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
         public float fastSyncTimeout = 0.25f;
 
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
@@ -24,7 +25,8 @@ namespace dev.mikeee324.OpenPutt
         [Range(0.001f, 0.05f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
         public float remoteUpdateSmoothTime = 0.02f;
 
-        [Header("Pickup Settings")] [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
+        [Header("Pickup Settings")]
+        [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
         public bool syncPositionAndRot = true;
 
         [Tooltip("Should this object be returned to its spawn position after players let go of it")]
@@ -439,6 +441,8 @@ namespace dev.mikeee324.OpenPutt
             {
                 currentOwnerHandInt = (int)handStateThisFrame;
 
+                _UpdatePickupHandOffsets();
+
                 RequestFastSync(forceSync: true);
             }
 
@@ -470,8 +474,6 @@ namespace dev.mikeee324.OpenPutt
 
             // Keep a track of which hand the player is holding the pickup in
             UpdatePickupCurrentHand();
-
-            _UpdatePickupHandOffsets();
 
             SendCustomNetworkEvent(NetworkEventTarget.All, nameof(ForceDrop));
         }
@@ -651,7 +653,7 @@ namespace dev.mikeee324.OpenPutt
 
         private bool _UpdatePickupHandOffsets()
         {
-            if (currentOwnerHandInt == (int)VRC_Pickup.PickupHand.None)
+            if (currentOwnerHand == VRC_Pickup.PickupHand.None)
                 return false;
 
             // Cache old values so we can check for changes that need syncing
@@ -672,7 +674,7 @@ namespace dev.mikeee324.OpenPutt
             // If it hasn't moved far enough, don't sync a change
             if (offsetPosDiff < .05f)
                 return false;
-            
+
             // If on desktop and they haven't rotated it while holding enough - send no sync
             if (!localPlayer.IsUserInVR() && offsetRotDiff < 1f)
                 return false;

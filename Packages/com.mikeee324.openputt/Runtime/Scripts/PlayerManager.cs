@@ -3,6 +3,7 @@ using com.dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 using Random = UnityEngine.Random;
@@ -218,11 +219,19 @@ namespace dev.mikeee324.OpenPutt
 
                 _isInLeftHandedMode = value;
 
-                openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+                // Just re-set the club type to update the head meshes (automatically picks which orientation)
+                golfClub.ClubType = golfClub.ClubType;
 
-                golfClub.ClubType = golfClub.ClubType; // Just re-set the club type to update the head meshes to the correct hand
+                if (Owner == Networking.LocalPlayer)
+                {
+                    // Swap shoulder pickups automatically
+                    openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
+                    openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
 
+                    RequestSync();
+                }
+
+                // Tell everybody that this player changed which hand they use
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
                     openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }

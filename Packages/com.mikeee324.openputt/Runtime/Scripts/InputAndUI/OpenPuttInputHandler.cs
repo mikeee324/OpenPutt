@@ -403,8 +403,8 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.LocalPlayerManager) || !Utilities.IsValid(openPutt.LocalPlayerManager.golfBall))
                 return;
 
-            var b = openPutt.LocalPlayerManager.IsInLeftHandedMode ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
-            if (!Utilities.IsValid(b) || !b.pickedUpAtLeastOnce)
+            // If they haven't used the ball yet, can't enable the camera yet
+            if (!openPutt.hasUsedGolfBall)
                 return;
 
             // Toggle ball camera

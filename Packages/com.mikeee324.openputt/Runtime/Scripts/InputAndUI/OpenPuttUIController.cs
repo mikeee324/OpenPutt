@@ -158,15 +158,15 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (Utilities.IsValid(activeUI.toggleCameraButton))
-                activeUI.toggleCameraButton.SetActive(true);
+                activeUI.toggleCameraButton.SetActive(openPutt.hasUsedGolfBall);
             if (Utilities.IsValid(activeUI.fetchBallButton))
                 activeUI.fetchBallButton.SetActive(!cameraIsOn);
             if (Utilities.IsValid(activeUI.shootButton))
                 activeUI.shootButton.SetActive(cameraIsOn);
             if (Utilities.IsValid(activeUI.cycleClubPreviousButton))
-                activeUI.cycleClubPreviousButton.SetActive(!openPutt.puttingOnlyMode);
+                activeUI.cycleClubPreviousButton.SetActive(!openPutt.puttingOnlyMode && ballCam.BallCamActive);
             if (Utilities.IsValid(activeUI.cycleClubNextButton))
-                activeUI.cycleClubNextButton.SetActive(!openPutt.puttingOnlyMode);
+                activeUI.cycleClubNextButton.SetActive(!openPutt.puttingOnlyMode && ballCam.BallCamActive);
             if (Utilities.IsValid(activeUI.leftShoulderButton))
                 activeUI.leftShoulderButton.SetActive(false);
             if (Utilities.IsValid(activeUI.rightShoulderButton))

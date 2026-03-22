@@ -306,8 +306,8 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (clubRigidbody.velocity.magnitude > 0.001f)
                     {
-                        if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                            openPuttSync.RequestFastSync(forceSync: true);
+                        //if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                        //    openPuttSync.RequestFastSync(forceSync: true);
                     }
                     else
                     {
