@@ -330,11 +330,11 @@ namespace dev.mikeee324.OpenPutt
             clubPowerSlider.value = playerManager.golfClub.forceMultiplier;
             clubPowerValueLabel.text = $"{clubPowerSlider.value:F2}x";
 
-            sfxVolumeSlider.value = playerManager.openPutt.SFXController.Volume;
+            sfxVolumeSlider.value = playerManager.openPutt.sfxController.Volume;
             sfxVolumeValueLabel.text = $"{sfxVolumeSlider.value:P0}";
 
             // Just use the first audio source volume
-            foreach (var audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.bgmAudioSources)
             {
                 if (!Utilities.IsValid(audioSource)) continue;
                 bgmVolumeSlider.value = audioSource.volume;
@@ -342,10 +342,10 @@ namespace dev.mikeee324.OpenPutt
                 break;
             }
 
-            bgmVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.BGMAudioSources.Length > 0);
+            bgmVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.bgmAudioSources.Length > 0);
 
             // Just use the first audio source volume
-            foreach (var audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.worldAudioSources)
             {
                 if (!Utilities.IsValid(audioSource)) continue;
                 worldVolumeSlider.value = audioSource.volume;
@@ -353,7 +353,7 @@ namespace dev.mikeee324.OpenPutt
                 break;
             }
 
-            worldVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.WorldAudioSources.Length > 0);
+            worldVolumeSlider.transform.parent.gameObject.SetActive(manager.openPutt.worldAudioSources.Length > 0);
 
             var color = playerManager.BallColor;
 
@@ -409,7 +409,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            manager.openPutt.SFXController.Volume = sfxVolumeSlider.value;
+            manager.openPutt.sfxController.Volume = sfxVolumeSlider.value;
 
             sfxVolumeValueLabel.text = $"{sfxVolumeSlider.value:P0}";
         }
@@ -419,7 +419,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            manager.openPutt.SFXController.Volume = 1f;
+            manager.openPutt.sfxController.Volume = 1f;
 
             RefreshSettingsMenu();
         }
@@ -429,7 +429,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (var audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.bgmAudioSources)
                 audioSource.volume = bgmVolumeSlider.value;
 
             bgmVolumeValueLabel.text = $"{bgmVolumeSlider.value:P0}";
@@ -440,7 +440,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (var audioSource in manager.openPutt.BGMAudioSources)
+            foreach (var audioSource in manager.openPutt.bgmAudioSources)
                 audioSource.volume = 1f;
 
             RefreshSettingsMenu();
@@ -451,7 +451,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (var audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.worldAudioSources)
                 audioSource.volume = worldVolumeSlider.value;
 
             worldVolumeValueLabel.text = $"{worldVolumeSlider.value:P0}";
@@ -462,7 +462,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(manager) || !Utilities.IsValid(manager.openPutt) || !Utilities.IsValid(manager.openPutt.LocalPlayerManager))
                 return;
 
-            foreach (var audioSource in manager.openPutt.WorldAudioSources)
+            foreach (var audioSource in manager.openPutt.worldAudioSources)
                 audioSource.volume = 1f;
 
             RefreshSettingsMenu();

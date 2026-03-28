@@ -90,11 +90,11 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="totalHits">The total number of hits the player took on this course</param>
         public void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
-            if (Utilities.IsValid(openPutt.SFXController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
-                openPutt.SFXController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, !player.isLocal);
+            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
+                openPutt.sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, !player.isLocal);
 
-            if (Utilities.IsValid(openPutt.SFXController) && Utilities.IsValid(hole))
-                openPutt.SFXController.PlayScoreSoundAtPosition(hole.transform.position, totalHits, scoreRelativeToPar, !player.isLocal);
+            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(hole))
+                openPutt.sfxController.PlayScoreSoundAtPosition(hole.transform.position, totalHits, scoreRelativeToPar, !player.isLocal);
 
             foreach (var listener in openPutt.eventListeners)
                 if (Utilities.IsValid(listener))

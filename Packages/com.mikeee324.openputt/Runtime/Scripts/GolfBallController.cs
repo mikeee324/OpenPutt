@@ -210,8 +210,8 @@ namespace dev.mikeee324.OpenPutt
                             ballRigidbody.position = respawnPosition;
 
                             // Play the reset noise
-                            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                                playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+                            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
                         }
                     }
 
@@ -702,8 +702,8 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.position = respawnPosition;
 
                     // Play the reset noise
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                        playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                        playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
 
                     pickedUpByPlayer = false;
 
@@ -751,8 +751,8 @@ namespace dev.mikeee324.OpenPutt
                     var velocityScale = Mathf.Clamp01(flingDir.magnitude / playerHeight) * 50f;
                     lastHeldFrameVelocity = flingDir.normalized * velocityScale;
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                        playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (lastHeldFrameVelocity.magnitude * 14.28571428571429f) / 4f);
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                        playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, (lastHeldFrameVelocity.magnitude * 14.28571428571429f) / 4f);
                 }
             }
             else
@@ -821,8 +821,8 @@ namespace dev.mikeee324.OpenPutt
             RespawnBall();
 
             // Play the reset noise
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                playerManager.openPutt.SFXController.PlayBallResetSoundAtPosition(respawnPosition);
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
         }
 
         public void OnBallHit(Vector3 withVelocity, Vector3 sideSpin)
@@ -867,8 +867,8 @@ namespace dev.mikeee324.OpenPutt
                 Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.25f, hapticAmplitude, 230f);
             }
 
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
@@ -1030,8 +1030,8 @@ namespace dev.mikeee324.OpenPutt
             lastFrameVelocity = ballRigidbody.velocity = newDirection.Sanitized();
 
             // Play a hit sound because we bounced off something
-            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
         }
 
         private bool lastGrounded = false;
@@ -1156,8 +1156,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (audioWhenBallHitsFloor && canPlayHitGroundSound)
             {
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.SFXController))
-                    playerManager.openPutt.SFXController.PlayBallHitSoundAtPosition(CurrentPosition, (lastFrameVelocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
+                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
+                    playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, (lastFrameVelocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
             }
 
             if (enableAirResistance)

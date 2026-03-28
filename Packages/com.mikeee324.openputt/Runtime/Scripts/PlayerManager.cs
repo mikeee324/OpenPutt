@@ -370,8 +370,8 @@ namespace dev.mikeee324.OpenPutt
                             CurrentCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
 
                             // Play max score reached sound
-                            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.SFXController))
-                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+                            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
+                                openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
 
                             // Prevents the sound from being heard again
                             courseStates[CurrentCourse.holeNumber] = CourseState.Completed;

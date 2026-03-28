@@ -47,9 +47,9 @@ namespace dev.mikeee324.OpenPutt
         public BodyMountedObject footCollider;
         public ControllerTracker controllerTracker;
         [FormerlySerializedAs("portableScoreboard")] public OpenPuttPortableMenu openPuttPortableScoreboard;
-        public SFXController SFXController;
-        public AudioSource[] BGMAudioSources;
-        public AudioSource[] WorldAudioSources;
+        public SFXController sfxController;
+        public AudioSource[] bgmAudioSources;
+        public AudioSource[] worldAudioSources;
 
         [Header("External References")]
         public OpenPuttEventListener[] eventListeners;
@@ -331,9 +331,9 @@ namespace dev.mikeee324.OpenPutt
             PlayerData.SetBool("OpenPutt-ClubAutoHold", LocalPlayerManager.golfClub.pickup.AutoHold == VRC_Pickup.AutoHoldMode.Yes);
 
             // Save volume settings
-            PlayerData.SetFloat("OpenPutt-SFXVol", SFXController.Volume);
-            PlayerData.SetFloat("OpenPutt-WorldVol", WorldAudioSources.Length > 0 ? WorldAudioSources[0].volume : 1);
-            PlayerData.SetFloat("OpenPutt-BGMVol", BGMAudioSources.Length > 0 ? BGMAudioSources[0].volume : 1);
+            PlayerData.SetFloat("OpenPutt-SFXVol", sfxController.Volume);
+            PlayerData.SetFloat("OpenPutt-WorldVol", worldAudioSources.Length > 0 ? worldAudioSources[0].volume : 1);
+            PlayerData.SetFloat("OpenPutt-BGMVol", bgmAudioSources.Length > 0 ? bgmAudioSources[0].volume : 1);
 
             // Save game state
             PlayerData.SetLong("OpenPuttGame-Modified", DateTime.UtcNow.GetUnixTimestamp());
@@ -365,19 +365,19 @@ namespace dev.mikeee324.OpenPutt
             else LocalPlayerManager.golfClub.AutoHoldEnabled = true;
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
-                SFXController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");
+                sfxController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-WorldVol"))
             {
                 var vol = PlayerData.GetFloat(localPlayer, "OpenPutt-WorldVol");
-                foreach (var worldAudio in WorldAudioSources)
+                foreach (var worldAudio in worldAudioSources)
                     worldAudio.volume = vol;
             }
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-BGMVol"))
             {
                 var vol = PlayerData.GetFloat(localPlayer, "OpenPutt-BGMVol");
-                foreach (var bgmAudio in BGMAudioSources)
+                foreach (var bgmAudio in bgmAudioSources)
                     bgmAudio.volume = vol;
             }
 
