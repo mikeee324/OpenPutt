@@ -2376,10 +2376,9 @@ MonoBehaviour:
   footCollider: {fileID: 5090196597156711172}
   controllerTracker: {fileID: 1047285168694093744}
   openPuttPortableScoreboard: {fileID: 2845923424478572997}
-  SFXController: {fileID: 5037104764325859341}
-  BGMAudioSources:
-  - {fileID: 7693000958186270462}
-  WorldAudioSources: []
+  sfxController: {fileID: 5037104764325859341}
+  bgmAudioSources: []
+  worldAudioSources: []
   eventListeners: []
   replayableCourses: 0
   enableVerticalHits: 0
@@ -2692,6 +2691,7 @@ MonoBehaviour:
   cameraCullPlayersMask:
     serializedVersion: 2
     m_Bits: 8387071
+  followPlayerHeadRotation: 1
   lineMinLength: 0.1
   lineMaxLength: 2
   aimUpAngle: 10
@@ -4708,12 +4708,6 @@ PrefabInstance:
 --- !u!4 &7693000958186270457 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8101402326566284695, guid: af69a8fd9835cb44da397972ea06766f,
-    type: 3}
-  m_PrefabInstance: {fileID: 1922740046196048750}
-  m_PrefabAsset: {fileID: 0}
---- !u!82 &7693000958186270462 stripped
-AudioSource:
-  m_CorrespondingSourceObject: {fileID: 8101402326566284688, guid: af69a8fd9835cb44da397972ea06766f,
     type: 3}
   m_PrefabInstance: {fileID: 1922740046196048750}
   m_PrefabAsset: {fileID: 0}

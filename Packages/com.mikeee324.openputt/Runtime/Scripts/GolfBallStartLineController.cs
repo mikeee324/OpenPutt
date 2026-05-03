@@ -122,7 +122,7 @@ namespace dev.mikeee324.OpenPutt
             if (hasBallStartPad)
                 lerpStopPosition = closestBallStart.transform.position;
             else
-                lerpStopPosition = golfBall.respawnPosition;
+                lerpStopPosition = golfBall.respawnWorldPosition;
             lerpToStartTime = 0;
 
             golfBall.transform.rotation = Quaternion.identity;
@@ -281,7 +281,7 @@ namespace dev.mikeee324.OpenPutt
                 if (currentState != CourseState.Playing) return;
 
                 lineRenderer.SetPosition(0, golfBall.CurrentPosition);
-                lineRenderer.SetPosition(1, golfBall.respawnPosition);
+                lineRenderer.SetPosition(1, golfBall.respawnWorldPosition);
             }
             else
             {

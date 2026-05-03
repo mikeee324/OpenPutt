@@ -50,7 +50,7 @@ namespace dev.mikeee324.OpenPutt
 
                 golfBall.BallIsMoving = false;
 
-                var oldPos = golfBall.respawnPosition;
+                var oldPos = golfBall.respawnWorldPosition;
                 golfBall.SetPosition(hideBallDuringDelay ? Vector3.up * (golfBall.openPuttSync.autoRespawnHeight * .95f) : targetPosition.position);
                 golfBall.SetRespawnPosition(oldPos);
 
@@ -92,7 +92,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(golfBall))
             {
-                var oldPos = golfBall.respawnPosition;
+                var oldPos = golfBall.respawnWorldPosition;
                 golfBall.isHeldInTeleporter = false;
                 golfBall.SetPosition(targetPosition.position);
                 golfBall.SetRespawnPosition(oldPos);

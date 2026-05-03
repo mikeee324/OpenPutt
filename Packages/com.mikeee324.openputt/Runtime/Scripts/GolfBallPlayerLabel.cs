@@ -21,7 +21,8 @@ namespace dev.mikeee324.OpenPutt
         public Canvas canvas;
         public TextMeshProUGUI CurrentLabel { get; private set; }
 
-        [Space, Header("Visibility Settings")] [Tooltip("The color to fade out to (usually has transparency on)")]
+        [Space, Header("Visibility Settings")]
+        [Tooltip("The color to fade out to (usually has transparency on)")]
         public Color labelHideColor = new Color(94, 129, 172, 0);
 
         [Tooltip("The color to fade in to")]
@@ -129,8 +130,10 @@ namespace dev.mikeee324.OpenPutt
 
         public void UpdatePosition()
         {
-            if (Utilities.IsValid(attachToObject))
-                transform.position = attachToObject.transform.position + new Vector3(0, 0.1f, 0);
+            if (!Utilities.IsValid(attachToObject))
+                return;
+                
+            transform.position = attachToObject.transform.position + new Vector3(0, 0.1f, 0);
         }
 
         public void RefreshPlayerName()

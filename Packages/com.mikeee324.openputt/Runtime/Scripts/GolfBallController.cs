@@ -36,7 +36,6 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField]
         private TrailRenderer trail;
 
-        [SerializeField]
         public Rigidbody ballRigidbody;
 
         [SerializeField]
@@ -116,7 +115,9 @@ namespace dev.mikeee324.OpenPutt
         public bool respawnAutomatically = true;
 
         [Tooltip("If the ball stops outside of a course, this is where it will respawn to in world space")]
-        public Vector3 respawnPosition = Vector3.zero;
+        public Vector3 respawnWorldPosition = Vector3.positiveInfinity;
+
+        private bool HasRespawnPosition => !float.IsPositiveInfinity(respawnWorldPosition.x);
 
         public Vector3 CurrentPosition
         {
@@ -204,14 +205,14 @@ namespace dev.mikeee324.OpenPutt
                                 SetRespawnPosition(CurrentPosition);
                             }
                         }
-                        else if (respawnPosition != Vector3.zero)
+                        else if (HasRespawnPosition)
                         {
                             // It is not on top of a course floor so move it to the previous position
-                            ballRigidbody.position = respawnPosition;
+                            ballRigidbody.position = respawnWorldPosition;
 
                             // Play the reset noise
                             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
-                                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
+                                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnWorldPosition);
                         }
                     }
 
@@ -228,7 +229,7 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 //if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                //Utils.Log(this, $"BallWasMoving({ballWasMoving}) BallMoving({_ballMoving}) RespawnAuto({respawnAutomatically}) BallValidPos({ballIsInValidPosition}) PickedUp({pickedUpByPlayer}) RespawnPos({respawnPosition})");
+                //Utils.Log(this, $"BallWasMoving({ballWasMoving}) BallMoving({_ballMoving}) RespawnAuto({respawnAutomatically}) BallValidPos({ballIsInValidPosition}) PickedUp({pickedUpByPlayer}) RespawnPos({respawnWorldPosition})");
             }
             get => _ballMoving;
         }
@@ -305,7 +306,6 @@ namespace dev.mikeee324.OpenPutt
         private int insideGravityZones = 0;
 
         /// Stores the velocity of the club that needs to be applied in the next FixedUpdate() frame
-        [SerializeField]
         public Vector3 requestedBallVelocity = Vector3.zero;
 
         public bool OnGround => stepsOnGround > 1;
@@ -318,10 +318,6 @@ namespace dev.mikeee324.OpenPutt
         int stepsOnGround, stepsInAir;
         private bool resetBallTimers = true;
         private float defaultGravityMagnitude = 9.87f;
-
-        /// Stores the last known dynamic friction value of the surface the ball was last on top of
-        //private float currentGroundDynamicFriction = 0f;
-        public CollisionDetectionMode requestedCollisionMode = CollisionDetectionMode.ContinuousSpeculative;
 
         /// <summary>
         /// Used to log ball speed after it gets hit, can be used to track down issues... maybe
@@ -344,11 +340,12 @@ namespace dev.mikeee324.OpenPutt
 
         private VRC_Pickup.PickupHand shoulderBallHeldInHand = VRC_Pickup.PickupHand.None;
 
-        [Header("Spin and Magnus Effect")]
-        [Tooltip("The current angular velocity vector of the ball's spin.")]
-        private Vector3 _currentSpin = Vector3.zero; // Private variable to store spin
+        private Vector3 _currentSpin = Vector3.zero;
 
         public bool isHeldInTeleporter { get; set; }
+
+        /// Converts ball velocity (m/s) to a normalised audio volume scale used by PlayBallHitSoundAtPosition
+        private const float VelocityToAudioScale = 14.285714f;
 
         #endregion
 
@@ -360,7 +357,6 @@ namespace dev.mikeee324.OpenPutt
             // Initialise gravity direction from Physics.gravity so runtime gravity changes
             // are reflected unless a force zone overrides the ball's gravity.
             gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
-            gravityDirection = gravityDirection.normalized;
 
             pickedUpByPlayer = false;
             BallIsMoving = false;
@@ -387,12 +383,12 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallFriction = BallFriction;
                 DefaultBallDrag = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
+                ballRigidbody.maxAngularVelocity = 300f;
             }
 
-            if (Utilities.IsValid(ballRigidbody))
-                ballRigidbody.maxAngularVelocity = 300f;
-
             DefaultBallMaxSpeed = maxBallSpeed;
+
+            lastFramePosition = ballRigidbody.position;
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
@@ -424,7 +420,6 @@ namespace dev.mikeee324.OpenPutt
             // assignments (force zones, runtime changes) don't break calculations.
             gravityDirection = gravityDirection.sqrMagnitude > 0f ? gravityDirection.normalized : Vector3.down;
 
-            // If ball is picked up by player - we do stuff in PostLateUpdate instead
             if (pickedUpByPlayer)
                 return;
 
@@ -547,7 +542,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (BallIsMoving)
             {
-                if (openPuttSync.originalPosition == respawnPosition)
+                if (!HasRespawnPosition || openPuttSync.originalPosition == respawnWorldPosition)
                 {
                     if (Physics.Raycast(ballRigidbody.position, gravityDirection, out var hit, 10f, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
                     {
@@ -555,13 +550,11 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
 
-                var distanceFromRespawnPos = Vector3.Distance(ballRigidbody.position, respawnPosition);
-                if (lastHitMaxDistance < distanceFromRespawnPos)
-                    lastHitMaxDistance = distanceFromRespawnPos;
+                var distanceFromRespawnPos = Vector3.Distance(ballRigidbody.position, respawnWorldPosition);
+                lastHitMaxDistance = Mathf.Max(lastHitMaxDistance, distanceFromRespawnPos);
 
                 var distanceTravelledThisFrame = Vector3.Distance(ballRigidbody.position, lastFramePosition);
-                if (lastFramePosition.magnitude > .01f)
-                    lastHitTravelDistance += distanceTravelledThisFrame;
+                lastHitTravelDistance += distanceTravelledThisFrame;
             }
 
             if (ballRigidbody.isKinematic)
@@ -691,7 +684,7 @@ namespace dev.mikeee324.OpenPutt
                         OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                     playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                 }
-                else if (Utilities.IsValid(respawnPosition))
+                else if (HasRespawnPosition)
                 {
                     if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
@@ -699,11 +692,12 @@ namespace dev.mikeee324.OpenPutt
                     BallIsMoving = false;
 
                     // Put the ball back where it last stopped on the course so the player can continue
-                    ballRigidbody.position = respawnPosition;
+                    ballRigidbody.position = respawnWorldPosition;
+                    lastFramePosition = respawnWorldPosition;
 
                     // Play the reset noise
                     if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
-                        playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
+                        playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnWorldPosition);
 
                     pickedUpByPlayer = false;
 
@@ -795,7 +789,7 @@ namespace dev.mikeee324.OpenPutt
 
         public void RespawnBall()
         {
-            var respawnPos = respawnPosition;
+            var respawnPos = respawnWorldPosition;
 
             BallIsMoving = false;
 
@@ -807,13 +801,14 @@ namespace dev.mikeee324.OpenPutt
         public void SetPosition(Vector3 worldPos)
         {
             ballRigidbody.position = worldPos;
+            lastFramePosition = worldPos;
         }
 
         public void SetRespawnPosition(Vector3 pos)
         {
-            respawnPosition = pos;
+            respawnWorldPosition = pos;
             if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
-                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnPosition}");
+                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnWorldPosition}");
         }
 
         public void _RespawnBallWithErrorNoise()
@@ -822,7 +817,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Play the reset noise
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
-                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnPosition);
+                playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnWorldPosition);
         }
 
         public void OnBallHit(Vector3 withVelocity, Vector3 sideSpin)
@@ -868,7 +863,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
-                playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, (requestedBallVelocity.magnitude * 14.28571428571429f) / 4f);
+                playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, requestedBallVelocity.magnitude * VelocityToAudioScale / 4f);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
@@ -885,20 +880,8 @@ namespace dev.mikeee324.OpenPutt
                 if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
 
                 //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
-                {
-                    SetEnabled(true);
-
-                    if (BallIsMoving)
-                    {
-                        // Just reset the timers
-                        timeNotMoving = 0f;
-                        timeMoving = 0f;
-                    }
-                    else
-                    {
-                        BallIsMoving = true;
-                    }
-                }
+                SetEnabled(true);
+                ResetBallCollisionTimers();
             }
 
             if (!BallIsMoving)
@@ -927,18 +910,20 @@ namespace dev.mikeee324.OpenPutt
                 // TODO: A static rigidbody may or may not help with ball collisions
                 // This if statement will confuse things though.. need to think of a better way (Steppy thing doesn't work properly with it)
                 // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
-                {
-                    if (BallIsMoving)
-                    {
-                        // Just reset the timers
-                        timeNotMoving = 0f;
-                        timeMoving = 0f;
-                    }
-                    else
-                    {
-                        BallIsMoving = true;
-                    }
-                }
+                ResetBallCollisionTimers();
+            }
+        }
+
+        private void ResetBallCollisionTimers()
+        {
+            if (BallIsMoving)
+            {
+                timeNotMoving = 0f;
+                timeMoving = 0f;
+            }
+            else
+            {
+                BallIsMoving = true;
             }
         }
 
@@ -1007,7 +992,7 @@ namespace dev.mikeee324.OpenPutt
 
             // How bouncy is this wall?
             var bounceMultiplier = wallBounceSpeedMultiplier;
-            if (Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.Length == 0)
+            if (Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.Length > 0)
                 bounceMultiplier = collision.collider.material.bounciness;
             if (bounceMultiplier < .01f)
                 bounceMultiplier = wallBounceSpeedMultiplier;
@@ -1152,12 +1137,12 @@ namespace dev.mikeee324.OpenPutt
 
             var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
 
-            HandleGroundSnapping(isGrounded);
+            HandleGroundSnapping(isGrounded, groundingHit);
 
             if (audioWhenBallHitsFloor && canPlayHitGroundSound)
             {
                 if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
-                    playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, (lastFrameVelocity.magnitude * 14.28571428571429f) * 0.6f); // Play a bounce sound but a bit quieter
+                    playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, lastFrameVelocity.magnitude * VelocityToAudioScale * 0.6f); // Play a bounce sound but a bit quieter
             }
 
             if (enableAirResistance)
@@ -1172,46 +1157,41 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        private void HandleGroundSnapping(bool isGrounded)
+        private void HandleGroundSnapping(bool isGrounded, RaycastHit groundingHit)
         {
             if (!enableBallSnap) return;
 
-            var shouldSnapToGround = enableBallSnap && !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
+            // Track ground normal every grounded frame so slope comparisons are never stale.
+            // Capture lastGroundDot before updating so it still reflects the previous frame.
+            var lastGroundDot = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
+            var currentGroundDot = Vector3.Dot(groundingHit.normal, -gravityDirection);
+            if (isGrounded)
+                lastGroundContactNormal = groundingHit.normal;
+            else
+                lastGroundContactNormal = -gravityDirection; // reset to neutral so gravity changes don't corrupt the slope comparison
+
+            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
             if (!shouldSnapToGround) return;
 
-            var velocity = ballRigidbody.velocity;
-            var speed = velocity.magnitude;
+            // Strip any velocity pushing the ball off the surface (edge-bounce suppression).
+            // Using the surface normal component avoids clamping legitimate ramp movement.
+            var liftOffSpeed = Vector3.Dot(ballRigidbody.velocity, groundingHit.normal);
+            if (liftOffSpeed > 0.05f)
+                ballRigidbody.velocity -= groundingHit.normal * liftOffSpeed;
 
-            // Ground surface detection
-            var foundFloor = Physics.Raycast(CurrentPosition, gravityDirection, out var snapHit, ballCollider.radius + groundSnappingProbeDistance, groundSnappingProbeMask);
+            var speed = ballRigidbody.velocity.magnitude;
 
-            if (!foundFloor) return;
-
-            // Update ground contact normal
-            var currentGroundNormal = snapHit.normal;
-            var lastGroundDot = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
-            var currentGroundDot = Vector3.Dot(currentGroundNormal, -gravityDirection);
-            lastGroundContactNormal = currentGroundNormal;
-
-            // Ramp angle and steepness checks (use gravity-relative dot)
-            var rampAngle = Mathf.Acos(currentGroundDot) * Mathf.Rad2Deg;
-
-            // Disable snapping for steep surfaces or flattening slopes
+            // Only snap when transitioning to a steeper slope — flat/flattening surfaces don't need it
             if (currentGroundDot < minGroundDotProduct || currentGroundDot >= lastGroundDot)
                 return;
 
-            // Project velocity onto ground plane
-            var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, currentGroundNormal).normalized * speed;
+            // Redirect velocity onto the new slope so the ball follows it rather than floating over the edge
+            var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, groundingHit.normal).normalized * speed;
+            var gravityInfluence = Mathf.Sqrt(1f - currentGroundDot * currentGroundDot);
+            newVelocity += gravityDirection * (gravityInfluence * Time.deltaTime * gravityMagnitude);
 
-            // Apply gravity influence
-            var gravityInfluence = Mathf.Sin(rampAngle * Mathf.Deg2Rad);
-            newVelocity += gravityDirection.normalized * (gravityInfluence * Time.deltaTime * gravityMagnitude);
-
-            // Apply velocity correction if vertical velocity is above threshold
-            if (newVelocity.y > .001f)
-            {
+            if (Vector3.Dot(newVelocity, -gravityDirection) > .001f)
                 ballRigidbody.velocity = lastFrameVelocity = newVelocity;
-            }
         }
 
         public void OnRespawn()
@@ -1286,7 +1266,6 @@ namespace dev.mikeee324.OpenPutt
 
                     // Set the appropriate collision detection mode (speculative picks up club hits better - dynamic works better when the ball is moving around, speculative makes it bounce off random edges it shouldn't)
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
-                    //ballRigidbody.collisionDetectionMode = requestedCollisionMode;
                 }
 
                 // Only allow the local player to pick up their ball when it has stopped

@@ -133,6 +133,8 @@ namespace dev.mikeee324.OpenPutt
                 _inputLookVerticalDelta = _inputLookVerticalDelta * .5f;
 #endif
 
+            bool isShooting = Utilities.IsValid(inputHandler) && inputHandler.IsShooting;
+
 #if UNITY_ANDROID || UNITY_IOS
             // InputLook on mobile keeps going to 0 while moving and make the camera move really badly
             if (Mathf.Abs(Input.GetAxis("Mouse X")) > 0.0001f || Mathf.Abs(Input.GetAxis("Mouse Y")) > 0.0001f)
@@ -144,15 +146,14 @@ namespace dev.mikeee324.OpenPutt
                     _inputLookVerticalDelta = Input.GetAxis("Mouse Y") * GetMoveSensitivity() * Time.deltaTime * 50f;
                 }
 
-                if (!inputHandler.IsShooting)
+                if (!isShooting)
                     _currentCameraX += _inputLookHorizontalDelta;
             }
 #else
             _currentCameraX += _inputLookHorizontalDelta;
 #endif
 
-
-            if (Utilities.IsValid(inputHandler) && !inputHandler.IsShooting)
+            if (!isShooting)
                 _currentCameraY += _inputLookVerticalDelta;
 
             float clampedRawCameraY;

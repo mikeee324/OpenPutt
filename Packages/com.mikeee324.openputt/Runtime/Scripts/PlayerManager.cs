@@ -222,14 +222,14 @@ namespace dev.mikeee324.OpenPutt
                 // Just re-set the club type to update the head meshes (automatically picks which orientation)
                 golfClub.ClubType = golfClub.ClubType;
 
-                if (Owner != Networking.LocalPlayer)
-                    return;
+                if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
+                {
+                    // Swap shoulder pickups automatically
+                    openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
+                    openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
 
-                // Swap shoulder pickups automatically
-                openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
-
-                RequestSync(syncNow: true);
+                    RequestSync(syncNow: true);
+                }
 
                 // Tell everybody that this player changed which hand they use
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
@@ -247,27 +247,15 @@ namespace dev.mikeee324.OpenPutt
             get => _isImmobilized;
             set
             {
-                var ownerIsValid = Utilities.IsValid(Owner) && Owner.IsValid();
-
-                if (!ownerIsValid)
+                if (!Networking.IsOwner(gameObject))
                 {
                     _isImmobilized = false;
                     return;
                 }
 
-                _isImmobilized = value;
-
-                if (!freezePlayerWhileClubIsArmed)
-                    _isImmobilized = false;
-
-                // Don't freeze desktop players (they can just not press any keys to not move anyway)
-                if (!canFreezeDesktopPlayers && !Owner.IsUserInVR())
-                    _isImmobilized = false;
-
-                if (Owner.isLocal)
-                    Owner.Immobilize(_isImmobilized);
-                else
-                    _isImmobilized = false;
+                var local = Networking.LocalPlayer;
+                _isImmobilized = value && freezePlayerWhileClubIsArmed && (canFreezeDesktopPlayers || local.IsUserInVR());
+                local.Immobilize(_isImmobilized);
             }
         }
 
@@ -692,7 +680,7 @@ namespace dev.mikeee324.OpenPutt
 
             PlayerIsCurrentlyFrozen = false;
 
-            var localPlayerIsNowOwner = Owner == Networking.LocalPlayer;
+            var localPlayerIsNowOwner = Networking.LocalPlayer == Networking.GetOwner(gameObject);
 
             if (localPlayerIsNowOwner)
             {
@@ -771,7 +759,7 @@ namespace dev.mikeee324.OpenPutt
             // Refresh scoreboards
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.scoreboardManager))
             {
-                if (Owner == Networking.LocalPlayer)
+                if (localPlayerIsNowOwner)
                     openPutt.OnLocalPlayerInitialised(this);
                 openPutt.OnPlayerUpdate(this);
             }

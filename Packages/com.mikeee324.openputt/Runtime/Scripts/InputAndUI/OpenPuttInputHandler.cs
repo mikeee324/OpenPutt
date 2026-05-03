@@ -125,6 +125,7 @@ namespace dev.mikeee324.OpenPutt
 #if !(UNITY_ANDROID || UNITY_IOS)
                     float mouseY = Input.GetAxis("Mouse Y");
                     accumulatedMouseY += mouseY * Time.deltaTime * mouseSensitivity * 100f;
+                    accumulatedMouseY = Mathf.Min(accumulatedMouseY, 0f);
                     float power = Mathf.Clamp(-accumulatedMouseY / 10f, 0f, maxPower);
                     currentShotPowerNormalized = Mathf.Clamp01(power / maxPower);
 #endif
@@ -133,6 +134,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     float mouseY = Input.GetAxis("Mouse Y");
                     accumulatedMouseY += mouseY * Time.deltaTime * mouseMobileSensitivity * 100f;
+                    accumulatedMouseY = Mathf.Min(accumulatedMouseY, 0f);
                     float power = Mathf.Clamp(-accumulatedMouseY / 10f, 0f, maxPower);
                     currentShotPowerNormalized = Mathf.Clamp01(power / maxPower);
                 }
@@ -507,6 +509,11 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="power">The power of the shot (0-1)</param>
         public void ExecuteShot(float power)
         {
+            // Power of 0 would pass Vector3.zero to HandleBallHit, which falls back to
+            // VR controller hand velocity and hits the ball anyway. Bail out instead.
+            if (power <= 0f)
+                return;
+
             // Execute shot with current power
             if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.LocalPlayerManager))
                 return;

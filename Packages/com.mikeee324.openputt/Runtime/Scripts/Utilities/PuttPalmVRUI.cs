@@ -217,8 +217,8 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(player) || !player.isLocal || !isInVR || !Utilities.IsValid(vrUIRoot))
             {
-                if (Utilities.IsValid(openPutt) && openPutt.debugMode)
-                    OpenPuttUtils.Log(this, $"PalmUI[height-change] ignored playerValid={Utilities.IsValid(player)} isLocal={(Utilities.IsValid(player) ? player.isLocal : false)} isInVR={isInVR} rootValid={Utilities.IsValid(vrUIRoot)}");
+                //if (Utilities.IsValid(openPutt) && openPutt.debugMode)
+                //    OpenPuttUtils.Log(this, $"PalmUI[height-change] ignored playerValid={Utilities.IsValid(player)} isLocal={(Utilities.IsValid(player) ? player.isLocal : false)} isInVR={isInVR} rootValid={Utilities.IsValid(vrUIRoot)}");
                 return;
             }
 
