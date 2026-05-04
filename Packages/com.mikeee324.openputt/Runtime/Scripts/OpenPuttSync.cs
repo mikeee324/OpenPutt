@@ -159,7 +159,7 @@ namespace dev.mikeee324.OpenPutt
             syncPosition = transform.localPosition;
             syncRotation = transform.localRotation;
 
-            if (!Utilities.IsValid(fastSyncIntervalCurve) || fastSyncIntervalCurve.length == 0)
+            if (fastSyncIntervalCurve == null || fastSyncIntervalCurve.length == 0)
             {
                 fastSyncIntervalCurve = new AnimationCurve();
                 fastSyncIntervalCurve.AddKey(0f, 0.03f);
@@ -168,7 +168,7 @@ namespace dev.mikeee324.OpenPutt
                 fastSyncIntervalCurve.AddKey(82f, 1f);
             }
 
-            if (!Utilities.IsValid(remoteUpdateDistanceCurve) || remoteUpdateDistanceCurve.length == 0)
+            if (remoteUpdateDistanceCurve == null || remoteUpdateDistanceCurve.length == 0)
             {
                 remoteUpdateDistanceCurve = new AnimationCurve();
                 remoteUpdateDistanceCurve.AddKey(0f, 0);
@@ -241,7 +241,7 @@ namespace dev.mikeee324.OpenPutt
                 RequestSerialization();
 
             // If we still have time left to sync or player is holding object (so we can check if the offsets have changed), schedule in the next sync
-            if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt > 0)
+            if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
             {
                 SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
             }
@@ -321,8 +321,9 @@ namespace dev.mikeee324.OpenPutt
 
                     if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue <= 0f)
                     {
-                        posOffset = Vector3.Lerp(lastSyncPos, syncPosition, Time.deltaTime * 10f);
-                        rotOffset = Quaternion.Slerp(lastSyncRot, syncRotation, Time.deltaTime * 10f);
+                        var lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
+                        posOffset = Vector3.Lerp(lastSyncPos, syncPosition, lerpProgress);
+                        rotOffset = Quaternion.Slerp(lastSyncRot, syncRotation, lerpProgress);
 
                         lastSyncPos = posOffset;
                         lastSyncRot = rotOffset;
@@ -342,7 +343,7 @@ namespace dev.mikeee324.OpenPutt
                     return;
                 }
 
-                if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Dot(transform.localRotation, syncRotation) < 0.999f)
+                if ((transform.localPosition - syncPosition).magnitude > 0.001f || Mathf.Abs(Quaternion.Dot(transform.localRotation, syncRotation)) < 0.999f)
                 {
                     var newPosition = syncPosition;
                     var newRotation = syncRotation;
@@ -592,7 +593,7 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (Utilities.IsValid(returnListener) && Utilities.IsValid(remoteReturnFunction) && remoteReturnFunction.Length > 0)
+            if (Utilities.IsValid(returnListener) && !string.IsNullOrEmpty(remoteReturnFunction))
                 returnListener.SendCustomEvent(remoteReturnFunction);
 
             RequestFastSync();
