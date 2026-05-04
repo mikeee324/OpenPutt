@@ -1,12 +1,14 @@
 ﻿using System;
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.Common.Interfaces;
 
 namespace dev.mikeee324.OpenPutt
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class GolfBallTeleporter : UdonSharpBehaviour
     {
         public BoxCollider localCollider;
@@ -51,8 +53,8 @@ namespace dev.mikeee324.OpenPutt
                 golfBall.BallIsMoving = false;
 
                 var oldPos = golfBall.respawnWorldPosition;
-                golfBall.SetPosition(hideBallDuringDelay ? Vector3.up * (golfBall.openPuttSync.autoRespawnHeight * .95f) : targetPosition.position);
-                golfBall.SetRespawnPosition(oldPos);
+                golfBall._SetPosition(hideBallDuringDelay ? Vector3.up * (golfBall.openPuttSync.autoRespawnHeight * .95f) : targetPosition.position);
+                golfBall._SetRespawnPosition(oldPos);
 
                 golfBall = ball;
 
@@ -66,10 +68,11 @@ namespace dev.mikeee324.OpenPutt
                         PlayEnterAudio();
                 }
 
-                SendCustomEventDelayedSeconds(nameof(Teleport), teleportDelay);
+                SendCustomEventDelayedSeconds(nameof(_Teleport), teleportDelay);
             }
         }
 
+        [NetworkCallable(maxEventsPerSecond: 5)]
         public void PlayEnterAudio()
         {
             if (!Utilities.IsValid(teleportEnterAudio)) return;
@@ -77,6 +80,7 @@ namespace dev.mikeee324.OpenPutt
             teleportEnterAudio.Play();
         }
 
+        [NetworkCallable(maxEventsPerSecond: 5)]
         public void PlayExitAudio()
         {
             if (!Utilities.IsValid(teleportExitAudio)) return;
@@ -84,7 +88,7 @@ namespace dev.mikeee324.OpenPutt
             teleportExitAudio.Play();
         }
 
-        public void Teleport()
+        public void _Teleport()
         {
             if (!Utilities.IsValid(launchPosition) || !Utilities.IsValid(targetPosition)) return;
 
@@ -94,8 +98,8 @@ namespace dev.mikeee324.OpenPutt
             {
                 var oldPos = golfBall.respawnWorldPosition;
                 golfBall.isHeldInTeleporter = false;
-                golfBall.SetPosition(targetPosition.position);
-                golfBall.SetRespawnPosition(oldPos);
+                golfBall._SetPosition(targetPosition.position);
+                golfBall._SetRespawnPosition(oldPos);
                 golfBall.BallIsMoving = true;
                 golfBall.ballRigidbody.velocity = (launchPosition.position - targetPosition.position).normalized * newMagnitude;
             }

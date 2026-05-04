@@ -5,7 +5,7 @@ using VRC.SDKBase;
 
 namespace com.dev.mikeee324.OpenPutt
 {
-    [DefaultExecutionOrder(20000)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(20000)]
     public class GolfClubColliderVisualiser : UdonSharpBehaviour
     {
         public GolfClub club;

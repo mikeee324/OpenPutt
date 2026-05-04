@@ -104,7 +104,7 @@ namespace dev.mikeee324.OpenPutt
             _worldUpSmoothed = Vector3.up;
 
             if (Utilities.IsValid(openPutt))
-                openPutt.RegisterEventListener(this);
+                openPutt._RegisterEventListener(this);
 
             ballCam.enabled = false;
         }

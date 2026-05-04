@@ -21,7 +21,7 @@ namespace dev.mikeee324.OpenPutt
             // Just pass the event on to the course manager - it will figure out what to do
             // If you want to add our own logic use an OpenPuttEventListener and listen for the OnPlayerFinishCourse event instead of modifying this directly
             if (Utilities.IsValid(courseManager))
-                courseManager.OnLocalPlayerBallEnterHole(this, other);
+                courseManager._OnLocalPlayerBallEnterHole(this, other);
         }
 
         [NetworkCallable(10)]

@@ -40,19 +40,19 @@ namespace dev.mikeee324.OpenPutt
             audioSource.Stop();
 
             // If this player is the owner they will start the audio and sync when it started
-            TryStartNextTrack();
+            _TryStartNextTrack();
         }
 
         /// <summary>
         /// Checks if this play can start the next track in the list. If they can they will tell other clients to play the same thing.
         /// </summary>
-        public void TryStartNextTrack()
+        public void _TryStartNextTrack()
         {
             if (!Utilities.IsValid(audioSource))
                 return;
 
             // Check every 250ms
-            SendCustomEventDelayedSeconds(nameof(TryStartNextTrack), .25f);
+            SendCustomEventDelayedSeconds(nameof(_TryStartNextTrack), .25f);
 
             // If local player doesn't own this object then they should wait for OnDeserialization from the owner to start playing
             if (isSynced && !this.LocalPlayerOwnsThisObject())
@@ -68,10 +68,10 @@ namespace dev.mikeee324.OpenPutt
                 currentTrackID = 0;
 
 
-            StartTrack(currentTrackID);
+            _StartTrack(currentTrackID);
         }
 
-        public void StartTrack(int trackID)
+        public void _StartTrack(int trackID)
         {
             currentTrackID = trackID;
             if (currentTrackID < 0 || currentTrackID >= audioClips.Length)

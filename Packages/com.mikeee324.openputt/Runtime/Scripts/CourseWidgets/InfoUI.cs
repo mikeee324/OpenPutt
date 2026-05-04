@@ -71,7 +71,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             // If this object isn't already registered as an event listener, register it here automatically
-            openPutt.RegisterEventListener(this);
+            openPutt._RegisterEventListener(this);
 
             valueTextLabel.text = defaultText;
         }
@@ -118,7 +118,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 case InfoUIDisplayType.LastHitTotalDistanceTravelled:
                 {
-                    golfBall.GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
+                    golfBall._GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
                     if (useMetric)
                         valueTextLabel.text = $"{totalDistanceTravelled:F0}m";
                     else
@@ -127,7 +127,7 @@ namespace dev.mikeee324.OpenPutt
                 }
                 case InfoUIDisplayType.LastHitMaxDistance:
                 {
-                    golfBall.GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
+                    golfBall._GetLastHitData(out var maxDistance, out var totalDistanceTravelled);
                     maxDistance = Mathf.FloorToInt(maxDistance);
                     if (useMetric)
                         valueTextLabel.text = $"{maxDistance:F0}m";

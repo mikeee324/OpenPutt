@@ -233,7 +233,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Make sure rigidbodies are awake
             myRigidbody.WakeUp();
-            golfBall.Wakeup();
+            golfBall._Wakeup();
 
             // We can assume if FixedUpdate is running, the club is armed
             if (clubIsTouchingBall)
@@ -664,7 +664,7 @@ namespace dev.mikeee324.OpenPutt
                 visual.OnBallHit(golfBall.transform.position, lastHitWorldPos, velocity, rawDirectionOfTravel);
 
             // Register the hit with the ball
-            golfBall.OnBallHit(velocity, sideSpin);
+            golfBall._OnBallHit(velocity, sideSpin);
         }
 
         private void MoveToClubWithoutVelocity()

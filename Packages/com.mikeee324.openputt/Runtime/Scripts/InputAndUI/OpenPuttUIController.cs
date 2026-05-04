@@ -38,7 +38,7 @@ namespace dev.mikeee324.OpenPutt
             isInVR = Networking.LocalPlayer.IsUserInVR();
 
             // If this object isn't already registered as an event listener, register it here automatically
-            openPutt.RegisterEventListener(this);
+            openPutt._RegisterEventListener(this);
 
             if (isInVR)
             {
@@ -207,7 +207,7 @@ namespace dev.mikeee324.OpenPutt
                     float maxDist = 0f;
                     if (Utilities.IsValid(localPlayerManager.golfBall))
                     {
-                        localPlayerManager.golfBall.GetLastHitData(out maxDist, out var totalDist);
+                        localPlayerManager.golfBall._GetLastHitData(out maxDist, out var totalDist);
                         maxDist = Mathf.FloorToInt(maxDist);
                     }
                     int currentPar = currentCourse.parScore;

@@ -46,7 +46,7 @@ namespace dev.mikeee324.OpenPutt
             lookVerticalAxis = 0f;
         }
 
-        public void Drop()
+        public void _Drop()
         {
             if (Utilities.IsValid(pickup))
                 pickup.Drop();

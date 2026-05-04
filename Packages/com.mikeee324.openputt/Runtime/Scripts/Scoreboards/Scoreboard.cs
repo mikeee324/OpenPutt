@@ -255,7 +255,7 @@ namespace dev.mikeee324.OpenPutt
                         {
                             case ScoreboardView.Settings:
                             case ScoreboardView.DevMode:
-                                manager.openPutt.SavePersistantData();
+                                manager.openPutt._SavePersistantData();
                                 break;
                         }
                     }
@@ -614,10 +614,10 @@ namespace dev.mikeee324.OpenPutt
 
             RefreshSettingsMenu();
 
-            playerManager.UpdateTotals();
+            playerManager._UpdateTotals();
 
-            playerManager.openPutt.OnPlayerUpdate(playerManager);
-            playerManager.RequestSync();
+            playerManager.openPutt._OnPlayerUpdate(playerManager);
+            playerManager._RequestSync();
         }
 
         public void OnToggleUnlimitedShaftSize()
@@ -779,7 +779,7 @@ namespace dev.mikeee324.OpenPutt
             var pm = manager.openPutt.LocalPlayerManager;
             if (Utilities.IsValid(pm))
             {
-                pm.ResetPlayerScores();
+                pm._ResetPlayerScores();
 
                 manager.openPutt.eventHandler.OnPlayerScoreReset(pm.Owner);
 
@@ -788,7 +788,7 @@ namespace dev.mikeee324.OpenPutt
                     if (Utilities.IsValid(pm.golfClub.pickup))
                         pm.golfClub.pickup.Drop();
                     if (Utilities.IsValid(pm.golfClub.openPuttSync))
-                        pm.golfClub.openPuttSync.Respawn();
+                        pm.golfClub.openPuttSync._Respawn();
                 }
 
                 if (Utilities.IsValid(pm.golfBall))
@@ -796,15 +796,15 @@ namespace dev.mikeee324.OpenPutt
                     if (pm.golfBall.GetComponent<VRCPickup>() != null)
                         pm.golfBall.GetComponent<VRCPickup>().Drop();
                     if (Utilities.IsValid(pm.golfClub.openPuttSync))
-                        pm.golfClub.openPuttSync.Respawn();
+                        pm.golfClub.openPuttSync._Respawn();
                     pm.golfBall.BallIsMoving = false;
                 }
 
-                pm.RequestSync();
+                pm._RequestSync();
 
-                pm.UpdateTotals();
+                pm._UpdateTotals();
 
-                pm.openPutt.OnPlayerUpdate(pm);
+                pm.openPutt._OnPlayerUpdate(pm);
 
                 if (manager.openPutt.debugMode)
                     OpenPuttUtils.Log(this, "Player reset their scores");

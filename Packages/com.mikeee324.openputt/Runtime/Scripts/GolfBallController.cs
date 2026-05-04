@@ -9,7 +9,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync), RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
     public class GolfBallController : UdonSharpBehaviour
     {
         #region Public Settings
@@ -95,9 +95,6 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
         float groundRaycastDistance = 0.02f;
 
-        [SerializeField, Min(0f), Tooltip("The distance to check for the ground snapping probe. This helps keep the ball from bouncing weird on certain floor edges. (in meters)")]
-        float groundSnappingProbeDistance = 0.05f;
-
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
@@ -145,21 +142,21 @@ namespace dev.mikeee324.OpenPutt
                     resetBallTimers = true;
                 }
 
-                UpdateBallState(localPlayerIsOwner);
+                _UpdateBallState(localPlayerIsOwner);
 
                 // Tells the players golf club to update its current state
                 if (Utilities.IsValid(club))
-                    club.RefreshState();
+                    club._RefreshState();
 
                 // Only the owner of the ball can run physics on it (everyone else should only receive ObjectSync updates)
                 if (!localPlayerIsOwner)
                 {
                     _ballMoving = false;
-                    SetEnabled(false);
+                    _SetEnabled(false);
                     return;
                 }
 
-                SetEnabled(_ballMoving);
+                _SetEnabled(_ballMoving);
 
                 if (ballWasMoving && !_ballMoving)
                 {
@@ -185,13 +182,13 @@ namespace dev.mikeee324.OpenPutt
                     {
                         var course = playerManager.CurrentCourse;
 
-                        playerManager.OnCourseFinished(course, null, CourseState.Completed);
+                        playerManager._OnCourseFinished(course, null, CourseState.Completed);
 
                         // If we can replay the course - automatically restart the course
                         if (playerManager.openPutt.replayableCourses || course.courseIsAlwaysReplayable)
                         {
-                            playerManager.OnCourseStarted(course);
-                            RespawnBall();
+                            playerManager._OnCourseStarted(course);
+                            _RespawnBall();
                         }
                     }
                     else if (respawnAutomatically)
@@ -202,7 +199,7 @@ namespace dev.mikeee324.OpenPutt
                             if (!pickedUpByPlayer)
                             {
                                 // Ball stopped on top of a course - save this position so we can respawn here if needed
-                                SetRespawnPosition(CurrentPosition);
+                                _SetRespawnPosition(CurrentPosition);
                             }
                         }
                         else if (HasRespawnPosition)
@@ -392,15 +389,15 @@ namespace dev.mikeee324.OpenPutt
 
             minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
-            SendCustomEventDelayedSeconds(nameof(Disable), 1f);
+            SendCustomEventDelayedSeconds(nameof(_Disable), 1f);
         }
 
-        public void Disable()
+        public void _Disable()
         {
             enabled = false;
         }
 
-        public void SetEnabled(bool enabled)
+        public void _SetEnabled(bool enabled)
         {
             if (enabled)
             {
@@ -546,7 +543,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Physics.Raycast(ballRigidbody.position, gravityDirection, out var hit, 10f, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
                     {
-                        SetRespawnPosition(hit.point);
+                        _SetRespawnPosition(hit.point);
                     }
                 }
 
@@ -567,10 +564,10 @@ namespace dev.mikeee324.OpenPutt
             // Tell PuttSync to sync position if it's attached
             var sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (Utilities.IsValid(startLine) && startLine.gameObject.activeSelf);
             if (Utilities.IsValid(openPuttSync) && sendFastPositionSync)
-                openPuttSync.RequestFastSync(forceSync: true);
+                openPuttSync._RequestFastSync(forceSync: true);
         }
 
-        public void OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
+        public void _OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
         {
             if (!Utilities.IsValid(courseThatIsBeingStarted))
             {
@@ -580,7 +577,7 @@ namespace dev.mikeee324.OpenPutt
 
             startLine.SetEnabled(false);
 
-            SetPosition(position.transform.position);
+            _SetPosition(position.transform.position);
 
             if (!ballRigidbody.isKinematic)
             {
@@ -588,17 +585,17 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.angularVelocity = Vector3.zero;
             }
 
-            SetRespawnPosition(position.transform.position);
+            _SetRespawnPosition(position.transform.position);
 
             //  BallIsMoving = false;
 
             if (Utilities.IsValid(playerManager))
-                playerManager.OnCourseStarted(courseThatIsBeingStarted);
+                playerManager._OnCourseStarted(courseThatIsBeingStarted);
 
-            UpdateBallState(this.LocalPlayerOwnsThisObject());
+            _UpdateBallState(this.LocalPlayerOwnsThisObject());
 
             // Force a sync to make sure ball syncs to the pad fully
-            openPuttSync.RequestFastSync(forceSync: true);
+            openPuttSync._RequestFastSync(forceSync: true);
         }
 
         public override void OnPickup()
@@ -606,7 +603,7 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager) && !playerManager.BallVisible)
                 playerManager.BallVisible = true;
 
-            playerManager.RequestSync(syncNow: true);
+            playerManager._RequestSync(syncNow: true);
 
             var ballShoulderPickup = shoulderPickup;
             ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
@@ -646,9 +643,9 @@ namespace dev.mikeee324.OpenPutt
 
             startLine.SetEnabled(true);
 
-            SetEnabled(true);
+            _SetEnabled(true);
 
-            UpdateBallState(this.LocalPlayerOwnsThisObject());
+            _UpdateBallState(this.LocalPlayerOwnsThisObject());
         }
 
         public override void OnDrop()
@@ -656,7 +653,7 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager) && !playerManager.BallVisible)
                 playerManager.BallVisible = true;
 
-            playerManager.RequestSync();
+            playerManager._RequestSync();
 
             var ballShoulderPickup = shoulderPickup;
             var currentBallHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
@@ -682,7 +679,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
-                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
+                    playerManager._OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                 }
                 else if (HasRespawnPosition)
                 {
@@ -708,7 +705,7 @@ namespace dev.mikeee324.OpenPutt
                 else
                 {
                     // We don't know where to put the ball - skip the current course
-                    playerManager.OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
+                    playerManager._OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Skipped);
                 }
             }
 
@@ -774,7 +771,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Called by external scripts when the ball has been picked up
         /// </summary>
-        public void OnScriptPickup()
+        public void _OnScriptPickup()
         {
             OnPickup();
         }
@@ -782,29 +779,29 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Called by external scripts when the ball has been dropped
         /// </summary>
-        public void OnScriptDrop()
+        public void _OnScriptDrop()
         {
             OnDrop();
         }
 
-        public void RespawnBall()
+        public void _RespawnBall()
         {
             var respawnPos = respawnWorldPosition;
 
             BallIsMoving = false;
 
-            SetPosition(respawnPos);
+            _SetPosition(respawnPos);
 
-            SetRespawnPosition(respawnPos);
+            _SetRespawnPosition(respawnPos);
         }
 
-        public void SetPosition(Vector3 worldPos)
+        public void _SetPosition(Vector3 worldPos)
         {
             ballRigidbody.position = worldPos;
             lastFramePosition = worldPos;
         }
 
-        public void SetRespawnPosition(Vector3 pos)
+        public void _SetRespawnPosition(Vector3 pos)
         {
             respawnWorldPosition = pos;
             if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
@@ -813,20 +810,20 @@ namespace dev.mikeee324.OpenPutt
 
         public void _RespawnBallWithErrorNoise()
         {
-            RespawnBall();
+            _RespawnBall();
 
             // Play the reset noise
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
                 playerManager.openPutt.sfxController.PlayBallResetSoundAtPosition(respawnWorldPosition);
         }
 
-        public void OnBallHit(Vector3 withVelocity, Vector3 sideSpin)
+        public void _OnBallHit(Vector3 withVelocity, Vector3 sideSpin)
         {
-            SetEnabled(true);
+            _SetEnabled(true);
 
             // Tell the club to disarm for a second
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
-                playerManager.golfClub.DisableClubColliderFor();
+                playerManager.golfClub._DisableClubColliderFor();
 
             var playerIsPlayingACourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse);
 
@@ -845,7 +842,7 @@ namespace dev.mikeee324.OpenPutt
             _currentSpin = sideSpin;
 
             if (Utilities.IsValid(playerManager))
-                playerManager.OnBallHit(withVelocity.magnitude);
+                playerManager._OnBallHit(withVelocity.magnitude);
 
             // Vibrate the controller to give feedback to the player
             var currentHand = club.CurrentHand;
@@ -868,7 +865,7 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
-            UpdateBallState(this.LocalPlayerOwnsThisObject());
+            _UpdateBallState(this.LocalPlayerOwnsThisObject());
         }
 
         private void OnCollisionEnter(Collision collision)
@@ -880,7 +877,7 @@ namespace dev.mikeee324.OpenPutt
                 if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
 
                 //  if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
-                SetEnabled(true);
+                _SetEnabled(true);
                 ResetBallCollisionTimers();
             }
 
@@ -1194,12 +1191,12 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.velocity = lastFrameVelocity = newVelocity;
         }
 
-        public void OnRespawn()
+        public void _OnRespawn()
         {
-            SendCustomEventDelayedFrames(nameof(RespawnBall), 2);
+            SendCustomEventDelayedFrames(nameof(_RespawnBall), 2);
         }
 
-        public void Wakeup()
+        public void _Wakeup()
         {
             ballRigidbody.WakeUp();
         }
@@ -1209,7 +1206,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         /// <param name="maxStraightLineDistance">The furthest distance recorded</param>
         /// <param name="totalDistanceTravelled">The total amount of distance that was covered by the ball</param>
-        public void GetLastHitData(out float maxStraightLineDistance, out float totalDistanceTravelled)
+        public void _GetLastHitData(out float maxStraightLineDistance, out float totalDistanceTravelled)
         {
             maxStraightLineDistance = lastHitMaxDistance;
             totalDistanceTravelled = lastHitTravelDistance;
@@ -1218,12 +1215,12 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Increments a counter of how many force zones the ball is currently inside
         /// </summary>
-        public void OnBallEnterGravityZone() => insideGravityZones += 1;
+        public void _OnBallEnterGravityZone() => insideGravityZones += 1;
 
         /// <summary>
         /// Called when a ball leaves a force zone - if a ball ends up in 0 force zones the gravity direction will be moved to Vector3.down (the default)
         /// </summary>
-        public void OnBallExitGravityZone()
+        public void _OnBallExitGravityZone()
         {
             insideGravityZones -= 1;
             if (insideGravityZones > 0) return;
@@ -1239,7 +1236,7 @@ namespace dev.mikeee324.OpenPutt
         /// Updates the state of various toggles on the ball depending on whether the local player owns this ball or not
         /// </summary>
         /// <param name="localPlayerIsOwner">Does the local player own this ball? (Can usually pass in this.LocalPlayerOwnsThisObject())</param>
-        public void UpdateBallState(bool localPlayerIsOwner)
+        public void _UpdateBallState(bool localPlayerIsOwner)
         {
             if (localPlayerIsOwner)
             {

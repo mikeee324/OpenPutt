@@ -99,13 +99,13 @@ namespace dev.mikeee324.OpenPutt
                     golfBall.gravityDirection = transform.forward;
                     golfBall.gravityMagnitude = forceMagnitude;
 
-                    golfBall.OnBallEnterGravityZone();
+                    golfBall._OnBallEnterGravityZone();
                     break;
                 case GolfBalLForceZoneType.CenterPull:
                     golfBall.gravityDirection = transform.position - golfBall.transform.position;
                     golfBall.gravityMagnitude = forceMagnitude;
 
-                    golfBall.OnBallEnterGravityZone();
+                    golfBall._OnBallEnterGravityZone();
                     break;
                 case GolfBalLForceZoneType.CapsuleGravity:
                     if (forceAreaCollider.GetType() == typeof(CapsuleCollider))
@@ -114,7 +114,7 @@ namespace dev.mikeee324.OpenPutt
                         golfBall.gravityMagnitude = forceMagnitude;
                     }
 
-                    golfBall.OnBallEnterGravityZone();
+                    golfBall._OnBallEnterGravityZone();
                     break;
             }
         }
@@ -133,7 +133,7 @@ namespace dev.mikeee324.OpenPutt
                 case GolfBalLForceZoneType.Gravity:
                 case GolfBalLForceZoneType.CenterPull:
                 case GolfBalLForceZoneType.CapsuleGravity:
-                    golfBall.OnBallExitGravityZone();
+                    golfBall._OnBallExitGravityZone();
                     break;
             }
 

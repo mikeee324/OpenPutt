@@ -225,15 +225,15 @@ namespace dev.mikeee324.OpenPutt
 
                 if (lerpProgress < 1f)
                 {
-                    golfBall.SetPosition(Vector3.Lerp(lerpStartPosition, lerpStopPosition, simpleEaseInOut.Evaluate(lerpProgress)));
+                    golfBall._SetPosition(Vector3.Lerp(lerpStartPosition, lerpStopPosition, simpleEaseInOut.Evaluate(lerpProgress)));
                     lerpToStartTime += Time.deltaTime;
                 }
                 else
                 {
-                    golfBall.SetPosition(lerpStopPosition);
+                    golfBall._SetPosition(lerpStopPosition);
 
                     if (Utilities.IsValid(closestBallStart))
-                        golfBall.OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
+                        golfBall._OnBallDroppedOnPad(courseThatIsBeingStarted, closestBallStart);
 
                     ResetDropAnimation();
                 }

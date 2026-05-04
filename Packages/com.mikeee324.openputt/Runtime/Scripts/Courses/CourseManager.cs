@@ -63,7 +63,7 @@ namespace dev.mikeee324.OpenPutt
         }
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
     public class CourseManager : UdonSharpBehaviour
     {
         [HideInInspector]
@@ -131,7 +131,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         /// <param name="hole">The hole that received a trigger collision</param>
         /// <param name="collider">The collider that entered the hole</param>
-        public void OnLocalPlayerBallEnterHole(CourseHole hole, Collider collider)
+        public void _OnLocalPlayerBallEnterHole(CourseHole hole, Collider collider)
         {
             // If this is the local players ball - tell their player manager the hole is now completed (Locks in the score etc)
             var golfBall = collider.gameObject.GetComponent<GolfBallController>();
@@ -139,12 +139,12 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (golfBall.BallIsMoving && !golfBall.pickedUpByPlayer)
                 {
-                    golfBall.playerManager.OnCourseFinished(this, hole, CourseState.Completed);
+                    golfBall.playerManager._OnCourseFinished(this, hole, CourseState.Completed);
                 }
             }
         }
 
-        [NetworkCallable]
+        [NetworkCallable(maxEventsPerSecond: 2)]
         public void OnPlayerHitMaxScore()
         {
             if (Utilities.IsValid(openPutt.eventHandler))

@@ -131,7 +131,7 @@ namespace dev.mikeee324.OpenPutt
                         headHolderMesh.SetPropertyBlock(headHolderPB);
 
                     if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                        openPuttSync.RequestFastSync(forceSync: true);
+                        openPuttSync._RequestFastSync(forceSync: true);
                 }
 
                 _clubArmed = value;
@@ -181,7 +181,7 @@ namespace dev.mikeee324.OpenPutt
                     Networking.LocalPlayer.PlayHapticEventInHand(CurrentHand, vibrationDuration, vibrationStrength, vibrationFrequency);
 
                 if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                    openPuttSync.RequestFastSync(forceSync: true);
+                    openPuttSync._RequestFastSync(forceSync: true);
             }
         }
 
@@ -272,16 +272,16 @@ namespace dev.mikeee324.OpenPutt
             headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
 
             // Update the collider states
-            RefreshState();
+            _RefreshState();
 
-            LocalPlayerCheck();
+            _LocalPlayerCheck();
         }
 
-        public void LocalPlayerCheck()
+        public void _LocalPlayerCheck()
         {
             if (!Utilities.IsValid(Networking.LocalPlayer))
             {
-                SendCustomEventDelayedSeconds(nameof(LocalPlayerCheck), 1);
+                SendCustomEventDelayedSeconds(nameof(_LocalPlayerCheck), 1);
                 return;
             }
 
@@ -298,16 +298,16 @@ namespace dev.mikeee324.OpenPutt
             {
                 // Player is rescaling club
                 if (LeftUseButtonDown && RightUseButtonDown)
-                    RescaleClub(false);
+                    _RescaleClub(false);
                 else if (!localPlayerIsInVR && RightUseButtonDown)
-                    RescaleClub(false);
+                    _RescaleClub(false);
 
                 if (CurrentHand == VRC_Pickup.PickupHand.None)
                 {
                     if (clubRigidbody.velocity.magnitude > 0.001f)
                     {
                         //if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                        //    openPuttSync.RequestFastSync(forceSync: true);
+                        //    openPuttSync._RequestFastSync(forceSync: true);
                     }
                     else
                     {
@@ -353,25 +353,25 @@ namespace dev.mikeee324.OpenPutt
         /// Disarms the club for the player for an amount of time
         /// </summary>
         /// <param name="duration">Amount of time to disable the club for in seconds</param>
-        public void DisableClubColliderFor(float duration = 1f)
+        public void _DisableClubColliderFor(float duration = 1f)
         {
             if (clubColliderIsTempDisabled) return;
 
             clubColliderIsTempDisabled = true;
-            RefreshState();
-            SendCustomEventDelayedSeconds(nameof(EnableClubCollider), duration);
+            _RefreshState();
+            SendCustomEventDelayedSeconds(nameof(_EnableClubCollider), duration);
         }
 
-        public void EnableClubCollider()
+        public void _EnableClubCollider()
         {
             clubColliderIsTempDisabled = false;
-            RefreshState();
+            _RefreshState();
         }
 
-        public void RefreshState()
+        public void _RefreshState()
         {
             if (shaftScale < 0)
-                RescaleClub(true);
+                _RescaleClub(true);
 
             var isOwner = this.LocalPlayerOwnsThisObject();
 
@@ -412,7 +412,7 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public void UpdateClubState()
+        public void _UpdateClubState()
         {
             var clubCanBePickedUp = this.LocalPlayerOwnsThisObject() && shoulderClubHeldInHand == VRC_Pickup.PickupHand.None;
 
@@ -423,16 +423,16 @@ namespace dev.mikeee324.OpenPutt
                 handleCollider.enabled = clubCanBePickedUp;
         }
 
-        public void OnRespawn()
+        public void _OnRespawn()
         {
             // if (shaftScale > 10f)
-            //    RescaleClub(true);
+            //    _RescaleClub(true);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
-            UpdateClubState();
-            RescaleClub(true);
+            _UpdateClubState();
+            _RescaleClub(true);
             RequestSerialization();
         }
 
@@ -440,7 +440,7 @@ namespace dev.mikeee324.OpenPutt
         /// Resizes the club for the player.
         /// </summary>
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
-        public void RescaleClub(bool resetToDefault)
+        public void _RescaleClub(bool resetToDefault)
         {
             var oldShaftScale = shaftScale;
             if (resetToDefault)
@@ -474,13 +474,13 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (Math.Abs(oldShaftScale - shaftScale) > .01f && Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync(forceSync: true);
+                openPuttSync._RequestFastSync(forceSync: true);
         }
 
         /// <summary>
         /// Called by external scripts when the club has been picked up
         /// </summary>
-        public void OnScriptPickup()
+        public void _OnScriptPickup()
         {
             if (!Utilities.IsValid(playerManager))
                 return;
@@ -522,19 +522,19 @@ namespace dev.mikeee324.OpenPutt
             if (!playerManager.ClubVisible)
             {
                 playerManager.ClubVisible = true;
-                playerManager.RequestSync(syncNow: true);
+                playerManager._RequestSync(syncNow: true);
             }
 
             if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync(forceSync: true);
+                openPuttSync._RequestFastSync(forceSync: true);
 
-            UpdateClubState();
+            _UpdateClubState();
         }
 
         /// <summary>
         /// Called by external scripts when the club has been dropped
         /// </summary>
-        public void OnScriptDrop()
+        public void _OnScriptDrop()
         {
             if (framesHeld > 10)
                 ThrowClub();
@@ -550,11 +550,11 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager))
             {
                 playerManager.ClubVisible = true;
-                playerManager.RequestSync();
+                playerManager._RequestSync();
             }
 
             if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
-                openPuttSync.RequestFastSync(forceSync: true);
+                openPuttSync._RequestFastSync(forceSync: true);
 
             var ballShoulderPickup = shoulderPickup;
             if (Utilities.IsValid(ballShoulderPickup))
@@ -568,9 +568,9 @@ namespace dev.mikeee324.OpenPutt
                 shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
             }
 
-            RefreshState();
+            _RefreshState();
 
-            UpdateClubState();
+            _UpdateClubState();
         }
 
         public override void OnPickup()
@@ -609,7 +609,7 @@ namespace dev.mikeee324.OpenPutt
                     playerManager.openPutt.openPuttPortableScoreboard.golfClubHeldByPlayer = true;
             }
 
-            RefreshState();
+            _RefreshState();
         }
 
         public override void OnDrop()
@@ -637,9 +637,9 @@ namespace dev.mikeee324.OpenPutt
                 shoulderClubHeldInHand = VRC_Pickup.PickupHand.None;
             }
 
-            RefreshState();
+            _RefreshState();
 
-            UpdateClubState();
+            _UpdateClubState();
         }
 
         public override void InputUse(bool value, UdonInputEventArgs args)
@@ -649,7 +649,7 @@ namespace dev.mikeee324.OpenPutt
                 LeftUseButtonDown = value;
             else if (args.handType == HandType.RIGHT)
                 RightUseButtonDown = value;
-            RefreshState();
+            _RefreshState();
         }
 
         private void SyncHandMode()
@@ -667,7 +667,7 @@ namespace dev.mikeee324.OpenPutt
                 playerManager.IsInLeftHandedMode = shouldBeLeftHandedMode;
 
                 if (Utilities.IsValid(playerManager.openPutt))
-                    playerManager.openPutt.SavePersistantData();
+                    playerManager.openPutt._SavePersistantData();
 
                 if (Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.scoreboardManager))
                     playerManager.openPutt.scoreboardManager.RefreshSettingsIfVisible();

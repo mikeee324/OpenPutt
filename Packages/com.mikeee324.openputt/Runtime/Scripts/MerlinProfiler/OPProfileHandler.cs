@@ -7,7 +7,7 @@ using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
 
-[DefaultExecutionOrder(1000000000)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(1000000000)]
 public class OPProfileHandler : UdonSharpBehaviour
 {
     public TextMeshProUGUI _timeText;

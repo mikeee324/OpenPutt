@@ -211,7 +211,7 @@ namespace dev.mikeee324.OpenPutt
         /// Registers an event listener if it's not already registered
         /// </summary>
         /// <param name="listener">The event listener to register</param>
-        public void RegisterEventListener(OpenPuttEventListener listener)
+        public void _RegisterEventListener(OpenPuttEventListener listener)
         {
             if (!eventListeners.Contains(listener))
             {
@@ -227,7 +227,7 @@ namespace dev.mikeee324.OpenPutt
         /// Deregisters an event listener if it's currently registered
         /// </summary>
         /// <param name="listener">The event listener to deregister</param>
-        public void DeregisterEventListener(OpenPuttEventListener listener) => eventListeners = eventListeners.Remove(listener);
+        public void _DeregisterEventListener(OpenPuttEventListener listener) => eventListeners = eventListeners.Remove(listener);
 
         #endregion
 
@@ -248,11 +248,11 @@ namespace dev.mikeee324.OpenPutt
             foreach (var marker in courseMarkers)
                 marker.ResetUI();
 
-            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+            _UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
             Physics.bounceThreshold = 0.5f;
 
-            SendCustomEventDelayedSeconds(nameof(CheckForUpdate), 2f);
+            SendCustomEventDelayedSeconds(nameof(_CheckForUpdate), 2f);
         }
 
         public override void OnDeserialization()
@@ -261,7 +261,7 @@ namespace dev.mikeee324.OpenPutt
                 scoreboardManager.RefreshSettingsIfVisible();
         }
 
-        public void UpdateRefreshSettings(int numberOfPlayers)
+        public void _UpdateRefreshSettings(int numberOfPlayers)
         {
             if (numberOfPlayers < 10)
                 playerSyncType = PlayerSyncType.All;
@@ -285,19 +285,19 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
-            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+            _UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            SendCustomEventDelayedFrames(nameof(RemoveInvalidPlayerManagers), 2);
+            SendCustomEventDelayedFrames(nameof(_RemoveInvalidPlayerManagers), 2);
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
         {
-            UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
+            _UpdateRefreshSettings(VRCPlayerApi.GetPlayerCount());
 
-            SendCustomEventDelayedFrames(nameof(RemoveInvalidPlayerManagers), 2);
+            SendCustomEventDelayedFrames(nameof(_RemoveInvalidPlayerManagers), 2);
         }
 
-        public void OnLocalPlayerInitialised(PlayerManager playerManager)
+        public void _OnLocalPlayerInitialised(PlayerManager playerManager)
         {
             OpenPuttUtils.Log(this, $"Local player init");
             LocalPlayerManager = playerManager;
@@ -306,7 +306,7 @@ namespace dev.mikeee324.OpenPutt
                 eventHandler.OnPlayerInitialised(Networking.LocalPlayer, LocalPlayerManager);
         }
 
-        public void OnPlayerUpdate(PlayerManager playerManager)
+        public void _OnPlayerUpdate(PlayerManager playerManager)
         {
             if (!allPlayerManagers.Contains(playerManager))
                 allPlayerManagers = allPlayerManagers.Add(playerManager);
@@ -314,13 +314,13 @@ namespace dev.mikeee324.OpenPutt
             playerListManager.OnPlayerUpdate();
 
             if (playerManager.Owner.isLocal)
-                SavePersistantData();
+                _SavePersistantData();
         }
 
         /// <summary>
         /// Updates the local players persistant save data
         /// </summary>
-        public void SavePersistantData()
+        public void _SavePersistantData()
         {
             if (!Utilities.IsValid(LocalPlayerManager)) return;
 
@@ -348,7 +348,7 @@ namespace dev.mikeee324.OpenPutt
                 OpenPuttUtils.Log(this, $"Persistent data saved for {LocalPlayerManager.Owner.displayName}");
         }
 
-        public void LoadPersistantData()
+        public void _LoadPersistantData()
         {
             var localPlayer = Networking.LocalPlayer;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColor"))
@@ -428,14 +428,14 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public void CheckForUpdate()
+        public void _CheckForUpdate()
         {
 #if !UNITY_EDITOR
             VRCStringDownloader.LoadUrl(versionURL, (IUdonEventReceiver)this);
 #endif
         }
 
-        public void RemoveInvalidPlayerManagers()
+        public void _RemoveInvalidPlayerManagers()
         {
             var newPlayerManagers = new PlayerManager[0];
             for (var i = 0; i < allPlayerManagers.Length; i++)

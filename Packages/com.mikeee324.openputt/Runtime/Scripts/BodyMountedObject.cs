@@ -34,10 +34,10 @@ namespace dev.mikeee324.OpenPutt
         }
 
         [Tooltip("When the player picks up this object it will send this an event with this name to the attached object")]
-        public string pickupEventName = "OnScriptPickup";
+        public string pickupEventName = "_OnScriptPickup";
 
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
-        public string dropEventName = "OnScriptDrop";
+        public string dropEventName = "_OnScriptDrop";
 
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
@@ -143,7 +143,7 @@ namespace dev.mikeee324.OpenPutt
 
             currentOffset = mountingOffset;
 
-            SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
+            SendCustomEventDelayedSeconds(nameof(_UpdateObjectOffset), 1f);
         }
 
         public override void PostLateUpdate()
@@ -267,13 +267,13 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player) || !player.isLocal)
                 return;
 
-            UpdateObjectOffset();
+            _UpdateObjectOffset();
         }
 
         /// <summary>
         /// Allows for scaling the position offset based on the players height
         /// </summary>
-        public void UpdateObjectOffset()
+        public void _UpdateObjectOffset()
         {
             if (!mountingOffsetHeightScaling)
             {
@@ -283,7 +283,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!OpenPuttUtils.LocalPlayerIsValid())
             {
-                SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
+                SendCustomEventDelayedSeconds(nameof(_UpdateObjectOffset), 1f);
                 return;
             }
 
