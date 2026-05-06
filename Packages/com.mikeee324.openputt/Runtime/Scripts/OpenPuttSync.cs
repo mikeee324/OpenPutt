@@ -38,7 +38,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Designate a script that is being called when object is returned. Calls the remote function written in the box below. ")]
         public UdonSharpBehaviour returnListener;
 
-        public string remoteReturnFunction = "ReturnFunction";
+        [Tooltip("Method name to call on the Return Listener when this object respawns")]
+        public string remoteReturnFunction = "";
 
         [Tooltip("Should the object be respawned if it goes below the height specified below?")]
         public bool autoRespawn = true;
@@ -46,6 +47,7 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("The minimum height that this object can go to before being respawned (if enabled)")]
         public float autoRespawnHeight = -100f;
 
+        [Tooltip("Lets PuttSync toggle the VRCPickup's pickupable state automatically")]
         public bool canManagePickupable = true;
 
         [Tooltip("Experimental: Tries to keep a dynamic rigidbody synced between players, haven't tested this much")]
@@ -77,6 +79,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// The respawn position for this object in world space
         /// </summary>
+        [Tooltip("World-space position this object respawns to")]
         public Vector3 originalPosition;
 
         /// <summary>
@@ -93,6 +96,7 @@ namespace dev.mikeee324.OpenPutt
             set => currentOwnerHandInt = (int)value;
         }
 
+        [Tooltip("Capture this object's transform as the respawn point on Start")]
         public bool grabOriginalPosOnStart = true;
 
         #endregion
