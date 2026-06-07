@@ -610,6 +610,8 @@ namespace dev.mikeee324.OpenPutt
             }
 
             _RefreshState();
+
+            RequestSerialization();
         }
 
         public override void OnDrop()

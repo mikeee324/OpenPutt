@@ -140,6 +140,7 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 lastSyncVelocity = Vector3.zero;
         private Vector3 lastSyncPos = Vector3.zero;
         private Quaternion lastSyncRot = Quaternion.identity;
+        private int lastReceivedOwnerHandInt = (int)VRC_Pickup.PickupHand.None;
         private bool isKinematic;
 
         #endregion
@@ -362,7 +363,7 @@ namespace dev.mikeee324.OpenPutt
                     }
 
                     // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)
-                    if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue == 0f)
+                    if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue <= 0f)
                     {
                         // Try to smooth out the lerps
                         var lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
@@ -392,6 +393,14 @@ namespace dev.mikeee324.OpenPutt
             if (!hasSynced)
                 isFirstSync = true;
             hasSynced = true;
+
+            // Reset lerp source on hand-state transitions so we don't lerp from a stale offset captured during a previous grab
+            if (currentOwnerHandInt != lastReceivedOwnerHandInt)
+            {
+                lastSyncPos = syncPosition;
+                lastSyncRot = syncRotation;
+                lastReceivedOwnerHandInt = currentOwnerHandInt;
+            }
 
             if (!isHandlingRemoteUpdates)
             {
@@ -473,9 +482,6 @@ namespace dev.mikeee324.OpenPutt
             OpenPuttUtils.SetOwner(localPlayer, gameObject);
 
             currentOwnerHand = VRC_Pickup.PickupHand.None;
-
-            syncPosition = Vector3.zero;
-            syncRotation = Quaternion.identity;
 
             // Keep a track of which hand the player is holding the pickup in
             _UpdatePickupCurrentHand();

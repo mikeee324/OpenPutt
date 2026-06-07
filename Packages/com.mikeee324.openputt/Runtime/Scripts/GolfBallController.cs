@@ -646,6 +646,8 @@ namespace dev.mikeee324.OpenPutt
             _SetEnabled(true);
 
             _UpdateBallState(this.LocalPlayerOwnsThisObject());
+            
+            RequestSerialization();
         }
 
         public override void OnDrop()
