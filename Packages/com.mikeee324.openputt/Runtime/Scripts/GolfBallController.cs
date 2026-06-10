@@ -62,6 +62,9 @@ namespace dev.mikeee324.OpenPutt
 
         public float gravityMagnitude = 9.87f;
 
+        [Range(0f, 1f), Tooltip("Caps the total Magnus force (from back/side spin) to this fraction of the ball's weight. This is what stops lofted/backspin shots from curling into a loop: the ball can float and extend its carry, but the spin force can never overpower gravity enough to bend the path back on itself. 1 = force can match gravity (max float/curve, still stable), lower = less float and gentler curve.")]
+        public float maxLiftGravityFraction = 0.85f;
+
         // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
         //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0, .5f), Tooltip("The amount of drag to apply to the balls RigidBody by default (Can be overriden by other scripts for sand pits and things)")]
@@ -89,16 +92,22 @@ namespace dev.mikeee324.OpenPutt
         public float maxBallRollingTime = 30f;
 
         [Space]
-        [SerializeField, Range(0, 90)]
-        float groundSnappingMaxGroundAngle = 45f;
-
         [SerializeField, Min(0f), Tooltip("An extra buffer to check if the ball is on the ground (in meters)")]
         float groundRaycastDistance = 0.02f;
+
+        [Tooltip("Master toggle for the script-driven ground snapping/rolling. When off, the ball rolls purely under Unity's physics. Wired to the in-world dev-menu 'ball snapping' checkbox")]
+        public bool enableBallSnap = true;
+
+        [SerializeField, Min(0f), FormerlySerializedAs("takeOverMinSpeed"), Tooltip("Below this speed (m/s) snapping hands grounded rolling back to Unity's physics, which settles the ball against walls / in ditches cleanly (the snap integrator has no real contact solver, so it jitters when wedged). Above it, the script drives the roll to kill mesh-edge ghosts. Raise it if a ball jitters/bounces when coming to rest; lower it to keep snapping active for slower rolls")]
+        float ballSnapMinSpeed = 0.4f;
 
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
         [Space]
+        [Range(0f, 0.5f), Tooltip("How far a surface normal may tilt from vertical and still count as a 'wall' for custom bouncing. 0.02≈1°, 0.15≈8.6°, 0.3≈17.5°. Keep below ~0.6 so ramps/floors aren't treated as walls")]
+        public float wallDetectionTolerance = 0.15f;
+
         [Range(0.1f, 2f), Tooltip("Used to pretend to absorb energy from the ball when it collides with a wall (Only used if the collider does not have a PhysicMaterial assigned)")]
         public float wallBounceSpeedMultiplier = 0.8f;
 
@@ -157,6 +166,12 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 _SetEnabled(_ballMoving);
+
+                if (!ballWasMoving && _ballMoving)
+                {
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.eventHandler))
+                        playerManager.openPutt.eventHandler.OnPlayerBallStartedMoving(playerManager.Owner);
+                }
 
                 if (ballWasMoving && !_ballMoving)
                 {
@@ -296,6 +311,22 @@ namespace dev.mikeee324.OpenPutt
         /// Tracks the velocity of the ball in the last frame so we can reflect properly on walls
         private Vector3 lastFrameVelocity;
 
+        /// Script-driven velocity used while the ground-snap integrator drives grounded rolling
+        private Vector3 snapVelocity;
+        private bool wasGroundSnapping;
+
+        /// External force-zone pushes (Normal/CenterPush) accumulated since the last FixedUpdate. The
+        /// ground-snap folds these into its own velocity so they aren't lost while it's driving; when it
+        /// isn't, UpdatePhysicsState hands them to PhysX. Kept off the rigidbody so collision impulses
+        /// don't leak into the ground-snap's clean velocity.
+        private Vector3 pendingExternalForce;
+
+        /// Most recent steep (wall/obstacle) contact normal seen while the ground-snap drives grounded
+        /// rolling, plus a freshness counter so it expires once the ball leaves the wall. Lets
+        /// DriveGroundSnap stop integrating velocity straight into a wall it's pressed against.
+        private Vector3 snapWallNormal = Vector3.up;
+        private int snapWallSteps;
+
         private Vector3 lastFramePosition;
 
         private float lastKnownGroundFriction = 0;
@@ -307,12 +338,9 @@ namespace dev.mikeee324.OpenPutt
 
         public bool OnGround => stepsOnGround > 1;
 
-        float minGroundDotProduct;
-
         private Vector3 lastGroundContactNormal = Vector3.up;
         private float timeFlying = 0;
-        public bool enableBallSnap = true;
-        int stepsOnGround, stepsInAir;
+        int stepsOnGround;
         private bool resetBallTimers = true;
         private float defaultGravityMagnitude = 9.87f;
 
@@ -338,6 +366,13 @@ namespace dev.mikeee324.OpenPutt
         private VRC_Pickup.PickupHand shoulderBallHeldInHand = VRC_Pickup.PickupHand.None;
 
         private Vector3 _currentSpin = Vector3.zero;
+
+        /// <summary>
+        /// The gravity direction the stored spin axis is currently aligned to. If a world rotates its
+        /// gravity mid-flight (gravity-flip zones etc) we rotate _currentSpin by the same delta so the
+        /// backspin lift and sidespin curve keep behaving relative to the *current* gravity.
+        /// </summary>
+        private Vector3 _prevGravityDirection = Vector3.down;
 
         public bool isHeldInTeleporter { get; set; }
 
@@ -386,8 +421,6 @@ namespace dev.mikeee324.OpenPutt
             DefaultBallMaxSpeed = maxBallSpeed;
 
             lastFramePosition = ballRigidbody.position;
-
-            minGroundDotProduct = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
 
             SendCustomEventDelayedSeconds(nameof(_Disable), 1f);
         }
@@ -452,6 +485,12 @@ namespace dev.mikeee324.OpenPutt
                 {
                     // Reset velocity of ball
                     ballRigidbody.velocity = requestedBallVelocity;
+
+                    // Seed the ground-snap integrator. Clearing the flag forces a clean re-adoption
+                    // next frame (reads ballRigidbody.velocity which we just set), while keeping
+                    // stepsOnGround intact so ghost-edge protection stays active immediately.
+                    snapVelocity = requestedBallVelocity;
+                    wasGroundSnapping = false;
 
                     // Consume the hit event
                     requestedBallVelocity = Vector3.zero;
@@ -758,9 +797,6 @@ namespace dev.mikeee324.OpenPutt
             // Switch ball physics on
             BallIsMoving = true;
 
-            // Allows ball to bounce
-            stepsInAir = -1;
-
             // Apply velocity of the ball that we saw last frame so players can throw the ball
             if (lastHeldFrameVelocity.magnitude > .001f || ballHeldInHand != VRC_Pickup.PickupHand.None)
             {
@@ -842,6 +878,7 @@ namespace dev.mikeee324.OpenPutt
             // Tell the ball to apply the velocity in the next FixedUpdate() frame
             requestedBallVelocity = withVelocity;
             _currentSpin = sideSpin;
+            _prevGravityDirection = gravityDirection;
 
             if (Utilities.IsValid(playerManager))
                 playerManager._OnBallHit(withVelocity.magnitude);
@@ -893,6 +930,9 @@ namespace dev.mikeee324.OpenPutt
             if (_currentSpin.sqrMagnitude > 0.001f)
                 _currentSpin *= 0.5f;
 
+            // Remember any wall/obstacle we're touching so the ground-snap doesn't ram it (see method)
+            RecordSnapWallContact(collision);
+
             // Hit something from the side or above the ball
             if (Utilities.IsValid(collision) && Utilities.IsValid(collision.collider))
                 ReflectCollision(collision);
@@ -911,6 +951,10 @@ namespace dev.mikeee324.OpenPutt
                 // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 ResetBallCollisionTimers();
             }
+
+            // Refresh the wall/obstacle memory every frame we stay in contact so the ground-snap keeps
+            // steering its velocity along the wall instead of into it (see RecordSnapWallContact)
+            RecordSnapWallContact(collision);
         }
 
         private void ResetBallCollisionTimers()
@@ -971,17 +1015,36 @@ namespace dev.mikeee324.OpenPutt
                 // Check if this is considered a wall in this gravity
                 var wallNormalDotRelativeToGravity = Vector3.Dot(collisionNormal, gravityDirection);
 
-                // A wall collision should be somewhere near zero
-                if (!wallNormalDotRelativeToGravity.IsNearZero(.02f))
+                // A wall collision should be somewhere near zero. Allow a few degrees of tilt so
+                // leaning walls / props still get the reliable custom bounce instead of falling
+                // through to Unity's physics (which won't bounce slow balls and just rolls them).
+                if (!wallNormalDotRelativeToGravity.IsNearZero(wallDetectionTolerance))
                     return;
             }
+
+            // Reject mesh-edge "ghost" collisions: when the sphere catches the leading edge of a mesh
+            // ramp/floor, Unity reports a near-horizontal (wall-like) normal even though the real
+            // surface is a shallow ramp. Bouncing off that fakes a wall and sends the ball back.
+            if (!IsGenuineContact(contact))
+                return;
 
             // Maybe fix the ball getting stuck on walls
             if (lastFrameVelocity == Vector3.zero)
                 lastFrameVelocity = ballRigidbody.velocity;
 
-            // Reflect the current vector off the wall
-            var newDirection = Vector3.Reflect(lastFrameVelocity.normalized, collisionNormal).Sanitized();
+            // Velocity of the obstacle's surface at the contact point. For a moving/spinning obstacle
+            // this is what flings the ball off - we reflect in the surface's frame (subtract it, reflect,
+            // add it back) so the ball picks up the obstacle's speed like a bat hitting a ball, instead of
+            // being dragged along the face. It's zero for static walls, so this stays a plain reflection there.
+            var surfaceVelocity = Vector3.zero;
+            if (Utilities.IsValid(collision.rigidbody))
+                surfaceVelocity = collision.rigidbody.GetPointVelocity(contact.point).Sanitized();
+
+            // Ball velocity relative to the (possibly moving) surface
+            var relativeVelocity = lastFrameVelocity - surfaceVelocity;
+
+            // Reflect the relative velocity off the wall
+            var newDirection = Vector3.Reflect(relativeVelocity.normalized, collisionNormal).Sanitized();
 
             // If we still don't have a velocity don't do anything else as we might get stuck against the wall
             if (newDirection == Vector3.zero)
@@ -998,38 +1061,85 @@ namespace dev.mikeee324.OpenPutt
             if (bounceMultiplier < .01f)
                 bounceMultiplier = .8f;
 
-            var speedAfterBounce = lastFrameVelocity.magnitude * bounceMultiplier;
+            var speedAfterBounce = relativeVelocity.magnitude * bounceMultiplier;
 
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
-            // If we reflected off a wall and the resulting bounce is going upwards
+            // Back into world space - re-add the surface velocity so the obstacle's spin/movement is
+            // carried into the bounce, then clamp so a fast spinner can't launch the ball absurdly fast.
+            newDirection = Vector3.ClampMagnitude((newDirection + surfaceVelocity).Sanitized(), maxBallSpeed);
+
+            // If we reflected off a wall and the resulting bounce is going upwards, suspend the ground-snap
+            // for the next frame (rolling needs stepsOnGround > 1) so PhysX can arc the ball.
             if (Vector3.Dot(newDirection, -gravityDirection) > .001f)
-            {
-                // Pretend we're in the air for the next frame so the snapping is switched off
                 stepsOnGround = 0;
-                stepsInAir = -1;
-            }
 
             // Set the ball velocity so it bounces the right way
             lastFrameVelocity = ballRigidbody.velocity = newDirection.Sanitized();
+            snapVelocity = ballRigidbody.velocity;
 
             // Play a hit sound because we bounced off something
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController))
                 playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
         }
 
+        /// <summary>
+        /// True when a collision contact is a genuine surface hit rather than a mesh-edge "ghost"
+        /// collision. For a sphere, a real contact normal always points from the contact point back
+        /// toward the ball centre. When the sphere catches the leading edge of a mesh ramp/floor,
+        /// Unity reports a contact point down at the low edge but a near-horizontal (wall-like) normal,
+        /// so the two no longer line up. Comparing them rejects those ghost edges without any extra
+        /// raycast or layer-mask dependency, using only the contact data we already have.
+        /// </summary>
+        private bool IsGenuineContact(ContactPoint contact)
+        {
+            var toCentre = CurrentPosition - contact.point;
+            if (toCentre.sqrMagnitude < 0.000001f)
+                return true;
+
+            return Vector3.Dot(toCentre.normalized, contact.normal.Sanitized()) > 0.5f;
+        }
+
         private bool lastGrounded = false;
 
         void UpdatePhysicsState()
         {
-            // Apply gravity
-            if (gravityMagnitude > 0f)
-                ballRigidbody.AddForce(gravityDirection.normalized * gravityMagnitude, ForceMode.Acceleration);
-
             var ballVelocity = ballRigidbody.velocity;
             var velMagnitude = ballVelocity.magnitude;
 
-            var isGrounded = Physics.Raycast(CurrentPosition, gravityDirection, out var groundingHit, ballCollider.radius + groundRaycastDistance, groundSnappingProbeMask);
+            // Probe for ground with a ball-sized spherecast rather than a single ray - a sphere can't
+            // thread through the seam/gap between two colliders, so grounding stays stable at edges
+            // (where the bad upward collisions happen). Start slightly above the ball to avoid the
+            // initial-overlap case where SphereCast returns distance 0 with an unreliable normal.
+            var castRadius = ballCollider.radius * 0.9f;
+            var castBackup = ballCollider.radius;
+            var castOrigin = CurrentPosition - gravityDirection * castBackup;
+            var castDistance = castBackup + (ballCollider.radius - castRadius) + groundRaycastDistance;
+            var isGrounded = Physics.SphereCast(castOrigin, castRadius, gravityDirection, out var groundingHit, castDistance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
+
+            // Keep the slope-stuck stop logic (in FixedUpdate) supplied with a fresh ground normal.
+            lastGroundContactNormal = isGrounded ? groundingHit.normal : -gravityDirection;
+
+            // The ground-snap drives grounded rolling above ballSnapMinSpeed (when enableBallSnap is on).
+            // Below the cutoff / with snapping off we hand the ball back to Unity's physics, which has a
+            // real contact solver and settles it cleanly against walls / in ditches (the ground-snap has
+            // none and jitters when wedged). This single flag gates both the script integrator
+            // (DriveGroundSnap) AND the manual gravity/drag/air forces below, so when the ground-snap
+            // steps aside, normal physics gets its forces back.
+            var snapActive = enableBallSnap && isGrounded && velMagnitude >= ballSnapMinSpeed;
+
+            // Apply any external force-zone pushes accumulated since last frame. While the ground-snap is
+            // driving it folds them into its own velocity instead (see DriveGroundSnap); here we hand
+            // them straight to PhysX for the airborne / below-cutoff case.
+            if (!snapActive && pendingExternalForce != Vector3.zero)
+            {
+                ballRigidbody.AddForce(pendingExternalForce, ForceMode.Force);
+                pendingExternalForce = Vector3.zero;
+            }
+
+            // Apply gravity (skipped while the ground-snap is driving grounded rolling - it adds its own)
+            if (gravityMagnitude > 0f && !snapActive)
+                ballRigidbody.AddForce(gravityDirection.normalized * gravityMagnitude, ForceMode.Acceleration);
 
             if (isGrounded)
             {
@@ -1039,7 +1149,6 @@ namespace dev.mikeee324.OpenPutt
                     lastKnownGroundFriction = 0;
 
                 stepsOnGround += 1;
-                stepsInAir = 0;
                 timeFlying = 0;
 
                 if (velMagnitude > .01f)
@@ -1059,14 +1168,15 @@ namespace dev.mikeee324.OpenPutt
                     if (velMagnitude < 1f)
                         currDrag *= Mathf.SmoothStep(0.1f, 1f, velMagnitude);
 
-                    ballRigidbody.AddForce(-ballVelocity.normalized * currDrag);
+                    // The ground-snap integrator applies its own drag, so skip this one when it's driving
+                    if (!snapActive)
+                        ballRigidbody.AddForce(-ballVelocity.normalized * currDrag);
                 }
             }
             else
             {
                 lastKnownGroundFriction = 0;
                 stepsOnGround = 0;
-                stepsInAir += 1;
                 timeFlying += Time.deltaTime;
 
                 if (velMagnitude > 0.01f)
@@ -1088,30 +1198,46 @@ namespace dev.mikeee324.OpenPutt
                         ballRigidbody.AddForce(-ballVelocity.normalized * currDrag);
                     }
 
-                    if (_currentSpin.sqrMagnitude > .001f)
+                    if (_currentSpin.sqrMagnitude > .0001f)
                     {
+                        // If the world rotated its gravity since we last touched the spin (gravity-flip
+                        // zones etc), rotate the stored spin axis by the same delta. This keeps backspin
+                        // lift pointing "up" and sidespin curving horizontally relative to the *current*
+                        // gravity instead of staying locked to the gravity that was in effect at hit time.
+                        // For constant-gravity worlds the directions are equal so this is a no-op.
+                        if (_prevGravityDirection != gravityDirection)
+                            _currentSpin = Quaternion.FromToRotation(_prevGravityDirection, gravityDirection) * _currentSpin;
+                        _prevGravityDirection = gravityDirection;
+
                         var magnusCoefficient = 0.001f;
 
                         // Increase spin decay slightly with ball speed to help avoid
-                        // sustained high-spin situations that produce upward spirals
+                        // sustained high-spin situations
                         var baseSpinDecayRate = 0.4f;
                         var speedDecayFactor = Mathf.Clamp(ballRigidbody.velocity.magnitude * 0.05f, 0f, 2f);
                         var spinDecayRate = baseSpinDecayRate + speedDecayFactor;
 
-                        // Project spin onto plane perpendicular to gravity so sidespin
-                        // behaves relative to the current gravity direction
-                        var spinAxisRelativeToGravity = Vector3.ProjectOnPlane(_currentSpin, gravityDirection).normalized;
-                        if (spinAxisRelativeToGravity == Vector3.zero)
-                            spinAxisRelativeToGravity = _currentSpin.normalized;
-
-                        var magnusForceDirection = Vector3.Cross(ballRigidbody.velocity, spinAxisRelativeToGravity).normalized;
+                        // Magnus force is perpendicular to both velocity and the spin axis. We use the
+                        // full 3D spin axis so backspin (horizontal axis) produces lift while sidespin
+                        // (vertical axis) produces horizontal hook/slice - both from the one spin vector.
+                        var spinAxis = _currentSpin.normalized;
+                        var magnusForceDirection = Vector3.Cross(ballRigidbody.velocity, spinAxis).normalized;
                         var magnusForceMagnitude = _currentSpin.magnitude * ballRigidbody.velocity.magnitude * magnusCoefficient;
                         var magnusForce = magnusForceDirection * magnusForceMagnitude;
 
-                        // Prevent Magnus from producing sustained vertical lift by
-                        // removing any component along the gravity direction. This
-                        // ensures sidespin curves horizontally relative to gravity.
-                        magnusForce = Vector3.ProjectOnPlane(magnusForce, gravityDirection);
+                        // Anti-loop: a real backspinning ball lifts, but in a discrete sim a large Magnus
+                        // force curls the trajectory into a loop ("loop de loop" on high-loft wedges). The
+                        // force is perpendicular to velocity, so while the ball is climbing it points mostly
+                        // sideways/backward - capping only the vertical (lift) component left that horizontal
+                        // curl uncapped and the ball still looped. Instead we cap the WHOLE force magnitude to
+                        // a fraction of the ball's weight: the ball still floats and carries, but the curve can
+                        // never overpower gravity enough to bend the path back on itself.
+                        if (gravityMagnitude > .01f)
+                        {
+                            var maxMagnus = ballRigidbody.mass * gravityMagnitude * maxLiftGravityFraction;
+                            if (magnusForce.sqrMagnitude > maxMagnus * maxMagnus)
+                                magnusForce = magnusForce.normalized * maxMagnus;
+                        }
 
                         ballRigidbody.AddForce(magnusForce, ForceMode.Force);
 
@@ -1136,7 +1262,7 @@ namespace dev.mikeee324.OpenPutt
 
             var canPlayHitGroundSound = timeFlying > .5f && isGrounded;
 
-            HandleGroundSnapping(isGrounded, groundingHit);
+            DriveGroundSnap(snapActive, groundingHit);
 
             if (audioWhenBallHitsFloor && canPlayHitGroundSound)
             {
@@ -1144,7 +1270,8 @@ namespace dev.mikeee324.OpenPutt
                     playerManager.openPutt.sfxController.PlayBallHitSoundAtPosition(CurrentPosition, lastFrameVelocity.magnitude * VelocityToAudioScale * 0.6f); // Play a bounce sound but a bit quieter
             }
 
-            if (enableAirResistance)
+            // Air resistance (skipped while the ground-snap is driving grounded rolling - it adds its own)
+            if (enableAirResistance && !snapActive)
             {
                 // Apply air resistance to the ball
                 const float airDensity = 1.225f;
@@ -1156,41 +1283,151 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        private void HandleGroundSnapping(bool isGrounded, RaycastHit groundingHit)
+        /// <summary>
+        /// While the ground-snap drives grounded rolling, remember any steep (wall/obstacle) surface
+        /// the ball is touching so DriveGroundSnap can stop integrating velocity straight into it.
+        /// The ground-snap only knows about the floor (from the down spherecast); without this it keeps
+        /// re-applying gravity projected onto the downhill slope - which points into a wall at the
+        /// slope's base - every frame, and the ball bounces off the wall forever instead of settling.
+        /// Uses the same almost-vertical wall test (wallDetectionTolerance) and ghost-edge rejection
+        /// (IsGenuineContact) ReflectCollision uses, so the bounce and pinning code agree on what a wall is.
+        /// </summary>
+        private void RecordSnapWallContact(Collision collision)
         {
-            if (!enableBallSnap) return;
+            if (!enableBallSnap) return; // single master toggle for all snapping code
 
-            // Track ground normal every grounded frame so slope comparisons are never stale.
-            // Capture lastGroundDot before updating so it still reflects the previous frame.
-            var lastGroundDot = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
-            var currentGroundDot = Vector3.Dot(groundingHit.normal, -gravityDirection);
-            if (isGrounded)
-                lastGroundContactNormal = groundingHit.normal;
-            else
-                lastGroundContactNormal = -gravityDirection; // reset to neutral so gravity changes don't corrupt the slope comparison
-
-            var shouldSnapToGround = !pickedUpByPlayer && isGrounded && stepsOnGround > 2 && stepsInAir == 0;
-            if (!shouldSnapToGround) return;
-
-            // Strip any velocity pushing the ball off the surface (edge-bounce suppression).
-            // Using the surface normal component avoids clamping legitimate ramp movement.
-            var liftOffSpeed = Vector3.Dot(ballRigidbody.velocity, groundingHit.normal);
-            if (liftOffSpeed > 0.05f)
-                ballRigidbody.velocity -= groundingHit.normal * liftOffSpeed;
-
-            var speed = ballRigidbody.velocity.magnitude;
-
-            // Only snap when transitioning to a steeper slope — flat/flattening surfaces don't need it
-            if (currentGroundDot < minGroundDotProduct || currentGroundDot >= lastGroundDot)
+            if (!Utilities.IsValid(collision) || collision.contacts.Length == 0)
                 return;
 
-            // Redirect velocity onto the new slope so the ball follows it rather than floating over the edge
-            var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, groundingHit.normal).normalized * speed;
-            var gravityInfluence = Mathf.Sqrt(1f - currentGroundDot * currentGroundDot);
-            newVelocity += gravityDirection * (gravityInfluence * Time.deltaTime * gravityMagnitude);
+            // Don't pin the ball to a MOVING obstacle (spinner, bat, conveyor). The wall-cancellation in
+            // DriveGroundSnap exists only to stop the ball infinitely bouncing off STATIC walls at the base
+            // of a slope. If we record a moving face as a wall, the snap cancels the into-wall component
+            // every frame and the ball just gets dragged along the surface instead of bouncing off it -
+            // ReflectCollision handles the (surface-velocity-aware) bounce for these instead.
+            if (Utilities.IsValid(collision.rigidbody) && collision.rigidbody.GetPointVelocity(collision.contacts[0].point).sqrMagnitude > 0.01f)
+                return;
 
-            if (Vector3.Dot(newVelocity, -gravityDirection) > .001f)
-                ballRigidbody.velocity = lastFrameVelocity = newVelocity;
+            for (var i = 0; i < collision.contacts.Length; i++)
+            {
+                var contact = collision.contacts[i];
+                if (!Utilities.IsValid(contact)) continue;
+
+                var normal = contact.normal.Sanitized();
+
+                // Only ALMOST-VERTICAL contacts count as walls - anything more sloped is floor/ramp the
+                // ground-snap already follows, and cancelling into it would stop the ball climbing legit
+                // ramps (e.g. SteppyThing's sloped steps). Uses the exact same near-vertical test as
+                // ReflectCollision so the bounce code and the pinning code agree on what a wall is.
+                if (!Vector3.Dot(normal, gravityDirection).IsNearZero(wallDetectionTolerance)) continue;
+                if (!IsGenuineContact(contact)) continue;
+
+                snapWallNormal = normal;
+                snapWallSteps = 2; // valid for the next couple of steps, refreshed while in contact
+                return;
+            }
+        }
+
+        /// <summary>
+        /// While the ball is rolling on the ground above ballSnapMinSpeed, drive its velocity entirely
+        /// from script - integrate gravity + drag on our own clean velocity and keep it on the surface -
+        /// so Unity's collision response (and all mesh-edge ghosts) is ignored. The normal gravity/drag
+        /// AddForce calls in UpdatePhysicsState are skipped while this is active and grounded; below the
+        /// speed cutoff (or airborne) we hand control back to Unity's physics.
+        /// </summary>
+        private void DriveGroundSnap(bool snapActive, RaycastHit groundingHit)
+        {
+            // snapActive already folds in grounded + above ballSnapMinSpeed. Below the speed cutoff
+            // (or airborne) we let Unity's physics drive, so it can rest the ball against walls / in
+            // ditches without the ground-snap jittering it.
+            var rolling = snapActive && stepsOnGround > 1;
+            if (!rolling)
+            {
+                // Stay synced while physics drives so snapping resumes seamlessly above the cutoff
+                snapVelocity = ballRigidbody.velocity;
+                wasGroundSnapping = false;
+                snapWallSteps = 0; // forget any wall once physics takes over / we leave the ground
+                return;
+            }
+
+            // First ground-snap frame: adopt whatever velocity the ball currently has (hit, landing, bounce)
+            if (!wasGroundSnapping)
+            {
+                snapVelocity = ballRigidbody.velocity;
+                wasGroundSnapping = true;
+            }
+
+            var v = snapVelocity;
+
+            // Fold in any external force-zone pushes (Normal/CenterPush) accumulated since last frame,
+            // kept off the rigidbody so collision impulses don't leak into our clean velocity.
+            if (pendingExternalForce != Vector3.zero)
+            {
+                v += pendingExternalForce / ballRigidbody.mass * Time.fixedDeltaTime;
+                pendingExternalForce = Vector3.zero;
+            }
+
+            // Integrate gravity first.
+            if (gravityMagnitude > 0f)
+                v += gravityDirection * gravityMagnitude * Time.fixedDeltaTime;
+
+            // If the integrated velocity points away from the surface the ball naturally wants to
+            // launch (ramp lip, jump, convex curve). Release control and let PhysX handle the flight.
+            if (Vector3.Dot(v, groundingHit.normal) > 0.05f)
+            {
+                snapVelocity = v;
+                ballRigidbody.velocity = v;
+                wasGroundSnapping = false;
+                return;
+            }
+
+            // Still on ground — project onto surface so we follow the slope without sinking.
+            v = Vector3.ProjectOnPlane(v, groundingHit.normal);
+
+            // The ball centre should sit exactly one radius above the contact point. If it's
+            // higher than that (floating), add a snap velocity to pull it back down.
+            var targetPos = groundingHit.point + groundingHit.normal * ballCollider.radius;
+            var dropNeeded = Vector3.Dot(targetPos - CurrentPosition, gravityDirection);
+            if (dropNeeded > 0.001f)
+                v += gravityDirection * Mathf.Min(dropNeeded / Time.fixedDeltaTime, 3f);
+
+            // Surface drag + air resistance (mirrors UpdatePhysicsState; forces, so accel = force / mass)
+            var speed = v.magnitude;
+            if (speed > 0.0001f)
+            {
+                var currDrag = defaultBallDrag;
+                if (lastKnownGroundFriction > 0f) currDrag = lastKnownGroundFriction;
+                if (ballDragOverride > 0f) currDrag = ballDragOverride;
+                if (speed < 1f) currDrag *= Mathf.SmoothStep(0.1f, 1f, speed);
+                var dragDelta = currDrag / ballRigidbody.mass * Time.fixedDeltaTime;
+
+                if (enableAirResistance)
+                {
+                    const float airDensity = 1.225f;
+                    const float dragCoeff = .35f;
+                    var ballCrossSection = Mathf.PI * ballCollider.radius * ballCollider.radius;
+                    dragDelta += 0.5f * airDensity * ballCrossSection * dragCoeff * speed * speed / ballRigidbody.mass * Time.fixedDeltaTime;
+                }
+
+                v -= v.normalized * Mathf.Min(dragDelta, speed); // never reverse past a stop
+            }
+
+            // Don't integrate velocity straight into a wall/obstacle while driving at speed. On a downhill
+            // slope gravity (and the snap-down above) project into a wall at the base; left alone the
+            // ground-snap rams the wall every frame and the ball bounces off it forever (the "rolls downhill
+            // into an obstacle and bounces back infinitely" bug). Cancelling the into-wall component lets
+            // it slide along the wall instead, bleeding speed until it drops below ballSnapMinSpeed and
+            // Unity's physics takes over to settle it. A fast ball still gets ReflectCollision's bounce.
+            if (snapWallSteps > 0)
+            {
+                snapWallSteps -= 1;
+
+                var intoWall = Vector3.Dot(v, snapWallNormal);
+                if (intoWall < 0f)
+                    v -= snapWallNormal * intoWall;
+            }
+
+            snapVelocity = v.Sanitized();
+            ballRigidbody.velocity = snapVelocity;
         }
 
         public void _OnRespawn()
@@ -1230,6 +1467,19 @@ namespace dev.mikeee324.OpenPutt
             insideGravityZones = 0;
             gravityDirection = Vector3.down;
             gravityMagnitude = defaultGravityMagnitude;
+        }
+
+        /// <summary>
+        /// Apply an external push (e.g. a force-zone fan/conveyor) to the ball. Routed through here
+        /// instead of a direct ballRigidbody.AddForce so it still works while the ground-snap is driving
+        /// grounded rolling - the ground-snap overwrites the rigidbody velocity each frame, so a raw
+        /// AddForce on a grounded ball would be discarded. We accumulate it and apply it once per
+        /// FixedUpdate: folded into the ground-snap's velocity when it's driving, or handed to PhysX when
+        /// it isn't. Mirrors Rigidbody.AddForce's ForceMode handling for Force / Acceleration.
+        /// </summary>
+        public void _AddExternalForce(Vector3 force, ForceMode mode)
+        {
+            pendingExternalForce += mode == ForceMode.Acceleration ? force * ballRigidbody.mass : force;
         }
 
         public SphereCollider GetBallCollider() => ballCollider;

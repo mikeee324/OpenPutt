@@ -68,11 +68,11 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
         public bool coursesCanBePlayedInAnyOrder;
 
+        [Tooltip("When a player isn't playing a course, lets them switch to any golf club instead of being limited to the putter. Courses still control their own allowed clubs.")]
+        public bool allowAnyClubOffCourse;
+
         [Tooltip("Maximum amount of time in seconds that a players game state will be remembered for when using persistence. This only applies to incomplete games. Completed games will not be loaded back in and treated as a fresh start. (-1 = forever)")]
         public int scoreMaxPersistantTimeInSeconds = 900;
-
-        [Tooltip("Only allows players to use the putter. Turn this off so they can swap to other club types (for proper golf)")]
-        public bool puttingOnlyMode = true;
 
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
         public bool enableDevModeForAll;

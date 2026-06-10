@@ -3,6 +3,7 @@ using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
 using Varneon.VUdon.ArrayExtensions;
+using VRC.SDK3.Rendering;
 using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
@@ -320,13 +321,34 @@ namespace dev.mikeee324.OpenPutt
 
             var currentVisibleScoreboardID = 0;
 
-            var localPlayerPos = Networking.LocalPlayer.GetPosition();
-            var localPlayerHead = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+            // Camera being viewed through: portable cam if active, else screen cam (carries desktop FOV)
+            var viewCamera = VRCCameraSettings.ScreenCamera;
+            var photoCamera = VRCCameraSettings.PhotoCamera;
+            if (Utilities.IsValid(photoCamera) && photoCamera.Active)
+                viewCamera = photoCamera;
+
+            Vector3 viewPosition;
+            Vector3 viewForward;
+            float viewFieldOfView;
+            if (Utilities.IsValid(viewCamera))
+            {
+                viewPosition = viewCamera.Position;
+                viewForward = viewCamera.Rotation * Vector3.forward;
+                viewFieldOfView = viewCamera.FieldOfView;
+            }
+            else
+            {
+                // Fallback to head tracking
+                var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                viewPosition = head.position;
+                viewForward = head.rotation * Vector3.forward;
+                viewFieldOfView = 60f;
+            }
 
             for (var i = 0; i < scoreboardPositions.Length; i++)
             {
                 var position = scoreboardPositions[i];
-                var isVisibleHere = position.ShouldBeVisible(localPlayerPos, localPlayerHead);
+                var isVisibleHere = position.ShouldBeVisible(viewPosition, viewForward, viewFieldOfView);
 
                 // We ran out of scoreboards in the pool so just show the positioner canvases if needed
                 if (currentVisibleScoreboardID >= scoreboards.Length)
@@ -341,6 +363,9 @@ namespace dev.mikeee324.OpenPutt
                     var scoreboard = scoreboards[currentVisibleScoreboardID];
                     scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
                     scoreboard.transform.localScale = position.transform.lossyScale;
+
+                    // Keep the board visible but stop accepting clicks once the player gets too far away
+                    scoreboard.SetInteractable(position.ShouldBeInteractable(viewPosition));
 
                     // Make it so we use the next scoreboard in the list next loop
                     currentVisibleScoreboardID += 1;

@@ -163,10 +163,12 @@ namespace dev.mikeee324.OpenPutt
                 activeUI.fetchBallButton.SetActive(!cameraIsOn);
             if (Utilities.IsValid(activeUI.shootButton))
                 activeUI.shootButton.SetActive(cameraIsOn);
+            var currentCourse = Utilities.IsValid(localPlayerManager) ? localPlayerManager.CurrentCourse : null;
+            var canChooseClub = Utilities.IsValid(currentCourse) ? currentCourse._HasClubChoice() : openPutt.allowAnyClubOffCourse;
             if (Utilities.IsValid(activeUI.cycleClubPreviousButton))
-                activeUI.cycleClubPreviousButton.SetActive(!openPutt.puttingOnlyMode && ballCam.BallCamActive);
+                activeUI.cycleClubPreviousButton.SetActive(canChooseClub && ballCam.BallCamActive);
             if (Utilities.IsValid(activeUI.cycleClubNextButton))
-                activeUI.cycleClubNextButton.SetActive(!openPutt.puttingOnlyMode && ballCam.BallCamActive);
+                activeUI.cycleClubNextButton.SetActive(canChooseClub && ballCam.BallCamActive);
             if (Utilities.IsValid(activeUI.leftShoulderButton))
                 activeUI.leftShoulderButton.SetActive(false);
             if (Utilities.IsValid(activeUI.rightShoulderButton))

@@ -31,6 +31,11 @@ namespace dev.mikeee324.OpenPutt
 
         public RectTransform rectTransform;
         public Canvas myCanvas;
+
+        [Tooltip("Optional - the colliders the VRChat UI laser hits. Disabled when the player is too far away to keep the board visible but unclickable (see ScoreboardPositioner.interactionMaxRadius). Auto-found in children if left empty.")]
+        public Collider[] interactionColliders = new Collider[0];
+
+        private bool isInteractable = true;
         public RectTransform scoreboardHeader;
         public Canvas settingsPanel;
         public Canvas infoPanel;
@@ -302,7 +307,27 @@ namespace dev.mikeee324.OpenPutt
                 creditsText.text = creditsText.text.Replace("{OpenPuttCurrVer}", manager.openPutt.CurrentVersion);
             }
 
+            // The UI laser hits these colliders - disabling them blocks clicks without hiding the board
+            if (interactionColliders == null || interactionColliders.Length == 0)
+                interactionColliders = GetComponentsInChildren<Collider>(true);
+
             SendCustomEventDelayedSeconds(nameof(InitUI), 0.05f);
+        }
+
+        /// <summary>
+        /// Toggles click acceptance by enabling/disabling the laser colliders. The board stays visible.
+        /// Used to stop clicks from across the map (see <see cref="ScoreboardPositioner.interactionMaxRadius"/>).
+        /// </summary>
+        public void SetInteractable(bool state)
+        {
+            if (isInteractable == state || interactionColliders == null)
+                return;
+
+            isInteractable = state;
+
+            foreach (var interactionCollider in interactionColliders)
+                if (Utilities.IsValid(interactionCollider))
+                    interactionCollider.enabled = state;
         }
 
         public void InitUI()

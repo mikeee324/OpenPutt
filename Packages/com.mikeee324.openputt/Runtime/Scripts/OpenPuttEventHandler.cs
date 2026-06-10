@@ -46,6 +46,22 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Called when a player's ball starts moving for any reason (club hit, physics, being bumped etc.)
+        /// <br/>
+        /// <b>Fired for the local player only (for now)</b>
+        /// </summary>
+        /// <param name="player">The player whose ball started moving</param>
+        public void OnPlayerBallStartedMoving(VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player))
+                return;
+
+            foreach (var listener in openPutt.eventListeners)
+                if (Utilities.IsValid(listener))
+                    listener.OnPlayerBallStartedMoving(player);
+        }
+
+        /// <summary>
         /// Called when a player hits the ball and their score for the current hole exceeds the course's max score
         /// <br/>
         /// <b>Fired for all players</b>

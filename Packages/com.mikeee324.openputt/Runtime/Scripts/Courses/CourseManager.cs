@@ -93,6 +93,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
         public string scoreboardLongName = "";
 
+        [Tooltip("Which club types are allowed to be used on this course. Leave as Nothing to only allow the putter. Driving range courses always allow every club. When a player arrives carrying a club that isn't allowed here they swap to the lowest allowed club.")]
+        public GolfClubTypeMask allowedClubs = GolfClubTypeMask.Putter;
+
         [HideInInspector]
         public OpenPutt openPutt;
 
@@ -123,6 +126,48 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(ballSpawns))
                 ballSpawns = new CourseStartPosition[0];
+        }
+
+        /// <summary>
+        /// Whether a club can be used here. Driving ranges allow all; otherwise only configured clubs (putter if none).
+        /// </summary>
+        public bool _IsClubAllowed(GolfClubType clubType)
+        {
+            if (drivingRangeMode)
+                return true;
+
+            if (allowedClubs == GolfClubTypeMask.None)
+                return clubType == GolfClubType.Putter;
+
+            return ((int)allowedClubs & (1 << (int)clubType)) != 0;
+        }
+
+        /// <summary>
+        /// Club to swap to when arriving with a disallowed club: lowest allowed club, or putter if unrestricted.
+        /// </summary>
+        public GolfClubType _GetFirstAllowedClub()
+        {
+            var clubCount = (int)GolfClubType.Hybrid + 1;
+            for (var i = 0; i < clubCount; i++)
+            {
+                if (((int)allowedClubs & (1 << i)) != 0)
+                    return (GolfClubType)i;
+            }
+
+            return GolfClubType.Putter;
+        }
+
+        /// <summary>
+        /// True if more than one club type is allowed here (so the club cycling UI should show).
+        /// </summary>
+        public bool _HasClubChoice()
+        {
+            if (drivingRangeMode)
+                return true;
+
+            // True only when two or more bits are set
+            var bits = (int)allowedClubs;
+            return bits != 0 && (bits & (bits - 1)) != 0;
         }
 
         /// <summary>

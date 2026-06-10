@@ -1400,6 +1400,15 @@ MonoBehaviour:
   maxSpeedForScaling: 10
   maxSpeedScale: {x: 1, y: 3, z: 3}
   hitWaitFrames: 0
+  sideSpinMagnitudeCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  sideSpinMultiplier: 1
+  backspinMultiplier: 0.6
+  loftLaunchAngleMultiplier: 1
   hitForceMultiplier:
     serializedVersion: 2
     m_Curve:
@@ -1526,8 +1535,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -1660,8 +1669,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Player
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
+  m_sharedMaterial: {fileID: 2180264, guid: 1915a699021ed90499beab1c04506e1c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -3562,6 +3571,7 @@ MonoBehaviour:
   audioWhenBallHitsFloor: 1
   gravityDirection: {x: 0, y: -1, z: 0}
   gravityMagnitude: 9.87
+  maxLiftGravityFraction: 0.4
   defaultBallDrag: 0.055
   ballDragOverride: 0
   enableAirResistance: 1
@@ -3570,22 +3580,21 @@ MonoBehaviour:
   minBallHitSpeed: 0.1
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60
-  groundSnappingMaxGroundAngle: 90
   groundRaycastDistance: 0.02
-  groundSnappingProbeDistance: 0.02
+  enableBallSnap: 1
+  ballSnapMinSpeed: 0.4
   groundSnappingProbeMask:
     serializedVersion: 2
     m_Bits: 133121
+  wallDetectionTolerance: 0.15
   wallBounceSpeedMultiplier: 0.8
   wallBounceDeflection: 0.1
   respawnAutomatically: 1
-  respawnPosition: {x: 0, y: -99, z: 0}
+  respawnWorldPosition: {x: Infinity, y: Infinity, z: Infinity}
   _ballMoving: 0
   currentOwnerHideOverride: 0
   ballGroundedDebug: 0
   requestedBallVelocity: {x: 0, y: 0, z: 0}
-  enableBallSnap: 1
-  requestedCollisionMode: 3
 --- !u!114 &1722553624231066590
 MonoBehaviour:
   m_ObjectHideFlags: 0

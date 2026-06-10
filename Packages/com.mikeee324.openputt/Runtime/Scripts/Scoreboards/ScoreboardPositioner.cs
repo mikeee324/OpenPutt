@@ -27,6 +27,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("How close the player needs to be to this scoreboard if one of the 'nearby' settings are used above")]
         public float nearbyMaxRadius = 10f;
 
+        [Tooltip("How close the player needs to be to click this scoreboard's UI. The board stays visible past this distance but stops accepting clicks (stops players clicking it from across the map). Set to 0 for no limit.")]
+        public float interactionMaxRadius = 0f;
+
         [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
         public int attachedToCourse = -1;
 
@@ -38,19 +41,24 @@ namespace dev.mikeee324.OpenPutt
                 CanvasWasEnabledAtStart = backgroundCanvas.enabled;
         }
 
-        public bool ShouldBeVisible(Vector3 playerPosition, VRCPlayerApi.TrackingData head)
+        /// <summary>
+        /// Whether this scoreboard should be shown to the local player, given the camera being viewed
+        /// through (world position, forward, and vertical FOV in degrees).
+        /// </summary>
+        public bool ShouldBeVisible(Vector3 viewPosition, Vector3 viewForward, float viewFieldOfView)
         {
             var isNowActive = false;
 
-            var scoreboardPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+            // Distance uses the (optional) nearby center transform so detection can be tuned, but the
+            // look direction should always be measured toward the positioner itself.
+            var nearbyPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
 
-            var scoreboardDistance = Vector3.Distance(playerPosition, scoreboardPos);
+            var scoreboardDistance = Vector3.Distance(viewPosition, nearbyPos);
             var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
-            
-            var normalizedDirectionToScoreboard = (scoreboardPos - head.position).normalized;
-            var normalizedHeadForward = (head.rotation * Vector3.forward).normalized;
-            var playerIsLookingToward = Vector3.Dot(normalizedHeadForward, normalizedDirectionToScoreboard) > .5f;
-            
+
+            var normalizedDirectionToScoreboard = (transform.position - viewPosition).normalized;
+            var playerIsLookingToward = Vector3.Dot(viewForward, normalizedDirectionToScoreboard) >= ViewDotThreshold(viewFieldOfView);
+
             switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:
@@ -81,8 +89,35 @@ namespace dev.mikeee324.OpenPutt
             return isNowActive;
         }
 
+        /// <summary>
+        /// Whether the board here should accept clicks. Always stays visible; this only blocks clicks from far away.
+        /// </summary>
+        public bool ShouldBeInteractable(Vector3 viewPosition)
+        {
+            if (interactionMaxRadius <= 0f)
+                return true;
+
+            var scoreboardPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+
+            return Vector3.Distance(viewPosition, scoreboardPos) <= interactionMaxRadius;
+        }
+
+        /// <summary>
+        /// Min dot product the scoreboard direction must clear to count as on screen. Loosens with wider FOV.
+        /// </summary>
+        private float ViewDotThreshold(float verticalFieldOfView)
+        {
+            // Vertical FOV widened to horizontal half-angle, assuming 16:9 (Udon can't read Screen size)
+            const float aspect = 16f / 9f;
+            var halfVerticalRad = verticalFieldOfView * 0.5f * Mathf.Deg2Rad;
+            var halfHorizontalRad = Mathf.Atan(Mathf.Tan(halfVerticalRad) * aspect);
+            return Mathf.Cos(halfHorizontalRad);
+        }
+
         private void OnDrawGizmosSelected()
         {
+            var center = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+
             switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:
@@ -90,11 +125,15 @@ namespace dev.mikeee324.OpenPutt
                     break;
                 case ScoreboardVisibility.NearbyOnly:
                 case ScoreboardVisibility.NearbyAndCourseFinished:
-                    if (Utilities.IsValid(nearbyCenterTransform))
-                        Gizmos.DrawWireSphere(nearbyCenterTransform.position, nearbyMaxRadius);
-                    else
-                        Gizmos.DrawWireSphere(transform.position, nearbyMaxRadius);
+                    Gizmos.DrawWireSphere(center, nearbyMaxRadius);
                     break;
+            }
+
+            // Distance past which the board stays visible but stops accepting clicks
+            if (interactionMaxRadius > 0f)
+            {
+                Gizmos.color = Color.cyan;
+                Gizmos.DrawWireSphere(center, interactionMaxRadius);
             }
         }
     }

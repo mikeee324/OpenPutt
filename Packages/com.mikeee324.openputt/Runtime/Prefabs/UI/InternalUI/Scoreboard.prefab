@@ -16715,6 +16715,7 @@ GameObject:
   - component: {fileID: 3225058041590026214}
   - component: {fileID: 3349211006856714797}
   - component: {fileID: 8037759517279059643}
+  - component: {fileID: 6633722150875285376}
   m_Layer: 17
   m_Name: Canvas
   m_TagString: Untagged
@@ -16855,6 +16856,18 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 4, y: 2.5, z: 0.01}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!225 &6633722150875285376
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5806249065950814548}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &5806249066182106837
 GameObject:
   m_ObjectHideFlags: 0
@@ -24693,6 +24706,7 @@ MonoBehaviour:
   scoreboardRows: []
   rectTransform: {fileID: 5806249065950814550}
   myCanvas: {fileID: 5806249065950814551}
+  interactionCanvasGroup: {fileID: 0}
   scoreboardHeader: {fileID: 5806249065919390855}
   settingsPanel: {fileID: 2680614244710337126}
   infoPanel: {fileID: 1920838147816961715}

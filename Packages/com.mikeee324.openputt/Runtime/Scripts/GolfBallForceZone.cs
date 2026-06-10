@@ -152,14 +152,14 @@ namespace dev.mikeee324.OpenPutt
             switch (forceType)
             {
                 case GolfBalLForceZoneType.Normal:
-                    golfBall.ballRigidbody.AddForce(transform.forward * forceMagnitude, ForceMode.Force);
+                    golfBall._AddExternalForce(transform.forward * forceMagnitude, ForceMode.Force);
                     break;
                 case GolfBalLForceZoneType.CenterPull:
                     golfBall.gravityDirection = transform.position - golfBall.transform.position;
                     golfBall.gravityMagnitude = forceMagnitude;
                     break;
                 case GolfBalLForceZoneType.CenterPush:
-                    golfBall.ballRigidbody.AddForce((golfBall.transform.position - transform.position).normalized * forceMagnitude, ForceMode.Acceleration);
+                    golfBall._AddExternalForce((golfBall.transform.position - transform.position).normalized * forceMagnitude, ForceMode.Acceleration);
                     break;
                 case GolfBalLForceZoneType.CapsuleGravity:
                     if (forceAreaCollider.GetType() == typeof(CapsuleCollider))

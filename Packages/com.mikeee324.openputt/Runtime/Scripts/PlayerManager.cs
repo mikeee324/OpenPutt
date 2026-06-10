@@ -421,6 +421,13 @@ namespace dev.mikeee324.OpenPutt
             CurrentCourse = newCourse;
 
             hitsOnCurrentCourse = 0;
+
+            // If the local player is carrying a club that isn't allowed on this course, swap to the first allowed one
+            if (this == openPutt.LocalPlayerManager && Utilities.IsValid(golfClub) && golfClub.LocalPlayerOwnsThisObject())
+            {
+                if (!newCourse._IsClubAllowed(golfClub.ClubType))
+                    golfClub.ClubType = newCourse._GetFirstAllowedClub();
+            }
         }
 
         public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)

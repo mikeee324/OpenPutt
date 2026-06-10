@@ -37,6 +37,30 @@ namespace dev.mikeee324.OpenPutt
         Hybrid, // Can represent a typical hybrid, or you might specify by number/loft
     }
 
+    /// <summary>
+    /// Bitmask of <see cref="GolfClubType"/> for configuring allowed clubs per course. Bit positions match the enum values.
+    /// </summary>
+    [Flags]
+    public enum GolfClubTypeMask
+    {
+        None = 0,
+        Putter = 1 << (int)GolfClubType.Putter,
+        Driver = 1 << (int)GolfClubType.Driver,
+        Wood3 = 1 << (int)GolfClubType.Wood3,
+        Wood5 = 1 << (int)GolfClubType.Wood5,
+        Iron4 = 1 << (int)GolfClubType.Iron4,
+        Iron5 = 1 << (int)GolfClubType.Iron5,
+        Iron6 = 1 << (int)GolfClubType.Iron6,
+        Iron7 = 1 << (int)GolfClubType.Iron7,
+        Iron8 = 1 << (int)GolfClubType.Iron8,
+        Iron9 = 1 << (int)GolfClubType.Iron9,
+        PitchingWedge = 1 << (int)GolfClubType.PitchingWedge,
+        GapWedge = 1 << (int)GolfClubType.GapWedge,
+        SandWedge = 1 << (int)GolfClubType.SandWedge,
+        LobWedge = 1 << (int)GolfClubType.LobWedge,
+        Hybrid = 1 << (int)GolfClubType.Hybrid,
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {

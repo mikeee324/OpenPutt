@@ -432,12 +432,6 @@ namespace dev.mikeee324.OpenPutt
 
             var golfClub = openPutt.LocalPlayerManager.golfClub;
 
-            if (openPutt.puttingOnlyMode)
-            {
-                golfClub.ClubType = GolfClubType.Putter;
-                return;
-            }
-
             if (golfClub.ClubIsArmed)
                 return;
 
@@ -447,10 +441,13 @@ namespace dev.mikeee324.OpenPutt
             if (!Networking.LocalPlayer.IsUserInVR() && !ballCameraActive)
                 return;
 
-            var currentType = golfClub.ClubType;
-            var nextType = (GolfClubType)((int)currentType + 1);
-            if ((int)nextType > (int)GolfClubType.Hybrid)
-                nextType = GolfClubType.Putter;
+            // Nothing to cycle to (and nothing to buzz about) if only one club is allowed
+            if (!IsMoreThanOneClubAllowed())
+                return;
+
+            var nextType = NextAllowedClub(golfClub.ClubType, 1);
+            if (nextType == golfClub.ClubType)
+                return;
             golfClub.ClubType = nextType;
 
             // Vibrate on club change if in VR
@@ -473,12 +470,6 @@ namespace dev.mikeee324.OpenPutt
 
             var golfClub = openPutt.LocalPlayerManager.golfClub;
 
-            if (openPutt.puttingOnlyMode)
-            {
-                golfClub.ClubType = GolfClubType.Putter;
-                return;
-            }
-
             if (golfClub.ClubIsArmed)
                 return;
 
@@ -488,10 +479,13 @@ namespace dev.mikeee324.OpenPutt
             if (!Networking.LocalPlayer.IsUserInVR() && !ballCameraActive)
                 return;
 
-            var currentType = golfClub.ClubType;
-            var prevType = (GolfClubType)((int)currentType - 1);
-            if ((int)prevType < 0)
-                prevType = GolfClubType.Hybrid;
+            // Nothing to cycle to (and nothing to buzz about) if only one club is allowed
+            if (!IsMoreThanOneClubAllowed())
+                return;
+
+            var prevType = NextAllowedClub(golfClub.ClubType, -1);
+            if (prevType == golfClub.ClubType)
+                return;
             golfClub.ClubType = prevType;
 
             // Vibrate on club change if in VR
@@ -501,6 +495,59 @@ namespace dev.mikeee324.OpenPutt
                 if (hapticHand != VRC_Pickup.PickupHand.None)
                     Networking.LocalPlayer.PlayHapticEventInHand(hapticHand, vibrationStrength, vibrationFrequency, vibrationDuration);
             }
+        }
+
+        /// <summary>
+        /// Next/previous (direction +1/-1) club type allowed on the current course, skipping disallowed
+        /// ones. Returns currentType if nothing else is allowed.
+        /// </summary>
+        private GolfClubType NextAllowedClub(GolfClubType currentType, int direction)
+        {
+            var currentCourse = Utilities.IsValid(openPutt.LocalPlayerManager) ? openPutt.LocalPlayerManager.CurrentCourse : null;
+
+            var clubCount = (int)GolfClubType.Hybrid + 1;
+            var candidate = (int)currentType;
+            for (var i = 0; i < clubCount; i++)
+            {
+                candidate += direction;
+                if (candidate > (int)GolfClubType.Hybrid)
+                    candidate = 0;
+                else if (candidate < 0)
+                    candidate = (int)GolfClubType.Hybrid;
+
+                var candidateType = (GolfClubType)candidate;
+                var allowed = Utilities.IsValid(currentCourse)
+                    ? currentCourse._IsClubAllowed(candidateType)
+                    : (openPutt.allowAnyClubOffCourse || candidateType == GolfClubType.Putter);
+                if (allowed)
+                    return candidateType;
+            }
+
+            return currentType;
+        }
+
+        /// <summary>
+        /// True if the player currently has more than one club to choose between. Used to avoid buzzing
+        /// the controller when cycling can't actually do anything (e.g. putter-only off a course).
+        /// </summary>
+        private bool IsMoreThanOneClubAllowed()
+        {
+            var currentCourse = Utilities.IsValid(openPutt.LocalPlayerManager) ? openPutt.LocalPlayerManager.CurrentCourse : null;
+
+            // Off a course: either every club (world setting) or just the putter
+            if (!Utilities.IsValid(currentCourse))
+                return openPutt.allowAnyClubOffCourse;
+
+            // On a course: count allowed clubs, stop as soon as we know there's more than one
+            var allowedCount = 0;
+            var clubCount = (int)GolfClubType.Hybrid + 1;
+            for (var i = 0; i < clubCount; i++)
+            {
+                if (currentCourse._IsClubAllowed((GolfClubType)i) && ++allowedCount > 1)
+                    return true;
+            }
+
+            return false;
         }
 
         /// <summary>
