@@ -101,6 +101,12 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField, Min(0f), FormerlySerializedAs("takeOverMinSpeed"), Tooltip("Below this speed (m/s) snapping hands grounded rolling back to Unity's physics, which settles the ball against walls / in ditches cleanly (the snap integrator has no real contact solver, so it jitters when wedged). Above it, the script drives the roll to kill mesh-edge ghosts. Raise it if a ball jitters/bounces when coming to rest; lower it to keep snapping active for slower rolls")]
         float ballSnapMinSpeed = 0.4f;
 
+        [SerializeField, Range(0f, 1f), Tooltip("Only let the ground-snap drive on ground at least this flat (1 = dead flat, ~0.71 = 45° slope, 0 = vertical wall). The snap pins the ball to the surface and projects out any bounce, so on steep/curved surfaces (bowls, banked ramps) it stops the ball bouncing. Steeper ground than this is handed back to Unity physics so the ball bounces/arcs naturally. Raise toward 1 to restrict snapping to flatter ground; lower to keep it active on gentler slopes")]
+        float snapMinGroundFlatness = 0.9f;
+
+        [SerializeField, Min(0), Tooltip("How many consecutive frames the ball must stay grounded before the ground-snap takes over. Stops a just-landed ball (after an arc or bounce) from being glued to the surface the instant it touches - it gets these frames under Unity's physics first so its landing bounce/momentum plays out. 0 = snap as soon as grounded, higher = longer grace period before snapping")]
+        int snapMinGroundedSteps = 4;
+
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
@@ -1126,7 +1132,24 @@ namespace dev.mikeee324.OpenPutt
             // none and jitters when wedged). This single flag gates both the script integrator
             // (DriveGroundSnap) AND the manual gravity/drag/air forces below, so when the ground-snap
             // steps aside, normal physics gets its forces back.
-            var snapActive = enableBallSnap && isGrounded && velMagnitude >= ballSnapMinSpeed;
+            //
+            // Only drive on near-flat ground. The snap pins the ball to the surface and projects out any
+            // velocity coming off it, so on a steep/curved surface (a bowl, a banked ramp) the ball can't
+            // bounce off walls/obstacles - it just glues to the surface. Handing those back to PhysX
+            // restores natural bouncing/arcing (and the straight-down ground probe is unreliable on steep
+            // slopes anyway). Flat course floors - where mesh-edge ghosts are the real problem - keep the snap.
+            // Raise snapMinGroundFlatness toward 1 to restrict the snap to flatter ground, lower it to keep
+            // the snap active on gentler slopes. 1 = dead flat, ~0.71 = 45°, 0 = vertical wall.
+            var groundFlatness = isGrounded ? Vector3.Dot(groundingHit.normal, -gravityDirection) : 0f;
+
+            // Don't let the snap grab the ball the instant it touches down. A just-landed ball (after an
+            // arc or bounce) needs a few frames under Unity's physics so its landing bounce/momentum plays
+            // out instead of being flattened onto the surface immediately. stepsOnGround counts consecutive
+            // grounded frames (reset to 0 the moment we go airborne), so requiring a minimum here delays
+            // snapping until the ball has actually settled. It's read before this frame's increment below,
+            // so a value of N engages the snap on the (N+1)th grounded frame. While we wait, snapActive is
+            // false, so the ball gets full Unity physics (gravity, drag, PhysX bounce) for the landing.
+            var snapActive = enableBallSnap && isGrounded && velMagnitude >= ballSnapMinSpeed && groundFlatness >= snapMinGroundFlatness && stepsOnGround >= snapMinGroundedSteps;
 
             // Apply any external force-zone pushes accumulated since last frame. While the ground-snap is
             // driving it folds them into its own velocity instead (see DriveGroundSnap); here we hand
@@ -1383,12 +1406,15 @@ namespace dev.mikeee324.OpenPutt
             // Still on ground — project onto surface so we follow the slope without sinking.
             v = Vector3.ProjectOnPlane(v, groundingHit.normal);
 
-            // The ball centre should sit exactly one radius above the contact point. If it's
-            // higher than that (floating), add a snap velocity to pull it back down.
-            var targetPos = groundingHit.point + groundingHit.normal * ballCollider.radius;
-            var dropNeeded = Vector3.Dot(targetPos - CurrentPosition, gravityDirection);
-            if (dropNeeded > 0.001f)
-                v += gravityDirection * Mathf.Min(dropNeeded / Time.fixedDeltaTime, 3f);
+            // Keep the ball glued to the surface as a POSITION correction, never a velocity change,
+            // so the snap can't add to the ball's speed. The old version injected downward velocity
+            // every frame; on a steep curved bowl the straight-down probe read that gap as a permanent
+            // "floating" and the injected velocity turned into runaway forward speed. We measure the
+            // gap along the surface NORMAL (slope-independent) and nudge the rigidbody position so its
+            // centre sits one radius off the surface, leaving velocity entirely to gravity/drag/slope.
+            var surfaceGap = ballCollider.radius - Vector3.Dot(CurrentPosition - groundingHit.point, groundingHit.normal);
+            if (Mathf.Abs(surfaceGap) > 0.001f)
+                ballRigidbody.position += groundingHit.normal * Mathf.Clamp(surfaceGap, -ballCollider.radius, ballCollider.radius);
 
             // Surface drag + air resistance (mirrors UpdatePhysicsState; forces, so accel = force / mass)
             var speed = v.magnitude;
