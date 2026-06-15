@@ -17,8 +17,12 @@ You can look at the [getting started guide here](https://github.com/mikeee324/Op
 Not everything is covered yet, but hopefully I can get around to covering things in more detail later :)
   
 # Worlds
-A list of worlds where you can see this in action (If you make one let me know!)
+A list of some worlds where you can see this in action (If you make one let me know!)
 - [Junkyard Golf - mikeee324](https://vrchat.com/home/world/wrld_d62918a1-9172-40cd-93a9-5d8546dad6cf)
+- [Stella Station Putt Putt - Beany`](https://vrchat.com/home/world/wrld_3a74864c-ba1d-4f11-b529-3a8a5fcfbab1)
+- [Palm Tee Minigolf - Rabothy](https://vrchat.com/home/world/wrld_ae6fe9ef-479c-4a9b-aeb6-78840f8e9f2d)
+- [シンプルパターゴルフ コース4 - kei4470](https://vrchat.com/home/world/wrld_3180b05d-13a7-45c8-89b2-6df7cbdcbee7)
+- [Low Poly Mini Golf - Clutzy](https://vrchat.com/home/world/wrld_d186c4ce-4632-42af-9685-0c27ef6f3094)
 
 # Patreon Thing
 If you feel the need to support me you can do so here: https://patreon.com/mikeee324  
