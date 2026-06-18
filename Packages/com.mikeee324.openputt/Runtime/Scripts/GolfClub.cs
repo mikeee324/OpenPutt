@@ -88,6 +88,7 @@ namespace dev.mikeee324.OpenPutt
         public bool throwEnabled = true;
         public float minThrowSpeed = 4f;
 
+        public MaterialPropertyBlock handlePB;
         public MaterialPropertyBlock headPB;
         public MaterialPropertyBlock shaftPB;
         public MaterialPropertyBlock headHolderPB;
@@ -109,6 +110,8 @@ namespace dev.mikeee324.OpenPutt
                 // If the state of the club has changed
                 if (ClubIsArmed != value)
                 {
+                    _clubArmed = value;
+
                     if (this.LocalPlayerOwnsThisObject())
                     {
                         // Toggles whether the player is frozen or not
@@ -128,6 +131,7 @@ namespace dev.mikeee324.OpenPutt
                             putter.gameObject.SetActive(false);
                     }
 
+                    // Apply the base armed/disarmed colours to the head/shaft/head holder
                     if (!Utilities.IsValid(headPB))
                         headPB = new MaterialPropertyBlock();
                     currentHeadMesh.GetPropertyBlock(headPB);
@@ -148,11 +152,13 @@ namespace dev.mikeee324.OpenPutt
                     headHolderPB.SetColor("_Color", value ? onColour : offColour);
                     headHolderPB.SetColor("_EmissionColor", value ? onEmission : offEmission);
 
-                    // Apply the MaterialPropertyBlock to the GameObject
                     currentHeadMesh.SetPropertyBlock(headPB);
                     shaftMesh.SetPropertyBlock(shaftPB);
                     if (Utilities.IsValid(headHolderMesh))
                         headHolderMesh.SetPropertyBlock(headHolderPB);
+
+                    // Overlay the players ball colour on the handle/head (when enabled + disarmed)
+                    _UpdateClubColour();
 
                     if (Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
                         openPuttSync._RequestFastSync(forceSync: true);
@@ -192,6 +198,9 @@ namespace dev.mikeee324.OpenPutt
                 {
                     headHolderMesh.gameObject.SetActive(value != GolfClubType.Putter);
                 }
+
+                // Make sure the newly selected head/head holder shows the correct colour
+                _UpdateClubColour();
 
                 if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
                 {
@@ -239,6 +248,13 @@ namespace dev.mikeee324.OpenPutt
         public Color onColour = Color.red;
         public Color offEmission = Color.black;
         public Color onEmission = Color.red;
+
+        [Tooltip("When enabled, the club handle and head meshes are tinted with the players ball colour while the club is disarmed")]
+        public bool tintWithBallColour = true;
+
+        [Tooltip("The players ball colour. Tints the handle and (when disarmed) the head meshes. Set via PlayerManager.BallColor")]
+        [HideInInspector]
+        public Color ballColour = Color.white;
 
         public BodyMountedObject shoulderPickup
         {
@@ -445,6 +461,52 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(handleCollider))
                 handleCollider.enabled = clubCanBePickedUp;
+        }
+
+        /// <summary>
+        /// Overlays the players ball colour onto the handle and head meshes using MaterialPropertyBlocks.<br/>
+        /// The base armed/disarmed colours are applied by the ClubIsArmed setter - this only tints on top,
+        /// so the head is left alone while armed (it stays red). Does nothing when tinting is disabled.
+        /// </summary>
+        public void _UpdateClubColour()
+        {
+            // Configured in the inspector and never toggled at runtime
+            if (!tintWithBallColour)
+                return;
+
+            // Handle always shows the players ball colour
+            if (Utilities.IsValid(handleMesh))
+            {
+                if (!Utilities.IsValid(handlePB))
+                    handlePB = new MaterialPropertyBlock();
+                handleMesh.GetPropertyBlock(handlePB);
+                handlePB.SetColor("_Color", ballColour);
+                handleMesh.SetPropertyBlock(handlePB);
+            }
+
+            // Leave the head/head holder red while armed - only tint them when disarmed
+            if (_clubArmed)
+                return;
+
+            if (Utilities.IsValid(currentHeadMesh))
+            {
+                if (!Utilities.IsValid(headPB))
+                    headPB = new MaterialPropertyBlock();
+                currentHeadMesh.GetPropertyBlock(headPB);
+                headPB.SetColor("_Color", ballColour);
+                headPB.SetColor("_EmissionColor", offEmission);
+                currentHeadMesh.SetPropertyBlock(headPB);
+            }
+
+            if (Utilities.IsValid(headHolderMesh))
+            {
+                if (!Utilities.IsValid(headHolderPB))
+                    headHolderPB = new MaterialPropertyBlock();
+                headHolderMesh.GetPropertyBlock(headHolderPB);
+                headHolderPB.SetColor("_Color", ballColour);
+                headHolderPB.SetColor("_EmissionColor", offEmission);
+                headHolderMesh.SetPropertyBlock(headHolderPB);
+            }
         }
 
         public void _OnRespawn()

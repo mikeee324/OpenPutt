@@ -55,6 +55,14 @@ namespace dev.mikeee324.OpenPutt
                 if (_ballColor == value) return;
 
                 _ballColor = value;
+
+                // Tint the club handle/heads to match the players ball colour
+                if (Utilities.IsValid(golfClub))
+                {
+                    golfClub.ballColour = _ballColor;
+                    golfClub._UpdateClubColour();
+                }
+
                 if (!Utilities.IsValid(golfBall)) return;
 
                 // Create a new MaterialPropertyBlock

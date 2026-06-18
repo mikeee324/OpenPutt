@@ -8,15 +8,14 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Golfclub
-  m_Shader: {fileID: 4800000, guid: 2dcd9e0568e0a6f45b92c60ba2eb16a0, type: 3}
+  m_Shader: {fileID: 4800000, guid: 0b7113dea2069fc4e8943843eff19f70, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords:
+  m_ValidKeywords:
   - _EMISSION
   - _ENABLE_GEOMETRIC_SPECULAR_AA
+  m_InvalidKeywords:
   - _LIGHTVOLUMES_ON
-  - _METALLICGLOSSMAP
   - _SPECULARS_ON
   m_LightmapFlags: 1
   m_EnableInstancingVariants: 1
@@ -61,7 +60,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: c10b81530d7f4434f9981eeba217f6a2, type: 3}
+        m_Texture: {fileID: 2800000, guid: e4afe29d35eb71547bc3d61b2c561ee7, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Matcap:
@@ -73,7 +72,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
-        m_Texture: {fileID: 2800000, guid: 7d66320aa1e928f488ace4397c9c4d21, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicMap:
@@ -129,7 +128,7 @@ Material:
     - _GlossMapChannel: 3
     - _GlossMapScale: 1
     - _GlossStrength: 0.5
-    - _Glossiness: 1
+    - _Glossiness: 0.3
     - _GlossyReflections: 1
     - _HueShift: 0
     - _HueShiftMaskChannel: 1
@@ -140,7 +139,7 @@ Material:
     - _MatcapMaskChannel: 0
     - _MatcapStrength: 1
     - _MatcapType: 0
-    - _Metallic: 1
+    - _Metallic: 0.2
     - _MetallicMapChannel: 0
     - _MetallicStrength: 0
     - _MinBrightness: 0
@@ -172,7 +171,7 @@ Material:
     - _ZWrite: 1
     - __dirty: 0
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 1, g: 0, b: 0, a: 1}
     - _ColorMaskColor1: {r: 1, g: 1, b: 1, a: 1}
     - _ColorMaskColor2: {r: 1, g: 1, b: 1, a: 1}
     - _ColorMaskColor3: {r: 1, g: 1, b: 1, a: 1}
