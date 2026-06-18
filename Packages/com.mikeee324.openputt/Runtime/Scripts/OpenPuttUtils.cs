@@ -412,7 +412,7 @@ namespace dev.mikeee324.OpenPutt
                 case GolfClubType.SandWedge: return 27f;
                 case GolfClubType.LobWedge: return 27f;
                 case GolfClubType.Hybrid: return 59f;
-                case GolfClubType.Putter: return 150f;
+                case GolfClubType.Putter: return 15f;
                 default: return 80f;
             }
         }
