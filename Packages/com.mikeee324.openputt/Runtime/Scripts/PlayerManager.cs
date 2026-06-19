@@ -711,7 +711,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (localPlayerIsNowOwner)
             {
-                BallColor = new Color(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
+                BallColor = Owner.ToColor();
                 openPutt._LoadPersistantData();
             }
 

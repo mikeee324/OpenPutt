@@ -517,7 +517,7 @@ namespace dev.mikeee324.OpenPutt
 
             var playerManager = manager.openPutt.LocalPlayerManager;
 
-            playerManager.BallColor = new Color(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
+            playerManager.BallColor = playerManager.Owner.ToColor();
 
             RefreshSettingsMenu();
 

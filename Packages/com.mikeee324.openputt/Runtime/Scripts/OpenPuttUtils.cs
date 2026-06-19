@@ -213,6 +213,68 @@ namespace dev.mikeee324.OpenPutt
         /// <returns>A random entry from the array</returns>
         public static T GetRandom<T>(this T[] array) => array[Random.Range(0, array.Length)];
 
+        /// <summary>
+        /// Generates a deterministic, vibrant colour for a player based on their name.
+        /// The same player always produces the same colour so they stay recognisable across sessions.
+        /// </summary>
+        /// <param name="player">The player to generate a colour for</param>
+        /// <returns>A consistent colour derived from the player's display name</returns>
+        public static Color ToColor(this VRCPlayerApi player)
+        {
+            if (!Utilities.IsValid(player) || string.IsNullOrEmpty(player.displayName))
+                return Color.white;
+
+            var name = player.displayName;
+
+            // FNV-1a style hash of the name gives a well distributed, stable number to work from
+            // (Udon doesn't expose uint maths, so we use int and let the multiply overflow/wrap)
+            var hash = -2128831035; // unchecked (int)2166136261
+            for (var i = 0; i < name.Length; i++)
+                hash = (hash ^ name[i]) * 16777619;
+
+            // Turn the low bits into an even hue (0-1), then convert via OKLCH - a perceptually
+            // uniform colour space - so colours stay vibrant and spread evenly instead of skewing
+            // blue the way a raw HSV hue does.
+            var hue = (hash & 0xFFFFFF) / 16777216f;
+            return OklchToColor(0.70f, 0.14f, hue);
+        }
+
+        /// <summary>
+        /// Converts an OKLCH colour to sRGB. OKLCH is perceptually uniform, so evenly spaced
+        /// hues produce evenly spaced colours (unlike HSV, which is lumpy and skews cool).
+        /// </summary>
+        /// <param name="lightness">Perceived brightness (0-1)</param>
+        /// <param name="chroma">Colourfulness (roughly 0-0.32, higher values clip to gamut)</param>
+        /// <param name="hue">Hue angle in turns (0-1)</param>
+        public static Color OklchToColor(float lightness, float chroma, float hue)
+        {
+            var h = hue * 2f * Mathf.PI;
+            var a = chroma * Mathf.Cos(h);
+            var b = chroma * Mathf.Sin(h);
+
+            // OKLab -> LMS
+            var l_ = lightness + 0.3963377774f * a + 0.2158037573f * b;
+            var m_ = lightness - 0.1055613458f * a - 0.0638541728f * b;
+            var s_ = lightness - 0.0894841775f * a - 1.2914855480f * b;
+            var l = l_ * l_ * l_;
+            var m = m_ * m_ * m_;
+            var s = s_ * s_ * s_;
+
+            // LMS -> linear sRGB
+            var r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
+            var g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
+            var bl = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
+
+            // linear -> gamma sRGB (clamped into the displayable range)
+            return new Color(LinearToGamma(r), LinearToGamma(g), LinearToGamma(bl));
+        }
+
+        private static float LinearToGamma(float c)
+        {
+            c = Mathf.Clamp01(c);
+            return c <= 0.0031308f ? 12.92f * c : 1.055f * Mathf.Pow(c, 1f / 2.4f) - 0.055f;
+        }
+
         public static Vector3 FixNaNs(Vector3 vector)
         {
             if (float.IsNaN(vector.x)) vector.x = 0;
