@@ -85,24 +85,19 @@ namespace dev.mikeee324.OpenPutt
 
         /// <summary>
         /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
-        /// MUST be the same length as lastPositionTimes
+        /// MUST be the same length as lastPositionRotations
         /// </summary>
         private Vector3[] lastPositions = new Vector3[16];
 
         /// <summary>
-        /// Tracks the path of the club head so we can work out an average velocity over several frames.<br/>
-        /// MUST be the same length as lastPositionTimes
+        /// Tracks the rotation of the club head alongside lastPositions.<br/>
+        /// MUST be the same length as lastPositions
         /// </summary>
         private Quaternion[] lastPositionRotations = new Quaternion[16];
 
         /// <summary>
-        /// Tracks how much time it has been since we recorded each position in the lastPositions array<br/>
-        /// MUST be the same length as lastPositions
-        /// </summary>
-        private float[] lastPositionTimes = new float[16];
-
-        /// <summary>
-        /// Set to true when the player hits the ball (The force will be applied to the ball in the next FixedUpdate frame)
+        /// Frame counter since the ball was hit (-1 = no pending hit). The force is applied to the ball
+        /// once this reaches framesToWaitAfterHit.
         /// </summary>
         private int framesSinceHit = -1;
 
@@ -152,12 +147,19 @@ namespace dev.mikeee324.OpenPutt
         private int framesSinceClubArmed = -1;
         private bool _initialized = false;
 
+        /// <summary>
+        /// Cached GetComponent lookup for the current target's Rigidbody (if any). Refreshed only when
+        /// the target transform changes so we don't run GetComponent every frame in PostLateUpdate.
+        /// </summary>
+        private Transform cachedTargetTransform;
+        private Rigidbody cachedTargetRigidbody;
+
         private Transform CurrentTarget
         {
             get
             {
                 if (Utilities.IsValid(targetOverride) && targetOverride.gameObject.activeSelf)
-                    return targetOverride.transform;
+                    return targetOverride;
                 return putterTarget.transform;
             }
         }
@@ -175,9 +177,63 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(golfBall) && !Utilities.IsValid(ballCollider))
                 ballCollider = golfBall.GetComponent<SphereCollider>();
 
+            InitCurves();
+
             _initialized = true;
 
             gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Builds the default tuning curves used by HandleBallHit. Serialized curves that have been set
+        /// in the inspector are left untouched - only empty/invalid curves get the built-in defaults.
+        /// </summary>
+        private void InitCurves()
+        {
+            if (!Utilities.IsValid(clubHeadDirectionInfluence) || clubHeadDirectionInfluence.length == 0)
+            {
+                clubHeadDirectionInfluence = new AnimationCurve();
+                clubHeadDirectionInfluence.AddKey(0f, 0.95f);       // High influence for very slow speeds (near perfect putts)
+                clubHeadDirectionInfluence.AddKey(3f, 0.6f);        // Influence drops significantly by faster putting/slow chipping speeds
+                clubHeadDirectionInfluence.AddKey(10f, 0.2f);       // Influence is lower for chipping/pitching speeds
+                clubHeadDirectionInfluence.AddKey(30f, 0.05f);      // Influence is very low but not zero for iron/drive speeds
+                clubHeadDirectionInfluence.AddKey(40f, 0.0f);       // Influence is none for very fast speeds
+                clubHeadDirectionInfluence.SmoothTangents(0, 0.5f); // Smooth the transition
+                clubHeadDirectionInfluence.SmoothTangents(1, 0.5f);
+                clubHeadDirectionInfluence.SmoothTangents(2, 0.5f);
+                clubHeadDirectionInfluence.SmoothTangents(3, 0.5f);
+                clubHeadDirectionInfluence.preWrapMode = WrapMode.Clamp;
+                clubHeadDirectionInfluence.postWrapMode = WrapMode.Clamp;
+            }
+
+            if (!Utilities.IsValid(momentumLossByAngle) || momentumLossByAngle.length == 0)
+            {
+                momentumLossByAngle = new AnimationCurve();
+                momentumLossByAngle.AddKey(-1f, 0.0f);
+                momentumLossByAngle.AddKey(0f, 0.5f);
+                momentumLossByAngle.AddKey(.5f, 0.9f);
+                momentumLossByAngle.AddKey(1f, 1.0f);
+                momentumLossByAngle.preWrapMode = WrapMode.Clamp;
+                momentumLossByAngle.postWrapMode = WrapMode.Clamp;
+            }
+
+            if (!Utilities.IsValid(sideSpinMagnitudeCurve) || sideSpinMagnitudeCurve.length == 0)
+            {
+                sideSpinMagnitudeCurve = new AnimationCurve();
+                sideSpinMagnitudeCurve.AddKey(new Keyframe(0.0f, 1.0f, 0f, 0f)); // Club was 90 degrees or more off
+                sideSpinMagnitudeCurve.AddKey(new Keyframe(0.3f, 1.0f, 0f, 0f));
+                sideSpinMagnitudeCurve.AddKey(new Keyframe(0.7f, 0.4f));
+                sideSpinMagnitudeCurve.AddKey(new Keyframe(1.0f, 0.0f, 0f, 0f)); // Club is facing the ball exactly
+                sideSpinMagnitudeCurve.preWrapMode = WrapMode.Clamp;
+                sideSpinMagnitudeCurve.postWrapMode = WrapMode.Clamp;
+            }
+
+            if (!Utilities.IsValid(hitForceMultiplier) || hitForceMultiplier.length == 0)
+            {
+                hitForceMultiplier = new AnimationCurve();
+                hitForceMultiplier.AddKey(0, 1);
+                hitForceMultiplier.AddKey(10, 2);
+            }
         }
 
         /// <summary>
@@ -202,7 +258,6 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Resizes collider to match the club head size. Also scales the collider based on the speed of the club head. Faster speeds will make the collider larger.
         /// </summary>
-        /// <param name="overrideSpeed"></param>
         private void ResizeClubCollider()
         {
             if (!Utilities.IsValid(golfClubHeadCollider))
@@ -312,14 +367,21 @@ namespace dev.mikeee324.OpenPutt
 
         private void UpdateVelocity()
         {
-            var currentPos = CurrentTarget.position;
-            var currentRot = CurrentTarget.rotation;
+            var target = CurrentTarget;
+            var currentPos = target.position;
+            var currentRot = target.rotation;
 
-            var tRB = CurrentTarget.GetComponent<Rigidbody>();
-            if (Utilities.IsValid(tRB))
+            // Only re-run GetComponent when the target actually changes (e.g. targetOverride toggling)
+            if (target != cachedTargetTransform)
             {
-                currentPos = tRB.position;
-                currentRot = tRB.rotation;
+                cachedTargetTransform = target;
+                cachedTargetRigidbody = target.GetComponent<Rigidbody>();
+            }
+
+            if (Utilities.IsValid(cachedTargetRigidbody))
+            {
+                currentPos = cachedTargetRigidbody.position;
+                currentRot = cachedTargetRigidbody.rotation;
             }
 
             // Calculate velocity from the most recent position (which is at the previous index)
@@ -333,14 +395,6 @@ namespace dev.mikeee324.OpenPutt
             // Store current position in the buffer at the current index
             lastPositions[bufferIndex] = currentPos;
             lastPositionRotations[bufferIndex] = currentRot;
-            lastPositionTimes[bufferIndex] = 0f; // Reset time for newest position
-
-            // Increment all other time values
-            for (var i = 0; i < lastPositionTimes.Length; i++)
-            {
-                if (i != bufferIndex)
-                    lastPositionTimes[i] += Time.deltaTime;
-            }
 
             // Move to next position in circular buffer
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
@@ -397,8 +451,7 @@ namespace dev.mikeee324.OpenPutt
             if (framesSinceHit >= 0)
                 return;
 
-            if (framesSinceHit < 0)
-                LastKnownHitType = "(Collision)";
+            LastKnownHitType = "(Collision)";
 
             if (collision.contactCount > 0)
             {
@@ -425,14 +478,14 @@ namespace dev.mikeee324.OpenPutt
             if (framesSinceClubArmed > 5) return;
 
             clubIsTouchingBall = true;
-            if (golfClub.playerManager.openPutt.debugMode)
+            if (openPutt.debugMode)
                 OpenPuttUtils.Log(this, "Player armed the club and instantly hit the ball (collision).. ignoring this collision");
         }
 
         private void OnTriggerExit(Collider other)
         {
             clubIsTouchingBall = false;
-            if (golfClub.playerManager.openPutt.debugMode)
+            if (openPutt.debugMode)
                 OpenPuttUtils.Log(this, "Club is no longer in contact with the ball");
         }
 
@@ -573,36 +626,9 @@ namespace dev.mikeee324.OpenPutt
                     // Stuff we can only do if people aren't hitting balls at stupid angles
                     if (faceAngleDiffToDirection > .2f)
                     {
-                        if (!Utilities.IsValid(clubHeadDirectionInfluence) || clubHeadDirectionInfluence.length == 0)
-                        {
-                            clubHeadDirectionInfluence = new AnimationCurve();
-                            clubHeadDirectionInfluence.AddKey(0f, 0.95f);       // High influence for very slow speeds (near perfect putts)
-                            clubHeadDirectionInfluence.AddKey(3f, 0.6f);        // Influence drops significantly by faster putting/slow chipping speeds
-                            clubHeadDirectionInfluence.AddKey(10f, 0.2f);       // Influence is lower for chipping/pitching speeds
-                            clubHeadDirectionInfluence.AddKey(30f, 0.05f);      // Influence is very low but not zero for iron/drive speeds
-                            clubHeadDirectionInfluence.AddKey(40f, 0.0f);       // Influence is none for very fast speeds
-                            clubHeadDirectionInfluence.SmoothTangents(0, 0.5f); // Smooth the transition
-                            clubHeadDirectionInfluence.SmoothTangents(1, 0.5f);
-                            clubHeadDirectionInfluence.SmoothTangents(2, 0.5f);
-                            clubHeadDirectionInfluence.SmoothTangents(3, 0.5f);
-                            clubHeadDirectionInfluence.preWrapMode = WrapMode.Clamp;
-                            clubHeadDirectionInfluence.postWrapMode = WrapMode.Clamp;
-                        }
-
                         // Face direction bias based on speed
                         LastKnownHitDirBias = clubHeadDirectionInfluence.Evaluate(velocityMagnitude);
                         directionOfTravel = directionOfTravel.BiasedDirection(faceDirection, LastKnownHitDirBias);
-                    }
-
-                    if (!Utilities.IsValid(momentumLossByAngle) || momentumLossByAngle.length == 0)
-                    {
-                        momentumLossByAngle = new AnimationCurve();
-                        momentumLossByAngle.AddKey(-1f, 0.0f);
-                        momentumLossByAngle.AddKey(0f, 0.5f);
-                        momentumLossByAngle.AddKey(.5f, 0.9f);
-                        momentumLossByAngle.AddKey(1f, 1.0f);
-                        momentumLossByAngle.preWrapMode = WrapMode.Clamp;
-                        momentumLossByAngle.postWrapMode = WrapMode.Clamp;
                     }
 
                     // Apply the momentum loss due to angle
@@ -613,17 +639,6 @@ namespace dev.mikeee324.OpenPutt
                     {
                         // Determine the 'horizontal' swing path direction relative to gravity
                         var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? headVelocity : headVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
-
-                        if (!Utilities.IsValid(sideSpinMagnitudeCurve) || sideSpinMagnitudeCurve.length == 0)
-                        {
-                            sideSpinMagnitudeCurve = new AnimationCurve();
-                            sideSpinMagnitudeCurve.AddKey(new Keyframe(0.0f, 1.0f, 0f, 0f)); // Club was 90 degrees or more off
-                            sideSpinMagnitudeCurve.AddKey(new Keyframe(0.3f, 1.0f, 0f, 0f));
-                            sideSpinMagnitudeCurve.AddKey(new Keyframe(0.7f, 0.4f));
-                            sideSpinMagnitudeCurve.AddKey(new Keyframe(1.0f, 0.0f, 0f, 0f)); // Club is facing the ball exactly
-                            sideSpinMagnitudeCurve.preWrapMode = WrapMode.Clamp;
-                            sideSpinMagnitudeCurve.postWrapMode = WrapMode.Clamp;
-                        }
 
                         // More angle difference => Faster side spin
                         var rawSpinMagnitude = sideSpinMagnitudeCurve.Evaluate(faceAngleDiffToDirection);
@@ -645,15 +660,14 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // Scale the velocity back up a bit
-            if (!Utilities.IsValid(hitForceMultiplier) || hitForceMultiplier.length == 0)
-            {
-                hitForceMultiplier.AddKey(0, 1);
-                hitForceMultiplier.AddKey(10, 2);
-            }
             velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);
 
             // Apply the players final hit force multiplier
             velocityMagnitude *= golfClub.forceMultiplier;
+
+            // Lower-loft clubs transfer swing speed to the ball more efficiently (relative smash factor,
+            // normalized so Driver = 1.0). Mostly noticeable on the driving range where speed isn't clamped.
+            velocityMagnitude *= golfClub.ClubType.GetSmashFactor();
 
             // Work out whether we need to clamp the hit speed
             // Clamp on normal courses (not driving ranges). Use per-club max
@@ -722,7 +736,6 @@ namespace dev.mikeee324.OpenPutt
             {
                 lastPositions[i] = target.position;
                 lastPositionRotations[i] = target.rotation;
-                lastPositionTimes[i] = 0f;
             }
 
             // Reset stored velocities

@@ -478,5 +478,34 @@ namespace dev.mikeee324.OpenPutt
                 default: return 80f;
             }
         }
+
+        /// <summary>
+        /// Relative ball-speed efficiency per club, normalized so Driver = 1.0. Lower-loft clubs convert
+        /// swing speed to ball speed more efficiently (real "smash factor"); the absolute power level is
+        /// already set by hitForceMultiplier/forceMultiplier, so this only models the difference *between*
+        /// clubs. Keep the spread narrow (~0.85-1.0) or club power starts to feel inconsistent.
+        /// </summary>
+        public static float GetSmashFactor(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 1.0f;
+                case GolfClubType.Wood3:
+                case GolfClubType.Wood5:
+                case GolfClubType.Hybrid: return 0.97f;
+                case GolfClubType.Iron4:
+                case GolfClubType.Iron5:
+                case GolfClubType.Iron6:
+                case GolfClubType.Iron7: return 0.94f;
+                case GolfClubType.Iron8:
+                case GolfClubType.Iron9: return 0.92f;
+                case GolfClubType.PitchingWedge:
+                case GolfClubType.GapWedge:
+                case GolfClubType.SandWedge:
+                case GolfClubType.LobWedge: return 0.88f;
+                case GolfClubType.Putter: return 1.0f; // putter is its own thing
+                default: return 1.0f;
+            }
+        }
     }
 }
