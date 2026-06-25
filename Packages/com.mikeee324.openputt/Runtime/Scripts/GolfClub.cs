@@ -657,6 +657,11 @@ namespace dev.mikeee324.OpenPutt
             _RefreshState();
 
             _UpdateClubState();
+
+            // Now the pickup is free, put the club/ball back on the shoulders that match the current
+            // handedness (in case it was changed while the club was being held off a shoulder)
+            if (Utilities.IsValid(playerManager))
+                playerManager._UpdateShoulderPickupAttachments();
         }
 
         public override void OnPickup()
@@ -728,6 +733,11 @@ namespace dev.mikeee324.OpenPutt
             _RefreshState();
 
             _UpdateClubState();
+
+            // Now the pickup is free, put the club/ball back on the shoulders that match the current
+            // handedness (in case it was changed while the club was being held off a shoulder)
+            if (Utilities.IsValid(playerManager))
+                playerManager._UpdateShoulderPickupAttachments();
         }
 
         public override void InputUse(bool value, UdonInputEventArgs args)

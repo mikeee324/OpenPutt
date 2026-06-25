@@ -282,6 +282,9 @@ namespace dev.mikeee324.OpenPutt
             ballCam.cullingMask = cameraCullMask;
             UpdateLocalBallLabelLookTarget();
 
+            // Stop the ball shoulder pickup from listening for the pickup key while aiming with the cam
+            SetBallPickupKeyIgnored(true);
+
             if (Utilities.IsValid(uiController))
                 uiController.OnBallCameraToggled();
 
@@ -301,12 +304,30 @@ namespace dev.mikeee324.OpenPutt
             ballCam.cullingMask = cameraCullMask;
             UpdateLocalBallLabelLookTarget();
 
+            // Re-enable the ball shoulder pickup key now the cam is off
+            SetBallPickupKeyIgnored(false);
+
             if (Utilities.IsValid(uiController))
                 uiController.OnBallCameraToggled();
 
             // This can be overridden on the playermanager
             if (Utilities.IsValid(localPlayerManager))
                 localPlayerManager.PlayerIsCurrentlyFrozen = false;
+        }
+
+        /// <summary>
+        /// Toggles whether the local player's ball shoulder pickup listens for the desktop/controller pickup key
+        /// </summary>
+        /// <param name="ignored">True to stop listening for the pickup key</param>
+        private void SetBallPickupKeyIgnored(bool ignored)
+        {
+            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(localPlayerManager))
+                return;
+
+            // Ball lives on the opposite shoulder to the club depending on handedness
+            var ballPickup = localPlayerManager.IsInLeftHandedMode ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
+            if (Utilities.IsValid(ballPickup))
+                ballPickup.ignorePickupKey = ignored;
         }
 
         private void ClearCameraInputState()

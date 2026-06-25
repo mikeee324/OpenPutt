@@ -362,7 +362,23 @@ namespace dev.mikeee324.OpenPutt
                     // Move this scoreboard to the correct position
                     var scoreboard = scoreboards[currentVisibleScoreboardID];
                     scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
-                    scoreboard.transform.localScale = position.transform.lossyScale;
+
+                    // We want the scoreboard to end up at the positioner's world (lossy) scale. localScale is
+                    // relative to the scoreboard's parent, so if that parent is scaled (e.g. the whole OpenPutt
+                    // object is scaled down) we have to divide the target out by the parent scale - otherwise the
+                    // parent scale gets applied twice and the board ends up tiny.
+                    var targetScale = position.transform.lossyScale;
+                    var scoreboardParent = scoreboard.transform.parent;
+                    if (Utilities.IsValid(scoreboardParent))
+                    {
+                        var parentScale = scoreboardParent.lossyScale;
+                        targetScale = new Vector3(
+                            parentScale.x != 0f ? targetScale.x / parentScale.x : targetScale.x,
+                            parentScale.y != 0f ? targetScale.y / parentScale.y : targetScale.y,
+                            parentScale.z != 0f ? targetScale.z / parentScale.z : targetScale.z);
+                    }
+
+                    scoreboard.transform.localScale = targetScale;
 
                     // Keep the board visible but stop accepting clicks once the player gets too far away
                     scoreboard.SetInteractable(position.ShouldBeInteractable(viewPosition));

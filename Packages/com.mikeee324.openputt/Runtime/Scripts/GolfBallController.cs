@@ -245,6 +245,13 @@ namespace dev.mikeee324.OpenPutt
 
         public bool pickedUpByPlayer { get; private set; }
 
+        /// <summary>
+        /// True while the player is holding the shoulder pickup but the ball is moving. In this mode we don't
+        /// grab/freeze the ball - we just draw a line to it so the player can see where it is.
+        /// </summary>
+        [HideInInspector]
+        public bool trackingMovingBall;
+
         [HideInInspector]
         public int currentOwnerHideOverride;
 
@@ -340,6 +347,9 @@ namespace dev.mikeee324.OpenPutt
         private bool resetBallTimers = true;
         private float defaultGravityMagnitude = 9.87f;
 
+        /// World radius captured at startup; the reference size for scale-relative tuning (gravity, contact skin, ground probe buffer)
+        private float defaultBallWorldRadius = 0f;
+
         /// Logs ball speed after a hit for debugging
         private float[] speedDataLogging = new float[0];
 
@@ -410,6 +420,10 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
             }
+
+            // Reference size for scale-relative tuning. Captured here so the ball behaves exactly as before at
+            // its design scale (ratio 1) and only deviates when it's scaled up/down from this.
+            defaultBallWorldRadius = BallWorldRadius;
 
             DefaultBallMaxSpeed = maxBallSpeed;
 
@@ -537,7 +551,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     // Fake ball roll based on speed
                     var directionOfTravel = ballRigidbody.position - lastFramePosition;
-                    var angle = directionOfTravel.magnitude * Mathf.Rad2Deg / ballCollider.radius;
+                    var angle = directionOfTravel.magnitude * Mathf.Rad2Deg / BallWorldRadius;
                     var rotationAxis = Vector3.Cross(-gravityDirection, directionOfTravel).normalized;
                     transform.localRotation = Quaternion.Euler(rotationAxis * angle) * transform.localRotation;
                     var worldRotation = transform.parent.rotation * transform.localRotation;
@@ -786,6 +800,23 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptPickup()
         {
+            // If the ball is currently moving while playing a course, don't grab/freeze it. Instead just draw a
+            // line from the shoulder pickup to the ball so the player can see where it went without interfering
+            // with the shot. Off a course there's no shot to protect, so fall through and grab it normally.
+            if (BallIsMoving && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse))
+            {
+                var ballShoulderPickup = shoulderPickup;
+                if (Utilities.IsValid(ballShoulderPickup))
+                    ballShoulderPickup.tempDisableAttachment = true;
+
+                trackingMovingBall = true;
+
+                if (Utilities.IsValid(startLine))
+                    startLine.SetEnabled(true);
+
+                return;
+            }
+
             OnPickup();
         }
 
@@ -794,6 +825,21 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptDrop()
         {
+            // If we were only tracking a moving ball (drawing a line to it), just clean that up without
+            // running the normal drop/throw logic - the ball was never actually held.
+            if (trackingMovingBall)
+            {
+                trackingMovingBall = false;
+
+                var ballShoulderPickup = shoulderPickup;
+                if (Utilities.IsValid(ballShoulderPickup))
+                    ballShoulderPickup.tempDisableAttachment = false;
+
+                // The start line controller hides itself once it sees the ball is no longer held/tracked, so we
+                // don't force it off here - that way it stays up if the ball is also being held directly.
+                return;
+            }
+
             OnDrop();
         }
 
@@ -1049,7 +1095,11 @@ namespace dev.mikeee324.OpenPutt
         private bool IsGenuineContact(ContactPoint contact)
         {
             var toCentre = CurrentPosition - contact.point;
-            if (toCentre.sqrMagnitude < 0.000001f)
+
+            // Degenerate guard: contact point is basically at the ball centre. Relative to ball size (toCentre is
+            // ~the world radius) so it scales down with the ball instead of swallowing every contact on a tiny one.
+            var worldRadius = BallWorldRadius;
+            if (toCentre.sqrMagnitude < worldRadius * worldRadius * 0.01f)
                 return true;
 
             return Vector3.Dot(toCentre.normalized, contact.normal.Sanitized()) > 0.5f;
@@ -1076,8 +1126,12 @@ namespace dev.mikeee324.OpenPutt
                 pendingExternalForce = Vector3.zero;
             }
 
+            // Gravity scales with the ball: a shrunk ball under full gravity falls too fast for its apparent size
+            // and tucks into walls instead of arcing/bouncing, so we scale the pull to match its size.
+            var scaledGravity = gravityMagnitude * BallScaleRatio;
+
             if (gravityMagnitude > 0f)
-                ballRigidbody.AddForce(gravityDirection.normalized * gravityMagnitude, ForceMode.Acceleration);
+                ballRigidbody.AddForce(gravityDirection.normalized * scaledGravity, ForceMode.Acceleration);
 
             if (isGrounded)
             {
@@ -1118,7 +1172,7 @@ namespace dev.mikeee324.OpenPutt
 
                         if (gravityMagnitude > .01f)
                         {
-                            var maxMagnus = ballRigidbody.mass * gravityMagnitude * maxLiftGravityFraction;
+                            var maxMagnus = ballRigidbody.mass * scaledGravity * maxLiftGravityFraction;
                             if (magnusForce.sqrMagnitude > maxMagnus * maxMagnus)
                                 magnusForce = magnusForce.normalized * maxMagnus;
                         }
@@ -1189,7 +1243,7 @@ namespace dev.mikeee324.OpenPutt
             // Redirect last frame's velocity along the slope at the same speed, then bleed the downhill gravity pull
             var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, normal).normalized * speed;
             var rampAngle = Mathf.Acos(Mathf.Clamp(groundUpDot, -1f, 1f));
-            newVelocity += gravityDirection * (Mathf.Sin(rampAngle) * Time.deltaTime * gravityMagnitude);
+            newVelocity += gravityDirection * (Mathf.Sin(rampAngle) * Time.deltaTime * gravityMagnitude * BallScaleRatio);
 
             // Only correct when the ball would otherwise lift off (i.e. make it follow the surface downhill); never push up
             if (Vector3.Dot(newVelocity, up) > .001f)
@@ -1198,14 +1252,47 @@ namespace dev.mikeee324.OpenPutt
 
         #region Physics Helpers
 
+        /// <summary>
+        /// World-space radius of the ball. SphereCollider.radius is in local space; Unity scales the actual
+        /// physics collider by the largest lossyScale component. Using the raw local radius makes the ground
+        /// probe (and drag/roll maths) wrong whenever the ball is scaled - e.g. a 0.1x ball would probe with a
+        /// sphere ~10x too big and treat nearby walls as ground, so it sticks instead of bouncing.
+        /// </summary>
+        private float BallWorldRadius
+        {
+            get
+            {
+                var s = transform.lossyScale;
+                return ballCollider.radius * Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z));
+            }
+        }
+
+        /// <summary>
+        /// Ball size relative to startup (1 at design scale, &lt;1 shrunk, &gt;1 grown). Used to keep gravity feel
+        /// and collision margins proportional so a scaled ball still bounces off walls instead of sticking to them.
+        /// </summary>
+        private float BallScaleRatio => defaultBallWorldRadius > 0.0001f ? BallWorldRadius / defaultBallWorldRadius : 1f;
+
         /// Spherecast straight down (along gravity) from just above the ball - sphere probes don't thread collider seams
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
         {
-            var castRadius = ballCollider.radius * 0.9f;
-            var castBackup = ballCollider.radius;
+            var radius = BallWorldRadius;
+            var castRadius = radius * 0.9f;
+            var castBackup = radius;
             var origin = position - gravityDirection * castBackup;
-            var distance = castBackup + (ballCollider.radius - castRadius) + groundRaycastDistance;
-            return Physics.SphereCast(origin, castRadius, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
+            // Buffer scales with the ball so a shrunk ball doesn't probe several radii past its own surface and
+            // latch onto a nearby wall as "ground"
+            var distance = castBackup + (radius - castRadius) + groundRaycastDistance * BallScaleRatio;
+            if (!Physics.SphereCast(origin, castRadius, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                return false;
+
+            // Reject wall-like hits: the downward probe can catch a wall (or a floor/wall seam) and report a
+            // near-horizontal normal as ground. Treating a wall as ground sticks the ball to it instead of
+            // bouncing - so a wall normal means "not grounded" here and PhysX/ReflectCollision handle the bounce.
+            if (gravityMagnitude > .01f && Vector3.Dot(hit.normal.Sanitized(), -gravityDirection).IsNearZero(wallDetectionTolerance))
+                return false;
+
+            return true;
         }
 
         /// Rolling drag force magnitude. Ground friction or a script override beats the default; eases off near a stop so the ball settles nicely
@@ -1223,7 +1310,8 @@ namespace dev.mikeee324.OpenPutt
         {
             const float airDensity = 1.225f;
             const float dragCoeff = .35f;
-            var crossSection = Mathf.PI * ballCollider.radius * ballCollider.radius;
+            var radius = BallWorldRadius;
+            var crossSection = Mathf.PI * radius * radius;
             return 0.5f * airDensity * crossSection * dragCoeff * speed * speed;
         }
 
@@ -1354,7 +1442,10 @@ namespace dev.mikeee324.OpenPutt
                     ballCollider.enabled = true;
                     ballCollider.isTrigger = false;
 
-                    ballCollider.contactOffset = 0.0005f;
+                    // Grow the collision skin as the ball shrinks so a small fast ball generates a wall contact
+                    // before it penetrates - otherwise it buries into the wall and sticks instead of bouncing.
+                    // (Divisor clamped so it stays in [0.0005, 0.01] and is unchanged at/above design scale.)
+                    ballCollider.contactOffset = 0.0005f / Mathf.Clamp(BallScaleRatio, 0.05f, 1f);
                 }
 
                 if (Utilities.IsValid(ballRigidbody))

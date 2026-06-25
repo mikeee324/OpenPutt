@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using com.dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
@@ -232,9 +232,10 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
                 {
-                    // Swap shoulder pickups automatically
-                    openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                    openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+                    // Move the club/ball onto the correct shoulders for the new handedness. This skips
+                    // any pickup that is currently held so switching handedness while grabbing the club
+                    // off a shoulder doesn't swap the club out for the ball in the players hand.
+                    _UpdateShoulderPickupAttachments();
 
                     _RequestSync(syncNow: true);
                 }
@@ -243,6 +244,33 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
                     openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }
+        }
+
+        /// <summary>
+        /// Points the shoulder pickups at the correct object (club/ball) for the current handedness.
+        /// If a shoulder pickup is currently being held it is left alone - re-pointing it would yank
+        /// the held object out of the players hand, so it gets normalised again on the next drop.
+        /// </summary>
+        public void _UpdateShoulderPickupAttachments()
+        {
+            if (Networking.LocalPlayer != Networking.GetOwner(gameObject))
+                return;
+
+            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.leftShoulderPickup) || !Utilities.IsValid(openPutt.rightShoulderPickup))
+                return;
+
+            if (openPutt.leftShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None || openPutt.rightShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                return;
+
+            var isLeftHanded = IsInLeftHandedMode;
+
+            var golfClubAutoHold = golfClub.AutoHoldEnabled;
+
+            openPutt.leftShoulderPickup.pickup.AutoHold = golfClubAutoHold && isLeftHanded ? VRC_Pickup.AutoHoldMode.Yes : VRC_Pickup.AutoHoldMode.No;
+            openPutt.leftShoulderPickup.ObjectToAttach = isLeftHanded ? golfClub.gameObject : golfBall.gameObject;
+
+            openPutt.rightShoulderPickup.pickup.AutoHold = golfClubAutoHold && !isLeftHanded ? VRC_Pickup.AutoHoldMode.Yes : VRC_Pickup.AutoHoldMode.No;
+            openPutt.rightShoulderPickup.ObjectToAttach = isLeftHanded ? golfBall.gameObject : golfClub.gameObject;
         }
 
         public bool canFreezeDesktopPlayers;
@@ -349,11 +377,6 @@ namespace dev.mikeee324.OpenPutt
                     {
                         courseScores[CurrentCourse.holeNumber] += 1;
 
-                        if (courseScores[CurrentCourse.holeNumber] > CurrentCourse.maxScore)
-                        {
-
-                        }
-
                         if (openPutt.debugMode)
                             OpenPuttUtils.Log(this, $"Player hit ball on course {CurrentCourse.holeNumber}. Score is now {courseScores[CurrentCourse.holeNumber]}. (_OnBallHit)");
 
@@ -368,6 +391,11 @@ namespace dev.mikeee324.OpenPutt
                             // Play max score reached sound
                             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
                                 openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+
+                            // The course is finished (max score reached) so lock in the time spent here the
+                            // same way _OnCourseFinished does. Otherwise courseTimes keeps the raw start
+                            // timestamp and the scoreboard formats it as a garbage m:ss value (e.g. 45:xx).
+                            courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[CurrentCourse.holeNumber];
 
                             // Prevents the sound from being heard again
                             courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
@@ -471,8 +499,11 @@ namespace dev.mikeee324.OpenPutt
                     courseTimes[course.holeNumber] = course.maxTime;
                     break;
                 default:
-                    // Calculate the amount of time player spent on this course
-                    courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
+                    // Calculate the amount of time player spent on this course.
+                    // If they already maxed out the score the time was locked in back then (state is
+                    // already Completed) - don't subtract again or we'd turn the duration into garbage.
+                    if (courseStates[course.holeNumber] != CourseState.Completed)
+                        courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
                     break;
             }
 
@@ -755,9 +786,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (localPlayerIsNowOwner)
             {
-                var isLeftHanded = IsInLeftHandedMode;
-                openPutt.leftShoulderPickup.ObjectToAttach = isLeftHanded ? golfClub.gameObject : golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = isLeftHanded ? golfBall.gameObject : golfClub.gameObject;
+                _UpdateShoulderPickupAttachments();
 
                 openPutt.leftShoulderPickup.gameObject.SetActive(true);
                 openPutt.rightShoulderPickup.gameObject.SetActive(true);

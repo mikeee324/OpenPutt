@@ -216,7 +216,9 @@ namespace dev.mikeee324.OpenPutt
                 var menuScale = Vector3.one * 1.7f;
 
                 var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                var menuPosition = head.position + head.rotation * desktopHeadOffset;
+                // Scale the offset by player height (1.7m reference) so the menu doesn't float too far away when scaled down
+                var heightScale = Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f) / 1.7f;
+                var menuPosition = head.position + head.rotation * (desktopHeadOffset * heightScale);
 
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;

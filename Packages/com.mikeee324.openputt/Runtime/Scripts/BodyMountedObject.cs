@@ -74,6 +74,9 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public bool tempDisableAttachment = false;
 
+        [HideInInspector, Tooltip("When true the desktop/controller pickup key is ignored (e.g. while the ball cam is active)")]
+        public bool ignorePickupKey = false;
+
         #endregion
 
         #region Internal Vars
@@ -170,8 +173,8 @@ namespace dev.mikeee324.OpenPutt
                 if (!userIsInVR)
                 {
                     pickupHandLimit = VRC_Pickup.PickupHand.None;
-                    currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRC_Pickup.PickupHand.Right : VRC_Pickup.PickupHand.None;
-                    if (controllerInputKey != ControllerButtons.None)
+                    currentHand = !ignorePickupKey && desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRC_Pickup.PickupHand.Right : VRC_Pickup.PickupHand.None;
+                    if (!ignorePickupKey && controllerInputKey != ControllerButtons.None)
                     {
                         if (Utilities.IsValid(controllerDetector) && controllerDetector.LastUsedJoystick.IsKeyPressed(controllerInputKey, controllerDetector.LastKnownJoystickID))
                             currentHand = VRC_Pickup.PickupHand.Right;
@@ -228,7 +231,7 @@ namespace dev.mikeee324.OpenPutt
             if (!userIsInVR)
             {
                 var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                currPos = head.position + head.rotation * desktopHeadOffset;
+                currPos = head.position + head.rotation * GetScaledDesktopHeadOffset();
                 currRot = head.rotation;
             }
 
@@ -268,6 +271,16 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             _UpdateObjectOffset();
+        }
+
+        /// <summary>
+        /// Returns the desktop head offset scaled to the local players height (1.7m reference) so the
+        /// object doesn't float too far away from their head when they have scaled themselves down.
+        /// </summary>
+        public Vector3 GetScaledDesktopHeadOffset()
+        {
+            var eyeHeight = OpenPuttUtils.LocalPlayerIsValid() ? Networking.LocalPlayer.GetAvatarEyeHeightAsMeters() : 1.7f;
+            return desktopHeadOffset * (Mathf.Clamp(eyeHeight, 0.2f, 5f) / 1.7f);
         }
 
         /// <summary>

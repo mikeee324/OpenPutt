@@ -150,8 +150,8 @@ namespace dev.mikeee324.OpenPutt
 
                 var radius = 2f;
                 if (OpenPuttUtils.LocalPlayerIsValid())
-                    radius = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters();
-                radius = Mathf.Clamp(radius, 2f, 100f);
+                    radius = Networking.LocalPlayer.GetAvatarEyeHeightAsMeters() * 1.5f;
+                radius = Mathf.Clamp(radius, .1f, 100f);
 
                 CourseStartPosition newSpawnPos = null;
                 CourseManager newCourse = null;
@@ -238,7 +238,7 @@ namespace dev.mikeee324.OpenPutt
                     ResetDropAnimation();
                 }
             }
-            else if (!golfBall.pickedUpByPlayer)
+            else if (!golfBall.pickedUpByPlayer && !golfBall.trackingMovingBall)
             {
                 SetEnabled(false);
                 return;
@@ -268,10 +268,34 @@ namespace dev.mikeee324.OpenPutt
                 lineRenderer.SetPosition(0, golfBall.transform.position);
                 lineRenderer.SetPosition(1, closestBallStart.transform.position);
             }
-            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None && ballShoulderPickup.tempDisableAttachment)
+            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None && (golfBall.trackingMovingBall || ballShoulderPickup.tempDisableAttachment))
             {
-                lineRenderer.SetPosition(0, golfBall.CurrentPosition);
-                lineRenderer.SetPosition(1, ballShoulderPickup.transform.position);
+                // Draw the line from where the player is holding the shoulder pickup (start) out to the
+                // ball (end). We work this out from live tracking data rather than the pickup transform -
+                // while the ball is being tracked the pickup's attachment is disabled, so its transform
+                // stops following the player.
+                var lineStart = ballShoulderPickup.transform.position;
+                if (OpenPuttUtils.LocalPlayerIsValid())
+                {
+                    var localPlayer = Networking.LocalPlayer;
+                    if (localPlayer.IsUserInVR())
+                    {
+                        // VR: anchor to the hand that grabbed the pickup
+                        var heldHand = ballShoulderPickup.heldInHand == VRC_Pickup.PickupHand.Left
+                            ? VRCPlayerApi.TrackingDataType.LeftHand
+                            : VRCPlayerApi.TrackingDataType.RightHand;
+                        lineStart = localPlayer.GetTrackingData(heldHand).position;
+                    }
+                    else
+                    {
+                        // Desktop: there are no tracked hands, so anchor where the held item floats in front of the head
+                        var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                        lineStart = head.position + head.rotation * ballShoulderPickup.GetScaledDesktopHeadOffset();
+                    }
+                }
+
+                lineRenderer.SetPosition(0, lineStart);
+                lineRenderer.SetPosition(1, golfBall.CurrentPosition);
             }
             else if (Utilities.IsValid(PlayerManager.CurrentCourse))
             {
