@@ -73,6 +73,9 @@ namespace dev.mikeee324.OpenPutt
         [Range(0f, 1f), Tooltip("Fraction of the club's loft that is used as the ball's launch angle. A real strike always launches the ball well below the club's actual loft, so firing a 56 wedge at the full 56deg sends the ball almost straight up. Lower this to flatten lofted (iron/wedge) trajectories. 1 = launch at the full loft angle.")]
         public float loftLaunchAngleMultiplier = 0.5f;
 
+        [Tooltip("Scales the effective launch loft (and backspin) down as clubhead speed rises - models dynamic loft so hard-hit lofted clubs don't pop straight up. x = clubhead speed (m/s), y = loft multiplier. Only engages on the driving range where hit speed is unclamped. Leave empty to use the built-in default curve.")]
+        public AnimationCurve loftSpeedFalloff;
+
         public AnimationCurve hitForceMultiplier;
 
         [NonSerialized]
@@ -233,6 +236,19 @@ namespace dev.mikeee324.OpenPutt
                 hitForceMultiplier = new AnimationCurve();
                 hitForceMultiplier.AddKey(0, 1);
                 hitForceMultiplier.AddKey(10, 2);
+            }
+
+            if (!Utilities.IsValid(loftSpeedFalloff) || loftSpeedFalloff.length == 0)
+            {
+                loftSpeedFalloff = new AnimationCurve();
+                loftSpeedFalloff.AddKey(0f, 1.0f);   // Full loft at normal/course speeds
+                loftSpeedFalloff.AddKey(30f, 0.7f);  // Flattening out as the swing gets fast
+                loftSpeedFalloff.AddKey(60f, 0.45f); // Hard range bombs launch much flatter
+                loftSpeedFalloff.SmoothTangents(0, 0.5f);
+                loftSpeedFalloff.SmoothTangents(1, 0.5f);
+                loftSpeedFalloff.SmoothTangents(2, 0.5f);
+                loftSpeedFalloff.preWrapMode = WrapMode.Clamp;
+                loftSpeedFalloff.postWrapMode = WrapMode.Clamp;
             }
         }
 
@@ -559,6 +575,11 @@ namespace dev.mikeee324.OpenPutt
             // a perfectly square strike and bleed speed / generate phantom side spin.
             var flatDirectionOfTravel = directionOfTravel.normalized.Sanitized();
 
+            // Dynamic loft: flatten the effective launch loft (and backspin further down) as clubhead
+            // speed rises so hard-hit lofted clubs don't fire straight up. Only engages on the driving
+            // range - normal courses clamp hit speed, where the curve stays at ~1.0 anyway.
+            var loftFalloff = currentCourseIsDrivingRange ? loftSpeedFalloff.Evaluate(velocityMagnitude) : 1f;
+
             if (hasGravity)
             {
                 // Apply loft
@@ -568,7 +589,7 @@ namespace dev.mikeee324.OpenPutt
 
                 // Launch below the club's actual loft - a real strike never sends the ball off at the
                 // full face angle, and doing so here fired lofted clubs (irons/wedges) almost straight up.
-                var loftRotation = Quaternion.AngleAxis(golfClub.ClubType.GetTypicalLoft() * loftLaunchAngleMultiplier, rotationAxis);
+                var loftRotation = Quaternion.AngleAxis(golfClub.ClubType.GetTypicalLoft() * loftLaunchAngleMultiplier * loftFalloff, rotationAxis);
                 directionOfTravel = loftRotation * directionOfTravel;
             }
 
@@ -653,7 +674,7 @@ namespace dev.mikeee324.OpenPutt
                         // Axis is chosen so the ball's Cross(velocity, spinAxis) Magnus force points "up".
                         var backspinAxis = Vector3.Cross(gravityUp, flatDirectionOfTravel).normalized;
                         var loftRadians = golfClub.ClubType.GetTypicalLoft() * Mathf.Deg2Rad;
-                        var backspinSpeed = Mathf.Sin(loftRadians) * velocityMagnitude * backspinMultiplier;
+                        var backspinSpeed = Mathf.Sin(loftRadians) * velocityMagnitude * backspinMultiplier * loftFalloff;
                         sideSpin += backspinAxis * backspinSpeed;
                     }
                 }

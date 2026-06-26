@@ -672,7 +672,7 @@ namespace dev.mikeee324.OpenPutt
             _SetEnabled(true);
 
             _UpdateBallState(this.LocalPlayerOwnsThisObject());
-            
+
             RequestSerialization();
         }
 
@@ -1017,23 +1017,54 @@ namespace dev.mikeee324.OpenPutt
 
             // Work out which direction we need to bounce off the wall
             var contact = collision.contacts[0];
-            if (!Utilities.IsValid(contact)) return;
+            if (!Utilities.IsValid(contact))
+                return;
 
-            var collisionNormal = contact.normal.Sanitized();
+            // Wall normal comes from contact.normal, averaged across the whole contact manifold. A single mesh
+            // triangle can report a bad face normal at an internal edge, but the manifold average points reliably
+            // away from the surface. (Deriving it from contact.point -> ball centre fails badly: for small balls
+            // the contact point isn't the closest point on the wall, so centre - contact points nowhere useful -
+            // see [BounceDbg] data where it landed ~111 degrees off the real wall normal.) contact.normal points
+            // from the wall back toward the ball - the outward wall normal we want.
+            var wallNormal = Vector3.zero;
+            for (var i = 0; i < collision.contactCount; i++)
+            {
+                var c = collision.contacts[i];
+                if (Utilities.IsValid(c))
+                    wallNormal += c.normal.Sanitized();
+            }
+            wallNormal = wallNormal.Sanitized();
+            if (wallNormal == Vector3.zero)
+                wallNormal = contact.normal.Sanitized();
 
-            // If we have gravity
+            Vector3 collisionNormal;
             if (gravityMagnitude > .01f)
             {
-                // Check if this is considered a wall in this gravity
-                var wallNormalDotRelativeToGravity = Vector3.Dot(collisionNormal, gravityDirection);
-
-                // A wall normal is near zero vs gravity. Allow a few degrees so leaning walls still get the custom bounce.
-                if (!wallNormalDotRelativeToGravity.IsNearZero(wallDetectionTolerance))
+                // Wall test: a wall's normal is horizontal (perpendicular to gravity). ~0 dot with gravity means a
+                // wall; ~±1 means floor/ceiling (e.g. a ramp edge), which we skip so a ball rolling up a ramp
+                // doesn't bounce back.
+                var normalVsGravity = Vector3.Dot(wallNormal, gravityDirection);
+                if (!normalVsGravity.IsNearZero(wallDetectionTolerance))
                     return;
+
+                // Keep only the horizontal part of the wall normal so the bounce stays in-plane.
+                var sideways = Vector3.ProjectOnPlane(wallNormal, gravityDirection);
+                if (sideways.sqrMagnitude < 1e-8f)
+                    return;
+                collisionNormal = sideways.normalized;
+            }
+            else
+            {
+                // No gravity - there's no "floor" to exclude, just bounce off the wall normal directly.
+                if (wallNormal.sqrMagnitude < 1e-6f)
+                    return;
+                collisionNormal = wallNormal;
             }
 
-            // Reject mesh-edge "ghost" hits: a sphere catching a ramp's leading edge reports a wall-like normal and bounces the ball back.
-            if (!IsGenuineContact(contact))
+            // Don't bounce a ball that's already travelling away from the wall - reflecting would shove it back in.
+            var ballVelForCheck = lastFrameVelocity == Vector3.zero ? ballRigidbody.velocity : lastFrameVelocity;
+            var velDotNormal = Vector3.Dot(ballVelForCheck, collisionNormal);
+            if (velDotNormal >= 0f)
                 return;
 
             // Maybe fix the ball getting stuck on walls
@@ -1086,23 +1117,6 @@ namespace dev.mikeee324.OpenPutt
             var sfx = SfxController;
             if (Utilities.IsValid(sfx))
                 sfx.PlayBallHitSoundAtPosition(CurrentPosition, ballRigidbody.velocity.magnitude / 10f);
-        }
-
-        /// <summary>
-        /// True for a real surface hit, not a mesh-edge "ghost". A real sphere contact normal points from
-        /// the contact back to the ball centre; a ghost edge reports a wall-like normal that doesn't line up.
-        /// </summary>
-        private bool IsGenuineContact(ContactPoint contact)
-        {
-            var toCentre = CurrentPosition - contact.point;
-
-            // Degenerate guard: contact point is basically at the ball centre. Relative to ball size (toCentre is
-            // ~the world radius) so it scales down with the ball instead of swallowing every contact on a tiny one.
-            var worldRadius = BallWorldRadius;
-            if (toCentre.sqrMagnitude < worldRadius * worldRadius * 0.01f)
-                return true;
-
-            return Vector3.Dot(toCentre.normalized, contact.normal.Sanitized()) > 0.5f;
         }
 
         private bool lastGrounded = false;
@@ -1258,7 +1272,7 @@ namespace dev.mikeee324.OpenPutt
         /// probe (and drag/roll maths) wrong whenever the ball is scaled - e.g. a 0.1x ball would probe with a
         /// sphere ~10x too big and treat nearby walls as ground, so it sticks instead of bouncing.
         /// </summary>
-        private float BallWorldRadius
+        public float BallWorldRadius
         {
             get
             {
@@ -1266,6 +1280,9 @@ namespace dev.mikeee324.OpenPutt
                 return ballCollider.radius * Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z));
             }
         }
+
+        /// <summary>World-space diameter of the ball, accounting for its current scale.</summary>
+        public float BallWorldDiameter => BallWorldRadius * 2f;
 
         /// <summary>
         /// Ball size relative to startup (1 at design scale, &lt;1 shrunk, &gt;1 grown). Used to keep gravity feel
