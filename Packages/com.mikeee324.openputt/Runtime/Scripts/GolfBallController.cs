@@ -411,6 +411,8 @@ namespace dev.mikeee324.OpenPutt
                 ballCollider = GetComponent<SphereCollider>();
             if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
+            if (!Utilities.IsValid(trail))
+                trail = GetComponent<TrailRenderer>();
 
             if (Utilities.IsValid(ballRigidbody))
             {
@@ -588,6 +590,7 @@ namespace dev.mikeee324.OpenPutt
             lastFramePosition = ballRigidbody.position;
 
             _UpdateRollingSound();
+            _UpdateTrailRendererWidth();
 
             // Tell PuttSync to sync position if it's attached
             var sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (Utilities.IsValid(startLine) && startLine.gameObject.activeSelf);
@@ -1341,6 +1344,15 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.angularVelocity = Vector3.zero;
             }
             ballRigidbody.WakeUp();
+        }
+
+        private void _UpdateTrailRendererWidth()
+        {
+            if (Utilities.IsValid(trail) && Utilities.IsValid(ballCollider))
+            {
+                trail.startWidth = BallWorldDiameter * 0.8f;
+                trail.endWidth = 0f;
+            }
         }
 
         /// Drives the looping rolling sound from ball speed; only audible while grounded and moving
