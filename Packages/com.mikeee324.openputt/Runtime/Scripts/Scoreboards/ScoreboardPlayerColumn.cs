@@ -131,7 +131,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
             var course = openPutt.courses[col - 1];
 
-            var courseIsDrivingRange = Utilities.IsValid(openPutt) && Utilities.IsValid(course) && course.drivingRangeMode;
+            var courseIsDrivingRange = Utilities.IsValid(openPutt) && Utilities.IsValid(course) && course.courseType == CourseType.DrivingRangeDistance;
 
             if (courseIsDrivingRange)
             {
@@ -243,7 +243,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                         var course = openPutt.courses[columnIndex - 1];
                         if (scoreboardManager.SpeedGolfMode)
                             SetText(TimeSpan.FromSeconds(course.parTime).ToString(@"m\:ss"));
-                        else if (course.drivingRangeMode)
+                        else if (course.courseType == CourseType.DrivingRangeDistance)
                             SetText($"{course.parScore}m");
                         else
                             SetText($"{course.parScore}");

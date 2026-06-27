@@ -526,7 +526,7 @@ namespace dev.mikeee324.OpenPutt
 
             var hasGravity = golfBall.gravityMagnitude > .01f;
             var currentCourse = playerManager.CurrentCourse;
-            var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.drivingRangeMode;
+            var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.courseType != CourseType.Standard;
 
             // Make sure the player isn't hitting with a club that isn't allowed on the course they're playing.
             // When not playing a course only the putter is allowed, unless the world enables any club off-course.

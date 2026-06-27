@@ -5,6 +5,13 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
+    public enum CourseType
+    {
+        Standard = 0,
+        DrivingRangeDistance = 1,
+        DrivingRangeWithTargets = 2
+    }
+
     /// <summary>
     /// Used to track exactly what state each course is in for a player
     /// </summary>
@@ -81,8 +88,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("The maximum amount of seconds a player can have on this hole (Default is 5 mins)")]
         public int maxTime = 300;
 
-        [Tooltip("The players score on this hole will be how far they hit the ball in meters from the start pad")]
-        public bool drivingRangeMode;
+        [Tooltip("What type of course this is")]
+        public CourseType courseType = CourseType.Standard;
 
         [Tooltip("Overrides the global replayable courses setting")]
         public bool courseIsAlwaysReplayable;
@@ -133,7 +140,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public bool _IsClubAllowed(GolfClubType clubType)
         {
-            if (drivingRangeMode)
+            if (courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets)
                 return true;
 
             if (allowedClubs == GolfClubTypeMask.None)
@@ -162,7 +169,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public bool _HasClubChoice()
         {
-            if (drivingRangeMode)
+            if (courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets)
                 return true;
 
             // True only when two or more bits are set

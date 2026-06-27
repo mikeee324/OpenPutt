@@ -349,8 +349,10 @@ namespace dev.mikeee324.OpenPutt
                 case CourseState.Skipped:
                 case CourseState.NotStarted:
                     courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
-                    if (!CurrentCourse.drivingRangeMode)
+                    if (CurrentCourse.courseType == CourseType.Standard)
                         courseScores[CurrentCourse.holeNumber] = 1;
+                    else if (CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
+                        courseScores[CurrentCourse.holeNumber] = 0;
                     courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
 
                     hitsOnCurrentCourse += 1;
@@ -360,7 +362,7 @@ namespace dev.mikeee324.OpenPutt
                     if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || CurrentCourse.courseIsAlwaysReplayable))
                     {
                         courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
-                        if (!CurrentCourse.drivingRangeMode)
+                        if (CurrentCourse.courseType == CourseType.Standard)
                             courseScores[CurrentCourse.holeNumber] = 1;
                         courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
                     }
@@ -373,7 +375,7 @@ namespace dev.mikeee324.OpenPutt
 
                     break;
                 case CourseState.Playing:
-                    if (!CurrentCourse.drivingRangeMode)
+                    if (CurrentCourse.courseType == CourseType.Standard)
                     {
                         courseScores[CurrentCourse.holeNumber] += 1;
 
@@ -482,7 +484,7 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(hole))
                 courseScores[course.holeNumber] += hole.holeScoreAddition;
 
-            if (course.drivingRangeMode)
+            if (course.courseType == CourseType.DrivingRangeDistance)
             {
                 golfBall._GetLastHitData(out var maxDistance, out var totalDistance);
                 // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
@@ -628,7 +630,7 @@ namespace dev.mikeee324.OpenPutt
                 var maxTimeOffCourse = ballOffCourseRespawnTime;
 
                 // Live driving range updates (kinda)
-                if (CurrentCourse.drivingRangeMode)
+                if (CurrentCourse.courseType == CourseType.DrivingRangeDistance)
                 {
                     if (golfBall.BallIsMoving)
                     {
@@ -843,7 +845,7 @@ namespace dev.mikeee324.OpenPutt
                 for (var i = 0; i < courseScores.Length; i++)
                 {
                     // We don't count driving range scores
-                    if (Utilities.IsValid(openPutt.courses[i]) && openPutt.courses[i].drivingRangeMode)
+                    if (Utilities.IsValid(openPutt.courses[i]) && openPutt.courses[i].courseType == CourseType.DrivingRangeDistance)
                         continue;
 
                     UpdateCourseState(openPutt.courses[i]);
@@ -904,7 +906,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             // Driving ranges don't do much
-            if (course.drivingRangeMode)
+            if (course.courseType == CourseType.DrivingRangeDistance)
             {
                 courseStates[course.holeNumber] = CourseState.NotStarted;
                 return;

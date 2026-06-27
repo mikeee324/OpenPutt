@@ -134,7 +134,7 @@ namespace dev.mikeee324.OpenPutt
                 var score = 0;
                 foreach (var course in courses)
                 {
-                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.courseType == CourseType.DrivingRangeDistance)
                         continue;
                     score += course.maxScore;
                 }
@@ -153,7 +153,7 @@ namespace dev.mikeee324.OpenPutt
                 var score = 0;
                 foreach (var course in courses)
                 {
-                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.courseType == CourseType.DrivingRangeDistance)
                         continue;
                     score += course.maxTime;
                 }
@@ -172,7 +172,7 @@ namespace dev.mikeee324.OpenPutt
                 var score = 0;
                 foreach (var course in courses)
                 {
-                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.courseType == CourseType.DrivingRangeDistance)
                         continue;
                     score += course.parScore;
                 }
@@ -188,7 +188,7 @@ namespace dev.mikeee324.OpenPutt
                 var score = 0;
                 foreach (var course in courses)
                 {
-                    if (!Utilities.IsValid(course) || course.drivingRangeMode)
+                    if (!Utilities.IsValid(course) || course.courseType == CourseType.DrivingRangeDistance)
                         continue;
                     score += course.parTime;
                 }

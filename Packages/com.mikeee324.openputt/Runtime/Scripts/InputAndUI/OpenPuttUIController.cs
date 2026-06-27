@@ -177,7 +177,7 @@ namespace dev.mikeee324.OpenPutt
                 activeUI.portableMenuButton.SetActive(false);
         }
 
-        private void UpdateDisplay()
+        public void UpdateDisplay()
         {
             if (!Utilities.IsValid(activeUI)) return;
             if (!Utilities.IsValid(localPlayerManager)) return;
@@ -194,7 +194,7 @@ namespace dev.mikeee324.OpenPutt
                         activeUI.courseName.text = $"{course.scoreboardLongName} ({holeNum + 1})";
                     else if (Utilities.IsValid(course.scoreboardShortName) && course.scoreboardShortName.Length > 0)
                         activeUI.courseName.text = $"{course.scoreboardShortName} ({holeNum + 1})";
-                    else if (course.drivingRangeMode)
+                    else if (course.courseType == CourseType.DrivingRangeDistance || course.courseType == CourseType.DrivingRangeWithTargets)
                         activeUI.courseName.text = $"Driving Range {holeNum + 1}";
                     else
                         activeUI.courseName.text = $"Hole {holeNum + 1}";
@@ -204,27 +204,41 @@ namespace dev.mikeee324.OpenPutt
                     activeUI.courseName.text = "All courses completed";
                 }
 
-                if (currentCourse.drivingRangeMode)
+                switch (currentCourse.courseType)
                 {
-                    float maxDist = 0f;
-                    if (Utilities.IsValid(localPlayerManager.golfBall))
-                    {
-                        localPlayerManager.golfBall._GetLastHitData(out maxDist, out var totalDist);
-                        maxDist = Mathf.FloorToInt(maxDist);
-                    }
-                    int currentPar = currentCourse.parScore;
-                    activeUI.parScore.text = $"Par {currentPar}m";
-                    activeUI.relativeScore.text = $"{maxDist:F0}m";
-                    activeUI.totalScore.text = $"{maxDist:F0}m / {currentPar}m\nDistance";
-                }
-                else
-                {
-                    int currentHoleScore = localPlayerManager.courseScores[currentCourse.holeNumber];
-                    int currentPar = currentCourse.parScore;
-                    int currentRelative = currentHoleScore - currentPar;
-                    activeUI.parScore.text = $"Par {currentPar}";
-                    activeUI.relativeScore.text = (currentRelative >= 0 ? "+" : "") + currentRelative.ToString();
-                    activeUI.totalScore.text = $"{currentHoleScore} / {currentPar}\nShots";
+                    case CourseType.Standard:
+                        {
+                            int currentHoleScore = localPlayerManager.courseScores[currentCourse.holeNumber];
+                            int currentPar = currentCourse.parScore;
+                            int currentRelative = currentHoleScore - currentPar;
+                            activeUI.parScore.text = $"Par {currentPar}";
+                            activeUI.relativeScore.text = (currentRelative >= 0 ? "+" : "") + currentRelative.ToString();
+                            activeUI.totalScore.text = $"{currentHoleScore} / {currentPar}\nShots";
+                            break;
+                        }
+                    case CourseType.DrivingRangeDistance:
+                        {
+                            float maxDist = 0f;
+                            if (Utilities.IsValid(localPlayerManager.golfBall))
+                            {
+                                localPlayerManager.golfBall._GetLastHitData(out maxDist, out var totalDist);
+                                maxDist = Mathf.FloorToInt(maxDist);
+                            }
+                            int currentPar = currentCourse.parScore;
+                            activeUI.parScore.text = $"Par {currentPar}m";
+                            activeUI.relativeScore.text = $"{maxDist:F0}m";
+                            activeUI.totalScore.text = $"{maxDist:F0}m / {currentPar}m\nDistance";
+                            break;
+                        }
+                    case CourseType.DrivingRangeWithTargets:
+                        {
+                            int currentHoleScore = localPlayerManager.courseScores[currentCourse.holeNumber];
+                            int currentPar = currentCourse.parScore;
+                            activeUI.parScore.text = $"";
+                            activeUI.relativeScore.text = currentHoleScore.ToString();
+                            activeUI.totalScore.text = $"Hit The Targets";
+                            break;
+                        }
                 }
             }
             else
@@ -303,7 +317,7 @@ namespace dev.mikeee324.OpenPutt
                 UpdateDisplay();
 
                 // Start monitoring ball distance for driving range
-                if (!isMonitoringBallDistance && Utilities.IsValid(localPlayerManager) && Utilities.IsValid(localPlayerManager.CurrentCourse) && localPlayerManager.CurrentCourse.drivingRangeMode)
+                if (!isMonitoringBallDistance && Utilities.IsValid(localPlayerManager) && Utilities.IsValid(localPlayerManager.CurrentCourse) && localPlayerManager.CurrentCourse.courseType == CourseType.DrivingRangeDistance)
                 {
                     isMonitoringBallDistance = true;
                     MonitorBallDistance();

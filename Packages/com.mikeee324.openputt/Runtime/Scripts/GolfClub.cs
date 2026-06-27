@@ -76,8 +76,7 @@ namespace dev.mikeee324.OpenPutt
         public MeshRenderer currentHeadMesh;
         public MeshRenderer headHolderMesh;
         public Transform headContainer;
-        public MeshRenderer[] lhHeadMeshes;
-        public MeshRenderer[] rhHeadMeshes;
+        public MeshRenderer[] headMeshes;
         public BoxCollider headBoxCollider;
         public GameObject shaftEndPosition;
         public VRCPickup pickup;
@@ -179,8 +178,6 @@ namespace dev.mikeee324.OpenPutt
                 if (ClubIsArmed && value != _clubType)
                     return;
 
-                var headMeshes = playerManager.IsInLeftHandedMode ? lhHeadMeshes : rhHeadMeshes;
-
                 if ((int)value < 0)
                     value = (GolfClubType)(headMeshes.Length - 1);
                 else if ((int)value >= headMeshes.Length)
@@ -193,6 +190,11 @@ namespace dev.mikeee324.OpenPutt
                 currentHeadMesh = headMeshes[(int)value];
 
                 currentHeadMesh.gameObject.SetActive(true);
+
+                // Left-handed clubs reuse the right-handed head meshes, mirrored on the X axis
+                var headScale = currentHeadMesh.transform.localScale;
+                headScale.x = Mathf.Abs(headScale.x) * (playerManager.IsInLeftHandedMode ? -1f : 1f);
+                currentHeadMesh.transform.localScale = headScale;
 
                 if (Utilities.IsValid(headHolderMesh))
                 {

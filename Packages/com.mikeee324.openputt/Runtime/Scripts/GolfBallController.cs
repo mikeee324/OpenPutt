@@ -186,7 +186,7 @@ namespace dev.mikeee324.OpenPutt
                         speedDataLogging = new float[0];
                     }
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.drivingRangeMode)
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType != CourseType.Standard)
                     {
                         var course = playerManager.CurrentCourse;
 
@@ -695,7 +695,7 @@ namespace dev.mikeee324.OpenPutt
             // Player did not drop ball on a start pad and are currently playing a course
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.CurrentCourse))
             {
-                if (playerManager.CurrentCourse.drivingRangeMode)
+                if (playerManager.CurrentCourse.courseType != CourseType.Standard)
                 {
                     if (DebugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");

@@ -35,7 +35,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(bottomText))
             {
-                if (courseManager.parScore > 0 && !courseManager.drivingRangeMode)
+                if (courseManager.parScore > 0 && courseManager.courseType == CourseType.Standard)
                 {
                     bottomText.text = $"<size=60%>Par</size>\r\n{courseManager.parScore}";
                 }
