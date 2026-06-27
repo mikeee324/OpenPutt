@@ -62,8 +62,6 @@ namespace dev.mikeee324.OpenPutt
         [Range(0f, 1f), Tooltip("Caps spin (Magnus) force to this fraction of ball weight - stops backspin shots looping. 1 = matches gravity (max float), lower = less float/curve")]
         public float maxLiftGravityFraction = 0.85f;
 
-        // [Tooltip("Which layers can start the ball moving when they collide with the ball? (For spinny things etc)")]
-        //public LayerMask allowNonClubCollisionsFrom = 0;
         [Range(0, .5f), Tooltip("Default RigidBody drag (scripts can override for sand pits etc)")]
         public float defaultBallDrag = .055f;
 
@@ -169,21 +167,20 @@ namespace dev.mikeee324.OpenPutt
 
                 if (!ballWasMoving && _ballMoving)
                 {
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.eventHandler))
-                        playerManager.openPutt.eventHandler.OnPlayerBallStartedMoving(playerManager.Owner);
+                    var handler = EventHandler;
+                    if (Utilities.IsValid(handler))
+                        handler.OnPlayerBallStartedMoving(playerManager.Owner);
                 }
 
                 if (ballWasMoving && !_ballMoving)
                 {
                     _StopRollingSound();
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
-                    {
-                        if (Utilities.IsValid(playerManager.openPutt.eventHandler))
-                            playerManager.openPutt.eventHandler.OnPlayerBallStopped(playerManager.Owner);
-                    }
+                    var handler = EventHandler;
+                    if (Utilities.IsValid(handler))
+                        handler.OnPlayerBallStopped(playerManager.Owner);
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                    if (DebugMode)
                     {
                         // Reset the per-hit speed log
                         speedDataLogging = new float[0];
@@ -379,6 +376,15 @@ namespace dev.mikeee324.OpenPutt
                 ? playerManager.openPutt.sfxController
                 : null;
 
+        /// True only when the playerManager/openPutt chain is wired up and debug mode is on
+        private bool DebugMode => Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode;
+
+        /// Event handler, or null when the playerManager/openPutt/eventHandler chain isn't fully wired yet
+        private OpenPuttEventHandler EventHandler =>
+            Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.eventHandler)
+                ? playerManager.openPutt.eventHandler
+                : null;
+
         #endregion
 
         void Start()
@@ -386,8 +392,7 @@ namespace dev.mikeee324.OpenPutt
             gravityMagnitude = Physics.gravity.magnitude;
             defaultGravityMagnitude = Physics.gravity.magnitude;
 
-            // Initialise gravity direction from Physics.gravity so runtime gravity changes
-            // are reflected unless a force zone overrides the ball's gravity.
+            // Init gravity direction from Physics.gravity (a force zone can override it later)
             gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
 
             pickedUpByPlayer = false;
@@ -448,8 +453,7 @@ namespace dev.mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
-            // Ensure gravityDirection is normalized each physics step so external
-            // assignments (force zones, runtime changes) don't break calculations.
+            // Re-normalize each step in case a force zone or runtime change set a non-unit vector
             gravityDirection = gravityDirection.sqrMagnitude > 0f ? gravityDirection.normalized : Vector3.down;
 
             if (pickedUpByPlayer)
@@ -467,7 +471,7 @@ namespace dev.mikeee324.OpenPutt
             if (BallIsMoving)
             {
                 // If in debug mode, log current speed for this frame
-                if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                if (DebugMode)
                     speedDataLogging = speedDataLogging.Add(ballRigidbody.velocity.magnitude);
 
                 // If the rigidbody fell asleep, reapply last frame's velocity to wake it
@@ -518,7 +522,7 @@ namespace dev.mikeee324.OpenPutt
                             {
                                 BallIsMoving = false;
 
-                                if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                                if (DebugMode)
                                     OpenPuttUtils.Log(this, "Ball is on a slope and appears to be stuck here - allow player to hit it again");
                             }
                             else
@@ -528,7 +532,7 @@ namespace dev.mikeee324.OpenPutt
                                 // Don't stop the ball from moving (people hate it stopping on slopes)
                                 BallIsMoving = true;
 
-                                if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                                if (DebugMode)
                                     OpenPuttUtils.Log(this, $"Ball would have stopped but it is on a slope - keep moving until we reach a flat surface. (FloorNormal.Dot={floorDotRelativeToGravity})");
                             }
                         }
@@ -603,11 +607,7 @@ namespace dev.mikeee324.OpenPutt
 
             _SetPosition(position.transform.position);
 
-            if (!ballRigidbody.isKinematic)
-            {
-                ballRigidbody.velocity = Vector3.zero;
-                ballRigidbody.angularVelocity = Vector3.zero;
-            }
+            StopBallVelocity();
 
             _SetRespawnPosition(position.transform.position);
 
@@ -631,11 +631,7 @@ namespace dev.mikeee324.OpenPutt
             ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
             shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
 
-            if (!ballRigidbody.isKinematic)
-            {
-                ballRigidbody.velocity = Vector3.zero;
-                ballRigidbody.angularVelocity = Vector3.zero;
-            }
+            StopBallVelocity();
 
             lastFramePosition = CurrentPosition;
             lastFrameVelocity = Vector3.zero;
@@ -689,7 +685,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (startLine.StartDropAnimation(CurrentPosition))
             {
-                if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                if (DebugMode)
                     OpenPuttUtils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
                 ballHeldInHand = Utilities.IsValid(pickup) ? pickup.currentHand : VRC_Pickup.PickupHand.None;
                 shoulderBallHeldInHand = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.heldInHand : VRC_Pickup.PickupHand.None;
@@ -701,13 +697,13 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (playerManager.CurrentCourse.drivingRangeMode)
                 {
-                    if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                    if (DebugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                     playerManager._OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                 }
                 else if (HasRespawnPosition)
                 {
-                    if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+                    if (DebugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
 
                     BallIsMoving = false;
@@ -796,9 +792,8 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptPickup()
         {
-            // If the ball is currently moving while playing a course, don't grab/freeze it. Instead just draw a
-            // line from the shoulder pickup to the ball so the player can see where it went without interfering
-            // with the shot. Off a course there's no shot to protect, so fall through and grab it normally.
+            // While moving on a course, don't grab/freeze the ball - just draw a line to it so the shot isn't
+            // disturbed. Off a course there's no shot to protect, so grab it normally.
             if (BallIsMoving && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse))
             {
                 var ballShoulderPickup = shoulderPickup;
@@ -831,8 +826,8 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(ballShoulderPickup))
                     ballShoulderPickup.tempDisableAttachment = false;
 
-                // The start line controller hides itself once it sees the ball is no longer held/tracked, so we
-                // don't force it off here - that way it stays up if the ball is also being held directly.
+                // The start line hides itself once the ball is no longer held/tracked, so we don't force it off
+                // here (keeps it up if the ball is still held directly).
                 return;
             }
 
@@ -859,7 +854,7 @@ namespace dev.mikeee324.OpenPutt
         public void _SetRespawnPosition(Vector3 pos)
         {
             respawnWorldPosition = pos;
-            if (Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode)
+            if (DebugMode)
                 OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnWorldPosition}");
         }
 
@@ -1016,12 +1011,9 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(contact))
                 return;
 
-            // Wall normal comes from contact.normal, averaged across the whole contact manifold. A single mesh
-            // triangle can report a bad face normal at an internal edge, but the manifold average points reliably
-            // away from the surface. (Deriving it from contact.point -> ball centre fails badly: for small balls
-            // the contact point isn't the closest point on the wall, so centre - contact points nowhere useful -
-            // see [BounceDbg] data where it landed ~111 degrees off the real wall normal.) contact.normal points
-            // from the wall back toward the ball - the outward wall normal we want.
+            // Average contact.normal across the manifold for a stable outward wall normal: a single triangle can
+            // report a bad edge normal, and deriving it from contact.point -> centre fails for small balls (the
+            // contact point isn't the closest point on the wall).
             var wallNormal = Vector3.zero;
             for (var i = 0; i < collision.contactCount; i++)
             {
@@ -1227,10 +1219,8 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Lightweight ground snap (0.9-style): Unity physics stays in charge and this only redirects the
-        /// ball's velocity to follow a downhill slope so it doesn't launch off mesh-edge ghosts. Skips steep
-        /// faces and crests (slope flattening out) so ramps still throw the ball naturally. Never adds speed
-        /// and never pushes the ball up - it only corrects a velocity that would otherwise lift off.
+        /// Redirects velocity to follow a downhill slope so the ball doesn't launch off mesh-edge ghosts.
+        /// Skips steep faces and crests so ramps still throw it; never adds speed or pushes the ball up.
         /// </summary>
         private void HandleGroundSnapping(bool isGrounded, RaycastHit groundingHit, float prevGroundUpDot)
         {
@@ -1263,10 +1253,8 @@ namespace dev.mikeee324.OpenPutt
         #region Physics Helpers
 
         /// <summary>
-        /// World-space radius of the ball. SphereCollider.radius is in local space; Unity scales the actual
-        /// physics collider by the largest lossyScale component. Using the raw local radius makes the ground
-        /// probe (and drag/roll maths) wrong whenever the ball is scaled - e.g. a 0.1x ball would probe with a
-        /// sphere ~10x too big and treat nearby walls as ground, so it sticks instead of bouncing.
+        /// World-space radius (local radius x largest lossyScale axis). Using the raw local radius breaks the
+        /// ground probe and drag/roll maths whenever the ball is scaled.
         /// </summary>
         public float BallWorldRadius
         {
@@ -1281,11 +1269,8 @@ namespace dev.mikeee324.OpenPutt
         public float BallWorldDiameter => BallWorldRadius * 2f;
 
         /// <summary>
-        /// Ball size relative to full scale (1 at full scale, &lt;1 shrunk, &gt;1 grown). The collider's local radius
-        /// IS the full-scale world size by definition (at lossyScale 1, world radius == local radius), so dividing
-        /// the world radius by it yields the transform scale factor - and lossyScale folds in both design-time and
-        /// runtime scaling, so a course that ships the ball at half size still gets correctly compensated. Used to
-        /// keep gravity feel and collision margins proportional so a scaled ball bounces off walls instead of sticking.
+        /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown): worldRadius / localRadius.
+        /// Keeps gravity feel and collision margins proportional so a scaled ball bounces instead of sticking.
         /// </summary>
         private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
 
@@ -1296,15 +1281,13 @@ namespace dev.mikeee324.OpenPutt
             var castRadius = radius * 0.9f;
             var castBackup = radius;
             var origin = position - gravityDirection * castBackup;
-            // Buffer scales with the ball so a shrunk ball doesn't probe several radii past its own surface and
-            // latch onto a nearby wall as "ground"
+            // Buffer scales with the ball so a shrunk ball doesn't probe past its surface onto a nearby wall
             var distance = castBackup + (radius - castRadius) + groundRaycastDistance * BallScaleRatio;
             if (!Physics.SphereCast(origin, castRadius, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
                 return false;
 
-            // Reject wall-like hits: the downward probe can catch a wall (or a floor/wall seam) and report a
-            // near-horizontal normal as ground. Treating a wall as ground sticks the ball to it instead of
-            // bouncing - so a wall normal means "not grounded" here and PhysX/ReflectCollision handle the bounce.
+            // Reject wall-like hits: a downward probe can catch a wall/seam and report a near-horizontal normal
+            // as ground, which sticks the ball. Treat it as "not grounded" and let ReflectCollision bounce it.
             if (gravityMagnitude > .01f && Vector3.Dot(hit.normal.Sanitized(), -gravityDirection).IsNearZero(wallDetectionTolerance))
                 return false;
 
@@ -1334,12 +1317,16 @@ namespace dev.mikeee324.OpenPutt
         /// Zero the ball's velocity but keep it awake, so it holds position without going kinematic
         private void FreezeBall()
         {
-            if (!ballRigidbody.isKinematic)
-            {
-                ballRigidbody.velocity = Vector3.zero;
-                ballRigidbody.angularVelocity = Vector3.zero;
-            }
+            StopBallVelocity();
             ballRigidbody.WakeUp();
+        }
+
+        /// Zero the ball's linear/angular velocity if it's currently dynamic (no-op while kinematic)
+        private void StopBallVelocity()
+        {
+            if (ballRigidbody.isKinematic) return;
+            ballRigidbody.velocity = Vector3.zero;
+            ballRigidbody.angularVelocity = Vector3.zero;
         }
 
         private void _UpdateTrailRendererWidth()
@@ -1440,12 +1427,9 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Apply an external push (e.g. a force-zone fan/conveyor) to the ball. Routed through here
-        /// instead of a direct ballRigidbody.AddForce so it still works while the ground-snap is driving
-        /// grounded rolling - the ground-snap overwrites the rigidbody velocity each frame, so a raw
-        /// AddForce on a grounded ball would be discarded. We accumulate it and apply it once per
-        /// FixedUpdate: folded into the ground-snap's velocity when it's driving, or handed to PhysX when
-        /// it isn't. Mirrors Rigidbody.AddForce's ForceMode handling for Force / Acceleration.
+        /// Apply an external push (force-zone fan/conveyor). Accumulated and applied once per FixedUpdate rather
+        /// than a direct AddForce, since the ground-snap overwrites rigidbody velocity each frame and would
+        /// discard a raw AddForce on a grounded ball. Mirrors AddForce's Force / Acceleration handling.
         /// </summary>
         public void _AddExternalForce(Vector3 force, ForceMode mode)
         {
@@ -1467,9 +1451,8 @@ namespace dev.mikeee324.OpenPutt
                     ballCollider.enabled = true;
                     ballCollider.isTrigger = false;
 
-                    // Grow the collision skin as the ball shrinks so a small fast ball generates a wall contact
-                    // before it penetrates - otherwise it buries into the wall and sticks instead of bouncing.
-                    // (Divisor clamped so it stays in [0.0005, 0.01] and is unchanged at/above design scale.)
+                    // Grow the collision skin as the ball shrinks so a small fast ball registers a wall contact
+                    // before it penetrates and sticks. (Divisor clamped to [0.0005, 0.01], unchanged at design scale.)
                     ballCollider.contactOffset = 0.0005f / Mathf.Clamp(BallScaleRatio, 0.05f, 1f);
                 }
 
@@ -1507,9 +1490,6 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = newPickupState;
-
-                if (Utilities.IsValid(ballCollider))
-                    ballCollider.enabled = true;
             }
             else
             {
@@ -1535,9 +1515,6 @@ namespace dev.mikeee324.OpenPutt
                 // Stop other players from picking this ball up
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = false;
-
-                if (Utilities.IsValid(ballCollider))
-                    ballCollider.enabled = false;
 
                 startLine.SetEnabled(false);
             }
