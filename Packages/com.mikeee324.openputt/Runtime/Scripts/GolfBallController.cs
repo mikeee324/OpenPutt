@@ -347,9 +347,6 @@ namespace dev.mikeee324.OpenPutt
         private bool resetBallTimers = true;
         private float defaultGravityMagnitude = 9.87f;
 
-        /// World radius captured at startup; the reference size for scale-relative tuning (gravity, contact skin, ground probe buffer)
-        private float defaultBallWorldRadius = 0f;
-
         /// Logs ball speed after a hit for debugging
         private float[] speedDataLogging = new float[0];
 
@@ -422,10 +419,6 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
             }
-
-            // Reference size for scale-relative tuning. Captured here so the ball behaves exactly as before at
-            // its design scale (ratio 1) and only deviates when it's scaled up/down from this.
-            defaultBallWorldRadius = BallWorldRadius;
 
             DefaultBallMaxSpeed = maxBallSpeed;
 
@@ -1288,10 +1281,13 @@ namespace dev.mikeee324.OpenPutt
         public float BallWorldDiameter => BallWorldRadius * 2f;
 
         /// <summary>
-        /// Ball size relative to startup (1 at design scale, &lt;1 shrunk, &gt;1 grown). Used to keep gravity feel
-        /// and collision margins proportional so a scaled ball still bounces off walls instead of sticking to them.
+        /// Ball size relative to full scale (1 at full scale, &lt;1 shrunk, &gt;1 grown). The collider's local radius
+        /// IS the full-scale world size by definition (at lossyScale 1, world radius == local radius), so dividing
+        /// the world radius by it yields the transform scale factor - and lossyScale folds in both design-time and
+        /// runtime scaling, so a course that ships the ball at half size still gets correctly compensated. Used to
+        /// keep gravity feel and collision margins proportional so a scaled ball bounces off walls instead of sticking.
         /// </summary>
-        private float BallScaleRatio => defaultBallWorldRadius > 0.0001f ? BallWorldRadius / defaultBallWorldRadius : 1f;
+        private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
 
         /// Spherecast straight down (along gravity) from just above the ball - sphere probes don't thread collider seams
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
