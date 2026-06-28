@@ -111,11 +111,11 @@ namespace dev.mikeee324.OpenPutt
             if (!gameObject.activeSelf) return false;
 
             var hasBallStartPad = Utilities.IsValid(closestBallStart);
-            var isPlayingACourse = false;
-            if (Utilities.IsValid(PlayerManager) && Utilities.IsValid(PlayerManager.CurrentCourse))
-                isPlayingACourse = PlayerManager.courseStates[PlayerManager.CurrentCourse.holeNumber] == CourseState.Playing;
+            var isPlayingStandardCourse = false;
+            if (Utilities.IsValid(PlayerManager) && Utilities.IsValid(PlayerManager.CurrentCourse) && PlayerManager.CurrentCourse.courseType == CourseType.Standard)
+                isPlayingStandardCourse = PlayerManager.courseStates[PlayerManager.CurrentCourse.holeNumber] == CourseState.Playing;
 
-            if (!hasBallStartPad && !isPlayingACourse)
+            if (!hasBallStartPad && !isPlayingStandardCourse)
                 return false;
 
             lerpStartPosition = ballWorldPosition;
@@ -246,70 +246,54 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(PlayerManager))
             {
-                if (Utilities.IsValid(closestBallStart))
-                {
-                    // We have a ball spawn nearby - draw a line to it
-                    lineRenderer.SetPosition(0, golfBall.transform.position);
-                    lineRenderer.SetPosition(1, closestBallStart.transform.position);
-                }
-                else
-                {
-                    // Can't see a ball spawn nearby - hide line renderer
-                    lineRenderer.SetPosition(0, Vector3.zero);
-                    lineRenderer.SetPosition(1, Vector3.zero);
-                }
+                lineRenderer.SetPosition(0, Utilities.IsValid(closestBallStart) ? golfBall.transform.position : Vector3.zero);
+                lineRenderer.SetPosition(1, Utilities.IsValid(closestBallStart) ? closestBallStart.transform.position : Vector3.zero);
+                return;
             }
 
             var ballShoulderPickup = PlayerManager.IsInLeftHandedMode ? PlayerManager.openPutt.rightShoulderPickup : PlayerManager.openPutt.leftShoulderPickup;
+            var onStandardCourse = Utilities.IsValid(PlayerManager.CurrentCourse) && PlayerManager.CurrentCourse.courseType == CourseType.Standard;
 
-            if (Utilities.IsValid(closestBallStart))
+            var slingshotArmed = !onStandardCourse &&
+                                 Utilities.IsValid(ballShoulderPickup) &&
+                                 ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None &&
+                                 ballShoulderPickup.tempDisableAttachment;
+
+            var lineStart = Utilities.IsValid(ballShoulderPickup) ? ballShoulderPickup.transform.position : Vector3.zero;
+            if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None && OpenPuttUtils.LocalPlayerIsValid())
             {
-                // We have a ball spawn nearby - draw a line to it
-                lineRenderer.SetPosition(0, golfBall.transform.position);
-                lineRenderer.SetPosition(1, closestBallStart.transform.position);
-            }
-            else if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None && (golfBall.trackingMovingBall || ballShoulderPickup.tempDisableAttachment))
-            {
-                // Draw the line from where the player is holding the shoulder pickup (start) out to the
-                // ball (end). We work this out from live tracking data rather than the pickup transform -
-                // while the ball is being tracked the pickup's attachment is disabled, so its transform
-                // stops following the player.
-                var lineStart = ballShoulderPickup.transform.position;
-                if (OpenPuttUtils.LocalPlayerIsValid())
+                var localPlayer = Networking.LocalPlayer;
+                if (localPlayer.IsUserInVR())
                 {
-                    var localPlayer = Networking.LocalPlayer;
-                    if (localPlayer.IsUserInVR())
-                    {
-                        // VR: anchor to the hand that grabbed the pickup
-                        var heldHand = ballShoulderPickup.heldInHand == VRC_Pickup.PickupHand.Left
-                            ? VRCPlayerApi.TrackingDataType.LeftHand
-                            : VRCPlayerApi.TrackingDataType.RightHand;
-                        lineStart = localPlayer.GetTrackingData(heldHand).position;
-                    }
-                    else
-                    {
-                        // Desktop: there are no tracked hands, so anchor where the held item floats in front of the head
-                        var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                        lineStart = head.position + head.rotation * ballShoulderPickup.GetScaledDesktopHeadOffset();
-                    }
+                    var heldHand = ballShoulderPickup.heldInHand == VRC_Pickup.PickupHand.Left
+                        ? VRCPlayerApi.TrackingDataType.LeftHand
+                        : VRCPlayerApi.TrackingDataType.RightHand;
+                    lineStart = localPlayer.GetTrackingData(heldHand).position;
                 }
+                else
+                {
+                    var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                    lineStart = head.position + head.rotation * ballShoulderPickup.GetScaledDesktopHeadOffset();
+                }
+            }
 
+            if (slingshotArmed)
+            {
                 lineRenderer.SetPosition(0, lineStart);
                 lineRenderer.SetPosition(1, golfBall.CurrentPosition);
             }
-            else if (Utilities.IsValid(PlayerManager.CurrentCourse))
+            else if (Utilities.IsValid(closestBallStart))
             {
-                var currentCourse = PlayerManager.CurrentCourse;
-
-                var currentState = PlayerManager.courseStates[currentCourse.holeNumber];
-                if (currentState != CourseState.Playing) return;
-
-                lineRenderer.SetPosition(0, golfBall.CurrentPosition);
-                lineRenderer.SetPosition(1, golfBall.respawnWorldPosition);
+                lineRenderer.SetPosition(0, golfBall.transform.position);
+                lineRenderer.SetPosition(1, closestBallStart.transform.position);
+            }
+            else if (onStandardCourse && Utilities.IsValid(ballShoulderPickup) && PlayerManager.courseStates[PlayerManager.CurrentCourse.holeNumber] == CourseState.Playing)
+            {
+                lineRenderer.SetPosition(0, lineStart);
+                lineRenderer.SetPosition(1, golfBall.CurrentPosition);
             }
             else
             {
-                // Can't see a ball spawn nearby - hide line renderer
                 lineRenderer.SetPosition(0, Vector3.zero);
                 lineRenderer.SetPosition(1, Vector3.zero);
             }

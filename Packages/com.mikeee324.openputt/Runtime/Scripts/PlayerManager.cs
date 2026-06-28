@@ -351,8 +351,6 @@ namespace dev.mikeee324.OpenPutt
                     courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                     if (CurrentCourse.courseType == CourseType.Standard)
                         courseScores[CurrentCourse.holeNumber] = 1;
-                    else if (CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
-                        courseScores[CurrentCourse.holeNumber] = 0;
                     courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
 
                     hitsOnCurrentCourse += 1;
@@ -422,6 +420,70 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
                 openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
+        }
+
+        /// <summary>
+        /// Adds points to a course score from an external source (e.g. a driving range target) and then
+        /// refreshes the scoreboards / syncs to other players the same way a normal ball hit does.<br/>
+        /// Should only be called for the local player - callers are expected to gate on ball ownership.
+        /// </summary>
+        /// <param name="course">The course to add the score to</param>
+        /// <param name="amount">How many points to add</param>
+        public void _AddToCourseScore(CourseManager course, int amount)
+        {
+            if (!Utilities.IsValid(course) || !Utilities.IsValid(openPutt))
+                return;
+
+            if (courseStates.Length != openPutt.courses.Length)
+                return;
+
+            var holeNumber = course.holeNumber;
+            if (holeNumber < 0 || holeNumber >= courseScores.Length)
+                return;
+
+            // The player might not have stepped on a starting pad - make sure this is their current
+            // course before scoring. Otherwise _UpdateTotals (via UpdateCourseState) will reset/skip
+            // the score we're about to add because it isn't the CurrentCourse.
+            if (CurrentCourse != course)
+            {
+                _OnCourseStarted(course);
+
+                // _OnCourseStarted refuses to (re)start completed/skipped courses when replaying is
+                // disabled - bail out if it didn't take
+                if (CurrentCourse != course)
+                    return;
+            }
+
+            // First contact with the course - transition it to Playing and stamp the start time
+            // (mirrors the NotStarted/Skipped case in _OnBallHit)
+            if (courseStates[holeNumber] == CourseState.NotStarted || courseStates[holeNumber] == CourseState.Skipped)
+            {
+                courseStates[holeNumber] = CourseState.Playing;
+                courseScores[holeNumber] = 0;
+                courseTimes[holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
+            }
+
+            courseScores[holeNumber] += amount;
+
+            if (course.courseType == CourseType.DrivingRangeWithTargets)
+            {
+                _OnCourseFinished(course, null, CourseState.Completed);
+                return;
+            }
+
+            // Update the state of all courses
+            _UpdateTotals();
+
+            // Refresh local scoreboards + save persistent data
+            openPutt._OnPlayerUpdate(this);
+
+            // Refresh the local HUD panel (this path doesn't fire the ball hit event that normally does it)
+            if (Utilities.IsValid(openPutt.uiController))
+                openPutt.uiController.UpdateDisplay();
+
+            // If fast updates are on send current state of player to everybody - otherwise it will be done when the player finishes the course
+            if (openPutt.playerSyncType == PlayerSyncType.All)
+                _RequestSync();
         }
 
         public void _OnCourseStarted(CourseManager newCourse)
@@ -608,8 +670,6 @@ namespace dev.mikeee324.OpenPutt
             var ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
             var clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup : openPutt.rightShoulderPickup;
 
-            // TODO: Instead of disabling the pickup while stood on the course, we could use the line renderer to point towards where the ball is
-            // Might be less confusing when they can't grab their ball from their shoulder is it draws a line to where their ball is
 
 
             var ballIsOnCurrentCourse = false;
@@ -650,6 +710,21 @@ namespace dev.mikeee324.OpenPutt
                     // Increase max floor time for driving ranges
                     maxTimeOffCourse *= 2;
                 }
+                else if (CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
+                {
+                    if (golfBall.BallIsMoving)
+                    {
+                        // If the ball is fairly close to any floor, start the count down to reset the ball
+                        ballIsOnCurrentCourse = !golfBall.OnGround;
+
+                        // We half the amount of time on the ground for driving ranges before resetting
+                        if (golfBall.OnGround)
+                            ballNotOnCourseCounter++;
+                    }
+
+                    // Increase max floor time for driving ranges
+                    maxTimeOffCourse *= 2;
+                }
 
                 // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
                 // Could count if there has been more than 10 frames of constant collision with a non course floor
@@ -666,15 +741,13 @@ namespace dev.mikeee324.OpenPutt
                         if (openPutt.debugMode)
                             OpenPuttUtils.Log(this, "Ball has been off its course for too long");
                         ballNotOnCourseCounter = 0;
-                        golfBall.BallIsMoving = false;
+                        if (golfBall.BallIsMoving)
+                            golfBall.BallIsMoving = false;
+                        else
+                            golfBall._RespawnBallWithErrorNoise();
                     }
                 }
 
-                // Toggle pickup on/off based on where the player and ball currently are
-                // Player On + Ball On Current Course = Pickup Off (Helps prevent ball being reset to last pos by accidental pickups)
-                // Player On + Ball Off Current Course = Pickup On (Allows them to quickly reset ball to last valid pos if ball gets lost)
-                if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 5f))
-                    shouldEnableBallShoulderPickup = !ballIsOnCurrentCourse;
             }
 
             if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(clubShoulderPickup))

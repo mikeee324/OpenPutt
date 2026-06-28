@@ -22,15 +22,17 @@ namespace dev.mikeee324.OpenPutt
 
         public float timeAfterHit = 2;
         public float timeToRespawn = 15;
-        public bool respawnBallImmediately = true;
 
-        private MeshRenderer myMesh;
+        public MeshRenderer myMesh;
+        private Collider myCollider;
 
         private MaterialPropertyBlock materialPropertyBlock;
 
         void Start()
         {
-            myMesh = GetComponent<MeshRenderer>();
+            if (!Utilities.IsValid(myMesh))
+                myMesh = GetComponent<MeshRenderer>();
+            myCollider = GetComponent<Collider>();
 
             // Apply the base armed/disarmed colours to the head/shaft/head holder
             if (!Utilities.IsValid(materialPropertyBlock))
@@ -59,14 +61,20 @@ namespace dev.mikeee324.OpenPutt
 
         public void _OnBallHit(GolfBallController golfBall)
         {
-            if (respawnBallImmediately)
-                golfBall._RespawnBall();
-            if (Utilities.IsValid(courseManager))
-            {
-                golfBall.playerManager.courseScores[courseManager.holeNumber] += scoreToAdd;
-                if (Utilities.IsValid(golfBall.playerManager.openPutt.uiController))
-                    golfBall.playerManager.openPutt.uiController.UpdateDisplay();
-            }
+            // This collision fires on every client - only react to the local player's own ball
+            if (!golfBall.LocalPlayerOwnsThisObject())
+                return;
+
+            myCollider.enabled = false;
+
+            golfBall._RespawnBall();
+
+            // Stop the target registering more hits until it respawns
+            if (Utilities.IsValid(myCollider))
+                myCollider.enabled = false;
+
+            if (Utilities.IsValid(courseManager) && Utilities.IsValid(golfBall.playerManager))
+                golfBall.playerManager._AddToCourseScore(courseManager, scoreToAdd);
 
             materialPropertyBlock.SetColor("_Color", hitColour);
             materialPropertyBlock.SetColor("_EmissionColor", hitColour);
@@ -85,10 +93,15 @@ namespace dev.mikeee324.OpenPutt
 
         public void ResetTarget()
         {
+            myCollider.enabled = true;
             materialPropertyBlock.SetColor("_Color", defaultColour);
             materialPropertyBlock.SetColor("_EmissionColor", defaultColour);
 
             myMesh.SetPropertyBlock(materialPropertyBlock);
+
+            // collider.enabled persists across SetActive, so re-enable it explicitly after it was disabled on hit
+            if (Utilities.IsValid(myCollider))
+                myCollider.enabled = true;
 
             gameObject.SetActive(true);
         }

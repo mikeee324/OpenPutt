@@ -186,7 +186,7 @@ namespace dev.mikeee324.OpenPutt
                         speedDataLogging = new float[0];
                     }
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType != CourseType.Standard)
+                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeDistance)
                     {
                         var course = playerManager.CurrentCourse;
 
@@ -198,6 +198,10 @@ namespace dev.mikeee324.OpenPutt
                             playerManager._OnCourseStarted(course);
                             _RespawnBall();
                         }
+                    }
+                    else if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
+                    {
+                        _RespawnBall();
                     }
                     else if (respawnAutomatically)
                     {
@@ -683,7 +687,21 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
                 playerManager.openPutt.openPuttPortableScoreboard.golfBallHeldByPlayer = false;
 
-            if (startLine.StartDropAnimation(CurrentPosition))
+            // Guard against spurious re-entrant OnDrop() calls that fire after a slingshot throw
+            // programmatically drops the remaining pickup. By then both saved hand states have been
+            // cleared to None, so there is nothing meaningful for this call to do.
+            if (ballHeldInHand == VRC_Pickup.PickupHand.None && shoulderBallHeldInHand == VRC_Pickup.PickupHand.None)
+                return;
+
+            // The player is doing a slingshot throw if both the ball and the shoulder were held and they've
+            // just released one of them. When that happens we want to fling the ball - ignore any nearby
+            // start pad so it doesn't snap the ball to the pad instead of throwing it.
+            var slingshotActive = Networking.LocalPlayer.IsUserInVR() &&
+                                  ballHeldInHand != VRC_Pickup.PickupHand.None &&
+                                  shoulderBallHeldInHand != VRC_Pickup.PickupHand.None &&
+                                  ((currentBallHeldInHand != VRC_Pickup.PickupHand.None) != (currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None));
+
+            if (!slingshotActive && startLine.StartDropAnimation(CurrentPosition))
             {
                 if (DebugMode)
                     OpenPuttUtils.Log(this, "Player dropped ball near a start pad.. moving to the start of a course");
@@ -695,13 +713,13 @@ namespace dev.mikeee324.OpenPutt
             // Player did not drop ball on a start pad and are currently playing a course
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.CurrentCourse))
             {
-                if (playerManager.CurrentCourse.courseType != CourseType.Standard)
+                if (playerManager.CurrentCourse.courseType != CourseType.Standard && !slingshotActive)
                 {
                     if (DebugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from driving range start pad - marking driving range as completed");
                     playerManager._OnCourseFinished(playerManager.CurrentCourse, null, CourseState.Completed);
                 }
-                else if (HasRespawnPosition)
+                else if (!slingshotActive && HasRespawnPosition)
                 {
                     if (DebugMode)
                         OpenPuttUtils.Log(this, "Player dropped ball away from a start pad.. moving ball back to last valid position.");
@@ -730,9 +748,6 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (ballHeldInHand == VRC_Pickup.PickupHand.None && shoulderBallHeldInHand == VRC_Pickup.PickupHand.None)
-                return;
-
             var pickupHand = currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? currentShoulderBallHeldInHand : currentBallHeldInHand;
             if (pickupHand == VRC_Pickup.PickupHand.None)
                 pickupHand = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None ? shoulderBallHeldInHand : ballHeldInHand;
@@ -744,10 +759,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (Networking.LocalPlayer.IsUserInVR() && ballHeldInHand != VRC_Pickup.PickupHand.None)
             {
-                var bothSidesWereHeld = shoulderBallHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != VRC_Pickup.PickupHand.None;
-                var oneSideStillHeld = (currentBallHeldInHand != VRC_Pickup.PickupHand.None) != (currentShoulderBallHeldInHand != VRC_Pickup.PickupHand.None);
-
-                if (bothSidesWereHeld && oneSideStillHeld)
+                if (slingshotActive)
                 {
                     ballShoulderPickup.tempDisableAttachment = false;
 
@@ -792,9 +804,14 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptPickup()
         {
-            // While moving on a course, don't grab/freeze the ball - just draw a line to it so the shot isn't
-            // disturbed. Off a course there's no shot to protect, so grab it normally.
-            if (BallIsMoving && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse))
+            var onCourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse);
+            var onStandardCourse = onCourse && playerManager.CurrentCourse.courseType == CourseType.Standard;
+
+            var courseIsActivelyPlaying = onStandardCourse &&
+                                          playerManager.courseStates[playerManager.CurrentCourse.holeNumber] == CourseState.Playing &&
+                                          playerManager.courseScores[playerManager.CurrentCourse.holeNumber] > 0;
+
+            if (courseIsActivelyPlaying || (BallIsMoving && onCourse))
             {
                 var ballShoulderPickup = shoulderPickup;
                 if (Utilities.IsValid(ballShoulderPickup))
@@ -802,7 +819,7 @@ namespace dev.mikeee324.OpenPutt
 
                 trackingMovingBall = true;
 
-                if (Utilities.IsValid(startLine))
+                if (courseIsActivelyPlaying && Utilities.IsValid(startLine))
                     startLine.SetEnabled(true);
 
                 return;
@@ -1480,11 +1497,19 @@ namespace dev.mikeee324.OpenPutt
                     newPickupState = allowBallPickup;
 
                     if (Utilities.IsValid(playerManager) && allowBallPickupWhenNotPlaying)
-                    {
-                        newPickupState = !Utilities.IsValid(playerManager.CurrentCourse);
+                        newPickupState = true;
 
-                        if (!newPickupState && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.courseScores[playerManager.CurrentCourse.holeNumber] == 0)
-                            newPickupState = true; // Should let players pick the ball up from the start pad
+                    // If the ball is currently held on the shoulder mount, keep it grabbable so the other
+                    // hand can grab it to arm the slingshot throw - otherwise the course rules above can
+                    // block the second grab and break the shot. Not on standard courses though - there the
+                    // shoulder only points to the ball (you putt with the club, you can't fling it).
+                    if (!newPickupState && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
+                    {
+                        var onStandardCourse = Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard;
+
+                        var ballShoulderPickup = shoulderPickup;
+                        if (!onStandardCourse && Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                            newPickupState = true;
                     }
                 }
 

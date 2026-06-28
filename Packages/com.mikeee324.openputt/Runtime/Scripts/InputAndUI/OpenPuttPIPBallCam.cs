@@ -167,62 +167,9 @@ namespace dev.mikeee324.OpenPutt
                 enabled = false;
         }
 
-        /// <summary>
-        /// True when the ball is moving, far enough away, and off screen. Uses the scoreboards'
-        /// FOV-aware look-at test (tracks desktop FOV and the portable camera).
-        /// </summary>
         private bool ShouldShowPip(Vector3 ballPos)
         {
-            if (!_ballMoving || ball.BallCurrentSpeed < minMoveSpeed)
-                return false;
-
-            // Camera being viewed through: portable cam if active, else screen cam (desktop FOV)
-            var viewCamera = VRCCameraSettings.ScreenCamera;
-            var photoCamera = VRCCameraSettings.PhotoCamera;
-            if (Utilities.IsValid(photoCamera) && photoCamera.Active)
-                viewCamera = photoCamera;
-
-            Vector3 viewPosition;
-            Vector3 viewForward;
-            float viewFieldOfView;
-            if (Utilities.IsValid(viewCamera))
-            {
-                viewPosition = viewCamera.Position;
-                viewForward = viewCamera.Rotation * Vector3.forward;
-                viewFieldOfView = viewCamera.FieldOfView;
-            }
-            else if (Utilities.IsValid(Networking.LocalPlayer))
-            {
-                // Fallback to head tracking
-                var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                viewPosition = head.position;
-                viewForward = head.rotation * Vector3.forward;
-                viewFieldOfView = 60f;
-            }
-            else
-            {
-                return false;
-            }
-
-            Vector3 toBall = ballPos - viewPosition;
-            if (toBall.magnitude < minBallDistance)
-                return false;
-
-            bool ballIsOnScreen = Vector3.Dot(viewForward, toBall.normalized) >= ViewDotThreshold(viewFieldOfView);
-            return !ballIsOnScreen;
-        }
-
-        /// <summary>
-        /// Min dot product the ball direction must clear to count as on screen. Mirrors
-        /// ScoreboardPositioner.ViewDotThreshold.
-        /// </summary>
-        private float ViewDotThreshold(float verticalFieldOfView)
-        {
-            // Vertical FOV widened to horizontal half-angle, assuming 16:9
-            const float aspect = 16f / 9f;
-            var halfVerticalRad = verticalFieldOfView * 0.5f * Mathf.Deg2Rad;
-            var halfHorizontalRad = Mathf.Atan(Mathf.Tan(halfVerticalRad) * aspect);
-            return Mathf.Cos(halfHorizontalRad);
+            return _ballMoving && ball.BallCurrentSpeed >= minMoveSpeed;
         }
 
         /// <summary>

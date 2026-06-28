@@ -246,6 +246,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft;
 
+        [Tooltip("When enabled the club scales to reach the ball's height below the hand, instead of raycasting down to the floor")]
+        public bool scaleToBallHeight;
+
         public Color offColour = Color.white;
         public Color onColour = Color.red;
         public Color offEmission = Color.black;
@@ -545,19 +548,40 @@ namespace dev.mikeee324.OpenPutt
             else
             {
                 var minSize = .1f;
-                var maxSize = localPlayerIsInVR ? 3f : 6f;
+                var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
 
-                var raycastDir = shaftEndPosition.transform.position - shaftMesh.gameObject.transform.position;
+                // Divide out parent scale so world-space distances are in the club's local units
+                var worldScale = shaftMesh.transform.parent.lossyScale.z;
+                if (worldScale < 0.0001f)
+                    worldScale = 1f;
 
-                // if (Physics.BoxCast(shaftMesh.gameObject.transform.position, boxExtents, raycastDir, out RaycastHit h, putter.transform.rotation, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                //     shaftScale = Mathf.Clamp((h.distance - headMesh.localBounds.size.z) / shaftDefaultSize, minSize, maxSize);
-                // else 
-                if (Physics.Raycast(shaftMesh.gameObject.transform.position, raycastDir.normalized, out var hit, enableBigShaft ? 100f : maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                var handPosition = shaftMesh.gameObject.transform.position;
+
+                var shaftDir = (shaftEndPosition.transform.position - handPosition).normalized;
+
+                var localPlayer = Networking.LocalPlayer;
+                var maxBallDistance = Utilities.IsValid(localPlayer) ? localPlayer.GetAvatarEyeHeightAsMeters() : 2f;
+
+                // Distance (in local units) from the hand/grip down to where the club head should end up
+                var localDistance = -1f;
+                if (scaleToBallHeight && Utilities.IsValid(ball) && shaftDir.y < -0.0001f && Vector3.Distance(handPosition, ball.transform.position) <= maxBallDistance)
+                {
+                    // Ball is close enough - scale along the shaft so the head reaches the height the ball sits at (accounts for club tilt)
+                    var ballGroundY = ball.transform.position.y - ball.BallWorldRadius;
+                    localDistance = (ballGroundY - handPosition.y) / shaftDir.y / worldScale;
+                }
+                else
+                {
+                    // Raycast down the shaft to find the floor
+                    if (Physics.Raycast(handPosition, shaftDir, out var hit, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                        localDistance = Vector3.Distance(hit.point, handPosition) / worldScale;
+                }
+
+                if (localDistance > 0f)
                 {
                     var putterScale = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
                     var putterHeight = putter.putterTarget.size.z * putterScale;
-                    var totalDistanceToFloor = Vector3.Distance(hit.point, shaftMesh.gameObject.transform.position) - putterHeight;
-                    shaftScale = Mathf.Clamp(totalDistanceToFloor / shaftCollider.size.z, minSize, enableBigShaft ? 100f : maxSize);
+                    shaftScale = Mathf.Clamp((localDistance - putterHeight) / shaftCollider.size.z, minSize, maxSize);
                 }
             }
 
