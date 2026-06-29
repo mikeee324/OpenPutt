@@ -468,6 +468,8 @@ namespace dev.mikeee324.OpenPutt
             if (course.courseType == CourseType.DrivingRangeWithTargets)
             {
                 _OnCourseFinished(course, null, CourseState.Completed);
+                if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || course.courseIsAlwaysReplayable))
+                    _OnCourseStarted(course);
                 return;
             }
 
@@ -476,10 +478,6 @@ namespace dev.mikeee324.OpenPutt
 
             // Refresh local scoreboards + save persistent data
             openPutt._OnPlayerUpdate(this);
-
-            // Refresh the local HUD panel (this path doesn't fire the ball hit event that normally does it)
-            if (Utilities.IsValid(openPutt.uiController))
-                openPutt.uiController.UpdateDisplay();
 
             // If fast updates are on send current state of player to everybody - otherwise it will be done when the player finishes the course
             if (openPutt.playerSyncType == PlayerSyncType.All)

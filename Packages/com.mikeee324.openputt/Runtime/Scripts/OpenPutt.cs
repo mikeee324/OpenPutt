@@ -314,7 +314,11 @@ namespace dev.mikeee324.OpenPutt
             playerListManager.OnPlayerUpdate();
 
             if (playerManager.Owner.isLocal)
+            {
                 _SavePersistantData();
+                if (Utilities.IsValid(uiController))
+                    uiController.UpdateDisplay();
+            }
         }
 
         /// <summary>
