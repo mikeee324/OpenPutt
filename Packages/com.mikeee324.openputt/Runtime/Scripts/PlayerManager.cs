@@ -444,7 +444,7 @@ namespace dev.mikeee324.OpenPutt
             // The player might not have stepped on a starting pad - make sure this is their current
             // course before scoring. Otherwise _UpdateTotals (via UpdateCourseState) will reset/skip
             // the score we're about to add because it isn't the CurrentCourse.
-            if (CurrentCourse != course)
+            if (course.courseType != CourseType.DrivingRangeWithTargets && CurrentCourse != course)
             {
                 _OnCourseStarted(course);
 
@@ -467,9 +467,26 @@ namespace dev.mikeee324.OpenPutt
 
             if (course.courseType == CourseType.DrivingRangeWithTargets)
             {
-                _OnCourseFinished(course, null, CourseState.Completed);
-                if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || course.courseIsAlwaysReplayable))
-                    _OnCourseStarted(course);
+                if (CurrentCourse == course)
+                {
+                    _OnCourseFinished(course, null, CourseState.Completed);
+                    if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || course.courseIsAlwaysReplayable))
+                        _OnCourseStarted(course);
+                }
+                else
+                {
+                    // Player is on a different course (e.g. DrivingRangeDistance) — update state directly
+                    // so we don't null out CurrentCourse or trigger course-switching side effects.
+                    if (courseStates[holeNumber] != CourseState.Completed)
+                    {
+                        courseTimes[holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[holeNumber];
+                        courseStates[holeNumber] = CourseState.Completed;
+                    }
+                    _UpdateTotals();
+                    openPutt._OnPlayerUpdate(this);
+                    if (openPutt.playerSyncType == PlayerSyncType.All)
+                        _RequestSync();
+                }
                 return;
             }
 
@@ -916,7 +933,7 @@ namespace dev.mikeee324.OpenPutt
                 for (var i = 0; i < courseScores.Length; i++)
                 {
                     // We don't count driving range scores
-                    if (Utilities.IsValid(openPutt.courses[i]) && openPutt.courses[i].courseType == CourseType.DrivingRangeDistance)
+                    if (Utilities.IsValid(openPutt.courses[i]) && (openPutt.courses[i].courseType == CourseType.DrivingRangeDistance || openPutt.courses[i].courseType == CourseType.DrivingRangeWithTargets))
                         continue;
 
                     UpdateCourseState(openPutt.courses[i]);
@@ -977,7 +994,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             // Driving ranges don't do much
-            if (course.courseType == CourseType.DrivingRangeDistance)
+            if (course.courseType == CourseType.DrivingRangeDistance || course.courseType == CourseType.DrivingRangeWithTargets)
             {
                 courseStates[course.holeNumber] = CourseState.NotStarted;
                 return;

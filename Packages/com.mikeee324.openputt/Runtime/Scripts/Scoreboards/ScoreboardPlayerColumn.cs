@@ -44,10 +44,16 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
         {
             // Render the last column - This is usually the "Total" column
             var finishedAllCourses = true;
-            foreach (var courseState in player.courseStates)
+            for (var i = 0; i < player.courseStates.Length; i++)
             {
+                if (Utilities.IsValid(openPutt) && i < openPutt.courses.Length && Utilities.IsValid(openPutt.courses[i]))
+                {
+                    var ct = openPutt.courses[i].courseType;
+                    if (ct == CourseType.DrivingRangeDistance || ct == CourseType.DrivingRangeWithTargets)
+                        continue;
+                }
                 // TODO: Maybe count skipped courses as completed too?
-                if (courseState != CourseState.Completed)
+                if (player.courseStates[i] != CourseState.Completed)
                 {
                     finishedAllCourses = false;
                     break;
@@ -125,49 +131,55 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
 
             var courseState = player.courseStates[col - 1];
             var holeScore = player.courseScores[col - 1];
-
-            bool playerIsAbovePar;
-            bool playerIsBelowPar;
-
             var course = openPutt.courses[col - 1];
 
-            var courseIsDrivingRange = Utilities.IsValid(openPutt) && Utilities.IsValid(course) && course.courseType == CourseType.DrivingRangeDistance;
+            bool playerIsAbovePar = false;
+            bool playerIsBelowPar = false;
 
-            if (courseIsDrivingRange)
+            switch (course.courseType)
             {
-                playerIsAbovePar = false;
-                playerIsBelowPar = false;
+                case CourseType.DrivingRangeDistance:
+                    if (courseState == CourseState.Completed)
+                    {
+                        SetText($"{holeScore}m");
+                        playerIsAbovePar = holeScore > 0 && holeScore < course.parScore;
+                        playerIsBelowPar = holeScore >= course.parScore;
+                    }
+                    else if (courseState == CourseState.Playing)
+                        SetText("-");
+                    break;
 
-                if (courseState == CourseState.Playing)
-                    SetText("-");
-                else if (courseState == CourseState.Completed)
-                    SetText($"{holeScore}m");
-            }
-            else if (scoreboardManager.SpeedGolfMode)
-            {
-                var timeOnThisCourse = player.courseTimes[col - 1];
+                case CourseType.DrivingRangeWithTargets:
+                    if (courseState == CourseState.Playing)
+                        SetText("-");
+                    else if (courseState == CourseState.Completed)
+                        SetText($"{holeScore}");
+                    break;
 
-                // If the player is playing this course right now, then the stored value is the time when they started the course
-                if (courseState == CourseState.Playing)
-                {
-                    // timeOnThisCourse = DateTime.UtcNow.GetUnixTimestamp() - timeOnThisCourse;
-                    // SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
-                    SetText("-");
-                    playerIsAbovePar = false;
-                    playerIsBelowPar = false;
-                }
-                else
-                {
-                    SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
-                    playerIsAbovePar = timeOnThisCourse > course.parTime;
-                    playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < course.parTime;
-                }
-            }
-            else
-            {
-                SetText($"{holeScore}");
-                playerIsAbovePar = holeScore > 0 && holeScore > course.parScore;
-                playerIsBelowPar = courseState == CourseState.Completed && holeScore < course.parScore;
+                default:
+                    if (scoreboardManager.SpeedGolfMode)
+                    {
+                        var timeOnThisCourse = player.courseTimes[col - 1];
+                        if (courseState == CourseState.Playing)
+                        {
+                            // timeOnThisCourse = DateTime.UtcNow.GetUnixTimestamp() - timeOnThisCourse;
+                            // SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
+                            SetText("-");
+                        }
+                        else
+                        {
+                            SetText(TimeSpan.FromSeconds(timeOnThisCourse).ToString(@"m\:ss"));
+                            playerIsAbovePar = timeOnThisCourse > course.parTime;
+                            playerIsBelowPar = courseState == CourseState.Completed && player.PlayerTotalTime > 0 && timeOnThisCourse < course.parTime;
+                        }
+                    }
+                    else
+                    {
+                        SetText($"{holeScore}");
+                        playerIsAbovePar = holeScore > 0 && holeScore > course.parScore;
+                        playerIsBelowPar = courseState == CourseState.Completed && holeScore < course.parScore;
+                    }
+                    break;
             }
 
             if (courseState == CourseState.Playing)
@@ -245,6 +257,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                             SetText(TimeSpan.FromSeconds(course.parTime).ToString(@"m\:ss"));
                         else if (course.courseType == CourseType.DrivingRangeDistance)
                             SetText($"{course.parScore}m");
+                        else if (course.courseType == CourseType.DrivingRangeWithTargets)
+                            SetText("-");
                         else
                             SetText($"{course.parScore}");
                     }

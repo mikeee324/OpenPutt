@@ -248,16 +248,20 @@ namespace dev.mikeee324.OpenPutt
                 activeUI.relativeScore.text = "-";
 
                 int holesCompleted = 0;
+                int totalHoles = 0;
                 foreach (var course in openPutt.courses)
                 {
-                    if (Utilities.IsValid(course) && course.holeNumber >= 0 && course.holeNumber < localPlayerManager.courseStates.Length)
+                    if (!Utilities.IsValid(course)) continue;
+                    if (course.courseType == CourseType.DrivingRangeDistance || course.courseType == CourseType.DrivingRangeWithTargets) continue;
+                    totalHoles++;
+                    if (course.holeNumber >= 0 && course.holeNumber < localPlayerManager.courseStates.Length)
                     {
                         var state = localPlayerManager.courseStates[course.holeNumber];
                         if (state == CourseState.Completed || state == CourseState.PlayedAndSkipped)
                             holesCompleted++;
                     }
                 }
-                activeUI.relativeScore.text = $"<size=200>{holesCompleted}/{openPutt.courses.Length}</size>";
+                activeUI.relativeScore.text = $"<size=200>{holesCompleted}/{totalHoles}</size>";
                 activeUI.totalScore.text = $"Holes\nCompleted";
 
                 // var rankText = "-";

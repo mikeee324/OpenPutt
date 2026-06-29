@@ -52,6 +52,7 @@ namespace dev.mikeee324.OpenPutt
         private VRCTweenHandle _respawnColourHandle;
         private VRCTweenHandle _deathScaleHandle;
         private VRCTweenHandle _respawnScaleHandle;
+        private bool _initialized;
 
         void Start()
         {
@@ -64,8 +65,25 @@ namespace dev.mikeee324.OpenPutt
             myMesh.GetPropertyBlock(materialPropertyBlock);
 
             _originalScale = transform.localScale;
+            _initialized = true;
 
             SetColour(defaultColour);
+        }
+
+        private void OnEnable()
+        {
+            if (!_initialized) return;
+            SendCustomEventDelayedFrames(nameof(_StartRespawnTweens), 0);
+        }
+
+        public void _StartRespawnTweens()
+        {
+            if (_respawnColourHandle != null) _respawnColourHandle.Kill();
+            _respawnColourHandle = VRCTween.TweenFloat(0f, 1f, respawnAnimDuration, this, nameof(_respawnColourT), nameof(_OnRespawnColourUpdate), VRCTweenEase.Linear);
+
+            transform.localScale = Vector3.zero;
+            if (_respawnScaleHandle != null) _respawnScaleHandle.Kill();
+            _respawnScaleHandle = transform.TweenScale(_originalScale, deathShrinkDuration, VRCTweenEase.OutElastic);
         }
 
         private void OnDisable()
@@ -136,12 +154,6 @@ namespace dev.mikeee324.OpenPutt
                 myCollider.enabled = true;
 
             gameObject.SetActive(true);
-
-            if (_respawnColourHandle != null) _respawnColourHandle.Kill();
-            _respawnColourHandle = VRCTween.TweenFloat(0f, 1f, respawnAnimDuration, this, nameof(_respawnColourT), nameof(_OnRespawnColourUpdate), VRCTweenEase.Linear);
-
-            if (_respawnScaleHandle != null) _respawnScaleHandle.Kill();
-            _respawnScaleHandle = transform.TweenScale(_originalScale, deathShrinkDuration, VRCTweenEase.OutElastic);
         }
 
         public void _OnRespawnColourUpdate()
