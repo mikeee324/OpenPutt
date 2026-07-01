@@ -151,7 +151,7 @@ namespace dev.mikeee324.OpenPutt
                 case ControllerButtons.Select:
                     return controller.Select(joystickID);
                 case ControllerButtons.Start:
-                    return controller.Select(joystickID);
+                    return controller.Start(joystickID);
             }
 
             return false;
@@ -295,6 +295,7 @@ namespace dev.mikeee324.OpenPutt
                 default:
                     return 0;
             }
+#endif
         }
 
         public static bool DpadLeft(this Controller controller, int joystickID)
@@ -311,7 +312,7 @@ namespace dev.mikeee324.OpenPutt
         {
 #if UNITY_ANDROID || UNITY_IOS
             return controller.DpadVertical(joystickID) < -.5f;
-#endif
+#else
             return controller.DpadVertical(joystickID) > .5f;
 #endif
         }

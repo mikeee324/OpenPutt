@@ -311,7 +311,7 @@ namespace dev.mikeee324.OpenPutt
             if (!allPlayerManagers.Contains(playerManager))
                 allPlayerManagers = allPlayerManagers.Add(playerManager);
 
-            playerListManager.OnPlayerUpdate();
+            playerListManager.OnPlayerUpdate(playerManager);
 
             if (playerManager.Owner.isLocal)
             {
@@ -448,7 +448,7 @@ namespace dev.mikeee324.OpenPutt
 
             allPlayerManagers = newPlayerManagers;
 
-            playerListManager.OnPlayerUpdate();
+            playerListManager.OnPlayerListChanged();
         }
 
         public override void OnStringLoadSuccess(IVRCStringDownload result)

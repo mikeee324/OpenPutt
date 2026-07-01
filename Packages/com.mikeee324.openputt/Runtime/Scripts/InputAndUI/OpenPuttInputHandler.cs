@@ -583,7 +583,7 @@ namespace dev.mikeee324.OpenPutt
             if (ball.gravityMagnitude > 0)
                 direction = Vector3.ProjectOnPlane(direction, -ball.gravityDirection).normalized;
 
-            // Only clamp hit speed if they player is on a normal course
+            // Scale hit speed by the current club's typical max speed
             float speed = power * club.ClubType.GetTypicalMaxSpeed();
 
             // Apply velocity to ball
