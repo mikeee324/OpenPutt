@@ -690,15 +690,11 @@ namespace dev.mikeee324.OpenPutt
             // normalized so Driver = 1.0). Mostly noticeable on the driving range where speed isn't clamped.
             velocityMagnitude *= golfClub.ClubType.GetSmashFactor();
 
-            // Work out whether we need to clamp the hit speed
-            // Clamp on normal courses (not driving ranges). Use per-club max
-            // speeds but never exceed the global ball max speed.
-            var shouldClampSpeed = Utilities.IsValid(currentCourse) && !currentCourseIsDrivingRange;
+            var shouldClampSpeed = Utilities.IsValid(currentCourse) && currentCourse.clampClubSpeed;
 
             if (shouldClampSpeed)
             {
-                var clubMax = golfClub.ClubType.GetTypicalMaxSpeed();
-                var allowedMax = Mathf.Min(clubMax, golfBall.BallMaxSpeed);
+                var allowedMax = golfClub.ClubType.GetTypicalMaxSpeed();
                 if (velocityMagnitude > allowedMax)
                 {
                     velocityMagnitude = allowedMax;

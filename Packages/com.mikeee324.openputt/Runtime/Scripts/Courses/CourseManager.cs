@@ -91,6 +91,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("What type of course this is")]
         public CourseType courseType = CourseType.Standard;
 
+        [Tooltip("Clamps the ball speed after a hit to the club's typical max speed. Usually disabled on driving ranges so players can see how hard they can hit the ball.")]
+        public bool clampClubSpeed = true;
+
         [Tooltip("Overrides the global replayable courses setting")]
         public bool courseIsAlwaysReplayable;
 

@@ -70,7 +70,7 @@ namespace com.dev.mikeee324.OpenPutt
 
             clubLine.positionCount = history.Length;
             clubLine.SetPositions(history);
-            clubLine.sharedMaterial.color = gradient.Evaluate(velocity.magnitude / club.playerManager.golfBall.BallMaxSpeed);
+            clubLine.sharedMaterial.color = gradient.Evaluate(velocity.magnitude / club.ClubType.GetTypicalMaxSpeed());
         }
     }
 }

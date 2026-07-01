@@ -27,7 +27,17 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Displays current ball speed
         /// </summary>
-        BallSpeed
+        BallSpeed,
+
+        /// <summary>
+        /// Displays the player's current score on the attached course
+        /// </summary>
+        CurrentScore,
+
+        /// <summary>
+        /// Displays the par score of the attached course
+        /// </summary>
+        Par
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
@@ -74,6 +84,10 @@ namespace dev.mikeee324.OpenPutt
             openPutt._RegisterEventListener(this);
 
             valueTextLabel.text = defaultText;
+
+            // Par never changes at runtime so it just needs setting once (and doesn't require a PlayerManager)
+            if (displayType == InfoUIDisplayType.Par && Utilities.IsValid(attachedToCourse))
+                valueTextLabel.text = $"{attachedToCourse.parScore}";
         }
 
         public void StartUpdate()
@@ -155,12 +169,36 @@ namespace dev.mikeee324.OpenPutt
                         valueTextLabel.text = $"{golfBall.BallCurrentSpeed * 2.2369362921f:F1}mph";
                     break;
                 }
+                case InfoUIDisplayType.CurrentScore:
+                {
+                    var course = Utilities.IsValid(attachedToCourse) ? attachedToCourse : playerManager.CurrentCourse;
+                    if (Utilities.IsValid(course) && course.holeNumber < playerManager.courseScores.Length)
+                        valueTextLabel.text = $"{playerManager.courseScores[course.holeNumber]}";
+
+                    // This is a one-time update, it gets re-triggered whenever the score changes
+                    StopUpdate();
+
+                    break;
+                }
             }
         }
 
         public override void OnPlayerBallHit(VRCPlayerApi player, float speed)
         {
             StartUpdate();
+        }
+
+        public override void OnPlayerScoreReset(VRCPlayerApi player)
+        {
+            if (displayType == InfoUIDisplayType.CurrentScore)
+                StartUpdate();
+        }
+
+        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
+        {
+            // Fired for all players - only react to our own local update
+            if (player.isLocal && displayType == InfoUIDisplayType.CurrentScore)
+                StartUpdate();
         }
 
         public override void OnPlayerInitialised(VRCPlayerApi player, PlayerManager playerManager)
@@ -193,6 +231,11 @@ namespace dev.mikeee324.OpenPutt
                 case InfoUIDisplayType.BallSpeed:
                 {
                     StopUpdate();
+                    break;
+                }
+                case InfoUIDisplayType.CurrentScore:
+                {
+                    StartUpdate();
                     break;
                 }
             }

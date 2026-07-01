@@ -71,9 +71,6 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Air resistance - helps the ball slow down in the air and on the ground")]
         public bool enableAirResistance = true;
 
-        [SerializeField, Range(0f, 200f), Tooltip("Fastest the ball can travel after a hit (m/s). Fastest recorded club swing is ~108 m/s")]
-        private float maxBallSpeed = 100f;
-
         [Range(0f, .2f), Tooltip("Below this speed (m/s) the ball counts as 'not moving' and stops after the time below")]
         public float minBallSpeed = 0.03f;
 
@@ -274,18 +271,11 @@ namespace dev.mikeee324.OpenPutt
             set => ballDragOverride = value;
         }
 
-        public float BallMaxSpeed
-        {
-            get => maxBallSpeed;
-            set => maxBallSpeed = value;
-        }
-
         public float BallAngularDrag { get; set; }
         public float DefaultBallWeight { get; private set; }
         public float DefaultBallFriction { get; private set; }
         public float DefaultBallDrag { get; private set; }
         public float DefaultBallAngularDrag { get; private set; }
-        public float DefaultBallMaxSpeed { get; private set; }
         public float BallCurrentSpeed => Utilities.IsValid(ballRigidbody) && !ballRigidbody.isKinematic ? ballRigidbody.velocity.magnitude : 0;
 
         /// Speculative collides early; maybe use it at rest/high speed and dynamic while moving?
@@ -428,8 +418,6 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
             }
-
-            DefaultBallMaxSpeed = maxBallSpeed;
 
             lastFramePosition = ballRigidbody.position;
 
@@ -924,7 +912,7 @@ namespace dev.mikeee324.OpenPutt
                 velocity *= 0.5f;
 #endif
 
-                var hapticAmplitude = 1f * Mathf.Clamp(velocity / maxBallSpeed, .5f, 1f);
+                var hapticAmplitude = 1f * Mathf.Clamp(velocity / club.ClubType.GetTypicalMaxSpeed(), .5f, 1f);
                 Networking.LocalPlayer.PlayHapticEventInHand(currentHand, 0.25f, hapticAmplitude, 230f);
             }
 
@@ -1107,8 +1095,8 @@ namespace dev.mikeee324.OpenPutt
 
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
-            // Back to world space - re-add surface velocity so the obstacle's motion carries into the bounce, then clamp speed.
-            newDirection = Vector3.ClampMagnitude((newDirection + surfaceVelocity).Sanitized(), maxBallSpeed);
+            // Back to world space - re-add surface velocity so the obstacle's motion carries into the bounce.
+            newDirection = (newDirection + surfaceVelocity).Sanitized();
 
             // If the bounce goes upward, suspend snapping for a frame (it needs snapMinGroundedSteps
             // grounded frames again) so PhysX can arc it.

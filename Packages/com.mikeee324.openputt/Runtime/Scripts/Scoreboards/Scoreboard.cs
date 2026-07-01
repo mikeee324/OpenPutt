@@ -23,7 +23,9 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
-        [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")] [Header("External References")] [Tooltip("This is needed to receive refresh events and give access to the player info")]
+        [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")]
+        [Header("External References")]
+        [Tooltip("This is needed to receive refresh events and give access to the player info")]
         public ScoreboardManager manager;
 
         [Header("Internal References (All are required to be set)")]
@@ -92,7 +94,6 @@ namespace dev.mikeee324.OpenPutt
         public Slider devModeBallFrictionSlider;
         public Slider devModeBallDragSlider;
         public Slider devModeBallADragSlider;
-        public Slider devModeBallMaxSpeedSlider;
         public TMP_Dropdown devModeVelocityTypeDropdown;
         public TextMeshProUGUI devModeOffsetFrameValueLabel;
         public TextMeshProUGUI devModeHitWaitFrameValueLabel;
@@ -101,7 +102,6 @@ namespace dev.mikeee324.OpenPutt
         public TextMeshProUGUI devModeBallFrictionValueLabel;
         public TextMeshProUGUI devModeBallDragValueLabel;
         public TextMeshProUGUI devModeBallADragValueLabel;
-        public TextMeshProUGUI devModeBallMaxSpeedValueLabel;
         public Image devModeForAllCheckbox;
         public Image footColliderCheckbox;
         public Image clubRendererCheckbox;
@@ -865,9 +865,6 @@ namespace dev.mikeee324.OpenPutt
             devModeBallDragSlider.value = playerManager.golfBall.BallDrag;
             devModeBallDragValueLabel.text = $"{devModeBallDragSlider.value:F3}";
 
-            devModeBallMaxSpeedSlider.value = playerManager.golfBall.BallMaxSpeed;
-            devModeBallMaxSpeedValueLabel.text = $"{devModeBallMaxSpeedSlider.value:F0}";
-
             devModeBallADragSlider.value = playerManager.golfBall.BallAngularDrag;
             devModeBallADragValueLabel.text = $"{devModeBallADragSlider.value:F2}";
 
@@ -1050,27 +1047,6 @@ namespace dev.mikeee324.OpenPutt
 
             player.golfBall.BallDrag = float.Parse(roundedVal);
             devModeBallDragValueLabel.text = roundedVal;
-        }
-
-        public void OnBallMaxSpeedReset()
-        {
-            var player = manager.openPutt.LocalPlayerManager;
-
-            if (!Utilities.IsValid(player)) return;
-
-            player.golfBall.BallMaxSpeed = player.golfBall.DefaultBallMaxSpeed;
-
-            RefreshDevModeMenu();
-        }
-
-        public void OnBallMaxSpeedChanged()
-        {
-            var player = manager.openPutt.LocalPlayerManager;
-
-            if (!Utilities.IsValid(player)) return;
-
-            player.golfBall.BallMaxSpeed = devModeBallMaxSpeedSlider.value;
-            devModeBallMaxSpeedValueLabel.text = $"{devModeBallMaxSpeedSlider.value:F0}";
         }
 
         #endregion
