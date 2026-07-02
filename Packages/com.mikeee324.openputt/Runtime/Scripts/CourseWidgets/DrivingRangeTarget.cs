@@ -39,6 +39,18 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("How long the shrink animation takes when the target dies")]
         public float deathShrinkDuration = 0.6f;
 
+        [Tooltip("Particle system to play when a ball hits this target")]
+        public ParticleSystem hitParticleSystem;
+
+        [Tooltip("If true, hitParticleSystem will be moved to this target's position/rotation before it is played (useful if it's shared between multiple targets). Requires its simulation space to be set to World so already emitted particles don't move with it afterwards")]
+        public bool moveParticleSystemToTarget;
+
+        [Tooltip("Audio source to play when a ball hits this target")]
+        public AudioSource hitAudioSource;
+
+        [Tooltip("If true, hitAudioSource's clip is played via AudioSource.PlayClipAtPoint at this target's position instead of moving/playing hitAudioSource directly. This spawns a temporary one-shot source so the sound stays anchored even if hitAudioSource is shared and reused by another target before the clip finishes")]
+        public bool moveAudioSourceToTarget;
+
         public MeshRenderer myMesh;
         private Collider myCollider;
         private MaterialPropertyBlock materialPropertyBlock;
@@ -125,6 +137,23 @@ namespace dev.mikeee324.OpenPutt
             transform.localScale = _originalScale * 1.3f;
             _hitScaleHandle = transform.TweenScale(_originalScale, hitAnimDuration, VRCTweenEase.OutBounce);
 
+            if (Utilities.IsValid(hitParticleSystem))
+            {
+                if (moveParticleSystemToTarget)
+                {
+                    hitParticleSystem.transform.SetPositionAndRotation(transform.position, transform.rotation);
+                }
+                hitParticleSystem.Play();
+            }
+
+            if (Utilities.IsValid(hitAudioSource))
+            {
+                if (moveAudioSourceToTarget)
+                    AudioSource.PlayClipAtPoint(hitAudioSource.clip, transform.position, hitAudioSource.volume);
+                else
+                    hitAudioSource.Play();
+            }
+
             SendCustomEventDelayedSeconds(nameof(_OnTargetDeath), timeAfterHit);
         }
 
@@ -142,7 +171,9 @@ namespace dev.mikeee324.OpenPutt
 
         public void _DisableTarget()
         {
-            gameObject.SetActive(false);
+            // Only hide the mesh (rather than disabling the whole GameObject) so that hitParticleSystem/hitAudioSource
+            // can keep playing on their own even though this target is "dead" and waiting to respawn
+            myMesh.enabled = false;
             SendCustomEventDelayedSeconds(nameof(ResetTarget), timeToRespawn);
         }
 
@@ -153,7 +184,9 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(myCollider))
                 myCollider.enabled = true;
 
-            gameObject.SetActive(true);
+            myMesh.enabled = true;
+
+            SendCustomEventDelayedFrames(nameof(_StartRespawnTweens), 0);
         }
 
         public void _OnRespawnColourUpdate()
