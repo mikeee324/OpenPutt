@@ -232,9 +232,7 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
                 {
-                    // Move the club/ball onto the correct shoulders for the new handedness. This skips
-                    // any pickup that is currently held so switching handedness while grabbing the club
-                    // off a shoulder doesn't swap the club out for the ball in the players hand.
+                    // Move the club/ball onto the correct shoulders for the new handedness
                     _UpdateShoulderPickupAttachments();
 
                     _RequestSync(syncNow: true);
@@ -247,9 +245,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Points the shoulder pickups at the correct object (club/ball) for the current handedness.
-        /// If a shoulder pickup is currently being held it is left alone - re-pointing it would yank
-        /// the held object out of the players hand, so it gets normalised again on the next drop.
+        /// Points the shoulder pickups at the correct object (club/ball) for the current handedness. Leaves held pickups alone.
         /// </summary>
         public void _UpdateShoulderPickupAttachments()
         {
@@ -392,9 +388,7 @@ namespace dev.mikeee324.OpenPutt
                             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
                                 openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
 
-                            // The course is finished (max score reached) so lock in the time spent here the
-                            // same way _OnCourseFinished does. Otherwise courseTimes keeps the raw start
-                            // timestamp and the scoreboard formats it as a garbage m:ss value (e.g. 45:xx).
+                            // Lock in the time spent on this course now that max score is reached
                             courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[CurrentCourse.holeNumber];
 
                             // Prevents the sound from being heard again
@@ -423,9 +417,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Adds points to a course score from an external source (e.g. a driving range target) and then
-        /// refreshes the scoreboards / syncs to other players the same way a normal ball hit does.<br/>
-        /// Should only be called for the local player - callers are expected to gate on ball ownership.
+        /// Adds points to a course score from an external source (e.g. a driving range target) and syncs/refreshes scoreboards like a normal ball hit
         /// </summary>
         /// <param name="course">The course to add the score to</param>
         /// <param name="amount">How many points to add</param>
@@ -441,21 +433,17 @@ namespace dev.mikeee324.OpenPutt
             if (holeNumber < 0 || holeNumber >= courseScores.Length)
                 return;
 
-            // The player might not have stepped on a starting pad - make sure this is their current
-            // course before scoring. Otherwise _UpdateTotals (via UpdateCourseState) will reset/skip
-            // the score we're about to add because it isn't the CurrentCourse.
+            // Make sure this is their current course before scoring, in case they skipped the starting pad
             if (course.courseType != CourseType.DrivingRangeWithTargets && CurrentCourse != course)
             {
                 _OnCourseStarted(course);
 
-                // _OnCourseStarted refuses to (re)start completed/skipped courses when replaying is
-                // disabled - bail out if it didn't take
+                // Bail out if the course couldn't be (re)started
                 if (CurrentCourse != course)
                     return;
             }
 
             // First contact with the course - transition it to Playing and stamp the start time
-            // (mirrors the NotStarted/Skipped case in _OnBallHit)
             if (courseStates[holeNumber] == CourseState.NotStarted || courseStates[holeNumber] == CourseState.Skipped)
             {
                 courseStates[holeNumber] = CourseState.Playing;
@@ -475,8 +463,7 @@ namespace dev.mikeee324.OpenPutt
                 }
                 else
                 {
-                    // Player is on a different course (e.g. DrivingRangeDistance) — update state directly
-                    // so we don't null out CurrentCourse or trigger course-switching side effects.
+                    // Player is on a different course - update state directly without touching CurrentCourse
                     if (courseStates[holeNumber] != CourseState.Completed)
                     {
                         courseTimes[holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[holeNumber];
@@ -543,6 +530,8 @@ namespace dev.mikeee324.OpenPutt
                 if (!newCourse._IsClubAllowed(golfClub.ClubType))
                     golfClub.ClubType = newCourse._GetFirstAllowedClub();
             }
+
+            newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));
         }
 
         public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
@@ -578,9 +567,7 @@ namespace dev.mikeee324.OpenPutt
                     courseTimes[course.holeNumber] = course.maxTime;
                     break;
                 default:
-                    // Calculate the amount of time player spent on this course.
-                    // If they already maxed out the score the time was locked in back then (state is
-                    // already Completed) - don't subtract again or we'd turn the duration into garbage.
+                    // Calculate time spent on this course, unless it was already locked in when maxed out
                     if (courseStates[course.holeNumber] != CourseState.Completed)
                         courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
                     break;

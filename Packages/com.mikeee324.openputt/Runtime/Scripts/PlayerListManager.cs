@@ -7,9 +7,7 @@ using VRC.SDKBase;
 namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
-    /// Keeps 2 lists of all players - one sorted by score, the other by time - for the scoreboards to use.<br/>
-    /// Both lists are always kept fully sorted, so when a players score/time changes we only need to remove them
-    /// and binary-search insert them back into their new position rather than re-sorting everybody.
+    /// Keeps 2 sorted lists of all players (by score and by time) for the scoreboards to use.
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlayerListManager : UdonSharpBehaviour
@@ -47,8 +45,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Called when the known player roster has changed (players joining/leaving) - removes anybody who is no
-        /// longer valid from both lists and queues up anybody missing so they get inserted
+        /// Called when the player roster changes - removes invalid players from both lists and queues up missing ones for insertion
         /// </summary>
         public void OnPlayerListChanged()
         {
@@ -82,8 +79,7 @@ namespace dev.mikeee324.OpenPutt
             var stopwatch = Stopwatch.StartNew();
             var playersProcessed = 0;
 
-            // Keep repositioning players from the queue until we run out of time for this frame - always do at
-            // least 1 so we're guaranteed to make progress even if a single reposition blows the budget
+            // Reposition queued players until the frame time budget runs out (always do at least 1)
             do
             {
                 var playerManager = dirtyPlayers[0];
@@ -115,8 +111,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Removes playerManager from the sorted array (if present) and re-inserts it at its correct sorted
-        /// position, comparing on either total score or total time
+        /// Removes playerManager from the sorted array (if present) and re-inserts it at its correct sorted position
         /// </summary>
         private PlayerManager[] Reposition(PlayerManager[] sorted, PlayerManager playerManager, bool byTime)
         {
@@ -128,8 +123,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Binary searches a sorted array for the index playerManager should be inserted at to keep it in
-        /// ascending score/time order (lowest PlayerID first as a tie breaker, matching the old sort order)
+        /// Binary searches for the index to insert playerManager at to keep the array sorted ascending by score/time (PlayerID as tie breaker)
         /// </summary>
         private int FindInsertIndex(PlayerManager[] sorted, PlayerManager playerManager, bool byTime)
         {
@@ -154,8 +148,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Stamps each player with their current index in both sorted lists. Used by the scoreboards to jump to
-        /// the local players position when there are more players than can fit on the board at once
+        /// Stamps each player with their current index in both sorted lists, used by scoreboards to jump to the local player's position
         /// </summary>
         private void StampPositions()
         {

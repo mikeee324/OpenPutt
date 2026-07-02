@@ -244,8 +244,7 @@ namespace dev.mikeee324.OpenPutt
         public bool pickedUpByPlayer { get; private set; }
 
         /// <summary>
-        /// True while the player is holding the shoulder pickup but the ball is moving. In this mode we don't
-        /// grab/freeze the ball - we just draw a line to it so the player can see where it is.
+        /// True while tracking a moving ball from the shoulder pickup without grabbing it.
         /// </summary>
         [HideInInspector]
         public bool trackingMovingBall;
@@ -317,8 +316,7 @@ namespace dev.mikeee324.OpenPutt
         /// Last frame's velocity, for reflecting off walls
         private Vector3 lastFrameVelocity;
 
-        /// External force-zone pushes since last FixedUpdate, applied via AddForce in UpdatePhysicsState.
-        /// Kept off the rigidbody so collision impulses don't leak in.
+        /// External force-zone pushes applied next FixedUpdate
         private Vector3 pendingExternalForce;
 
         private Vector3 lastFramePosition;
@@ -355,8 +353,7 @@ namespace dev.mikeee324.OpenPutt
 
         private Vector3 _currentSpin = Vector3.zero;
 
-        /// Gravity direction the stored spin is aligned to. If gravity rotates mid-flight we rotate
-        /// _currentSpin to match so lift/curve stay relative to current gravity.
+        /// Gravity direction the stored spin is aligned to
         private Vector3 _prevGravityDirection = Vector3.down;
 
         public bool isHeldInTeleporter { get; set; }
@@ -675,15 +672,11 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.openPuttPortableScoreboard))
                 playerManager.openPutt.openPuttPortableScoreboard.golfBallHeldByPlayer = false;
 
-            // Guard against spurious re-entrant OnDrop() calls that fire after a slingshot throw
-            // programmatically drops the remaining pickup. By then both saved hand states have been
-            // cleared to None, so there is nothing meaningful for this call to do.
+            // Guard against re-entrant OnDrop() calls after a slingshot throw drops the remaining pickup
             if (ballHeldInHand == VRC_Pickup.PickupHand.None && shoulderBallHeldInHand == VRC_Pickup.PickupHand.None)
                 return;
 
-            // The player is doing a slingshot throw if both the ball and the shoulder were held and they've
-            // just released one of them. When that happens we want to fling the ball - ignore any nearby
-            // start pad so it doesn't snap the ball to the pad instead of throwing it.
+            // Slingshot throw: both ball and shoulder were held and one was just released
             var slingshotActive = Networking.LocalPlayer.IsUserInVR() &&
                                   ballHeldInHand != VRC_Pickup.PickupHand.None &&
                                   shoulderBallHeldInHand != VRC_Pickup.PickupHand.None &&
@@ -821,8 +814,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptDrop()
         {
-            // If we were only tracking a moving ball (drawing a line to it), just clean that up without
-            // running the normal drop/throw logic - the ball was never actually held.
+            // Only tracking a moving ball - just clean that up, nothing was actually held
             if (trackingMovingBall)
             {
                 trackingMovingBall = false;
@@ -831,8 +823,7 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(ballShoulderPickup))
                     ballShoulderPickup.tempDisableAttachment = false;
 
-                // The start line hides itself once the ball is no longer held/tracked, so we don't force it off
-                // here (keeps it up if the ball is still held directly).
+                // Start line hides itself once the ball is no longer held/tracked
                 return;
             }
 
@@ -1016,9 +1007,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(contact))
                 return;
 
-            // Average contact.normal across the manifold for a stable outward wall normal: a single triangle can
-            // report a bad edge normal, and deriving it from contact.point -> centre fails for small balls (the
-            // contact point isn't the closest point on the wall).
+            // Average contact.normal across the manifold for a stable outward wall normal
             var wallNormal = Vector3.zero;
             for (var i = 0; i < collision.contactCount; i++)
             {
@@ -1033,9 +1022,7 @@ namespace dev.mikeee324.OpenPutt
             Vector3 collisionNormal;
             if (gravityMagnitude > .01f)
             {
-                // Wall test: a wall's normal is horizontal (perpendicular to gravity). ~0 dot with gravity means a
-                // wall; ~±1 means floor/ceiling (e.g. a ramp edge), which we skip so a ball rolling up a ramp
-                // doesn't bounce back.
+                // Wall test: normal near-perpendicular to gravity = wall; skip floor/ceiling normals
                 var normalVsGravity = Vector3.Dot(wallNormal, gravityDirection);
                 if (!normalVsGravity.IsNearZero(wallDetectionTolerance))
                     return;
@@ -1054,7 +1041,7 @@ namespace dev.mikeee324.OpenPutt
                 collisionNormal = wallNormal;
             }
 
-            // Don't bounce a ball that's already travelling away from the wall - reflecting would shove it back in.
+            // Don't bounce a ball already travelling away from the wall
             var ballVelForCheck = lastFrameVelocity == Vector3.zero ? ballRigidbody.velocity : lastFrameVelocity;
             var velDotNormal = Vector3.Dot(ballVelForCheck, collisionNormal);
             if (velDotNormal >= 0f)
@@ -1064,8 +1051,7 @@ namespace dev.mikeee324.OpenPutt
             if (lastFrameVelocity == Vector3.zero)
                 lastFrameVelocity = ballRigidbody.velocity;
 
-            // Obstacle surface velocity at the contact. We reflect in its frame (subtract, reflect, add back)
-            // so the ball picks up its speed like a bat. Zero for static walls (plain reflection).
+            // Obstacle surface velocity at the contact; zero for static walls
             var surfaceVelocity = Vector3.zero;
             if (Utilities.IsValid(collision.rigidbody))
                 surfaceVelocity = collision.rigidbody.GetPointVelocity(contact.point).Sanitized();
@@ -1095,11 +1081,10 @@ namespace dev.mikeee324.OpenPutt
 
             newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
 
-            // Back to world space - re-add surface velocity so the obstacle's motion carries into the bounce.
+            // Back to world space - re-add surface velocity
             newDirection = (newDirection + surfaceVelocity).Sanitized();
 
-            // If the bounce goes upward, suspend snapping for a frame (it needs snapMinGroundedSteps
-            // grounded frames again) so PhysX can arc it.
+            // If the bounce goes upward, suspend ground snapping so PhysX can arc it
             if (Vector3.Dot(newDirection, -gravityDirection) > .001f)
                 stepsOnGround = 0;
 
@@ -1133,8 +1118,7 @@ namespace dev.mikeee324.OpenPutt
                 pendingExternalForce = Vector3.zero;
             }
 
-            // Gravity scales with the ball: a shrunk ball under full gravity falls too fast for its apparent size
-            // and tucks into walls instead of arcing/bouncing, so we scale the pull to match its size.
+            // Gravity scales with the ball size so a shrunk ball doesn't fall too fast
             var scaledGravity = gravityMagnitude * BallScaleRatio;
 
             if (gravityMagnitude > 0f)
@@ -1164,8 +1148,7 @@ namespace dev.mikeee324.OpenPutt
                     if (gravityMagnitude < .01f)
                         ballRigidbody.AddForce(-ballVelocity.normalized * GetSurfaceDrag(velMagnitude));
 
-                    // Magnus lift/curve from spin: force perpendicular to velocity and spin axis (backspin lifts,
-                    // sidespin hooks/slices), capped to a fraction of ball weight so it can't loop the path
+                    // Magnus lift/curve from spin, capped to a fraction of ball weight
                     if (_currentSpin.sqrMagnitude > .0001f)
                     {
                         // Keep spin aligned to current gravity if it rotated mid-flight (no-op for constant gravity)
@@ -1225,7 +1208,6 @@ namespace dev.mikeee324.OpenPutt
 
         /// <summary>
         /// Redirects velocity to follow a downhill slope so the ball doesn't launch off mesh-edge ghosts.
-        /// Skips steep faces and crests so ramps still throw it; never adds speed or pushes the ball up.
         /// </summary>
         private void HandleGroundSnapping(bool isGrounded, RaycastHit groundingHit, float prevGroundUpDot)
         {
@@ -1238,19 +1220,19 @@ namespace dev.mikeee324.OpenPutt
             var normal = groundingHit.normal;
             var groundUpDot = Vector3.Dot(normal, up);
 
-            // Skip steep surfaces, and skip when the slope is flattening out (crest / ramp exit) so the ball flies off
+            // Skip steep surfaces and flattening slopes (crest/ramp exit)
             var minGroundUpDot = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
             if (groundUpDot < minGroundUpDot || groundUpDot >= prevGroundUpDot) return;
 
             var speed = ballRigidbody.velocity.magnitude;
             if (speed < 0.0001f) return;
 
-            // Redirect last frame's velocity along the slope at the same speed, then bleed the downhill gravity pull
+            // Redirect last frame's velocity along the slope, then bleed downhill gravity pull
             var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, normal).normalized * speed;
             var rampAngle = Mathf.Acos(Mathf.Clamp(groundUpDot, -1f, 1f));
             newVelocity += gravityDirection * (Mathf.Sin(rampAngle) * Time.deltaTime * gravityMagnitude * BallScaleRatio);
 
-            // Only correct when the ball would otherwise lift off (i.e. make it follow the surface downhill); never push up
+            // Only correct when the ball would otherwise lift off; never push up
             if (Vector3.Dot(newVelocity, up) > .001f)
                 ballRigidbody.velocity = lastFrameVelocity = newVelocity;
         }
@@ -1258,8 +1240,7 @@ namespace dev.mikeee324.OpenPutt
         #region Physics Helpers
 
         /// <summary>
-        /// World-space radius (local radius x largest lossyScale axis). Using the raw local radius breaks the
-        /// ground probe and drag/roll maths whenever the ball is scaled.
+        /// World-space radius (local radius x largest lossyScale axis).
         /// </summary>
         public float BallWorldRadius
         {
@@ -1274,25 +1255,23 @@ namespace dev.mikeee324.OpenPutt
         public float BallWorldDiameter => BallWorldRadius * 2f;
 
         /// <summary>
-        /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown): worldRadius / localRadius.
-        /// Keeps gravity feel and collision margins proportional so a scaled ball bounces instead of sticking.
+        /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown).
         /// </summary>
         private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
 
-        /// Spherecast straight down (along gravity) from just above the ball - sphere probes don't thread collider seams
+        /// Spherecast straight down (along gravity) from just above the ball
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
         {
             var radius = BallWorldRadius;
             var castRadius = radius * 0.9f;
             var castBackup = radius;
             var origin = position - gravityDirection * castBackup;
-            // Buffer scales with the ball so a shrunk ball doesn't probe past its surface onto a nearby wall
+            // Buffer scales with the ball so a shrunk ball doesn't probe onto a nearby wall
             var distance = castBackup + (radius - castRadius) + groundRaycastDistance * BallScaleRatio;
             if (!Physics.SphereCast(origin, castRadius, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
                 return false;
 
-            // Reject wall-like hits: a downward probe can catch a wall/seam and report a near-horizontal normal
-            // as ground, which sticks the ball. Treat it as "not grounded" and let ReflectCollision bounce it.
+            // Reject wall-like hits so ReflectCollision can bounce it instead
             if (gravityMagnitude > .01f && Vector3.Dot(hit.normal.Sanitized(), -gravityDirection).IsNearZero(wallDetectionTolerance))
                 return false;
 
@@ -1432,9 +1411,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Apply an external push (force-zone fan/conveyor). Accumulated and applied once per FixedUpdate rather
-        /// than a direct AddForce, since the ground-snap overwrites rigidbody velocity each frame and would
-        /// discard a raw AddForce on a grounded ball. Mirrors AddForce's Force / Acceleration handling.
+        /// Applies an external push (force-zone fan/conveyor), accumulated and applied once per FixedUpdate.
         /// </summary>
         public void _AddExternalForce(Vector3 force, ForceMode mode)
         {
@@ -1456,8 +1433,7 @@ namespace dev.mikeee324.OpenPutt
                     ballCollider.enabled = true;
                     ballCollider.isTrigger = false;
 
-                    // Grow the collision skin as the ball shrinks so a small fast ball registers a wall contact
-                    // before it penetrates and sticks. (Divisor clamped to [0.0005, 0.01], unchanged at design scale.)
+                    // Grow the collision skin as the ball shrinks so it registers wall contact before penetrating
                     ballCollider.contactOffset = 0.0005f / Mathf.Clamp(BallScaleRatio, 0.05f, 1f);
                 }
 
@@ -1473,7 +1449,7 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.drag = 0.05f;
                     ballRigidbody.angularDrag = 0;
 
-                    // Speculative picks up club hits better at rest; dynamic is better while moving (speculative bounces off edges it shouldn't)
+                    // Speculative detects club hits better at rest; dynamic works better while moving
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
                 }
 
@@ -1487,10 +1463,8 @@ namespace dev.mikeee324.OpenPutt
                     if (Utilities.IsValid(playerManager) && allowBallPickupWhenNotPlaying)
                         newPickupState = true;
 
-                    // If the ball is currently held on the shoulder mount, keep it grabbable so the other
-                    // hand can grab it to arm the slingshot throw - otherwise the course rules above can
-                    // block the second grab and break the shot. Not on standard courses though - there the
-                    // shoulder only points to the ball (you putt with the club, you can't fling it).
+                    // If held on the shoulder mount, keep it grabbable so the other hand can arm a slingshot throw
+                    // (not on standard courses, where the shoulder only points to the ball)
                     if (!newPickupState && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt))
                     {
                         var onStandardCourse = Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard;

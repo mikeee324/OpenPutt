@@ -30,8 +30,7 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 originalPosition;
 
         /// <summary>
-        /// Used when trying to lock the rotation of this object so it only spins on one axis<br/>
-        /// Would be better to maybe use Quaternions but I can't figure out how to lock the axises with them.. so eulerAngles will do for now
+        /// Stores original rotation used to lock this object to spinning on one axis.
         /// </summary>
         private Vector3 originalRotationEuler;
 

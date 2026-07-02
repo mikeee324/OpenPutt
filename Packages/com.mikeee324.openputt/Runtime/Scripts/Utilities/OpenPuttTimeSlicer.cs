@@ -45,9 +45,7 @@ public class AgentUpdateController : TimeSlicer
 */
 
     /// <summary>
-    /// TimeSlicer is a script to inherit from when you want to loop through a list of objects repeatedly and perform an action.<br/>
-    /// It will loop through as many objects per frame as you allow with the timeAllowedPerFrame variable. This allows you to call a function on everything in the array fairly often and define how much CPU time per frame to dedicate to this.<br/>
-    /// Your subclass should contain the array you're working with so you can reference it in _OnUpdateItem().
+    /// Base class for looping through an array of objects a bit at a time, spending at most timeAllowedPerFrame ms per frame
     /// </summary>
     public abstract class OpenPuttTimeSlicer : UdonSharpBehaviour
     {

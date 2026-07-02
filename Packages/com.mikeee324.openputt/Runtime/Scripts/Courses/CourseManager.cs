@@ -33,14 +33,12 @@ namespace dev.mikeee324.OpenPutt
         Completed = 2,
 
         /// <summary>
-        /// The player skipped this course and did not try to play it, they can restart it if they want to later.<br/>
-        /// The player will be assigned maxScore for the course until they restart it
+        /// Player skipped this course without playing it. Assigned maxScore until restarted.
         /// </summary>
         Skipped = 3,
 
         /// <summary>
-        /// The player skipped this course.. they started it but did not finish it before moving to the next course.<br/>
-        /// The player will be assigned maxScore for the course until they restart it
+        /// Player started but didn't finish this course before moving on. Assigned maxScore until restarted.
         /// </summary>
         PlayedAndSkipped = 4
     }
@@ -103,7 +101,7 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
         public string scoreboardLongName = "";
 
-        [Tooltip("Which club types are allowed to be used on this course. Leave as Nothing to only allow the putter. Driving range courses always allow every club. When a player arrives carrying a club that isn't allowed here they swap to the lowest allowed club.")]
+        [Tooltip("Which club types are allowed on this course. Leave as Nothing to only allow the putter. Driving ranges always allow every club.")]
         public GolfClubTypeMask allowedClubs = GolfClubTypeMask.Putter;
 
         [HideInInspector]
@@ -181,8 +179,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Called by a CourseHole when something enters it, if it is the local players ball then we will trigger the course completion process for the player.<br/>
-        /// The players player manager will then send out network events etc
+        /// Called when something enters a CourseHole. If it's the local player's ball, triggers course completion.
         /// </summary>
         /// <param name="hole">The hole that received a trigger collision</param>
         /// <param name="collider">The collider that entered the hole</param>
@@ -204,6 +201,13 @@ namespace dev.mikeee324.OpenPutt
         {
             if (Utilities.IsValid(openPutt.eventHandler))
                 openPutt.eventHandler.OnPlayerHitCourseMaxScore(NetworkCalling.CallingPlayer, this);
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 1)]
+        public void OnPlayerStartedCourse()
+        {
+            if (Utilities.IsValid(openPutt.eventHandler))
+                openPutt.eventHandler.OnPlayerStartCourse(NetworkCalling.CallingPlayer, this);
         }
 
         private void OnDrawGizmosSelected()

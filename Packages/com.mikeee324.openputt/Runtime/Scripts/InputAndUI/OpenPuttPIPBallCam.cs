@@ -7,9 +7,7 @@ using VRC.SDKBase;
 namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
-    /// Passive picture-in-picture camera that chases the local ball while it's moving and off screen,
-    /// rendering to a RenderTexture shown in an on-screen RawImage. Desktop/mobile only. Hides in VR
-    /// and while the main ball cam (OpenPuttBallCam) is active.
+    /// Picture-in-picture camera that follows the local ball when it's moving off screen (desktop/mobile only)
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(1000)]
     public class OpenPuttPIPBallCam : OpenPuttEventListener

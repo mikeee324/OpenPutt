@@ -31,9 +31,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Called when a player's ball starts moving for any reason - a club hit, physics (rolling
-        /// off a ledge, falling), being bumped, etc. Unlike <see cref="OnPlayerBallHit"/> this covers
-        /// all the ways a ball can begin moving, not just club hits.
+        /// Called when a player's ball starts moving, for any reason (not just club hits)
         /// <br/>
         /// <b>Fired for the local player only (for now)</b>
         /// </summary>
@@ -50,6 +48,18 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         /// <param name="player">The player whose ball stopped</param>
         public virtual void OnPlayerBallStopped(VRCPlayerApi player)
+        {
+
+        }
+
+        /// <summary>
+        /// Called when a player starts playing a course
+        /// <br/>
+        /// <b>Fired for all players</b>
+        /// </summary>
+        /// <param name="player">The player who started the course</param>
+        /// <param name="course">Which course the player just started</param>
+        public virtual void OnPlayerStartCourse(VRCPlayerApi player, CourseManager course)
         {
 
         }
@@ -111,7 +121,7 @@ namespace dev.mikeee324.OpenPutt
         /// <b>Fired for all players</b>
         /// </summary>
         /// <param name="player">The player whose handedness changed</param>
-        /// <param name="isLeftHanded">True if the player is now in left-handed mode</param>
+        /// <param name="newHand">The hand the player now uses to hold their club/ball</param>
         public virtual void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
         {
 

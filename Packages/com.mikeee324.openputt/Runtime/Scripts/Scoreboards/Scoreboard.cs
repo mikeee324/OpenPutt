@@ -315,8 +315,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Toggles click acceptance by enabling/disabling the laser colliders. The board stays visible.
-        /// Used to stop clicks from across the map (see <see cref="ScoreboardPositioner.interactionMaxRadius"/>).
+        /// Toggles click acceptance by enabling/disabling the laser colliders, keeping the board visible (see <see cref="ScoreboardPositioner.interactionMaxRadius"/>)
         /// </summary>
         public void SetInteractable(bool state)
         {

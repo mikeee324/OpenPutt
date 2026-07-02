@@ -252,9 +252,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Syncs up all the scoreboards so they are displaying the same thing<br/>
-        /// Might need to be expanded to sync up scroll positions on larger lists later.<br/>
-        /// This can take 1+ms to perform so don't call this too often. (Might need to split this up into separate frames so it's less laggy)
+        /// Syncs up all the scoreboards so they display the same thing. Can take 1+ms, so don't call too often.
         /// </summary>
         public void UpdateScoreboardVisibility()
         {
@@ -363,10 +361,7 @@ namespace dev.mikeee324.OpenPutt
                     var scoreboard = scoreboards[currentVisibleScoreboardID];
                     scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
 
-                    // We want the scoreboard to end up at the positioner's world (lossy) scale. localScale is
-                    // relative to the scoreboard's parent, so if that parent is scaled (e.g. the whole OpenPutt
-                    // object is scaled down) we have to divide the target out by the parent scale - otherwise the
-                    // parent scale gets applied twice and the board ends up tiny.
+                    // Convert the positioner's world scale into a local scale relative to the scoreboard's parent
                     var targetScale = position.transform.lossyScale;
                     var scoreboardParent = scoreboard.transform.parent;
                     if (Utilities.IsValid(scoreboardParent))
@@ -395,8 +390,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Updates the settings page on all scoreboards if the settings are currently visible.<br/>
-        /// If the settings aren't visible then we don't need to do anything as they get refreshed when players click the settings cog
+        /// Updates the settings page on all scoreboards if the settings tab is currently visible
         /// </summary>
         public void RefreshSettingsIfVisible()
         {

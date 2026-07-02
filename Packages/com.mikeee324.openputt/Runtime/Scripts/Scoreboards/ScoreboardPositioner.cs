@@ -42,15 +42,13 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Whether this scoreboard should be shown to the local player, given the camera being viewed
-        /// through (world position, forward, and vertical FOV in degrees).
+        /// Whether this scoreboard should be shown to the local player, based on the current view camera
         /// </summary>
         public bool ShouldBeVisible(Vector3 viewPosition, Vector3 viewForward, float viewFieldOfView)
         {
             var isNowActive = false;
 
-            // Distance uses the (optional) nearby center transform so detection can be tuned, but the
-            // look direction should always be measured toward the positioner itself.
+            // Distance uses the (optional) nearby center transform, but look direction targets the positioner itself
             var nearbyPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
 
             var scoreboardDistance = Vector3.Distance(viewPosition, nearbyPos);

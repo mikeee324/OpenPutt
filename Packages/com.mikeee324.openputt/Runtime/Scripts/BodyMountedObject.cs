@@ -274,8 +274,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Returns the desktop head offset scaled to the local players height (1.7m reference) so the
-        /// object doesn't float too far away from their head when they have scaled themselves down.
+        /// Returns the desktop head offset scaled to the local player's height.
         /// </summary>
         public Vector3 GetScaledDesktopHeadOffset()
         {

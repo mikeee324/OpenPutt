@@ -6,7 +6,7 @@ using VRC.SDKBase;
 namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
-    /// This script doesn't do much other than display the hole number or name right now.. I intend this to allow people to summon their ball or golf club using the course markers in the future.
+    /// Displays the hole number/name on a marker.
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class CourseMarker : UdonSharpBehaviour

@@ -226,15 +226,12 @@ namespace dev.mikeee324.OpenPutt
 
             var name = player.displayName;
 
-            // FNV-1a style hash of the name gives a well distributed, stable number to work from
-            // (Udon doesn't expose uint maths, so we use int and let the multiply overflow/wrap)
+            // FNV-1a style hash of the name (using int since Udon has no uint maths)
             var hash = -2128831035; // unchecked (int)2166136261
             for (var i = 0; i < name.Length; i++)
                 hash = (hash ^ name[i]) * 16777619;
 
-            // Turn the low bits into an even hue (0-1), then convert via OKLCH - a perceptually
-            // uniform colour space - so colours stay vibrant and spread evenly instead of skewing
-            // blue the way a raw HSV hue does.
+            // Convert hash to a hue and use OKLCH for evenly spread, vibrant colours
             var hue = (hash & 0xFFFFFF) / 16777216f;
             return OklchToColor(0.70f, 0.14f, hue);
         }
@@ -480,10 +477,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Relative ball-speed efficiency per club, normalized so Driver = 1.0. Lower-loft clubs convert
-        /// swing speed to ball speed more efficiently (real "smash factor"); the absolute power level is
-        /// already set by hitForceMultiplier/forceMultiplier, so this only models the difference *between*
-        /// clubs. Keep the spread narrow (~0.85-1.0) or club power starts to feel inconsistent.
+        /// Relative ball-speed efficiency per club ("smash factor"), normalized so Driver = 1.0
         /// </summary>
         public static float GetSmashFactor(this GolfClubType clubType)
         {

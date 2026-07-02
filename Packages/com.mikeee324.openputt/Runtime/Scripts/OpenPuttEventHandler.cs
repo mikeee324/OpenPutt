@@ -62,6 +62,20 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Called when a player starts playing a course
+        /// <br/>
+        /// <b>Fired for all players</b>
+        /// </summary>
+        /// <param name="player">The player who started the course</param>
+        /// <param name="course">Which course the player just started</param>
+        public void OnPlayerStartCourse(VRCPlayerApi player, CourseManager course)
+        {
+            foreach (var listener in openPutt.eventListeners)
+                if (Utilities.IsValid(listener))
+                    listener.OnPlayerStartCourse(player, course);
+        }
+
+        /// <summary>
         /// Called when a player hits the ball and their score for the current hole exceeds the course's max score
         /// <br/>
         /// <b>Fired for all players</b>

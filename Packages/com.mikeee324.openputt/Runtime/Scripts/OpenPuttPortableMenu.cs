@@ -169,8 +169,7 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
 
-                // Orient the menu so it spans between the hands (menu right axis follows hand direction),
-                // but pitch it up/down so it faces the player's head instead of being flat to world Y.
+                // Orient the menu so it spans the hands and faces the player's head
                 var headPos = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
 
                 Quaternion finalRot;
@@ -181,15 +180,13 @@ namespace dev.mikeee324.OpenPutt
                 }
                 else
                 {
-                        // Compute a forward vector that looks at the head but is orthogonal to the
-                        // hand direction (so the menu plane spans the hands while facing the head).
                         var desiredRight = directionBetweenHands.normalized;
                         var toHead = headPos - menuPosition;
 
-                        // Project the head direction onto the plane orthogonal to the hand axis
+                        // Project head direction onto the plane orthogonal to the hand axis
                         var forward = toHead - Vector3.Project(toHead, desiredRight);
 
-                        // If projection is degenerate (hands line up with head), pick a fallback forward
+                        // Fallback forward if projection is degenerate
                         if (forward.sqrMagnitude < 1e-6f)
                         {
                             forward = Vector3.Cross(Vector3.up, desiredRight);
@@ -199,7 +196,7 @@ namespace dev.mikeee324.OpenPutt
 
                         forward.Normalize();
 
-                        // Ensure the forward is pointing toward the head (not away)
+                        // Make sure forward points toward the head
                         if (Vector3.Dot(forward, toHead) < 0f)
                             forward = -forward;
 

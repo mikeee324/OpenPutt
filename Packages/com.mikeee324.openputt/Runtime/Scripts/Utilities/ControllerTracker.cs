@@ -9,9 +9,6 @@ public class ControllerTracker : UdonSharpBehaviour
     [Tooltip("Number of frames to store in history for velocity calculations")] [Range(2, 60)]
     public int bufferSize = 4;
 
-    // Removed defaultFrameOffset and defaultSmoothingFrames variables.
-    // Velocity calculation will now use a fixed number of frames for smoothing (defaulting to 5).
-
     // History arrays for each tracking point
     private Vector3[] headPositions;
     private Quaternion[] headRotations;
@@ -125,12 +122,10 @@ public class ControllerTracker : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Gets the linear velocity of a tracking point using a fixed number of frames for calculation.
-    /// Uses VELOCITY_END_OFFSET to determine the end frame and FIXED_LOOKBACK_FRAMES for the start frame.
-    /// Returns Vector3.zero if the buffer is not yet initialized or if deltaTime is zero.
+    /// Gets the linear velocity of a tracking point over the lookback window
     /// </summary>
     /// <param name="dataType">The tracking data type (Head, LeftHand, RightHand).</param>
-    /// <returns>The calculated linear velocity in meters per second.</returns>
+    /// <returns>Linear velocity in meters per second.</returns>
     public Vector3 GetVelocity(VRCPlayerApi.TrackingDataType dataType)
     {
         if (!initialized) return Vector3.zero;
@@ -154,14 +149,11 @@ public class ControllerTracker : UdonSharpBehaviour
     }
 
      /// <summary>
-    /// Gets the linear velocity of a point offset from a tracking point using a fixed number of frames for calculation.
-    /// The offset is treated as a local offset relative to the tracking point's rotation.
-    /// Uses VELOCITY_END_OFFSET to determine the end frame and FIXED_LOOKBACK_FRAMES for the start frame.
-    /// Returns Vector3.zero if the buffer is not yet initialized or if deltaTime is zero.
+    /// Gets the linear velocity of a point offset (in local space) from a tracking point
     /// </summary>
     /// <param name="dataType">The tracking data type (Head, LeftHand, RightHand).</param>
     /// <param name="localOffset">The offset vector in the local space of the tracking point.</param>
-    /// <returns>The calculated linear velocity of the offset point in meters per second.</returns>
+    /// <returns>Linear velocity of the offset point in meters per second.</returns>
     public Vector3 GetVelocityAtOffset(VRCPlayerApi.TrackingDataType dataType, Vector3 localOffset)
     {
         if (!initialized) return Vector3.zero;
@@ -193,12 +185,10 @@ public class ControllerTracker : UdonSharpBehaviour
 
 
     /// <summary>
-    /// Gets the angular velocity of a tracking point using a fixed number of frames for calculation.
-    /// Uses VELOCITY_END_OFFSET to determine the end frame and FIXED_LOOKBACK_FRAMES for the start frame.
-    /// Returns Vector3.zero if the buffer is not yet initialized or if deltaTime is zero.
+    /// Gets the angular velocity of a tracking point over the lookback window
     /// </summary>
     /// <param name="dataType">The tracking data type (Head, LeftHand, RightHand).</param>
-    /// <returns>The calculated angular velocity in degrees per second (Euler angles).</returns>
+    /// <returns>Angular velocity in degrees per second (Euler angles).</returns>
     public Vector3 GetAngularVelocity(VRCPlayerApi.TrackingDataType dataType, int smoothingFrames)
     {
         if (!initialized) return Vector3.zero;
@@ -225,18 +215,14 @@ public class ControllerTracker : UdonSharpBehaviour
         // Calculate the difference in rotation as a delta quaternion (rotation from previous to current)
         var deltaRotation = Quaternion.Inverse(previousRot) * currentRot;
 
-        // Convert the delta quaternion to axis-angle representation
-        // The angle is in degrees here, as per Unity's ToAngleAxis
+        // Convert the delta quaternion to axis-angle representation (degrees)
         deltaRotation.ToAngleAxis(out var angle, out var axis);
 
-        // Ensure the angle represents the shortest rotation path (between -180 and 180 degrees)
-        // This is important for consistent angular velocity direction
+        // Keep the angle in the shortest rotation path (-180 to 180 degrees)
         if (angle > 180f) angle -= 360f;
         else if (angle < -180f) angle += 360f;
 
         // Angular velocity is the angle rotated per second along the rotation axis
-        // Convert angle to radians if needed for other calculations, but for a Vector3 representation
-        // where magnitude is speed in deg/sec and direction is axis, this is appropriate.
         return (axis * angle) / deltaTime;
     }
 
@@ -272,9 +258,7 @@ public class ControllerTracker : UdonSharpBehaviour
     }
 
     /// <summary>
-    /// Calculates the local offset of a world position relative to a tracking point.
-    /// This offset can then be used with GetVelocityAtOffset to find the velocity of that world point.
-    /// Returns Vector3.zero if the buffer is not yet initialized.
+    /// Calculates the local offset of a world position relative to a tracking point, for use with GetVelocityAtOffset
     /// </summary>
     /// <param name="dataType">The tracking data type (Head, LeftHand, RightHand).</param>
     /// <param name="worldPosition">The world position to calculate the offset for.</param>
@@ -283,9 +267,7 @@ public class ControllerTracker : UdonSharpBehaviour
     {
         if (!initialized) return Vector3.zero;
 
-        // Get the current world position and rotation of the tracking point
-        // Note: This calculation uses the *most current* tracking data, not the VELOCITY_END_OFFSET frame.
-        // This is because you typically want the offset relative to the current position/rotation for attachment purposes.
+        // Uses the most current tracking data (not the endOffset frame) for attachment purposes
         var trackingPointWorldPos = GetPosition(dataType, currentIndex);
         var trackingPointWorldRot = GetRotation(dataType, currentIndex);
 
@@ -294,9 +276,7 @@ public class ControllerTracker : UdonSharpBehaviour
     }
         
     /// <summary>
-    /// Gets an array of historical world positions for a point offset from a tracking point, starting from a specified offset.
-    /// The offset is treated as a local offset relative to the tracking point's rotation at each historical frame.
-    /// Returns an empty array if the buffer is not initialized or the requested range is invalid.
+    /// Gets an array of historical world positions for a point offset (in local space) from a tracking point
     /// </summary>
     /// <param name="dataType">The tracking data type (Head, LeftHand, RightHand).</param>
     /// <param name="localOffset">The offset vector in the local space of the tracking point.</param>

@@ -469,9 +469,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Overlays the players ball colour onto the handle and head meshes using MaterialPropertyBlocks.<br/>
-        /// The base armed/disarmed colours are applied by the ClubIsArmed setter - this only tints on top,
-        /// so the head is left alone while armed (it stays red). Does nothing when tinting is disabled.
+        /// Tints the handle and head meshes with the player's ball colour (skipped while armed or tinting is disabled).
         /// </summary>
         public void _UpdateClubColour()
         {

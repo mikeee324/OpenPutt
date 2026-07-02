@@ -134,7 +134,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Plays a sound at the given position based on how well the player scored compared to par. If the player scored a hole in one, the hole in one sound will be played instead, regardless of how that score relates to par
+        /// Plays a sound based on score relative to par (hole in one always takes priority).
         /// </summary>
         /// <param name="position"></param>
         /// <param name="totalHits"></param>
