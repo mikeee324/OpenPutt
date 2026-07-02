@@ -194,10 +194,10 @@ namespace dev.mikeee324.OpenPutt
             {
                 clubHeadDirectionInfluence = new AnimationCurve();
                 clubHeadDirectionInfluence.AddKey(0f, 0.95f);       // High influence for very slow speeds (near perfect putts)
-                clubHeadDirectionInfluence.AddKey(3f, 0.6f);        // Influence drops significantly by faster putting/slow chipping speeds
-                clubHeadDirectionInfluence.AddKey(10f, 0.2f);       // Influence is lower for chipping/pitching speeds
-                clubHeadDirectionInfluence.AddKey(30f, 0.05f);      // Influence is very low but not zero for iron/drive speeds
-                clubHeadDirectionInfluence.AddKey(40f, 0.0f);       // Influence is none for very fast speeds
+                clubHeadDirectionInfluence.AddKey(3f, 0.75f);       // Influence drops slightly by faster putting/slow chipping speeds
+                clubHeadDirectionInfluence.AddKey(10f, 0.6f);       // Face angle still dominant for chipping/pitching speeds
+                clubHeadDirectionInfluence.AddKey(30f, 0.45f);      // Face angle remains the main driver of direction for iron/drive speeds
+                clubHeadDirectionInfluence.AddKey(40f, 0.4f);       // Swing path gets a bit more say at very fast speeds, but face angle still leads
                 clubHeadDirectionInfluence.SmoothTangents(0, 0.5f); // Smooth the transition
                 clubHeadDirectionInfluence.SmoothTangents(1, 0.5f);
                 clubHeadDirectionInfluence.SmoothTangents(2, 0.5f);
