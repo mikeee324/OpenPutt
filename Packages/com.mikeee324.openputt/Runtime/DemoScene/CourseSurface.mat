@@ -8,11 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: CourseSurface
-  m_Shader: {fileID: 4800000, guid: 2146d187ed71fe047b8f4f7882a178cc, type: 3}
+  m_Shader: {fileID: 4800000, guid: 16051587239545e48abfebf939390dc9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _GLOSSYREFLECTIONS_OFF
+  - _LOCKNOISETOOBJECT_ON
   - _SPECULARHIGHLIGHTS_OFF
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -83,6 +84,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AllNoiseStrength: 0.5
+    - _BigNoiseAmaount: 2
+    - _BigNoiseStrength: 0.33
     - _BlendMax: 0.6
     - _BlendMin: 0.393
     - _BumpScale: 1
@@ -96,12 +100,15 @@ Material:
     - _GlossyReflections: 0
     - _HeightOffset: 0
     - _LineHeightCM: 1
+    - _LinesDarkenAmount: 0.25
+    - _LockNoiseToObject: 1
     - _Metallic: 0
     - _MetallicValue: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _RoughnessToggle: 0
+    - _SmallNoiseAmaount: 100
     - _SmoothnessTextureChannel: 0
     - _SmoothnessValue: 0
     - _SpecularHighlights: 0
@@ -109,6 +116,8 @@ Material:
     - _UVSec: 0
     - _ZWrite: 1
     - __dirty: 1
+    - _smooothstepmax: 0.95
+    - _smooothstepmin: 0.1
     m_Colors:
     - _Color: {r: 0, g: 0.5754717, b: 0.08393869, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
