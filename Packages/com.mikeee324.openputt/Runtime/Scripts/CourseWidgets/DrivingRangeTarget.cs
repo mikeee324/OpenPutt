@@ -95,7 +95,7 @@ namespace dev.mikeee324.OpenPutt
 
             transform.localScale = Vector3.zero;
             if (_respawnScaleHandle != null) _respawnScaleHandle.Kill();
-            _respawnScaleHandle = transform.TweenScale(_originalScale, deathShrinkDuration, VRCTweenEase.OutElastic);
+            _respawnScaleHandle = transform.TweenScale(_originalScale, deathShrinkDuration, VRCTweenEase.OutQuint);
         }
 
         private void OnDisable()
@@ -131,11 +131,11 @@ namespace dev.mikeee324.OpenPutt
                 golfBall.playerManager._AddToCourseScore(courseManager, scoreToAdd);
 
             if (_hitColourHandle != null) _hitColourHandle.Kill();
-            _hitColourHandle = VRCTween.TweenFloat(0f, 1f, hitAnimDuration, this, nameof(_hitColourT), nameof(_OnHitColourUpdate), VRCTweenEase.OutBounce);
+            _hitColourHandle = VRCTween.TweenFloat(0f, 1f, hitAnimDuration, this, nameof(_hitColourT), nameof(_OnHitColourUpdate), VRCTweenEase.OutQuint);
 
             if (_hitScaleHandle != null) _hitScaleHandle.Kill();
             transform.localScale = _originalScale * 1.3f;
-            _hitScaleHandle = transform.TweenScale(_originalScale, hitAnimDuration, VRCTweenEase.OutBounce);
+            _hitScaleHandle = transform.TweenScale(_originalScale, hitAnimDuration, VRCTweenEase.OutQuint);
 
             if (Utilities.IsValid(hitParticleSystem))
             {
@@ -165,7 +165,7 @@ namespace dev.mikeee324.OpenPutt
         public void _OnTargetDeath()
         {
             if (_deathScaleHandle != null) _deathScaleHandle.Kill();
-            _deathScaleHandle = transform.TweenScale(Vector3.zero, deathShrinkDuration, VRCTweenEase.InBounce)
+            _deathScaleHandle = transform.TweenScale(Vector3.zero, deathShrinkDuration, VRCTweenEase.InQuint)
                 .OnComplete(this, nameof(_DisableTarget));
         }
 
