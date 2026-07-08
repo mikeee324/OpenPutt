@@ -17,7 +17,7 @@ You can look at the [getting started guide here](https://github.com/mikeee324/Op
 Not everything is covered yet, but hopefully I can get around to covering things in more detail later :)
   
 # Worlds
-A list of some worlds where you can see this in action (If you make one let me know!)
+A list of some worlds where you can see OpenPutt in action. If you make something yourself with this prefab. Let me know, or share with the #OpenPutt tag on social media. It's great seeing what people make!
 - [Junkyard Golf - mikeee324](https://vrchat.com/home/world/wrld_d62918a1-9172-40cd-93a9-5d8546dad6cf)
 - [Stella Station Putt Putt - Beany`](https://vrchat.com/home/world/wrld_3a74864c-ba1d-4f11-b529-3a8a5fcfbab1)
 - [Palm Tee Minigolf - Rabothy](https://vrchat.com/home/world/wrld_ae6fe9ef-479c-4a9b-aeb6-78840f8e9f2d)

@@ -106,6 +106,11 @@ public class GolfCourseLinesMasterGUI : ShaderGUI
         if (lineHeight == null) return; 
 
         MaterialProperty heightOffset = FindProperty("_HeightOffset", properties, false);
+        
+        // Handle new single slider for blur/blend (checks for either naming convention)
+        MaterialProperty edgeBlur = FindProperty("_EdgeBlur", properties, false) ?? FindProperty("_LineBlend", properties, false);
+        
+        // Fallbacks for older shaders
         MaterialProperty blendMin = FindProperty("_BlendMin", properties, false);
         MaterialProperty blendMax = FindProperty("_BlendMax", properties, false);
         
@@ -121,10 +126,20 @@ public class GolfCourseLinesMasterGUI : ShaderGUI
             if (heightOffset != null) materialEditor.ShaderProperty(heightOffset, new GUIContent("Height Offset"));
             if (darkenAmount != null) materialEditor.ShaderProperty(darkenAmount, new GUIContent("Darken Amount"));
 
-            if (blendMin != null && blendMax != null)
+            if (edgeBlur != null)
             {
                 GUILayout.Space(5);
-                EditorGUILayout.LabelField("Line Blending Limits", EditorStyles.boldLabel);
+                materialEditor.ShaderProperty(edgeBlur, new GUIContent("Edge Blur Amount", "Controls the softness of the topographical line edges."));
+                
+                if (edgeBlur.floatValue == 0f)
+                {
+                    EditorGUILayout.HelpBox("Setting Edge Blur to 0.1 or more is recommended to soften jagged edges.", MessageType.Info);
+                }
+            }
+            else if (blendMin != null && blendMax != null)
+            {
+                GUILayout.Space(5);
+                EditorGUILayout.LabelField("Line Blending Limits (Legacy)", EditorStyles.boldLabel);
                 materialEditor.ShaderProperty(blendMin, new GUIContent("Blend Min"));
                 materialEditor.ShaderProperty(blendMax, new GUIContent("Blend Max"));
                 
