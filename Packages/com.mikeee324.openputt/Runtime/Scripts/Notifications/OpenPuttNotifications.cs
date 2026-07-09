@@ -1,6 +1,4 @@
 ﻿using dev.mikeee324.OpenPutt;
-using UdonSharp;
-using Unity.XR.Oculus;
 using UnityEngine;
 using VRC.SDK3.Persistence;
 using VRC.SDK3.Rendering;

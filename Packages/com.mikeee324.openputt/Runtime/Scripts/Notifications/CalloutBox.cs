@@ -1,11 +1,8 @@
-﻿
-using TMPro;
+﻿using TMPro;
 using UdonSharp;
-using Unity.XR.Oculus;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
-using VRC.Udon;
 
 public class CalloutBox : UdonSharpBehaviour
 {
