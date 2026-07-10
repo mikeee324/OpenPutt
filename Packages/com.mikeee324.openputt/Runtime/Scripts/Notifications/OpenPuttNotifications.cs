@@ -7,8 +7,7 @@ using VRC.SDKBase;
 
 public class OpenPuttNotifications : OpenPuttEventListener
 {
-    public Canvas _desktopCanvas;
-    public Canvas _vrCanvas;
+    public Canvas _canvas;
     public HeadFollower _headFollower;
     [Range(1,20)]public float _vrSmoothing = 10f;
     public bool _notificationToggle = true;
@@ -83,15 +82,36 @@ public class OpenPuttNotifications : OpenPuttEventListener
         if(player != Networking.LocalPlayer) return;
         _playerIsInVR = player.IsUserInVR();
         
+        Vector3 baseScale = new Vector3(0.01f, 0.01f, 0.01f); // Your default canvas scale
         if (_playerIsInVR)
         {
             // _vrCanvas.gameObject.SetActive(true);
             // _desktopCanvas.gameObject.SetActive(false);
             _headFollower._lerpSpeed = _vrSmoothing;
+            _canvas.transform.localScale = baseScale;
         }
         else
         {
             _headFollower._lerpSpeed = 1000;
+            
+            // 1. Define the baseline values you used when designing the UI
+            float baseFOV = 60f; // The FOV where the UI looks perfect
+
+            // 2. Get the player's current FOV (e.g., 50, 90, 100)
+            float currentFOV = VRCCameraSettings.ScreenCamera.FieldOfView;
+
+            // 3. Calculate the multiplier
+            // We divide by 2, and multiply by Mathf.Deg2Rad because Mathf.Tan expects radians!
+            float currentTan = Mathf.Tan((currentFOV / 2f) * Mathf.Deg2Rad);
+            float baseTan = Mathf.Tan((baseFOV / 2f) * Mathf.Deg2Rad);
+            float scaleMultiplier = currentTan / baseTan;
+
+            // 4. Apply the exact scale to your Canvas/UI
+            _canvas.transform.localScale = baseScale * scaleMultiplier;
+            
+            
+            
+            
             // _vrCanvas.gameObject.SetActive(false);
             // _desktopCanvas.gameObject.SetActive(true);
             // _headFollower.enabled = false;
@@ -120,115 +140,51 @@ public class OpenPuttNotifications : OpenPuttEventListener
         {
             case Callouts.Ace:
                 _notificationSound = aceSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "ACE!";
-                }
-                else
-                {
-                    calloutText = $"{player.displayName} scored an ACE!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "ACE!" : $"{player.displayName} scored an ACE!";
                 break;
             case Callouts.Condor:
                 _notificationSound = condorSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Condor!";
-						
-                }
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Condor!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Condor!" : $"{player.displayName} scored a Condor!";
 
                 break;
             case Callouts.Albatross:
                 _notificationSound = albatrossSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Albatross!";
-                }
-                else
-                {
-                    calloutText = $"{player.displayName} scored an Albatross!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Albatross!" : $"{player.displayName} scored an Albatross!";
 
                 break;
             case Callouts.Eagle:
                 _notificationSound = eagleSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Eagle!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored an Eagle!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Eagle!" : $"{player.displayName} scored an Eagle!";
 
                 break;
             case Callouts.Birdie:
                 _notificationSound = birdieSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Birdie!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Birdie!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Birdie!" : $"{player.displayName} scored a Birdie!";
 
                 break;
             case Callouts.Par:
                 _notificationSound = parSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Par!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Par!";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Par!" : $"{player.displayName} scored a Par!";
 
                 break;
             case Callouts.Bogey:
                 _notificationSound = bogeySound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Bogey!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Bogey.";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Bogey!" : $"{player.displayName} scored a Bogey.";
 
                 break;
             case Callouts.DoubleBogey:
                 _notificationSound = doubleBogeySound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Double Bogey!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Double Bogey.";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Double Bogey!" : $"{player.displayName} scored a Double Bogey.";
 
                 break;
             case Callouts.TripleBogey:
                 _notificationSound = tripleBogeySound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Triple Bogey!";}
-                else
-                {
-                    calloutText = $"{player.displayName} scored a Triple Bogey.";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Triple Bogey!" : $"{player.displayName} scored a Triple Bogey.";
 
                 break;
             case Callouts.StrokeLimit:
                 _notificationSound = strokeLimitSound;
-                if (player == Networking.LocalPlayer)
-                {
-                    calloutText = "Stroke Limit!";}
-                else
-                {
-                    calloutText = $"{player.displayName} hit the Stroke Limit.";
-                }
+                calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
 
                 break;
         }
@@ -239,7 +195,8 @@ public class OpenPuttNotifications : OpenPuttEventListener
 
     public void InstantiateCalloutBox(string callText, AudioClip callAudio = null)
     {
-        GameObject lastCallout = Instantiate(_calloutBoxPrefab, _playerIsInVR ? _vrCanvas.transform : _desktopCanvas.transform);
+        // GameObject lastCallout = Instantiate(_calloutBoxPrefab, _playerIsInVR ? _canvas.transform : _canvas.transform);
+        GameObject lastCallout = Instantiate(_calloutBoxPrefab, _canvas.transform);
         var calloutScript = lastCallout.GetComponent<CalloutBox>();
 		
         calloutScript.targetPos = _playerIsInVR ? _vrTargetPos : _desktopTargetPos;
