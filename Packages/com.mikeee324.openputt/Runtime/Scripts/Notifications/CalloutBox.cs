@@ -6,7 +6,7 @@ using VRC.SDKBase;
 
 public class CalloutBox : UdonSharpBehaviour
 {
-    
+    [HideInInspector] public OpenPuttNotifications manager;
     public GameObject targetObject;
     private VRCTweenHandle _positionTweenHandle;
     private VRCTweenHandle _scaleTweenHandle;
@@ -57,6 +57,11 @@ public class CalloutBox : UdonSharpBehaviour
     
     public void OnEvenMoreTweened() //I use stupid names. Fight me.
     {
+        if (Utilities.IsValid(manager))
+        {
+            manager.OnCalloutFinished();
+        }
+        else Debug.LogError($"[CalloutBox] I have no reference to the notification script manager");
         Debug.Log("Destroying callout box.");
         Destroy(gameObject);
     }
