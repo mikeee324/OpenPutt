@@ -308,8 +308,8 @@ RectTransform:
   m_GameObject: {fileID: 9104757542541406243}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 3}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 5032810705522641105}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -421,8 +421,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 4505204410308885561}
-  _desktopCanvas: {fileID: 640609761339339320}
-  _vrCanvas: {fileID: 640609761339339320}
+  _canvas: {fileID: 640609761339339320}
   _headFollower: {fileID: 8877022280582352304}
   _vrSmoothing: 12
   _notificationToggle: 1
@@ -430,10 +429,10 @@ MonoBehaviour:
   _playerIsInVR: 1
   _calloutBoxPrefab: {fileID: 8194396697069291042, guid: 3ce06f06391c6d0448af7b32fc03fcb7,
     type: 3}
-  _vrTargetPos: {x: 0, y: 0.8, z: 0}
-  _desktopTargetPos: {x: 0, y: 1.5, z: 0}
-  _vrStartPos: {x: 3, y: 1, z: 0}
-  _desktopStartPos: {x: 3, y: 1, z: 0}
+  _vrTargetPos: {x: 0, y: 80, z: 0}
+  _desktopTargetPos: {x: 0, y: 150, z: 0}
+  _vrStartPos: {x: 300, y: 250, z: 0}
+  _desktopStartPos: {x: 300, y: 250, z: 0}
   aceSound: {fileID: 0}
   condorSound: {fileID: 0}
   albatrossSound: {fileID: 0}

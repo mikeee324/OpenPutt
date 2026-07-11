@@ -18,8 +18,7 @@ public class ShaderController : UdonSharpBehaviour
     public Slider smoothstepMinSlider;
     public Slider smoothstepMaxSlider;
     public Slider heightOffsetSlider;
-    public Slider blendMaxSlider;
-    public Slider blendMinSlider;
+    public Slider lineBlendSlider;
     public Slider lineHeightCMSlider;
 
     private bool isInitializing = true;
@@ -27,7 +26,7 @@ public class ShaderController : UdonSharpBehaviour
     // Variables to store the original default values
     private float defSmallNoise, defBigNoise, defBigNoiseStrength, defLinesDarken;
     private float defAllNoise, defSmoothMin, defSmoothMax, defHeightOffset;
-    private float defBlendMax, defBlendMin, defLineHeight;
+    private float defLineBlend, defLineHeight;
 
     void Start()
     {
@@ -73,8 +72,7 @@ public class ShaderController : UdonSharpBehaviour
         defSmoothMin = targetMaterial.GetFloat("_smooothstepmin");
         defSmoothMax = targetMaterial.GetFloat("_smooothstepmax");
         defHeightOffset = targetMaterial.GetFloat("_HeightOffset");
-        defBlendMax = targetMaterial.GetFloat("_BlendMax");
-        defBlendMin = targetMaterial.GetFloat("_BlendMin");
+        defLineBlend = targetMaterial.GetFloat("_LineBlend");
         defLineHeight = targetMaterial.GetFloat("_LineHeightCM");
         
         Debug.Log("[ShaderController] Default values stored in memory.");
@@ -98,8 +96,7 @@ public class ShaderController : UdonSharpBehaviour
         targetMaterial.SetFloat("_smooothstepmin", defSmoothMin);
         targetMaterial.SetFloat("_smooothstepmax", defSmoothMax);
         targetMaterial.SetFloat("_HeightOffset", defHeightOffset);
-        targetMaterial.SetFloat("_BlendMax", defBlendMax);
-        targetMaterial.SetFloat("_BlendMin", defBlendMin);
+        targetMaterial.SetFloat("_LineBlend", defLineBlend);
         targetMaterial.SetFloat("_LineHeightCM", defLineHeight);
 
         // Tell the UI sliders to snap back to these updated material values
@@ -119,8 +116,7 @@ public class ShaderController : UdonSharpBehaviour
         if (smoothstepMinSlider != null) targetMaterial.SetFloat("_smooothstepmin", smoothstepMinSlider.value);
         if (smoothstepMaxSlider != null) targetMaterial.SetFloat("_smooothstepmax", smoothstepMaxSlider.value);
         if (heightOffsetSlider != null) targetMaterial.SetFloat("_HeightOffset", heightOffsetSlider.value);
-        if (blendMaxSlider != null) targetMaterial.SetFloat("_BlendMax", blendMaxSlider.value);
-        if (blendMinSlider != null) targetMaterial.SetFloat("_BlendMin", blendMinSlider.value);
+        if (lineBlendSlider != null) targetMaterial.SetFloat("_LineBlend", lineBlendSlider.value);
         if (lineHeightCMSlider != null) targetMaterial.SetFloat("_LineHeightCM", lineHeightCMSlider.value);
     }
 
@@ -138,8 +134,7 @@ public class ShaderController : UdonSharpBehaviour
         if (smoothstepMinSlider != null) smoothstepMinSlider.value = targetMaterial.GetFloat("_smooothstepmin");
         if (smoothstepMaxSlider != null) smoothstepMaxSlider.value = targetMaterial.GetFloat("_smooothstepmax");
         if (heightOffsetSlider != null) heightOffsetSlider.value = targetMaterial.GetFloat("_HeightOffset");
-        if (blendMaxSlider != null) blendMaxSlider.value = targetMaterial.GetFloat("_BlendMax");
-        if (blendMinSlider != null) blendMinSlider.value = targetMaterial.GetFloat("_BlendMin");
+        if (lineBlendSlider != null) lineBlendSlider.value = targetMaterial.GetFloat("_LineBlend");
         if (lineHeightCMSlider != null) lineHeightCMSlider.value = targetMaterial.GetFloat("_LineHeightCM");
         
         isInitializing = false; 

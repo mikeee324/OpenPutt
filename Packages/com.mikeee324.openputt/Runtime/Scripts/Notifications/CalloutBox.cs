@@ -10,7 +10,7 @@ public class CalloutBox : UdonSharpBehaviour
     public GameObject targetObject;
     private VRCTweenHandle _positionTweenHandle;
     private VRCTweenHandle _scaleTweenHandle;
-    private Vector3 startPos;
+    public Vector3 startPos;
     public Vector3 targetPos;
     public float speed = 2f;
     public float delay = 2f;
