@@ -529,6 +529,10 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (!newCourse._IsClubAllowed(golfClub.ClubType))
                     golfClub.ClubType = newCourse._GetFirstAllowedClub();
+
+                // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
+                if (Utilities.IsValid(openPutt.uiController))
+                    openPutt.uiController.UpdateButtonStates();
             }
 
             newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));
@@ -545,6 +549,10 @@ namespace dev.mikeee324.OpenPutt
             }
 
             CurrentCourse = null;
+
+            // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
+            if (Owner.isLocal && Utilities.IsValid(openPutt.uiController))
+                openPutt.uiController.UpdateButtonStates();
 
             // Add on any extra points to the players score that this particular hole has
             if (Utilities.IsValid(hole))

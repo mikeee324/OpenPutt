@@ -8,10 +8,11 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: GridFloorDemoUdonGreen
-  m_Shader: {fileID: 4800000, guid: 2146d187ed71fe047b8f4f7882a178cc, type: 3}
+  m_Shader: {fileID: 4800000, guid: 16051587239545e48abfebf939390dc9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
+  - _LOCKNOISETOOBJECT_ON
   - _ROUGHNESSTOGGLE_ON
   m_InvalidKeywords: []
   m_LightmapFlags: 4
@@ -102,6 +103,9 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AllNoiseStrength: 0.5
+    - _BigNoiseAmaount: 2
+    - _BigNoiseStrength: 0.33
     - _BlendMax: 0.6
     - _BlendMin: 0.4
     - _BumpScale: 1
@@ -115,7 +119,10 @@ Material:
     - _GlossyReflections: 1
     - _HeightOffset: 0
     - _LightMapGain: 0
+    - _LineBlend: 0.2
     - _LineHeightCM: 6.6
+    - _LinesDarkenAmount: 0.25
+    - _LockNoiseToObject: 1
     - _Metallic: 0
     - _MetallicValue: 0
     - _Mode: 0
@@ -124,6 +131,7 @@ Material:
     - _Parallax: 0.02
     - _RoughnessToggle: 1
     - _Shininess: 0.1
+    - _SmallNoiseAmaount: 200
     - _Smoothness1: 0
     - _SmoothnessTextureChannel: 0
     - _SmoothnessValue: 0
@@ -140,11 +148,13 @@ Material:
     - _UseObjectSpace: 1
     - _ZWrite: 1
     - __dirty: 1
+    - _smooothstepmax: 0.95
+    - _smooothstepmin: 0.1
     m_Colors:
     - _Color: {r: 0.019735768, g: 0.4811321, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Offset: {r: 1, g: 1, b: 0, a: 0}
     - _TextureOffset: {r: 0, g: 0, b: 0, a: 0}
-    - _TextureTiling: {r: 8, g: 8, b: 0, a: 0}
+    - _TextureTiling: {r: 10, g: 10, b: 0, a: 0}
     - _Tiling1: {r: 1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []

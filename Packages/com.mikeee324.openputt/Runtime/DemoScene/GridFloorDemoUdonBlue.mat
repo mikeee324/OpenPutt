@@ -8,10 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: GridFloorDemoUdonBlue
-  m_Shader: {fileID: 46, guid: 0000000000000000f000000000000000, type: 0}
+  m_Shader: {fileID: 4800000, guid: 16051587239545e48abfebf939390dc9, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _LOCKNOISETOOBJECT_ON
+  - _ROUGHNESSTOGGLE_ON
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -23,6 +25,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _Albedo:
+        m_Texture: {fileID: 2800000, guid: b2c2c1a52cdb75943958a408093dee04, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _Albedo1:
         m_Texture: {fileID: 2800000, guid: b2c2c1a52cdb75943958a408093dee04, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -55,7 +61,15 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Metallic:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Normal:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -68,6 +82,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Smoothness:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -85,25 +103,36 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _AllNoiseStrength: 0.5
+    - _BigNoiseAmaount: 2
+    - _BigNoiseStrength: 0.33
     - _BumpScale: 1
     - _Cutoff: 0.5
     - _DarkenAmount: 0.05423951
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
+    - _EmissionIntensity: 1
     - _GlossMapScale: 1
     - _Glossiness: 0
     - _GlossyReflections: 1
     - _HeightOffset: 0
     - _LightMapGain: 0
+    - _LineBlend: 0.2
+    - _LineHeightCM: 3
+    - _LinesDarkenAmount: 0.25
+    - _LockNoiseToObject: 1
     - _Metallic: 0
+    - _MetallicValue: 0
     - _Mode: 0
     - _OcclusionStrength: 1
     - _Oclusion: 0
     - _Parallax: 0.02
     - _RoughnessToggle: 1
     - _Shininess: 0.1
+    - _SmallNoiseAmaount: 200
     - _Smoothness1: 0
     - _SmoothnessTextureChannel: 0
+    - _SmoothnessValue: 0
     - _SpecularBrightness: 1
     - _SpecularHighlights: 1
     - _SrcBlend: 1
@@ -117,9 +146,13 @@ Material:
     - _UseObjectSpace: 1
     - _ZWrite: 1
     - __dirty: 1
+    - _smooothstepmax: 0.95
+    - _smooothstepmin: 0.1
     m_Colors:
     - _Color: {r: 0.23172642, g: 0.47907075, b: 0.7264151, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Offset: {r: 1, g: 1, b: 0, a: 0}
+    - _TextureOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _TextureTiling: {r: 10, g: 10, b: 0, a: 0}
     - _Tiling1: {r: 1, g: 1, b: 0, a: 0}
   m_BuildTextureStacks: []
