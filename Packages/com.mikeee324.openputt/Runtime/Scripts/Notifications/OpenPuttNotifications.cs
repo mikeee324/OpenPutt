@@ -18,9 +18,20 @@ public class OpenPuttNotifications : OpenPuttEventListener
     private AudioClip _notificationSound;
     public AudioClip aceSound, condorSound, albatrossSound, eagleSound, birdieSound, parSound, bogeySound, doubleBogeySound, tripleBogeySound, strokeLimitSound;
     public OpenPutt openPutt;
+
+    // --- NEW QUEUE VARIABLES ---
+    public int maxQueueSize = 20;
+    private int[] _queuedCallouts;
+    private int[] _queuedPlayerIds;
+    private int _queueCount = 0;
+    private bool _isDisplayingCallout = false;
     
     void Start()
     {
+        // Initialize our queue arrays
+        _queuedCallouts = new int[maxQueueSize];
+        _queuedPlayerIds = new int[maxQueueSize];
+
         if (!Utilities.IsValid(openPutt))
             return;
 
@@ -109,9 +120,6 @@ public class OpenPuttNotifications : OpenPuttEventListener
             // 4. Apply the exact scale to your Canvas/UI
             _canvas.transform.localScale = baseScale * scaleMultiplier;
             
-            
-            
-            
             // _vrCanvas.gameObject.SetActive(false);
             // _desktopCanvas.gameObject.SetActive(true);
             // _headFollower.enabled = false;
@@ -128,15 +136,66 @@ public class OpenPuttNotifications : OpenPuttEventListener
     [NetworkCallable]
     public void Callout(Callouts callout, int playerId)
     {
+        // Preliminary checks
         VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
         if (player == null) return;
-        
-        if (_notificationToggle == false) return;
-        if (_othersNotificationsToggle == false && player != Networking.LocalPlayer) return;
-		
+        if (!_notificationToggle) return;
+        if (!_othersNotificationsToggle && player != Networking.LocalPlayer) return;
+
+        // Add to queue if we have space
+        if (_queueCount < maxQueueSize)
+        {
+            _queuedCallouts[_queueCount] = (int)callout;
+            _queuedPlayerIds[_queueCount] = playerId;
+            _queueCount++;
+        }
+        else
+        {
+            Debug.LogWarning("Callout queue is full! Dropping notification.");
+        }
+
+        // If nothing is playing, start the queue
+        if (!_isDisplayingCallout)
+        {
+            ProcessNextQueueItem();
+        }
+    }
+
+    private void ProcessNextQueueItem()
+    {
+        // If the queue is empty, flag that we are done and wait for the next call
+        if (_queueCount == 0)
+        {
+            _isDisplayingCallout = false;
+            return;
+        }
+
+        _isDisplayingCallout = true;
+
+        // Pop the first item
+        Callouts currentCallout = (Callouts)_queuedCallouts[0];
+        int currentPlayerId = _queuedPlayerIds[0];
+
+        // Shift the remaining items down the arrays
+        for (int i = 0; i < _queueCount - 1; i++)
+        {
+            _queuedCallouts[i] = _queuedCallouts[i + 1];
+            _queuedPlayerIds[i] = _queuedPlayerIds[i + 1];
+        }
+        _queueCount--;
+
+        // It's possible the player left while sitting in the queue, check again
+        VRCPlayerApi player = VRCPlayerApi.GetPlayerById(currentPlayerId);
+        if (player == null)
+        {
+            // Player left, skip this one and instantly process the next
+            ProcessNextQueueItem();
+            return;
+        }
+
         string calloutText = "This is an error!";
 
-        switch (callout)
+        switch (currentCallout)
         {
             case Callouts.Ace:
                 _notificationSound = aceSound;
@@ -145,87 +204,72 @@ public class OpenPuttNotifications : OpenPuttEventListener
             case Callouts.Condor:
                 _notificationSound = condorSound;
                 calloutText = player == Networking.LocalPlayer ? "Condor!" : $"{player.displayName} scored a Condor!";
-
                 break;
             case Callouts.Albatross:
                 _notificationSound = albatrossSound;
                 calloutText = player == Networking.LocalPlayer ? "Albatross!" : $"{player.displayName} scored an Albatross!";
-
                 break;
             case Callouts.Eagle:
                 _notificationSound = eagleSound;
                 calloutText = player == Networking.LocalPlayer ? "Eagle!" : $"{player.displayName} scored an Eagle!";
-
                 break;
             case Callouts.Birdie:
                 _notificationSound = birdieSound;
                 calloutText = player == Networking.LocalPlayer ? "Birdie!" : $"{player.displayName} scored a Birdie!";
-
                 break;
             case Callouts.Par:
                 _notificationSound = parSound;
                 calloutText = player == Networking.LocalPlayer ? "Par!" : $"{player.displayName} scored a Par!";
-
                 break;
             case Callouts.Bogey:
                 _notificationSound = bogeySound;
                 calloutText = player == Networking.LocalPlayer ? "Bogey!" : $"{player.displayName} scored a Bogey.";
-
                 break;
             case Callouts.DoubleBogey:
                 _notificationSound = doubleBogeySound;
                 calloutText = player == Networking.LocalPlayer ? "Double Bogey!" : $"{player.displayName} scored a Double Bogey.";
-
                 break;
             case Callouts.TripleBogey:
                 _notificationSound = tripleBogeySound;
                 calloutText = player == Networking.LocalPlayer ? "Triple Bogey!" : $"{player.displayName} scored a Triple Bogey.";
-
                 break;
             case Callouts.StrokeLimit:
                 _notificationSound = strokeLimitSound;
                 calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
-
                 break;
         }
         
         InstantiateCalloutBox(calloutText, _notificationSound);
-        
     }
 
     public void InstantiateCalloutBox(string callText, AudioClip callAudio = null)
     {
-        // GameObject lastCallout = Instantiate(_calloutBoxPrefab, _playerIsInVR ? _canvas.transform : _canvas.transform);
         GameObject lastCallout = Instantiate(_calloutBoxPrefab, _canvas.transform);
         var calloutScript = lastCallout.GetComponent<CalloutBox>();
-		
+       
+        // Pass the reference of this script so the box can tell us when it dies
+        calloutScript.manager = this; 
+
         calloutScript.targetPos = _playerIsInVR ? _vrTargetPos : _desktopTargetPos;
         calloutScript.SetCalloutText(callText, callAudio
             , targetPosition: _playerIsInVR ? _vrTargetPos : _desktopTargetPos
             , startPosition: _playerIsInVR ? _vrStartPos : _desktopStartPos);
     }
-	
-	
-    public Vector2 GetScreenResolution() //I don't think this is needed.
+    
+    // CalloutBox will trigger this when its destruction tween finishes
+    public void OnCalloutFinished()
     {
-		
-        float width = VRCCameraSettings.ScreenCamera.PixelWidth;
-        float height = VRCCameraSettings.ScreenCamera.PixelHeight;
-
-        return new Vector2(width, height);
+        ProcessNextQueueItem();
     }
-
 
     public void SendTestNotification()
     {
         //You can't pass a playerobject through networking. So we recreate it after the network.
-        // SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)testCallout, Networking.LocalPlayer.playerId);
         int randomIndex = Random.Range(0, (int)Callouts.StrokeLimit + 1);
         Callouts randomResult = (Callouts)randomIndex;
         SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)randomResult, Networking.LocalPlayer.playerId);
     }
 }
-
 
 public enum Callouts
 {
