@@ -87,12 +87,15 @@ namespace dev.mikeee324.OpenPutt
                 case 2:
                     Callout(Callouts.DoubleBogey, player.playerId);
                     break;
+                case 3:
+                    Callout(Callouts.TripleBogey, player.playerId);
+                    break;
             }
         }
 
         public override void OnPlayerHitCourseMaxScore(VRCPlayerApi player, CourseManager course)
         {
-            Callout(Callouts.StrokeLimit, Networking.LocalPlayer.playerId);
+            Callout(Callouts.StrokeLimit, player.playerId);
         }
 
         //This is just to check if the player is in vr once.
