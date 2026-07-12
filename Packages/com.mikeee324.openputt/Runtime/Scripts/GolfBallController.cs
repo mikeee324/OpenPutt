@@ -803,6 +803,10 @@ namespace dev.mikeee324.OpenPutt
                 if (courseIsActivelyPlaying && Utilities.IsValid(startLine))
                     startLine.SetEnabled(true);
 
+                // Undo openPuttSync's hand-sync mode from the same broadcast - ball isn't really held
+                if (Utilities.IsValid(openPuttSync))
+                    openPuttSync.SendCustomEventDelayedFrames(nameof(OpenPuttSync._OnScriptDrop), 1);
+
                 return;
             }
 
