@@ -1,10 +1,12 @@
 ﻿using dev.mikeee324.OpenPutt;
+using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Persistence;
 using VRC.SDK3.Rendering;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 
+[UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class OpenPuttNotifications : OpenPuttEventListener
 {
     public Canvas _canvas;

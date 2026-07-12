@@ -68,7 +68,7 @@ namespace dev.mikeee324.OpenPutt
         }
     }
 
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class CourseManager : UdonSharpBehaviour
     {
         [HideInInspector]

@@ -8,7 +8,7 @@ using VRC.Udon.Common.Interfaces;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class GolfBallTeleporter : UdonSharpBehaviour
     {
         public BoxCollider localCollider;
