@@ -44,7 +44,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Whether this scoreboard should be shown to the local player, based on the current view camera
         /// </summary>
-        public bool ShouldBeVisible(Vector3 viewPosition, Vector3 viewForward, float viewFieldOfView)
+        public bool ShouldBeVisible(Vector3 viewPosition, Vector3 viewForward, float viewFieldOfView, out float distanceToViewer)
         {
             var isNowActive = false;
 
@@ -52,6 +52,7 @@ namespace dev.mikeee324.OpenPutt
             var nearbyPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
 
             var scoreboardDistance = Vector3.Distance(viewPosition, nearbyPos);
+            distanceToViewer = scoreboardDistance;
             var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
 
             var normalizedDirectionToScoreboard = (transform.position - viewPosition).normalized;

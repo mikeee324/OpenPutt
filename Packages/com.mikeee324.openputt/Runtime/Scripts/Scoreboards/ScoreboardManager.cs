@@ -319,38 +319,62 @@ namespace dev.mikeee324.OpenPutt
 
             var currentVisibleScoreboardID = 0;
 
-            // Camera being viewed through: portable cam if active, else screen cam (carries desktop FOV)
+            // Head tracking is always available and is what governs physical proximity (interaction range)
+            var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+            var headPosition = head.position;
+            var headForward = head.rotation * Vector3.forward;
+            const float headFieldOfView = 60f;
+
+            // Camera the player might be looking through instead of/as well as their head (handheld photo cam takes priority over the desktop/screen cam)
             var viewCamera = VRCCameraSettings.ScreenCamera;
             var photoCamera = VRCCameraSettings.PhotoCamera;
             if (Utilities.IsValid(photoCamera) && photoCamera.Active)
                 viewCamera = photoCamera;
 
-            Vector3 viewPosition;
-            Vector3 viewForward;
-            float viewFieldOfView;
-            if (Utilities.IsValid(viewCamera))
+            var cameraIsValid = Utilities.IsValid(viewCamera);
+            var cameraPosition = cameraIsValid ? viewCamera.Position : default;
+            var cameraForward = cameraIsValid ? viewCamera.Rotation * Vector3.forward : default;
+            var cameraFieldOfView = cameraIsValid ? viewCamera.FieldOfView : 0f;
+
+            // A positioner qualifies if either the player's head or their camera is looking at it. If they all fit in the pool there's no contest, so skip the distance ranking below
+            var claimed = new bool[scoreboardPositions.Length];
+            var distance = new float[scoreboardPositions.Length];
+            var qualifyingCount = 0;
+            for (var i = 0; i < scoreboardPositions.Length; i++)
             {
-                viewPosition = viewCamera.Position;
-                viewForward = viewCamera.Rotation * Vector3.forward;
-                viewFieldOfView = viewCamera.FieldOfView;
+                var visibleFromHead = scoreboardPositions[i].ShouldBeVisible(headPosition, headForward, headFieldOfView, out var headDistance);
+
+                var visibleFromCamera = false;
+                var cameraDistance = headDistance;
+                if (cameraIsValid)
+                    visibleFromCamera = scoreboardPositions[i].ShouldBeVisible(cameraPosition, cameraForward, cameraFieldOfView, out cameraDistance);
+
+                claimed[i] = visibleFromHead || visibleFromCamera;
+                distance[i] = Mathf.Min(headDistance, cameraDistance);
+                if (claimed[i])
+                    qualifyingCount++;
             }
-            else
+
+            // Pool is oversubscribed - drop the farthest positioners until what's left fits
+            if (qualifyingCount > scoreboards.Length)
             {
-                // Fallback to head tracking
-                var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                viewPosition = head.position;
-                viewForward = head.rotation * Vector3.forward;
-                viewFieldOfView = 60f;
+                for (var excess = qualifyingCount - scoreboards.Length; excess > 0; excess--)
+                {
+                    var farthestIndex = -1;
+                    for (var i = 0; i < claimed.Length; i++)
+                    {
+                        if (claimed[i] && (farthestIndex == -1 || distance[i] > distance[farthestIndex]))
+                            farthestIndex = i;
+                    }
+
+                    claimed[farthestIndex] = false;
+                }
             }
 
             for (var i = 0; i < scoreboardPositions.Length; i++)
             {
                 var position = scoreboardPositions[i];
-                var isVisibleHere = position.ShouldBeVisible(viewPosition, viewForward, viewFieldOfView);
-
-                // We ran out of scoreboards in the pool so just show the positioner canvases if needed
-                if (currentVisibleScoreboardID >= scoreboards.Length)
-                    isVisibleHere = false;
+                var isVisibleHere = claimed[i];
 
                 if (isVisibleHere)
                 {
@@ -376,7 +400,7 @@ namespace dev.mikeee324.OpenPutt
                     scoreboard.transform.localScale = targetScale;
 
                     // Keep the board visible but stop accepting clicks once the player gets too far away
-                    scoreboard.SetInteractable(position.ShouldBeInteractable(viewPosition));
+                    scoreboard.SetInteractable(position.ShouldBeInteractable(headPosition));
 
                     // Make it so we use the next scoreboard in the list next loop
                     currentVisibleScoreboardID += 1;
