@@ -357,9 +357,9 @@ namespace dev.mikeee324.OpenPutt
                     // Hide the background of the positioner
                     position.backgroundCanvas.enabled = false;
 
-                    // Move this scoreboard to the correct position
+                    // Move this scoreboard to the correct position (pooled scoreboard prefabs face the opposite way to the positioner's forward)
                     var scoreboard = scoreboards[currentVisibleScoreboardID];
-                    scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation);
+                    scoreboard.transform.SetPositionAndRotation(position.transform.position, position.transform.rotation * Quaternion.Euler(0f, 180f, 0f));
 
                     // Convert the positioner's world scale into a local scale relative to the scoreboard's parent
                     var targetScale = position.transform.lossyScale;

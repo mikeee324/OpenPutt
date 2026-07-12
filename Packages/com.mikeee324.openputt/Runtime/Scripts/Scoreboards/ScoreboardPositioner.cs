@@ -57,6 +57,10 @@ namespace dev.mikeee324.OpenPutt
             var normalizedDirectionToScoreboard = (transform.position - viewPosition).normalized;
             var playerIsLookingToward = Vector3.Dot(viewForward, normalizedDirectionToScoreboard) >= ViewDotThreshold(viewFieldOfView);
 
+            // Board only readable from its front face, so ignore players standing behind it
+            var boardIsFacingPlayer = Vector3.Dot(transform.forward, -normalizedDirectionToScoreboard) > 0f;
+            playerIsLookingToward = playerIsLookingToward && boardIsFacingPlayer;
+
             switch (scoreboardVisiblility)
             {
                 case ScoreboardVisibility.AlwaysVisible:

@@ -42,8 +42,18 @@ namespace dev.mikeee324.OpenPutt
         [Range(5, 30), Tooltip("The number of seconds a ball can be away from the current course before being respawned back instantly")]
         public int ballOffCourseRespawnTime = 5;
 
-        [HideInInspector]
-        public VRCPlayerApi Owner;
+        private VRCPlayerApi _owner;
+
+        public VRCPlayerApi Owner
+        {
+            get
+            {
+                if (!Utilities.IsValid(_owner))
+                    _owner = Networking.GetOwner(gameObject);
+                return _owner;
+            }
+            private set => _owner = value;
+        }
 
         [UdonSynced, FieldChangeCallback(nameof(BallColor))]
         private Color _ballColor = Color.black;
@@ -239,7 +249,7 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 // Tell everybody that this player changed which hand they use
-                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
                     openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }
         }
@@ -331,7 +341,7 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(CurrentCourse) || courseStates.Length != openPutt.courses.Length)
             {
-                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
                     openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
 
                 return;
@@ -412,7 +422,7 @@ namespace dev.mikeee324.OpenPutt
             if (sendSync)
                 _RequestSync();
 
-            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler))
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
                 openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
         }
 
@@ -551,7 +561,7 @@ namespace dev.mikeee324.OpenPutt
             CurrentCourse = null;
 
             // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
-            if (Owner.isLocal && Utilities.IsValid(openPutt.uiController))
+            if (Utilities.IsValid(openPutt.uiController))
                 openPutt.uiController.UpdateButtonStates();
 
             // Add on any extra points to the players score that this particular hole has
@@ -801,6 +811,11 @@ namespace dev.mikeee324.OpenPutt
                 playerState = playerState.Substring(0, playerState.Length - 3) + ")";
 
             return playerState;
+        }
+
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            Owner = player;
         }
 
         public override void OnPlayerRestored(VRCPlayerApi player)

@@ -23,7 +23,7 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="playerManager">The PlayerManager that was assigned</param>
         public void OnPlayerInitialised(VRCPlayerApi player, PlayerManager playerManager)
         {
-            if (player.isLocal)
+            if (Utilities.IsValid(player) && player.isLocal)
                 openPutt.LocalPlayerManager = playerManager;
 
             foreach (var listener in openPutt.eventListeners)
@@ -120,10 +120,10 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="totalHits">The total number of hits the player took on this course</param>
         public void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
-            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(course) && Utilities.IsValid(hole))
+            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(course) && Utilities.IsValid(hole) && Utilities.IsValid(player))
                 openPutt.sfxController.PlayBallHoleSoundAtPosition(course.holeNumber, hole.transform.position, !player.isLocal);
 
-            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(hole))
+            if (Utilities.IsValid(openPutt.sfxController) && Utilities.IsValid(hole) && Utilities.IsValid(player))
                 openPutt.sfxController.PlayScoreSoundAtPosition(hole.transform.position, totalHits, scoreRelativeToPar, !player.isLocal);
 
             foreach (var listener in openPutt.eventListeners)
@@ -153,7 +153,7 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="newClubType">The new club type</param>
         public void OnPlayerClubTypeChanged(VRCPlayerApi player, GolfClubType newClubType)
         {
-            if (player.isLocal && Utilities.IsValid(openPutt.uiController))
+            if (Utilities.IsValid(player) && player.isLocal && Utilities.IsValid(openPutt.uiController))
                 openPutt.uiController.UpdateButtonStates();
 
             foreach (var listener in openPutt.eventListeners)
@@ -168,7 +168,7 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
         {
-            if (player.isLocal && Utilities.IsValid(openPutt.uiController))
+            if (Utilities.IsValid(player) && player.isLocal && Utilities.IsValid(openPutt.uiController))
                 openPutt.uiController.UpdateButtonStates();
 
             foreach (var listener in openPutt.eventListeners)
