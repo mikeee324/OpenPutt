@@ -38,6 +38,8 @@ namespace dev.mikeee324.OpenPutt
 
         public GameObject portableMenuButton;
 
+        public GameObject fetchBallPanel;
+
         public bool isShooting = false;
         private float targetPower = 0f;
         [Tooltip("Speed at which the power indicator scales smoothly")]

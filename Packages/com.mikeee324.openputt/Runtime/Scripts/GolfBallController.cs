@@ -790,7 +790,7 @@ namespace dev.mikeee324.OpenPutt
                                           playerManager.courseStates[playerManager.CurrentCourse.holeNumber] == CourseState.Playing &&
                                           playerManager.courseScores[playerManager.CurrentCourse.holeNumber] > 0;
 
-            if (courseIsActivelyPlaying || (BallIsMoving && onCourse))
+            if (courseIsActivelyPlaying)
             {
                 var ballShoulderPickup = shoulderPickup;
                 if (Utilities.IsValid(ballShoulderPickup))
@@ -798,7 +798,7 @@ namespace dev.mikeee324.OpenPutt
 
                 trackingMovingBall = true;
 
-                if (courseIsActivelyPlaying && Utilities.IsValid(startLine))
+                if (Utilities.IsValid(startLine))
                     startLine.SetEnabled(true);
 
                 // Undo openPuttSync's hand-sync mode from the same broadcast - ball isn't really held
@@ -807,6 +807,26 @@ namespace dev.mikeee324.OpenPutt
 
                 return;
             }
+
+            OnPickup();
+        }
+
+        /// <summary>
+        /// Called by the shoulder mount when the player presses Use while holding/tracking the ball on their shoulder.
+        /// Skips the course currently being played and brings the ball back to the shoulder mount.
+        /// </summary>
+        public void _OnScriptUse()
+        {
+            if (!Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.CurrentCourse))
+                return;
+
+            playerManager._SkipCurrentCourse();
+
+            trackingMovingBall = false;
+
+            var ballShoulderPickup = shoulderPickup;
+            if (Utilities.IsValid(ballShoulderPickup))
+                ballShoulderPickup.tempDisableAttachment = false;
 
             OnPickup();
         }
@@ -1479,6 +1499,14 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = newPickupState;
+
+                // Show "Skip Course" as the shoulder mount's use prompt while playing a course
+                var shoulderPickupForUseText = shoulderPickup;
+                if (Utilities.IsValid(shoulderPickupForUseText) && Utilities.IsValid(shoulderPickupForUseText.pickup))
+                {
+                    var playingStandardCourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard;
+                    shoulderPickupForUseText.pickup.UseText = playingStandardCourse ? "Skip Course" : "";
+                }
             }
             else
             {

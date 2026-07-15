@@ -3,6 +3,7 @@ using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
@@ -38,6 +39,9 @@ namespace dev.mikeee324.OpenPutt
 
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string dropEventName = "_OnScriptDrop";
+
+        [Tooltip("When the player presses Use while holding this object it will send this event with this name to the attached object")]
+        public string useEventName = "_OnScriptUse";
 
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
@@ -252,6 +256,19 @@ namespace dev.mikeee324.OpenPutt
             {
                 objectToAttach.transform.SetPositionAndRotation(currPos, currRot);
             }
+        }
+
+        public override void InputUse(bool value, UdonInputEventArgs args)
+        {
+            if (!value || heldInHand == VRC_Pickup.PickupHand.None)
+                return;
+
+            if (string.IsNullOrEmpty(useEventName) || !Utilities.IsValid(objectToAttach))
+                return;
+
+            var listeners = objectToAttach.GetComponents<UdonBehaviour>();
+            foreach (var listener in listeners)
+                listener.SendCustomEvent(useEventName);
         }
 
         private void ActivateAndTakeOwnership()

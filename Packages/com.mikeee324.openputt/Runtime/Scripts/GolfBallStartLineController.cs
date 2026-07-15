@@ -83,8 +83,7 @@ namespace dev.mikeee324.OpenPutt
                 lineRenderer.SetPosition(0, Vector3.zero);
                 lineRenderer.SetPosition(1, Vector3.zero);
 
-                closestBallStart = null;
-                courseThatIsBeingStarted = null;
+                ResetDropAnimation();
             }
 
             gameObject.SetActive(enabled);
@@ -220,6 +219,10 @@ namespace dev.mikeee324.OpenPutt
                 if (golfBall.pickedUpByPlayer)
                     return;
 
+                // The ball has committed to snapping onto a pad - hide the line immediately rather than let it linger/jump around during the animation
+                lineRenderer.SetPosition(0, Vector3.zero);
+                lineRenderer.SetPosition(1, Vector3.zero);
+
                 var lerpMaxTime = 0.5f;
                 var lerpProgress = Mathf.Clamp(lerpToStartTime / lerpMaxTime, 0, 1);
 
@@ -237,6 +240,8 @@ namespace dev.mikeee324.OpenPutt
 
                     ResetDropAnimation();
                 }
+
+                return;
             }
             else if (!golfBall.pickedUpByPlayer && !golfBall.trackingMovingBall)
             {

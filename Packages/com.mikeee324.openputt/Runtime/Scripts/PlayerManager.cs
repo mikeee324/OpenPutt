@@ -391,12 +391,7 @@ namespace dev.mikeee324.OpenPutt
                             // Clamp score to the max
                             courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
 
-                            // Tell everybody this player hit the max score on this course
-                            CurrentCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
-
-                            // Play max score reached sound
-                            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
-                                openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+                            _NotifyMaxScoreReached(CurrentCourse);
 
                             // Lock in the time spent on this course now that max score is reached
                             courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[CurrentCourse.holeNumber];
@@ -546,6 +541,32 @@ namespace dev.mikeee324.OpenPutt
             }
 
             newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));
+        }
+
+        /// <summary>
+        /// Tells everybody this player hit the max score on this course and plays the associated sound
+        /// </summary>
+        private void _NotifyMaxScoreReached(CourseManager course)
+        {
+            course.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
+
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
+                openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+        }
+
+        /// <summary>
+        /// Skips the course currently being played, giving the same feedback as reaching the max score
+        /// </summary>
+        public void _SkipCurrentCourse()
+        {
+            if (!Utilities.IsValid(CurrentCourse))
+                return;
+
+            var course = CurrentCourse;
+
+            _NotifyMaxScoreReached(course);
+
+            _OnCourseFinished(course, null, CourseState.Skipped);
         }
 
         public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
@@ -764,7 +785,10 @@ namespace dev.mikeee324.OpenPutt
                         if (golfBall.BallIsMoving)
                             golfBall.BallIsMoving = false;
                         else
+                        {
+                            OpenPuttUtils.Log(this, $"Respawning ball at {golfBall.CurrentPosition} because it isn't on top of course {(Utilities.IsValid(CurrentCourse) ? CurrentCourse.holeNumber : -1)}. If this is incorrect, add the mesh it's standing on to that course's Floor Objects list.");
                             golfBall._RespawnBallWithErrorNoise();
+                        }
                     }
                 }
 
