@@ -189,12 +189,10 @@ namespace dev.mikeee324.OpenPutt
 
                         playerManager._OnCourseFinished(course, null, CourseState.Completed);
 
-                        // If we can replay the course - automatically restart the course
-                        if (playerManager.openPutt.replayableCourses || course.courseIsAlwaysReplayable)
-                        {
-                            playerManager._OnCourseStarted(course);
-                            _RespawnBall();
-                        }
+                        // Driving ranges are always replayable - there's no "complete once" state for them,
+                        // so always restart the course rather than leaving CurrentCourse as null
+                        playerManager._OnCourseStarted(course);
+                        _RespawnBall();
                     }
                     else if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
                     {

@@ -37,6 +37,7 @@ namespace dev.mikeee324.OpenPutt
 
         private float velocityBeforeTeleport = -1f;
         private GolfBallController golfBall;
+        private Vector3 respawnPositionBeforeTeleport;
 
         private void OnTriggerEnter(Collider other)
         {
@@ -50,11 +51,14 @@ namespace dev.mikeee324.OpenPutt
 
                 velocityBeforeTeleport = ball.ballRigidbody.velocity.magnitude;
 
+                // Capture the player's last-hit respawn position before BallIsMoving's setter has a chance to
+                // overwrite it with the teleporter entrance position
+                respawnPositionBeforeTeleport = golfBall.respawnWorldPosition;
+
                 golfBall.BallIsMoving = false;
 
-                var oldPos = golfBall.respawnWorldPosition;
                 golfBall._SetPosition(hideBallDuringDelay ? Vector3.up * (golfBall.openPuttSync.autoRespawnHeight * .95f) : targetPosition.position);
-                golfBall._SetRespawnPosition(oldPos);
+                golfBall._SetRespawnPosition(respawnPositionBeforeTeleport);
 
                 golfBall = ball;
 
@@ -96,10 +100,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(golfBall))
             {
-                var oldPos = golfBall.respawnWorldPosition;
                 golfBall.isHeldInTeleporter = false;
                 golfBall._SetPosition(targetPosition.position);
-                golfBall._SetRespawnPosition(oldPos);
+                golfBall._SetRespawnPosition(respawnPositionBeforeTeleport);
                 golfBall.BallIsMoving = true;
                 golfBall.ballRigidbody.velocity = (launchPosition.position - targetPosition.position).normalized * newMagnitude;
             }
