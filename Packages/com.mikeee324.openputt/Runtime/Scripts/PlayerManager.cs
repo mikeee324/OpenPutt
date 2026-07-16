@@ -534,10 +534,6 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (!newCourse._IsClubAllowed(golfClub.ClubType))
                     golfClub.ClubType = newCourse._GetFirstAllowedClub();
-
-                // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
-                if (Utilities.IsValid(openPutt.uiController))
-                    openPutt.uiController.UpdateButtonStates();
             }
 
             newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));

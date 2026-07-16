@@ -366,7 +366,7 @@ namespace dev.mikeee324.OpenPutt
             else LocalPlayerManager.IsInLeftHandedMode = false;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-ClubAutoHold"))
                 LocalPlayerManager.golfClub.AutoHoldEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ClubAutoHold");
-            else LocalPlayerManager.golfClub.AutoHoldEnabled = true;
+            else LocalPlayerManager.golfClub.AutoHoldEnabled = false;
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-SFXVol"))
                 sfxController.Volume = PlayerData.GetFloat(localPlayer, "OpenPutt-SFXVol");

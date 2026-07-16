@@ -107,7 +107,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2022269763740196090
 RectTransform:
   m_ObjectHideFlags: 0
@@ -237,14 +237,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1703885455880096958}
-  - component: {fileID: 157685773784601261}
-  - component: {fileID: 603365556743945615}
+  - component: {fileID: 7290719478861208223}
   - component: {fileID: 7848953040175249214}
   - component: {fileID: 3340377993067903383}
   - component: {fileID: 2925314032234985591}
   - component: {fileID: 8555216153461596162}
   - component: {fileID: 8456039099590683486}
   - component: {fileID: 8514590022788713332}
+  - component: {fileID: 1189947288786467668}
+  - component: {fileID: 3478329095800780461}
   m_Layer: 13
   m_Name: GolfBall
   m_TagString: Untagged
@@ -262,22 +263,14 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: -0.72, z: 3.23}
-  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 730203422921093809}
   m_Father: {fileID: 3143531810935004085}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &157685773784601261
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1242583910806792937}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!65 &603365556743945615
-BoxCollider:
+--- !u!135 &7290719478861208223
+SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -291,11 +284,11 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &7848953040175249214
 Rigidbody:
@@ -355,7 +348,7 @@ MonoBehaviour:
   ThrowVelocityBoostScale: 1
   currentlyHeldBy: {fileID: 0}
   pickupable: 1
-  proximity: 0.2
+  proximity: 0.3
   version: 1
 --- !u!114 &2925314032234985591
 MonoBehaviour:
@@ -432,11 +425,12 @@ MonoBehaviour:
   objectToAttach: {fileID: 0}
   pickupEventName: _OnScriptPickup
   dropEventName: _OnScriptDrop
+  useEventName: _OnScriptUse
   currentHandVariableName: currentOwnerHideOverride
   pickup: {fileID: 3340377993067903383}
   mountToBone: 10
-  mountToPlayerPosition: 0
-  mountingOffset: {x: -0.1, y: 0.07, z: -0.03}
+  mountToPlayerPosition: 1
+  mountingOffset: {x: -0.1, y: -0.05, z: -0.03}
   mountingOffsetHeightScaling: 1
   mountingOffsetHeightScale:
     serializedVersion: 2
@@ -462,7 +456,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  defaultPickupProximity: 0.2
+  defaultPickupProximity: 0.3
   desktopInputKey: 98
   controllerInputKey: 2
   pickupHandLimit: 0
@@ -498,6 +492,56 @@ MonoBehaviour:
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
   publicVariablesUnityEngineObjects: []
   publicVariablesSerializationDataFormat: 0
+--- !u!33 &1189947288786467668
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1242583910806792937}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &3478329095800780461
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1242583910806792937}
+  m_Enabled: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 81b0ace20eb51c746a2fdc161ef7bbfd, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &1260665601658047283
 GameObject:
   m_ObjectHideFlags: 0
@@ -761,6 +805,7 @@ MonoBehaviour:
   objectToAttach: {fileID: 0}
   pickupEventName: _OnScriptPickup
   dropEventName: _OnScriptDrop
+  useEventName: _OnScriptUse
   currentHandVariableName: currentOwnerHideOverride
   pickup: {fileID: 0}
   mountToBone: 6
@@ -1609,14 +1654,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9029854077538648}
-  - component: {fileID: 2326810458442234060}
-  - component: {fileID: 3717913844070615371}
+  - component: {fileID: 8855436043018742181}
   - component: {fileID: 3351130109989870736}
   - component: {fileID: 906940991815505550}
   - component: {fileID: 4835784689299195682}
   - component: {fileID: 8865885556257655097}
   - component: {fileID: 178743159397435406}
   - component: {fileID: 7874744816656458465}
+  - component: {fileID: 8254331702865745730}
+  - component: {fileID: 7079515308484063208}
   m_Layer: 13
   m_Name: GolfClub
   m_TagString: Untagged
@@ -1634,22 +1680,14 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: -0.72, z: 3.23}
-  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.1, y: 0.1, z: 0.1}
+  m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 4382727914188767616}
   m_Father: {fileID: 3143531810935004085}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!33 &2326810458442234060
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3370477314992704585}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!65 &3717913844070615371
-BoxCollider:
+--- !u!135 &8855436043018742181
+SphereCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -1663,11 +1701,11 @@ BoxCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 1
+  m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
+  m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &3351130109989870736
 Rigidbody:
@@ -1727,7 +1765,7 @@ MonoBehaviour:
   ThrowVelocityBoostScale: 1
   currentlyHeldBy: {fileID: 0}
   pickupable: 1
-  proximity: 0.2
+  proximity: 0.3
   version: 1
 --- !u!114 &4835784689299195682
 MonoBehaviour:
@@ -1804,11 +1842,12 @@ MonoBehaviour:
   objectToAttach: {fileID: 0}
   pickupEventName: _OnScriptPickup
   dropEventName: _OnScriptDrop
+  useEventName: _OnScriptUse
   currentHandVariableName: currentOwnerHideOverride
   pickup: {fileID: 906940991815505550}
   mountToBone: 10
-  mountToPlayerPosition: 0
-  mountingOffset: {x: 0.1, y: 0.07, z: -0.03}
+  mountToPlayerPosition: 1
+  mountingOffset: {x: 0.1, y: -0.05, z: -0.03}
   mountingOffsetHeightScaling: 1
   mountingOffsetHeightScale:
     serializedVersion: 2
@@ -1834,7 +1873,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  defaultPickupProximity: 0.2
+  defaultPickupProximity: 0.3
   desktopInputKey: 109
   controllerInputKey: 0
   pickupHandLimit: 0
@@ -1870,6 +1909,56 @@ MonoBehaviour:
   serializedPublicVariablesBytesString: Ai8AAAAAATIAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAFQAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AAAAAAAYBAAAAAAAAACcBBAAAAHQAeQBwAGUAAWgAAABTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEcAZQBuAGUAcgBpAGMALgBMAGkAcwB0AGAAMQBbAFsAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4ALgBJAG4AdABlAHIAZgBhAGMAZQBzAC4ASQBVAGQAbwBuAFYAYQByAGkAYQBiAGwAZQAsACAAVgBSAEMALgBVAGQAbwBuAC4AQwBvAG0AbQBvAG4AXQBdACwAIABtAHMAYwBvAHIAbABpAGIAAQEJAAAAVgBhAHIAaQBhAGIAbABlAHMALwEAAAABaAAAAFMAeQBzAHQAZQBtAC4AQwBvAGwAbABlAGMAdABpAG8AbgBzAC4ARwBlAG4AZQByAGkAYwAuAEwAaQBzAHQAYAAxAFsAWwBWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAEkAbgB0AGUAcgBmAGEAYwBlAHMALgBJAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlACwAIABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgBdAF0ALAAgAG0AcwBjAG8AcgBsAGkAYgABAAAABgEAAAAAAAAAAi8CAAAAAUkAAABWAFIAQwAuAFUAZABvAG4ALgBDAG8AbQBtAG8AbgAuAFUAZABvAG4AVgBhAHIAaQBhAGIAbABlAGAAMQBbAFsAUwB5AHMAdABlAG0ALgBJAG4AdAAzADIALAAgAG0AcwBjAG8AcgBsAGkAYgBdAF0ALAAgAFYAUgBDAC4AVQBkAG8AbgAuAEMAbwBtAG0AbwBuAAIAAAAGAgAAAAAAAAAnAQQAAAB0AHkAcABlAAEXAAAAUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwAsACAAbQBzAGMAbwByAGwAaQBiACcBCgAAAFMAeQBtAGIAbwBsAE4AYQBtAGUAAR8AAABfAF8AXwBVAGQAbwBuAFMAaABhAHIAcABCAGUAaABhAHYAaQBvAHUAcgBWAGUAcgBzAGkAbwBuAF8AXwBfACcBBAAAAHQAeQBwAGUAARYAAABTAHkAcwB0AGUAbQAuAEkAbgB0ADMAMgAsACAAbQBzAGMAbwByAGwAaQBiABcBBQAAAFYAYQBsAHUAZQACAAAABwUHBQcF
   publicVariablesUnityEngineObjects: []
   publicVariablesSerializationDataFormat: 0
+--- !u!33 &8254331702865745730
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3370477314992704585}
+  m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &7079515308484063208
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3370477314992704585}
+  m_Enabled: 0
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 81b0ace20eb51c746a2fdc161ef7bbfd, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &3437464431563979945
 GameObject:
   m_ObjectHideFlags: 0
@@ -3758,6 +3847,7 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 1425924651068723633}
   openPutt: {fileID: 6945536582650298137}
   vrUI: {fileID: 7202487536224110240}
+  uiController: {fileID: 0}
   vrReferenceHeight: 1.1
   vrUIVisibilityAnimSeconds: 0.3
   vrUIVisibilityAnimCurve:
@@ -4360,6 +4450,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.g
+      value: 0.6666667
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.r
+      value: 0.8666667
       objectReference: {fileID: 0}
     - target: {fileID: 4179804943067636049, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
@@ -6543,6 +6643,13 @@ PrefabInstance:
       propertyPath: m_ConstrainProportionsScale
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 193169478137213999, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_text
+      value: 'Click <b><color=#ddaa00>Use</color></b>
+
+        To Fetch Your Ball'
+      objectReference: {fileID: 0}
     - target: {fileID: 545714775092965472, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
       propertyPath: m_LocalScale.x
@@ -6732,6 +6839,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.g
+      value: 0.6666667
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.r
+      value: 0.8666667
       objectReference: {fileID: 0}
     - target: {fileID: 6283346330283826533, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
@@ -7161,7 +7278,7 @@ PrefabInstance:
     - target: {fileID: 6382416405437576951, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
       propertyPath: AutoHold
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6795647789150147966, guid: f475c74e151ed7741aa70f32e655690c,
         type: 3}
@@ -7654,6 +7771,13 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 4102277656666497366}
     m_Modifications:
+    - target: {fileID: 193169478137213999, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_text
+      value: 'Click <b><color=#ddaa00>LMB</color></b>
+
+        To Fetch Your Ball'
+      objectReference: {fileID: 0}
     - target: {fileID: 1058082634904870632, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
       propertyPath: m_Name
@@ -7758,6 +7882,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.g
+      value: 0.6666667
+      objectReference: {fileID: 0}
+    - target: {fileID: 3726365311590000312, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_fontColor.r
+      value: 0.8666667
       objectReference: {fileID: 0}
     - target: {fileID: 7524913437519473628, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}

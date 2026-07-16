@@ -1449,6 +1449,8 @@ namespace dev.mikeee324.OpenPutt
         {
             if (localPlayerIsOwner)
             {
+                var ballShoulderPickup = shoulderPickup;
+
                 // Enable the collider and make sure it can hit surfaces
                 if (Utilities.IsValid(ballCollider))
                 {
@@ -1491,7 +1493,6 @@ namespace dev.mikeee324.OpenPutt
                     {
                         var onStandardCourse = Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard;
 
-                        var ballShoulderPickup = shoulderPickup;
                         if (!onStandardCourse && Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
                             newPickupState = true;
                     }
@@ -1499,14 +1500,6 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Utilities.IsValid(pickup))
                     pickup.pickupable = newPickupState;
-
-                // Show "Skip Course" as the shoulder mount's use prompt while playing a course
-                var shoulderPickupForUseText = shoulderPickup;
-                if (Utilities.IsValid(shoulderPickupForUseText) && Utilities.IsValid(shoulderPickupForUseText.pickup))
-                {
-                    var playingStandardCourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard;
-                    shoulderPickupForUseText.pickup.UseText = playingStandardCourse ? "Skip Course" : "";
-                }
             }
             else
             {

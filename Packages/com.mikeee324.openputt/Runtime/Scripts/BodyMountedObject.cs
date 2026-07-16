@@ -204,7 +204,13 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (mountToPlayerPosition)
                 {
-                    gameObject.transform.SetPositionAndRotation(localPlayer.GetPosition(), localPlayer.GetRotation());
+                    // GetPosition() only tracks the playspace origin (X/Z), so it doesn't move when the
+                    // player crouches or their playspace is raised above the floor. Use the real tracked
+                    // head height for Y instead of a fixed eye-height offset so it follows both cases.
+                    var rootPos = localPlayer.GetPosition();
+                    rootPos.y = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position.y;
+                    var rootRot = localPlayer.GetRotation();
+                    gameObject.transform.SetPositionAndRotation(rootPos + rootRot * currentOffset, rootRot);
                 }
                 else
                 {
@@ -261,6 +267,13 @@ namespace dev.mikeee324.OpenPutt
         public override void InputUse(bool value, UdonInputEventArgs args)
         {
             if (!value || heldInHand == VRC_Pickup.PickupHand.None)
+                return;
+
+            // Only fire from the hand actually holding this object, otherwise pressing Use with the
+            // other hand (e.g. while it's holding something else) would incorrectly trigger this too.
+            bool useFromHeldHand = (heldInHand == VRC_Pickup.PickupHand.Left && args.handType == HandType.LEFT) ||
+                                    (heldInHand == VRC_Pickup.PickupHand.Right && args.handType == HandType.RIGHT);
+            if (!useFromHeldHand)
                 return;
 
             if (string.IsNullOrEmpty(useEventName) || !Utilities.IsValid(objectToAttach))

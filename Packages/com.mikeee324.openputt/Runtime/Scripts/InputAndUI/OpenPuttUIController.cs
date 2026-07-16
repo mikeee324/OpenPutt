@@ -24,11 +24,13 @@ namespace dev.mikeee324.OpenPutt
         public OpenPuttUIView desktopUI;
         public OpenPuttUIView mobileUI;
         public OpenPuttUIView vrUI;
+
         private PlayerManager localPlayerManager;
 
         private bool isMonitoringBallDistance = false;
         private bool isBallMoving = false;
         private bool isInVR = false;
+        private bool fetchBallPanelVisible = false;
 
         void Start()
         {
@@ -54,9 +56,9 @@ namespace dev.mikeee324.OpenPutt
             else
             {
 #if UNITY_ANDROID || UNITY_IOS
-                if (Utilities.IsValid(mobileUI)) {  
+                if (Utilities.IsValid(mobileUI)) {
                     mobileUI.transform.parent.gameObject.SetActive(true);
-                    activeUI = mobileUI; 
+                    activeUI = mobileUI;
                 }
                 if (Utilities.IsValid(desktopUI)) desktopUI.transform.parent.gameObject.SetActive(false);
                 if (Utilities.IsValid(vrUI)) vrUI.transform.parent.gameObject.SetActive(false);
@@ -70,7 +72,6 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(vrUI)) vrUI.transform.parent.gameObject.SetActive(false);
 #endif
             }
-
         }
 
         void Update()
@@ -79,7 +80,45 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             activeUI.SetPowerIndicator(inputHandler.CurrentShotPowerNormalized);
+
+            UpdateFetchBallPanel();
         }
+
+        /// <summary>
+        /// Shows the fetch ball panel while the player is holding their ball on the shoulder mount during
+        /// a standard course, since that's when they can press Use to skip the course. In VR the palm UI
+        /// (PuttPalmVRUI) is what actually controls on-screen visibility - it reads FetchBallPanelVisible
+        /// to override the palm-angle check so this panel gets seen regardless of hand orientation.
+        /// </summary>
+        private void UpdateFetchBallPanel()
+        {
+            if (!Utilities.IsValid(activeUI.fetchBallPanel))
+                return;
+
+            bool showPanel = false;
+
+            if (Utilities.IsValid(localPlayerManager) && Utilities.IsValid(openPutt))
+            {
+                var ballShoulderPickup = localPlayerManager.IsInLeftHandedMode ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
+                if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                {
+                    var currentCourse = localPlayerManager.CurrentCourse;
+                    showPanel = Utilities.IsValid(currentCourse) && currentCourse.courseType == CourseType.Standard;
+                }
+            }
+
+            if (showPanel == fetchBallPanelVisible)
+                return;
+
+            fetchBallPanelVisible = showPanel;
+            activeUI.fetchBallPanel.SetActive(showPanel);
+        }
+
+        /// <summary>
+        /// True while the fetch ball panel needs to be visible (ball held on shoulder mount during a
+        /// standard course). PuttPalmVRUI reads this to override the palm-angle visibility check in VR.
+        /// </summary>
+        public bool FetchBallPanelVisible => fetchBallPanelVisible;
 
         /// <summary>
         /// Called when OpenPutt has assigned and finished setting up a PlayerManager for a player
@@ -118,10 +157,12 @@ namespace dev.mikeee324.OpenPutt
                     activeUI.fetchBallButton.SetActive(false);
                 if (Utilities.IsValid(activeUI.shootButton))
                     activeUI.shootButton.SetActive(false);
+                var vrCurrentCourse = Utilities.IsValid(localPlayerManager) ? localPlayerManager.CurrentCourse : null;
+                var vrCanChooseClub = Utilities.IsValid(vrCurrentCourse) ? vrCurrentCourse._HasClubChoice() : openPutt.allowAnyClubOffCourse;
                 if (Utilities.IsValid(activeUI.cycleClubPreviousButton))
-                    activeUI.cycleClubPreviousButton.SetActive(!openPutt.hasChangedClubType);
+                    activeUI.cycleClubPreviousButton.SetActive(vrCanChooseClub && !openPutt.hasChangedClubType);
                 if (Utilities.IsValid(activeUI.cycleClubNextButton))
-                    activeUI.cycleClubNextButton.SetActive(!openPutt.hasChangedClubType);
+                    activeUI.cycleClubNextButton.SetActive(vrCanChooseClub && !openPutt.hasChangedClubType);
                 if (Utilities.IsValid(localPlayerManager))
                 {
                     if (Utilities.IsValid(activeUI.leftShoulderButton))
@@ -269,6 +310,13 @@ namespace dev.mikeee324.OpenPutt
                 //     rankText = GetPlaceName(localPlayerManager.ScoreboardPositionByScore + 1);
                 // activeUI.relativeScore.text = rankText;
             }
+
+            bool isLeftHanded = localPlayerManager.IsInLeftHandedMode;
+            activeUI.leftShoulderText.text = isLeftHanded ? "Grab Club" : "Grab Ball";
+            activeUI.rightShoulderText.text = isLeftHanded ? "Grab Ball" : "Grab Club";
+
+            // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it here too
+            UpdateButtonStates();
         }
 
         private string GetPlaceName(int position)
@@ -291,15 +339,23 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        /// <summary>
+        /// Called when a player starts playing a course
+        /// </summary>
+        /// <param name="player">The player who started the course</param>
+        /// <param name="course">Which course the player just started</param>
+        public override void OnPlayerStartCourse(VRCPlayerApi player, CourseManager course)
+        {
+            if (!Utilities.IsValid(player) || !player.isLocal) return;
+
+            UpdateDisplay();
+        }
+
         public override void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
         {
             if (!Utilities.IsValid(player) || !player.isLocal) return;
 
-            if (Utilities.IsValid(activeUI))
-            {
-                activeUI.leftShoulderText.text = newHand == VRC_Pickup.PickupHand.Left ? "Grab Club" : "Grab Ball";
-                activeUI.rightShoulderText.text = newHand == VRC_Pickup.PickupHand.Right ? "Grab Club" : "Grab Ball";
-            }
+            UpdateDisplay();
         }
 
         /// <summary>

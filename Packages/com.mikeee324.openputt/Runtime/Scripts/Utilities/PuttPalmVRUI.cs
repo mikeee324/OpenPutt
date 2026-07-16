@@ -16,6 +16,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Reference to the VR UI view")]
         public OpenPuttUIView vrUI;
 
+        [Tooltip("Reference to the UI controller, used to force the palm UI open for the fetch ball panel")]
+        public OpenPuttUIController uiController;
+
         [Header("Height Scaling")]
         [Tooltip("Reference player height in meters that corresponds to 1x UI scale")]
         public float vrReferenceHeight = 1.1f;
@@ -148,6 +151,11 @@ namespace dev.mikeee324.OpenPutt
             if (overrideHideBecauseNotPlaying)
                 palmFacingUp = false;
 
+            // Override: force the palm UI open while the fetch ball panel needs to be seen (ball held on
+            // shoulder mount during a standard course), regardless of palm orientation.
+            if (Utilities.IsValid(uiController) && uiController.FetchBallPanelVisible)
+                palmFacingUp = true;
+
             if (palmFacingUp != vrUIVisibilityTarget)
                 vrUIVisibilityDirection = palmFacingUp ? 1f : -1f;
 
@@ -249,12 +257,11 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            if (!Utilities.IsValid(vrUI))
-            {
-                var uiController = GetComponent<OpenPuttUIController>();
-                if (Utilities.IsValid(uiController))
-                    vrUI = uiController.vrUI;
-            }
+            if (!Utilities.IsValid(uiController))
+                uiController = GetComponent<OpenPuttUIController>();
+
+            if (!Utilities.IsValid(vrUI) && Utilities.IsValid(uiController))
+                vrUI = uiController.vrUI;
 
             if (!Utilities.IsValid(vrUI) || !Utilities.IsValid(vrUI.transform.parent))
             {

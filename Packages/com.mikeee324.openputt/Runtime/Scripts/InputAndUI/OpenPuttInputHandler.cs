@@ -63,6 +63,7 @@ namespace dev.mikeee324.OpenPutt
         private float maxPower = 100f;
         private Collider[] _menuColliders = new Collider[3];
         private bool isMenuOpen = false;
+        public bool IsMenuOpen => isMenuOpen;
 
         [Tooltip("The duration of the vibration in seconds.")]
         private float vibrationDuration = 0.2f;
