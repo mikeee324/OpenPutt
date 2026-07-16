@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0, g: 0, b: 0, a: 1}
+  m_IndirectSpecularColor: {r: 0.3322065, g: 0.3627174, b: 0.46474278, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -2780,6 +2780,12 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1482554085818539379}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1305681282 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8421833032846346507, guid: bbfafd995f07c5c45b78e2003070c14c,
+    type: 3}
+  m_PrefabInstance: {fileID: 1482554085818539379}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1307244334 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 948313459165178724, guid: bbfafd995f07c5c45b78e2003070c14c,
@@ -4419,6 +4425,12 @@ GameObject:
 --- !u!1 &2138338799 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2772716183870105953, guid: bbfafd995f07c5c45b78e2003070c14c,
+    type: 3}
+  m_PrefabInstance: {fileID: 1482554085818539379}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &2142587939 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2812404848562767679, guid: bbfafd995f07c5c45b78e2003070c14c,
     type: 3}
   m_PrefabInstance: {fileID: 1482554085818539379}
   m_PrefabAsset: {fileID: 0}
@@ -6331,6 +6343,12 @@ PrefabInstance:
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 3556861298537963504, guid: bbfafd995f07c5c45b78e2003070c14c,
+        type: 3}
+    - target: {fileID: 3561565395627986630, guid: bbfafd995f07c5c45b78e2003070c14c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 3561565395627986630, guid: bbfafd995f07c5c45b78e2003070c14c,
         type: 3}
     - target: {fileID: 3603672285146519057, guid: bbfafd995f07c5c45b78e2003070c14c,
         type: 3}
@@ -8860,6 +8878,12 @@ PrefabInstance:
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 8168161934764019597, guid: bbfafd995f07c5c45b78e2003070c14c,
+        type: 3}
+    - target: {fileID: 8207301185007149805, guid: bbfafd995f07c5c45b78e2003070c14c,
+        type: 3}
+      propertyPath: serializationData.Prefab
+      value: 
+      objectReference: {fileID: 8207301185007149805, guid: bbfafd995f07c5c45b78e2003070c14c,
         type: 3}
     - target: {fileID: 8216961741004747911, guid: bbfafd995f07c5c45b78e2003070c14c,
         type: 3}
@@ -12158,6 +12182,14 @@ MonoBehaviour:
     - VRC.Udon.UdonBehaviour
   - gameObject: {fileID: 1617804049}
     ID: 1842
+    SerializedTypeNames:
+    - VRC.Udon.UdonBehaviour
+  - gameObject: {fileID: 2142587939}
+    ID: 1843
+    SerializedTypeNames:
+    - VRC.Udon.UdonBehaviour
+  - gameObject: {fileID: 1305681282}
+    ID: 1844
     SerializedTypeNames:
     - VRC.Udon.UdonBehaviour
   portraitCameraPositionOffset: {x: 0, y: 0, z: 0}
