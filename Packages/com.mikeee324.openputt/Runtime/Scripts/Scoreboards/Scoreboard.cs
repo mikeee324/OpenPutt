@@ -584,6 +584,8 @@ namespace dev.mikeee324.OpenPutt
             playerManager.golfClub.throwEnabled = !playerManager.golfClub.throwEnabled;
 
             RefreshSettingsMenu();
+
+            manager.openPutt._SavePersistantData();
         }
 
         public void OnTogglePlayerManager()
@@ -664,6 +666,8 @@ namespace dev.mikeee324.OpenPutt
             playerManager.IsInLeftHandedMode = !playerManager.IsInLeftHandedMode;
 
             RefreshSettingsMenu();
+
+            manager.openPutt._SavePersistantData();
         }
 
         public void OnToggleDevModeForAll()
@@ -711,6 +715,8 @@ namespace dev.mikeee324.OpenPutt
             playerManager.golfClub.AutoHoldEnabled = !playerManager.golfClub.AutoHoldEnabled;
 
             RefreshSettingsMenu();
+
+            manager.openPutt._SavePersistantData();
         }
 
         public void OnToggleCourseReplays()

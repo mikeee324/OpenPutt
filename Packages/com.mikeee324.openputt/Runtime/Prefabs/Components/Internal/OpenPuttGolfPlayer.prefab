@@ -1010,10 +1010,7 @@ MonoBehaviour:
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
-    SerializationNodes:
-    - Name: Owner
-      Entry: 6
-      Data: 
+    SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 4926412382919218395}
   golfClub: {fileID: 234486930054562862}
   golfBall: {fileID: 3843631105412776836}
@@ -3105,11 +3102,14 @@ MonoBehaviour:
   shaftCollider: {fileID: 2882034093205668839}
   throwEnabled: 1
   minThrowSpeed: 3
+  throwSpinMultiplier: 1
+  maxThrowAngularVelocity: 720
   resizeLayerMask:
     serializedVersion: 2
     m_Bits: 4038655
   forceMultiplier: 1
   enableBigShaft: 0
+  scaleToBallHeight: 0
   offColour: {r: 1, g: 1, b: 1, a: 1}
   onColour: {r: 1, g: 0, b: 0, a: 1}
   offEmission: {r: 0, g: 0, b: 0, a: 1}
@@ -4035,7 +4035,6 @@ MonoBehaviour:
   defaultBallDrag: 0.055
   ballDragOverride: 0
   enableAirResistance: 1
-  maxBallSpeed: 150
   minBallSpeed: 0.04
   minBallHitSpeed: 0.1
   minBallSpeedMaxTime: 1
@@ -4177,6 +4176,7 @@ MonoBehaviour:
   shapeType: 0
   radius: 0.0225
   height: 2
+  size: {x: 1, y: 1, z: 1}
   position: {x: 0, y: 0, z: 0}
   rotation: {x: 0, y: 0, z: 0, w: 1}
   localOnly: 0
@@ -4185,6 +4185,7 @@ MonoBehaviour:
   - OpenPutt-Putter
   allowSelf: 1
   allowOthers: 1
+  useFaceProximity: 0
   receiverType: 0
   parameter: 
   minVelocity: 0.05

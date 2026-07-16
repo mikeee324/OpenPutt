@@ -86,6 +86,10 @@ namespace dev.mikeee324.OpenPutt
 
         public bool throwEnabled = true;
         public float minThrowSpeed = 4f;
+        [Tooltip("Scales down the spin applied to the club when thrown (1 = raw hand rotation speed, lower values reduce spin)")]
+        public float throwSpinMultiplier = 0.4f;
+        [Tooltip("Maximum angular velocity (degrees/sec) the club can be thrown with, clamped before the spin multiplier is applied")]
+        public float maxThrowAngularVelocity = 720f;
 
         public MaterialPropertyBlock handlePB;
         public MaterialPropertyBlock headPB;
@@ -836,6 +840,7 @@ namespace dev.mikeee324.OpenPutt
             clubRigidbody.velocity = linearVelocity;
 
             var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
+            handAngularVelocityDeg = Vector3.ClampMagnitude(handAngularVelocityDeg, maxThrowAngularVelocity) * throwSpinMultiplier;
             clubRigidbody.angularVelocity = handAngularVelocityDeg * Mathf.Deg2Rad;
         }
 
