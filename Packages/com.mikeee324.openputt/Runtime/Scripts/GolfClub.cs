@@ -835,25 +835,8 @@ namespace dev.mikeee324.OpenPutt
             var linearVelocity = controllerTracker.GetVelocityAtOffset(hand, offsetForCentreMass);
             clubRigidbody.velocity = linearVelocity;
 
-            if (localPlayerIsInVR)
-            {
-                var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
-                var handAngularVelocityRad = handAngularVelocityDeg * Mathf.Deg2Rad;
-
-                // *** Proposed correction for VR angular velocity ***
-                Vector3 transformedAngularVelocity;
-                transformedAngularVelocity.x = handAngularVelocityRad.y;  // Removed negation - Fixes flipped up/down
-                transformedAngularVelocity.y = -handAngularVelocityRad.x; // Kept negation - Left/right is correct
-                transformedAngularVelocity.z = handAngularVelocityRad.z;  // Kept as is (assuming Z is correct)
-                clubRigidbody.angularVelocity = transformedAngularVelocity;
-                // *************************************************
-            }
-            else
-            {
-                var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
-                var handAngularVelocityRad = handAngularVelocityDeg * Mathf.Deg2Rad;
-                clubRigidbody.angularVelocity = handAngularVelocityRad;
-            }
+            var handAngularVelocityDeg = controllerTracker.GetAngularVelocity(hand, 5);
+            clubRigidbody.angularVelocity = handAngularVelocityDeg * Mathf.Deg2Rad;
         }
 
         private void ResetClubThrow()

@@ -761,7 +761,6 @@ namespace dev.mikeee324.OpenPutt
             }
             else
             {
-                // Normal drop behaviour
                 if (Networking.LocalPlayer.IsUserInVR())
                     lastHeldFrameVelocity *= pickup.ThrowVelocityBoostScale;
             }

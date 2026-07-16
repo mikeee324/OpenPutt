@@ -212,8 +212,9 @@ public class ControllerTracker : UdonSharpBehaviour
         // Avoid division by zero or negative time differences
         if (deltaTime <= 0) return Vector3.zero;
 
-        // Calculate the difference in rotation as a delta quaternion (rotation from previous to current)
-        var deltaRotation = Quaternion.Inverse(previousRot) * currentRot;
+        // Calculate the difference in rotation as a delta quaternion, expressed in world space
+        // (previousRot on the right so the result rotates previousRot into currentRot around a world-space axis)
+        var deltaRotation = currentRot * Quaternion.Inverse(previousRot);
 
         // Convert the delta quaternion to axis-angle representation (degrees)
         deltaRotation.ToAngleAxis(out var angle, out var axis);
