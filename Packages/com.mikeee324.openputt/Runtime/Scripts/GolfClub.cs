@@ -287,6 +287,7 @@ namespace dev.mikeee324.OpenPutt
         private bool RightUseButtonDown;
         private bool clubColliderIsTempDisabled;
         private bool localPlayerIsInVR;
+        private bool hasSeededShaftScaleFromEyeHeight;
 
         [Tooltip("The duration of the vibration in seconds.")]
         private float vibrationDuration = 0.1f;
@@ -324,6 +325,60 @@ namespace dev.mikeee324.OpenPutt
             _RefreshState();
 
             _LocalPlayerCheck();
+
+            // Give the club a sensible starting length the first time it's made visible, so it doesn't need
+            // to be pointed at the ground and rescaled manually first
+            if (this.LocalPlayerOwnsThisObject())
+            {
+                hasSeededShaftScaleFromEyeHeight = true;
+                SeedShaftScaleFromEyeHeight();
+            }
+        }
+
+        public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)
+        {
+            if (!Utilities.IsValid(player) || !player.isLocal || !this.LocalPlayerOwnsThisObject())
+                return;
+
+            SeedShaftScaleFromEyeHeight();
+        }
+
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            _UpdateClubState();
+            _RescaleClub(true);
+            RequestSerialization();
+
+            // A new player may have just taken ownership without ever having gone through Start() with this
+            // as their local player (e.g. club spawned before they connected) - make sure they still get seeded
+            if (!hasSeededShaftScaleFromEyeHeight && this.LocalPlayerOwnsThisObject())
+            {
+                hasSeededShaftScaleFromEyeHeight = true;
+                SeedShaftScaleFromEyeHeight();
+            }
+        }
+
+        /// <summary>
+        /// Gives the club a sensible starting length based on the local player's eye height, so it doesn't
+        /// need to be pointed at the ground and rescaled manually first. The raycast/button rescale
+        /// (<see cref="_RescaleClub"/>) still runs as normal afterwards to fine-tune the fit. Applies the
+        /// resulting scale immediately, since PostLateUpdate (which normally does this) doesn't run while
+        /// the club is disabled/not being held.
+        /// </summary>
+        private void SeedShaftScaleFromEyeHeight()
+        {
+            var localPlayer = Networking.LocalPlayer;
+            if (!Utilities.IsValid(localPlayer))
+                return;
+
+            var worldScale = shaftMesh.transform.parent.lossyScale.z;
+            if (worldScale < 0.0001f)
+                worldScale = 1f;
+
+            var desiredWorldLength = localPlayer.GetAvatarEyeHeightAsMeters() * 0.48f;
+
+            ApplyLocalShaftDistance(desiredWorldLength / worldScale);
+            ApplyShaftVisualScale(shaftScale);
         }
 
         public void _LocalPlayerCheck()
@@ -377,20 +432,29 @@ namespace dev.mikeee324.OpenPutt
                 if (!isOwner)
                     newShaftScale = Mathf.Lerp(shaftMesh.transform.localScale.z, shaftScale, 1.0f - Mathf.Pow(0.001f, Time.deltaTime));
 
-                // Scale thickness independent of the shaft length
-                var shaftGirth = Mathf.Lerp(1f, 6f, (newShaftScale - 1.5f) / 20f);
-
-                shaftMesh.transform.localScale = new Vector3(1, 1, newShaftScale);
-                handleMesh.transform.localScale = new Vector3(shaftGirth, shaftGirth, 1);
-                headContainer.transform.localScale = new Vector3(1, 1, shaftGirth);
-
-                headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
+                ApplyShaftVisualScale(newShaftScale);
             }
             else if (!isOwner)
             {
                 // Local player doesn't own this club and the scale hasn't changed - do nothing
                 enabled = false;
             }
+        }
+
+        /// <summary>
+        /// Applies a shaft scale value to the meshes' transforms. Doesn't touch the synced <see cref="shaftScale"/>
+        /// field itself - callers decide what value to render (e.g. lerped for remote players, instant for the owner).
+        /// </summary>
+        private void ApplyShaftVisualScale(float targetShaftScale)
+        {
+            // Scale thickness independent of the shaft length
+            var shaftGirth = Mathf.Lerp(1f, 6f, (targetShaftScale - 1.5f) / 20f);
+
+            shaftMesh.transform.localScale = new Vector3(1, 1, targetShaftScale);
+            handleMesh.transform.localScale = new Vector3(shaftGirth, shaftGirth, 1);
+            headContainer.transform.localScale = new Vector3(1, 1, shaftGirth);
+
+            headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
         }
 
         public override void OnDeserialization()
@@ -522,22 +586,16 @@ namespace dev.mikeee324.OpenPutt
             //    _RescaleClub(true);
         }
 
-        public override void OnOwnershipTransferred(VRCPlayerApi player)
-        {
-            _UpdateClubState();
-            _RescaleClub(true);
-            RequestSerialization();
-        }
-
         /// <summary>
         /// Resizes the club for the player.
         /// </summary>
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
         public void _RescaleClub(bool resetToDefault)
         {
-            var oldShaftScale = shaftScale;
             if (resetToDefault)
             {
+                var oldShaftScale = shaftScale;
+
                 // Reset all mesh scaling and work out actual default bounds
                 shaftScale = 1;
 
@@ -546,46 +604,60 @@ namespace dev.mikeee324.OpenPutt
                 headContainer.transform.localScale = new Vector3(1, 1, 1);
 
                 headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
+
+                if (Math.Abs(oldShaftScale - shaftScale) > .01f && Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
+                    openPuttSync._RequestFastSync(forceSync: true);
+
+                return;
+            }
+
+            var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
+
+            // Divide out parent scale so world-space distances are in the club's local units
+            var worldScale = shaftMesh.transform.parent.lossyScale.z;
+            if (worldScale < 0.0001f)
+                worldScale = 1f;
+
+            var handPosition = shaftMesh.gameObject.transform.position;
+
+            var shaftDir = (shaftEndPosition.transform.position - handPosition).normalized;
+
+            var localPlayer = Networking.LocalPlayer;
+            var maxBallDistance = Utilities.IsValid(localPlayer) ? localPlayer.GetAvatarEyeHeightAsMeters() : 2f;
+
+            // Distance (in local units) from the hand/grip down to where the club head should end up
+            var localDistance = -1f;
+            if (scaleToBallHeight && Utilities.IsValid(ball) && shaftDir.y < -0.0001f && Vector3.Distance(handPosition, ball.transform.position) <= maxBallDistance)
+            {
+                // Ball is close enough - scale along the shaft so the head reaches the height the ball sits at (accounts for club tilt)
+                var ballGroundY = ball.transform.position.y - ball.BallWorldRadius;
+                localDistance = (ballGroundY - handPosition.y) / shaftDir.y / worldScale;
             }
             else
             {
-                var minSize = .1f;
-                var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
-
-                // Divide out parent scale so world-space distances are in the club's local units
-                var worldScale = shaftMesh.transform.parent.lossyScale.z;
-                if (worldScale < 0.0001f)
-                    worldScale = 1f;
-
-                var handPosition = shaftMesh.gameObject.transform.position;
-
-                var shaftDir = (shaftEndPosition.transform.position - handPosition).normalized;
-
-                var localPlayer = Networking.LocalPlayer;
-                var maxBallDistance = Utilities.IsValid(localPlayer) ? localPlayer.GetAvatarEyeHeightAsMeters() : 2f;
-
-                // Distance (in local units) from the hand/grip down to where the club head should end up
-                var localDistance = -1f;
-                if (scaleToBallHeight && Utilities.IsValid(ball) && shaftDir.y < -0.0001f && Vector3.Distance(handPosition, ball.transform.position) <= maxBallDistance)
-                {
-                    // Ball is close enough - scale along the shaft so the head reaches the height the ball sits at (accounts for club tilt)
-                    var ballGroundY = ball.transform.position.y - ball.BallWorldRadius;
-                    localDistance = (ballGroundY - handPosition.y) / shaftDir.y / worldScale;
-                }
-                else
-                {
-                    // Raycast down the shaft to find the floor
-                    if (Physics.Raycast(handPosition, shaftDir, out var hit, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
-                        localDistance = Vector3.Distance(hit.point, handPosition) / worldScale;
-                }
-
-                if (localDistance > 0f)
-                {
-                    var putterScale = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
-                    var putterHeight = putter.putterTarget.size.z * putterScale;
-                    shaftScale = Mathf.Clamp((localDistance - putterHeight) / shaftCollider.size.z, minSize, maxSize);
-                }
+                // Raycast down the shaft to find the floor
+                if (Physics.Raycast(handPosition, shaftDir, out var hit, maxSize, resizeLayerMask, QueryTriggerInteraction.Ignore))
+                    localDistance = Vector3.Distance(hit.point, handPosition) / worldScale;
             }
+
+            if (localDistance > 0f)
+                ApplyLocalShaftDistance(localDistance);
+        }
+
+        /// <summary>
+        /// Clamps a shaft length (in the club's local units, i.e. already divided by parent world scale) and
+        /// applies it to <see cref="shaftScale"/>, requesting a network sync if it actually changed.
+        /// </summary>
+        private void ApplyLocalShaftDistance(float localDistance)
+        {
+            var oldShaftScale = shaftScale;
+
+            var minSize = .1f;
+            var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
+
+            var putterScale = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
+            var putterHeight = putter.putterTarget.size.z * putterScale;
+            shaftScale = Mathf.Clamp((localDistance - putterHeight) / shaftCollider.size.z, minSize, maxSize);
 
             if (Math.Abs(oldShaftScale - shaftScale) > .01f && Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
                 openPuttSync._RequestFastSync(forceSync: true);
