@@ -4,6 +4,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
+    /// <summary>Moves the local player's club to targetPosition when interacted with.</summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttPedestalClubButton : UdonSharpBehaviour
     {
@@ -16,6 +17,12 @@ namespace dev.mikeee324.OpenPutt
         public bool enableClubPhysicsAfterMove = false;
 
         public override void Interact()
+        {
+            FetchItem();
+        }
+
+        /// <summary>Moves the local player's club to targetPosition, dropping it first if held.</summary>
+        public void FetchItem()
         {
             if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.LocalPlayerManager) || !Utilities.IsValid(openPutt.LocalPlayerManager.golfClub) || !Utilities.IsValid(targetPosition))
                 return;
