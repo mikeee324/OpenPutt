@@ -52,8 +52,6 @@ namespace dev.mikeee324.OpenPutt
             playerManager.BallColor = colour;
 
             playerManager._RequestSync(syncNow: true);
-
-            ApplyColourToMeshes(colour);
         }
 
         /// <summary>Applies the given colour to each renderer in meshesToColour.</summary>
@@ -77,6 +75,11 @@ namespace dev.mikeee324.OpenPutt
         #endregion
 
         #region Unity Events
+
+        private void Start()
+        {
+            ApplyColourToMeshes(ballColour);
+        }
 
         public override void Interact()
         {

@@ -314,12 +314,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(openPuttSync))
                 openPuttSync = GetComponent<OpenPuttSync>();
             shaftScale = 1;
-
-            shaftMesh.transform.localScale = new Vector3(1, 1, 1);
-            handleMesh.transform.localScale = new Vector3(1, 1, 1);
-            headContainer.transform.localScale = new Vector3(1, 1, 1);
-
-            headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
+            ApplyShaftVisualScale(shaftScale);
 
             // Update the collider states
             _RefreshState();
@@ -328,11 +323,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Give the club a sensible starting length the first time it's made visible, so it doesn't need
             // to be pointed at the ground and rescaled manually first
-            if (this.LocalPlayerOwnsThisObject())
-            {
-                hasSeededShaftScaleFromEyeHeight = true;
-                SeedShaftScaleFromEyeHeight();
-            }
+            TrySeedShaftScaleFromEyeHeight();
         }
 
         public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)
@@ -346,16 +337,29 @@ namespace dev.mikeee324.OpenPutt
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
             _UpdateClubState();
-            _RescaleClub(true);
-            RequestSerialization();
 
             // A new player may have just taken ownership without ever having gone through Start() with this
-            // as their local player (e.g. club spawned before they connected) - make sure they still get seeded
-            if (!hasSeededShaftScaleFromEyeHeight && this.LocalPlayerOwnsThisObject())
-            {
-                hasSeededShaftScaleFromEyeHeight = true;
-                SeedShaftScaleFromEyeHeight();
-            }
+            // as their local player (e.g. club spawned before they connected) - make sure they still get seeded.
+            // Skip the reset-to-default rescale in that case since the seed below immediately overwrites it anyway.
+            if (hasSeededShaftScaleFromEyeHeight || !this.LocalPlayerOwnsThisObject())
+                _RescaleClub(true);
+
+            TrySeedShaftScaleFromEyeHeight();
+
+            RequestSerialization();
+        }
+
+        /// <summary>
+        /// Seeds the shaft scale from the local player's eye height once (see <see cref="SeedShaftScaleFromEyeHeight"/>).
+        /// No-ops on subsequent calls or if the local player doesn't own this club.
+        /// </summary>
+        private void TrySeedShaftScaleFromEyeHeight()
+        {
+            if (hasSeededShaftScaleFromEyeHeight || !this.LocalPlayerOwnsThisObject())
+                return;
+
+            hasSeededShaftScaleFromEyeHeight = true;
+            SeedShaftScaleFromEyeHeight();
         }
 
         /// <summary>
@@ -587,6 +591,12 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Upper bound for <see cref="shaftScale"/>, based on whether big shafts are allowed and whether the
+        /// local player is in VR.
+        /// </summary>
+        private float MaxShaftSize => enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
+
+        /// <summary>
         /// Resizes the club for the player.
         /// </summary>
         /// <param name="resetToDefault">True=Scale is reset to 1<br/>False=Club will be resized to touch the ground</param>
@@ -598,12 +608,7 @@ namespace dev.mikeee324.OpenPutt
 
                 // Reset all mesh scaling and work out actual default bounds
                 shaftScale = 1;
-
-                shaftMesh.transform.localScale = new Vector3(1, 1, 1);
-                handleMesh.transform.localScale = new Vector3(1, 1, 1);
-                headContainer.transform.localScale = new Vector3(1, 1, 1);
-
-                headContainer.gameObject.transform.position = shaftEndPosition.transform.position;
+                ApplyShaftVisualScale(shaftScale);
 
                 if (Math.Abs(oldShaftScale - shaftScale) > .01f && Utilities.IsValid(openPuttSync) && openPuttSync.LocalPlayerOwnsThisObject())
                     openPuttSync._RequestFastSync(forceSync: true);
@@ -611,7 +616,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
+            var maxSize = MaxShaftSize;
 
             // Divide out parent scale so world-space distances are in the club's local units
             var worldScale = shaftMesh.transform.parent.lossyScale.z;
@@ -653,7 +658,7 @@ namespace dev.mikeee324.OpenPutt
             var oldShaftScale = shaftScale;
 
             var minSize = .1f;
-            var maxSize = enableBigShaft ? 100f : (localPlayerIsInVR ? 3f : 6f);
+            var maxSize = MaxShaftSize;
 
             var putterScale = Mathf.Lerp(1f, 6f, (shaftScale - 1.5f) / 20f);
             var putterHeight = putter.putterTarget.size.z * putterScale;
