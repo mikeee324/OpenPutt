@@ -28,12 +28,28 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.LocalPlayerManager) || !Utilities.IsValid(openPutt.LocalPlayerManager.golfClub) || !Utilities.IsValid(targetPosition))
                 return;
 
+            // Desktop/mobile players don't physically hold the club - point them at Ball Cam instead
+            if (!Networking.LocalPlayer.IsUserInVR())
+            {
+                ShowBallCamHint();
+                return;
+            }
+
             var playerManager = openPutt.LocalPlayerManager;
             var golfClub = playerManager.golfClub;
 
-            // Can't move the club while it's attached to a hand, so drop it first
+            // Can't move the club while it's attached to a hand, so drop it first - the club can be
+            // held either directly (golfClub.pickup) or via the shoulder holster (golfClub.shoulderPickup),
+            // and only the one actually holding it will respond to Drop()
             if (golfClub.CurrentHand != VRC_Pickup.PickupHand.None)
-                golfClub.pickup.Drop();
+            {
+                if (Utilities.IsValid(golfClub.pickup))
+                    golfClub.pickup.Drop();
+
+                var shoulderPickup = golfClub.shoulderPickup;
+                if (Utilities.IsValid(shoulderPickup) && Utilities.IsValid(shoulderPickup.pickup))
+                    shoulderPickup.pickup.Drop();
+            }
 
             // Make sure the club is active/visible before touching its physics, otherwise the
             // changes below won't take effect properly on a disabled GameObject
@@ -52,6 +68,22 @@ namespace dev.mikeee324.OpenPutt
             }
 
             playerManager._RequestSync(syncNow: true);
+        }
+
+        private void ShowBallCamHint()
+        {
+            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.notifications))
+                return;
+
+            string hintText;
+#if UNITY_ANDROID || UNITY_IOS
+            hintText = "Tap the Ball Cam button to aim your shot";
+#else
+            var controllerDetector = Utilities.IsValid(openPutt.ballCam) && Utilities.IsValid(openPutt.ballCam.inputHandler) ? openPutt.ballCam.inputHandler.controllerDetector : null;
+            bool usingGamepad = Utilities.IsValid(controllerDetector) && controllerDetector.currentInputMethod == VRCInputMethod.Controller;
+            hintText = usingGamepad ? "Press RB to use Ball Cam" : "Press E to use Ball Cam";
+#endif
+            openPutt.notifications.InstantiateCalloutBox(hintText);
         }
     }
 }

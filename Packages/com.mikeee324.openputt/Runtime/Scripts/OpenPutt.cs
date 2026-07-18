@@ -17,12 +17,18 @@ namespace dev.mikeee324.OpenPutt
         public readonly string CurrentVersion = "0.9.1";
 
         #region References
-        [OpenPuttDescription("The central OpenPutt controller for this world - it links all the player prefabs, courses and scoreboards together and does not need to be synced itself.")]
+        [OpenPuttDescription("The central OpenPutt controller for this world - it links all the player prefabs, courses and scoreboards together.")]
+        [OpenPuttFoldoutGroup("Internal References")]
         public OpenPuttEventHandler eventHandler;
 
+        [OpenPuttFoldoutGroup("Internal References")]
         public OpenPuttUIController uiController;
 
+        [OpenPuttFoldoutGroup("Internal References")]
         public OpenPuttBallCam ballCam;
+
+        [OpenPuttFoldoutGroup("Internal References")]
+        public OpenPuttNotifications notifications;
 
         [OpenPuttFoldoutGroup("Internal References")]
         [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
