@@ -4,6 +4,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttHeadFollower : UdonSharpBehaviour
     {
         #region Public Settings
