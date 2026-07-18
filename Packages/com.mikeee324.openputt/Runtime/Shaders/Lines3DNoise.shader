@@ -12,7 +12,7 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 		_AllNoiseStrength( "AllNoiseStrength", Range( 0, 1 ) ) = 0.5
 		_smooothstepmin( "smooothstepmin", Range( 0, 1 ) ) = 0.1
 		_smooothstepmax( "smooothstepmax", Range( 0, 1 ) ) = 0.95
-		[Toggle( _LOCKNOISETOOBJECT_ON )] _LockNoiseToObject( "LockNoiseToObject", Float ) = 1
+		[Toggle( _LOCKNOISETOOBJECT_ON )] _LockNoiseToObject( "LockNoiseToObject", Float ) = 0
 		_HeightOffset( "HeightOffset", Range( -0.3, 0.3 ) ) = 0
 		_LineBlend( "LineBlend", Range( 0, 1 ) ) = 0.2
 		_LineHeightCM( "_LineHeightCM", Range( 0.5, 30 ) ) = 3
@@ -125,9 +125,10 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 			float temp_output_18_0_g7 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
 			float3 ase_positionWS = i.worldPos;
 			float temp_output_10_0_g6 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
-			float smoothstepResult21_g6 = smoothstep( ( 0.5 - temp_output_18_0_g7 ) , ( 0.5 + temp_output_18_0_g7 ) , abs( (frac( temp_output_10_0_g6 )*2.0 + -1.0) ));
-			float lerpResult24_g6 = lerp( smoothstepResult21_g6 , 0.5 , saturate( ( fwidth( temp_output_10_0_g6 ) * 1.0 ) ));
-			float _LinesAlpha48 = lerpResult24_g6;
+			float temp_output_16_0_g6 = fwidth( temp_output_10_0_g6 );
+			float smoothstepResult21_g6 = smoothstep( ( ( 0.5 - temp_output_18_0_g7 ) - temp_output_16_0_g6 ) , ( ( 0.5 + temp_output_18_0_g7 ) + temp_output_16_0_g6 ) , abs( (frac( temp_output_10_0_g6 )*2.0 + -1.0) ));
+			float lerpResult37_g6 = lerp( smoothstepResult21_g6 , 0.5 , saturate( ( temp_output_16_0_g6 * 2.0 ) ));
+			float _LinesAlpha48 = lerpResult37_g6;
 			float _LinesDarkenAmount_Instance = UNITY_ACCESS_INSTANCED_PROP(_LinesDarkenAmount_arr, _LinesDarkenAmount);
 			float clampResult60 = clamp( ( 1.0 - _LinesAlpha48 ) , ( 1.0 - _LinesDarkenAmount_Instance ) , 1.0 );
 			float3 ase_positionOS = i.ase_positionOS4f.xyz;
@@ -292,4 +293,4 @@ WireConnection;0;0;111;0
 WireConnection;0;3;65;0
 WireConnection;0;4;66;0
 ASEEND*/
-//CHKSM=D4DBD623F5BA36C2EBF5B902AA76664A76516F1D
+//CHKSM=40D47F84FD453EB1BCFE674AC8FED8B7AAEE0F8E

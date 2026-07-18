@@ -154,13 +154,13 @@ Shader "OpenPutt/GolfCourse/LinesStandard3DNoise"
 			o.Normal = UnpackNormal( tex2D( _Normal, uv_TexCoord6 ) );
 			float3 temp_output_180_0 = ( _Color.rgb * tex2D( _Albedo, uv_TexCoord6 ).rgb );
 			float3 ase_normalWS = WorldNormalVector( i, float3( 0, 0, 1 ) );
-			float temp_output_18_0_g8 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
+			float temp_output_18_0_g11 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
 			float3 ase_positionWS = i.worldPos;
-			float temp_output_10_0_g7 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
-			float temp_output_16_0_g7 = fwidth( temp_output_10_0_g7 );
-			float smoothstepResult21_g7 = smoothstep( ( ( 0.5 - temp_output_18_0_g8 ) - temp_output_16_0_g7 ) , ( ( 0.5 + temp_output_18_0_g8 ) + temp_output_16_0_g7 ) , abs( (frac( temp_output_10_0_g7 )*2.0 + -1.0) ));
-			float lerpResult37_g7 = lerp( smoothstepResult21_g7 , 0.5 , saturate( ( temp_output_16_0_g7 * 2.0 ) ));
-			float _LinesAlpha355 = lerpResult37_g7;
+			float temp_output_10_0_g10 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
+			float temp_output_16_0_g10 = fwidth( temp_output_10_0_g10 );
+			float smoothstepResult21_g10 = smoothstep( ( ( 0.5 - temp_output_18_0_g11 ) - temp_output_16_0_g10 ) , ( ( 0.5 + temp_output_18_0_g11 ) + temp_output_16_0_g10 ) , abs( (frac( temp_output_10_0_g10 )*2.0 + -1.0) ));
+			float lerpResult37_g10 = lerp( smoothstepResult21_g10 , 0.5 , saturate( ( temp_output_16_0_g10 * 2.0 ) ));
+			float _LinesAlpha355 = lerpResult37_g10;
 			float3 lerpResult79 = lerp( temp_output_180_0 , ( temp_output_180_0 * ( 1.0 - _LinesDarkenAmount ) ) , _LinesAlpha355);
 			float3 ase_positionOS = i.ase_positionOS4f.xyz;
 			#ifdef _LOCKNOISETOOBJECT_ON
@@ -290,7 +290,7 @@ Node;AmplifyShaderEditor.CommentaryNode, AmplifyShaderEditor, Version=0.0.0.0, C
 Node;AmplifyShaderEditor.SamplerNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;1;4736,-576;Inherit;True;Property;_Albedo;Albedo;13;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;False;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
 Node;AmplifyShaderEditor.ColorNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;179;4800,-784;Inherit;False;Property;_Color;Color;23;0;Create;True;0;0;0;False;0;False;1,1,1,1;0,0,0,0;True;True;0;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
 Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;47;5232,-512;Inherit;False;Property;_LinesDarkenAmount;_LinesDarkenAmount;14;0;Create;True;0;0;0;True;0;False;0.25;0.05423951;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;444;3168,-768;Inherit;False;OpenPuttLines;0;;7;5b7dadceb1064e74c9a5f3f739983153;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;446;3168,-768;Inherit;False;OpenPuttLines;0;;10;5b7dadceb1064e74c9a5f3f739983153;0;0;1;FLOAT;0
 Node;AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;180;5120,-624;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;181;5504,-704;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.OneMinusNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;189;5552,-592;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
@@ -330,7 +330,7 @@ WireConnection;180;0;179;5
 WireConnection;180;1;1;5
 WireConnection;181;0;180;0
 WireConnection;189;0;47;0
-WireConnection;355;0;444;0
+WireConnection;355;0;446;0
 WireConnection;138;1;6;0
 WireConnection;172;0;138;5
 WireConnection;78;0;181;0
@@ -365,4 +365,4 @@ WireConnection;0;2;188;0
 WireConnection;0;3;175;0
 WireConnection;0;4;176;0
 ASEEND*/
-//CHKSM=513D40CAD9D36644D9FD51479FC27BB3E41C2905
+//CHKSM=9B85E58488CF1891EF30793D32833BF752236679
