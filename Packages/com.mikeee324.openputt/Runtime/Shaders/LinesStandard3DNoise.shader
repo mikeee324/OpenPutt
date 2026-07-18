@@ -13,7 +13,7 @@ Shader "OpenPutt/GolfCourse/LinesStandard3DNoise"
 		_AllNoiseStrength( "AllNoiseStrength", Range( 0, 1 ) ) = 0.5
 		_smooothstepmin( "smooothstepmin", Range( 0, 1 ) ) = 0.1
 		_smooothstepmax( "smooothstepmax", Range( 0, 1 ) ) = 0.95
-		[Toggle( _LOCKNOISETOOBJECT_ON )] _LockNoiseToObject( "LockNoiseToObject", Float ) = 1
+		[Toggle( _LOCKNOISETOOBJECT_ON )] _LockNoiseToObject( "LockNoiseToObject", Float ) = 0
 		_Albedo( "Albedo", 2D ) = "white" {}
 		_LinesDarkenAmount( "_LinesDarkenAmount", Range( 0, 1 ) ) = 0.25
 		_Normal( "Normal", 2D ) = "bump" {}
@@ -157,9 +157,10 @@ Shader "OpenPutt/GolfCourse/LinesStandard3DNoise"
 			float temp_output_18_0_g8 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
 			float3 ase_positionWS = i.worldPos;
 			float temp_output_10_0_g7 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
-			float smoothstepResult21_g7 = smoothstep( ( 0.5 - temp_output_18_0_g8 ) , ( 0.5 + temp_output_18_0_g8 ) , abs( (frac( temp_output_10_0_g7 )*2.0 + -1.0) ));
-			float lerpResult24_g7 = lerp( smoothstepResult21_g7 , 0.5 , saturate( ( fwidth( temp_output_10_0_g7 ) * 1.0 ) ));
-			float _LinesAlpha355 = lerpResult24_g7;
+			float temp_output_16_0_g7 = fwidth( temp_output_10_0_g7 );
+			float smoothstepResult21_g7 = smoothstep( ( ( 0.5 - temp_output_18_0_g8 ) - temp_output_16_0_g7 ) , ( ( 0.5 + temp_output_18_0_g8 ) + temp_output_16_0_g7 ) , abs( (frac( temp_output_10_0_g7 )*2.0 + -1.0) ));
+			float lerpResult37_g7 = lerp( smoothstepResult21_g7 , 0.5 , saturate( ( temp_output_16_0_g7 * 2.0 ) ));
+			float _LinesAlpha355 = lerpResult37_g7;
 			float3 lerpResult79 = lerp( temp_output_180_0 , ( temp_output_180_0 * ( 1.0 - _LinesDarkenAmount ) ) , _LinesAlpha355);
 			float3 ase_positionOS = i.ase_positionOS4f.xyz;
 			#ifdef _LOCKNOISETOOBJECT_ON
@@ -364,4 +365,4 @@ WireConnection;0;2;188;0
 WireConnection;0;3;175;0
 WireConnection;0;4;176;0
 ASEEND*/
-//CHKSM=10846567CE7D5796873D236E0B2AA630574E52ED
+//CHKSM=513D40CAD9D36644D9FD51479FC27BB3E41C2905

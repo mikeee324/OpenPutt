@@ -79,12 +79,13 @@ Shader "OpenPutt/GolfCourse/LinesStandard"
 			o.Normal = UnpackNormal( tex2D( _Normal, uv_TexCoord6 ) );
 			float3 temp_output_180_0 = ( _Color.rgb * tex2D( _Albedo, uv_TexCoord6 ).rgb );
 			float3 ase_normalWS = WorldNormalVector( i, float3( 0, 0, 1 ) );
-			float temp_output_18_0_g3 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
+			float temp_output_18_0_g2 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
 			float3 ase_positionWS = i.worldPos;
-			float temp_output_10_0_g2 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
-			float smoothstepResult21_g2 = smoothstep( ( 0.5 - temp_output_18_0_g3 ) , ( 0.5 + temp_output_18_0_g3 ) , abs( (frac( temp_output_10_0_g2 )*2.0 + -1.0) ));
-			float lerpResult24_g2 = lerp( smoothstepResult21_g2 , 0.5 , saturate( ( fwidth( temp_output_10_0_g2 ) * 1.0 ) ));
-			float _LinesAlpha240 = lerpResult24_g2;
+			float temp_output_10_0_g1 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
+			float temp_output_16_0_g1 = fwidth( temp_output_10_0_g1 );
+			float smoothstepResult21_g1 = smoothstep( ( ( 0.5 - temp_output_18_0_g2 ) - temp_output_16_0_g1 ) , ( ( 0.5 + temp_output_18_0_g2 ) + temp_output_16_0_g1 ) , abs( (frac( temp_output_10_0_g1 )*2.0 + -1.0) ));
+			float lerpResult37_g1 = lerp( smoothstepResult21_g1 , 0.5 , saturate( ( temp_output_16_0_g1 * 2.0 ) ));
+			float _LinesAlpha240 = lerpResult37_g1;
 			float3 lerpResult79 = lerp( temp_output_180_0 , ( temp_output_180_0 * ( 1.0 - _LinesDarkenAmount ) ) , _LinesAlpha240);
 			float3 AlbedoOut147 = lerpResult79;
 			o.Albedo = AlbedoOut147;
@@ -195,7 +196,7 @@ Node;AmplifyShaderEditor.CommentaryNode, AmplifyShaderEditor, Version=0.0.0.0, C
 Node;AmplifyShaderEditor.SamplerNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;1;4736,-576;Inherit;True;Property;_Albedo;Albedo;5;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;False;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
 Node;AmplifyShaderEditor.ColorNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;179;4800,-784;Inherit;False;Property;_Color;Color;15;0;Create;True;0;0;0;False;0;False;1,1,1,1;0,0,0,0;True;True;0;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
 Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;47;5232,-512;Inherit;False;Property;_LinesDarkenAmount;_LinesDarkenAmount;6;0;Create;True;0;0;0;True;0;False;0.25;0.05423951;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;269;3936,-384;Inherit;False;OpenPuttLines;0;;2;5b7dadceb1064e74c9a5f3f739983153;0;0;1;FLOAT;0
+Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;270;3936,-384;Inherit;False;OpenPuttLines;0;;1;5b7dadceb1064e74c9a5f3f739983153;0;0;1;FLOAT;0
 Node;AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;180;5120,-624;Inherit;False;2;2;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;181;5504,-704;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
 Node;AmplifyShaderEditor.SamplerNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;138;4576,704;Inherit;True;Property;_Smoothness;Smoothness;8;0;Create;True;0;0;0;False;0;False;-1;None;None;True;0;False;white;Auto;False;Object;-1;Auto;Texture2D;False;8;0;SAMPLER2D;;False;1;FLOAT2;0,0;False;2;FLOAT;0;False;3;FLOAT2;0,0;False;4;FLOAT2;0,0;False;5;FLOAT;1;False;6;FLOAT;0;False;7;SAMPLERSTATE;;False;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
@@ -233,7 +234,7 @@ WireConnection;181;0;180;0
 WireConnection;138;1;6;0
 WireConnection;172;0;138;5
 WireConnection;189;0;47;0
-WireConnection;240;0;269;0
+WireConnection;240;0;270;0
 WireConnection;78;0;181;0
 WireConnection;78;1;189;0
 WireConnection;182;0;180;0
@@ -263,4 +264,4 @@ WireConnection;0;2;188;0
 WireConnection;0;3;175;0
 WireConnection;0;4;176;0
 ASEEND*/
-//CHKSM=F9E29B2C4B5E2310D9CEC99E51B125CAFCCD3B87
+//CHKSM=D46452F0C60D4A1B2A11E9B60D257014CCA94AA4
