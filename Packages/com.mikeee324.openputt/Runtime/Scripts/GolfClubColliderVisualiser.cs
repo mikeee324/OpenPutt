@@ -8,15 +8,26 @@ namespace com.dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(20000)]
     public class GolfClubColliderVisualiser : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A debugging aid that draws lines showing the club head's recent swing path and where the ball was sent after a hit. Not needed for normal gameplay.")]
+        [OpenPuttFoldoutGroup("References")]
         public GolfClub club;
+        [OpenPuttFoldoutGroup("References")]
         public ControllerTracker ControllerTracker;
+        [OpenPuttFoldoutGroup("References")]
         public BoxCollider clubFollow;
+        [OpenPuttFoldoutGroup("References")]
         public Transform follower;
+        [OpenPuttFoldoutGroup("References")]
         public MeshRenderer meshRenderer;
+        [OpenPuttFoldoutGroup("References")]
         public LineRenderer hitDirection;
+        [OpenPuttFoldoutGroup("References")]
         public LineRenderer rawHitDirection;
+        [OpenPuttFoldoutGroup("References")]
         public LineRenderer clubLine;
+        [OpenPuttFoldoutGroup("References")]
         public LineRenderer clubData;
+        [OpenPuttFoldoutGroup("References")]
         public Gradient gradient;
 
         void Start()

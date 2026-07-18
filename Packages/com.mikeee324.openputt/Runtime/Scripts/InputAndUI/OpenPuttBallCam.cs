@@ -10,56 +10,77 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(999)]
     public class OpenPuttBallCam : OpenPuttEventListener
     {
-        [Header("References")]
+        [OpenPuttDescription("Controls the orbiting third-person camera you can use to aim and look at your ball, including zoom/collision handling and the aim line shown while lining up a shot.")]
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the OpenPutt instance")]
         public OpenPutt openPutt;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the ball camera")]
         public Camera ballCam;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the aim line renderer")]
         public LineRenderer aimLineRenderer;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the input handler")]
         public OpenPuttInputHandler inputHandler;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the UI controller")]
         public OpenPuttUIController uiController;
 
-        [Header("Camera Settings")]
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Initial distance from the ball")]
         public float initialDistance = 1f;
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Minimum distance")]
         public float minDistance = 1f;
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Maximum distance")]
         public float maxDistance = 20f;
-        [Header("Ball Camera Sensitivity")]
+        [OpenPuttFoldoutGroup("Ball Camera Sensitivity")]
         [Tooltip("Sensitivity multiplier for ball camera movement (desktop)"), Range(0.5f, 15f)]
         public float moveSensitivity = 5f;
+        [OpenPuttFoldoutGroup("Ball Camera Sensitivity")]
         [Tooltip("Sensitivity multiplier for ball camera zoom (desktop)"), Range(0.1f, 15f)]
         public float zoomSensitivity = 1f;
+        [OpenPuttFoldoutGroup("Ball Camera Sensitivity")]
         [Tooltip("Sensitivity multiplier for ball camera movement (mobile)"), Range(10f, 100f)]
         public float mobileMoveSensitivity = 25f;
+        [OpenPuttFoldoutGroup("Ball Camera Sensitivity")]
         [Tooltip("Sensitivity multiplier for ball camera zoom (mobile)"), Range(0.01f, 1f)]
         public float mobileZoomSensitivity = 0.5f;
-        [Header("Camera Settings")]
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Smoothing speed for camera movement"), Range(0.1f, 10f)]
         public float smoothingSpeed = 5f;
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Sphere cast radius for collision detection")]
         public float sphereCastRadius = 0.1f;
+        [OpenPuttFoldoutGroup("Camera Settings")]
         [Tooltip("Layer mask for sphere cast (what to collide with)")]
         public LayerMask collisionMask = -1;
 
+        [OpenPuttFoldoutGroup("Camera Settings")]
+        [Tooltip("Layers the ball camera is allowed to render")]
         public LayerMask cameraCullMask = -1;
+        [OpenPuttFoldoutGroup("Camera Settings")]
+        [Tooltip("Layers containing other players that the ball camera is allowed to render")]
         public LayerMask cameraCullPlayersMask = -1;
 
-        [Header("Aim Line Settings")]
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Minimum length of the aim line")]
         public float lineMinLength = 0.1f;
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Maximum length of the aim line")]
         public float lineMaxLength = 1f;
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Angle to aim the line up when no gravity (degrees)")]
         public float aimUpAngle = 10f;
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Smoothing speed for UI elements")]
         public float uiSmoothSpeed = 5f;
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Gradient for power bar color")]
         public Gradient powerBarGradient;
+        [OpenPuttFoldoutGroup("Aim Line Settings")]
         [Tooltip("Offset for the start of the aim line")]
         public float aimLineStartOffset = 0.1f;
 

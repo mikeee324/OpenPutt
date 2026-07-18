@@ -6,48 +6,62 @@ using VRC.SDKBase;
 namespace dev.mikeee324.OpenPutt
 {
     /// <summary>
-    /// Forces any golf balls to jump back to their last known valid position when colliding with this object<br/>
+    /// A target that reacts when a golf ball hits it, awarding score, playing a hit animation/particles/sound, then hiding itself and respawning after a delay.<br/>
     /// Requires a collider on the same object as this script!!
     /// </summary>
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class DrivingRangeTarget : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A target that players can hit with their ball to score points. It plays a hit animation and briefly disappears before respawning.")]
         [Tooltip("The course manager that this target is a part of")]
         public CourseManager courseManager;
 
         [Tooltip("The score to add to the player's score when hitting this target")]
         public int scoreToAdd = 1;
 
+        [OpenPuttFoldoutGroup("Visual Settings")]
         [Tooltip("Colour shown while the target is idle and waiting to be hit")]
         public Color defaultColour = Color.white;
 
+        [OpenPuttFoldoutGroup("Visual Settings")]
         [Tooltip("Gradient played over timeAfterHit when a ball hits this target")]
         public Gradient hitGradient;
 
+        [OpenPuttFoldoutGroup("Visual Settings")]
         [Tooltip("Gradient played over respawnAnimDuration when the target reappears")]
         public Gradient respawnGradient;
 
+        [OpenPuttFoldoutGroup("Timing Settings")]
         public float timeAfterHit = 2f;
+
+        [OpenPuttFoldoutGroup("Timing Settings")]
         public float timeToRespawn = 15f;
 
+        [OpenPuttFoldoutGroup("Timing Settings")]
         [Tooltip("How long the hit colour animation lasts (should be less than timeAfterHit)")]
         public float hitAnimDuration = 0.5f;
 
+        [OpenPuttFoldoutGroup("Timing Settings")]
         [Tooltip("How long the respawn colour animation lasts")]
         public float respawnAnimDuration = 0.5f;
 
+        [OpenPuttFoldoutGroup("Timing Settings")]
         [Tooltip("How long the shrink animation takes when the target dies")]
         public float deathShrinkDuration = 0.6f;
 
+        [OpenPuttFoldoutGroup("Hit Effects")]
         [Tooltip("Particle system to play when a ball hits this target")]
         public ParticleSystem hitParticleSystem;
 
+        [OpenPuttFoldoutGroup("Hit Effects")]
         [Tooltip("If true, hitParticleSystem will be moved to this target's position/rotation before it is played (useful if it's shared between multiple targets). Requires its simulation space to be set to World so already emitted particles don't move with it afterwards")]
         public bool moveParticleSystemToTarget;
 
+        [OpenPuttFoldoutGroup("Hit Effects")]
         [Tooltip("Audio source to play when a ball hits this target")]
         public AudioSource hitAudioSource;
 
+        [OpenPuttFoldoutGroup("Hit Effects")]
         [Tooltip("If true, hitAudioSource's clip is played via AudioSource.PlayClipAtPoint at this target's position instead of moving/playing hitAudioSource directly. This spawns a temporary one-shot source so the sound stays anchored even if hitAudioSource is shared and reused by another target before the clip finishes")]
         public bool moveAudioSourceToTarget;
 

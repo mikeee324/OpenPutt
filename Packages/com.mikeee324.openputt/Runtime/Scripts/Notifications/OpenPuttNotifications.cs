@@ -12,17 +12,32 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
+        [OpenPuttDescription("Shows score callouts (Ace, Eagle, Birdie, Stroke Limit etc.) with sound whenever a player finishes a hole, queuing them one at a time so they don't overlap on screen.")]
+        [OpenPuttFoldoutGroup("References")]
         public Canvas _canvas;
+        [OpenPuttFoldoutGroup("References")]
         public OpenPuttHeadFollower _headFollower;
-        [Range(1, 20)] public float _vrSmoothing = 10f;
-        public bool _notificationToggle = true;
-        public bool _othersNotificationsToggle = true;
-        public bool _playerIsInVR = true;
+        [OpenPuttFoldoutGroup("References")]
         public GameObject _calloutBoxPrefab;
-        public Vector3 _vrTargetPos, _desktopTargetPos, _vrStartPos, _desktopStartPos;
-        public AudioClip aceSound, condorSound, albatrossSound, eagleSound, birdieSound, parSound, bogeySound, doubleBogeySound, tripleBogeySound, strokeLimitSound;
+        [OpenPuttFoldoutGroup("References")]
         public OpenPutt openPutt;
+
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        [Range(1, 20)] public float _vrSmoothing = 10f;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        public bool _notificationToggle = true;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        public bool _othersNotificationsToggle = true;
+        [OpenPuttFoldoutGroup("Notification Settings")]
         public int maxQueueSize = 20;
+
+        public bool _playerIsInVR = true;
+
+        [OpenPuttFoldoutGroup("Position Settings")]
+        public Vector3 _vrTargetPos, _desktopTargetPos, _vrStartPos, _desktopStartPos;
+
+        [OpenPuttFoldoutGroup("Callout Sounds")]
+        public AudioClip aceSound, condorSound, albatrossSound, eagleSound, birdieSound, parSound, bogeySound, doubleBogeySound, tripleBogeySound, strokeLimitSound;
 
         #endregion
 

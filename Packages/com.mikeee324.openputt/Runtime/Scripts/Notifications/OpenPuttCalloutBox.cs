@@ -10,13 +10,23 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
+        [OpenPuttDescription("A single floating notification bubble that tweens onto screen near the player, shows a message with an optional sound, then tweens away again after a delay. Spawned and managed internally by OpenPuttNotifications - you shouldn't need to set this up by hand.")]
+        [OpenPuttFoldoutGroup("References")]
         public GameObject targetObject;
-        public float speed = 2f;
-        public float delay = 2f;
-        public VRCTweenEase inTweenType = VRCTweenEase.OutElastic;
-        public VRCTweenEase outTweenType = VRCTweenEase.InElastic;
+
+        [OpenPuttFoldoutGroup("References")]
         public TMP_Text _calloutTextField;
+        [OpenPuttFoldoutGroup("References")]
         public AudioSource _notificationSound;
+
+        [OpenPuttFoldoutGroup("Tween Settings")]
+        public float speed = 2f;
+        [OpenPuttFoldoutGroup("Tween Settings")]
+        public float delay = 2f;
+        [OpenPuttFoldoutGroup("Tween Settings")]
+        public VRCTweenEase inTweenType = VRCTweenEase.OutElastic;
+        [OpenPuttFoldoutGroup("Tween Settings")]
+        public VRCTweenEase outTweenType = VRCTweenEase.InElastic;
 
         #endregion
 

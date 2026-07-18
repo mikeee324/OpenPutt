@@ -11,6 +11,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class GolfBallTeleporter : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Teleports the ball to a target position when it enters this object's trigger collider, optionally launching it towards another point afterwards.")]
         public BoxCollider localCollider;
 
         [Header("Ball Teleports To (Yellow sphere gizmo)"), Tooltip("Where the ball will be teleported to")]
@@ -19,20 +20,23 @@ namespace dev.mikeee324.OpenPutt
         [Header("Ball Rolls Towards (Gray sphere gizmo)"), Tooltip("Where the ball will go towards after being teleported")]
         public Transform launchPosition;
 
-        [Header("Settings"), Tooltip("How long to wait before teleporting in seconds")]
+        [OpenPuttFoldoutGroup("Settings"), Tooltip("How long to wait before teleporting in seconds")]
         public float teleportDelay = 0f;
 
-        [Tooltip("Toggles if ths ball is hidden during the teleport delay or if it just gets frozen at the target position")]
+        [OpenPuttFoldoutGroup("Settings"), Tooltip("Toggles if ths ball is hidden during the teleport delay or if it just gets frozen at the target position")]
         public bool hideBallDuringDelay = false;
 
-        [Tooltip("Toggles whether the speed of the ball will be set to targetSpeed after it is teleported")]
+        [OpenPuttFoldoutGroup("Settings"), Tooltip("Toggles whether the speed of the ball will be set to targetSpeed after it is teleported")]
         public bool updateSpeedAfterTeleport = false;
 
-        [Tooltip("The speed of the ball after it is launched (m/s) - !Only applies if updateSpeedAfterTeleport is enabled!")]
+        [OpenPuttFoldoutGroup("Settings"), Tooltip("The speed of the ball after it is launched (m/s) - !Only applies if updateSpeedAfterTeleport is enabled!")]
         public float speedAfterTeleport = 0.5f;
 
+        [OpenPuttFoldoutGroup("Settings")]
         public bool networkAudio = false;
+        [OpenPuttFoldoutGroup("Settings")]
         public AudioSource teleportEnterAudio;
+        [OpenPuttFoldoutGroup("Settings")]
         public AudioSource teleportExitAudio;
 
         private float velocityBeforeTeleport = -1f;

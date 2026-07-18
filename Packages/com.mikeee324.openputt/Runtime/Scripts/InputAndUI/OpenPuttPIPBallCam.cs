@@ -12,43 +12,56 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(1000)]
     public class OpenPuttPIPBallCam : OpenPuttEventListener
     {
-        [Header("References")]
+        [OpenPuttDescription("Shows a small picture-in-picture camera that follows your ball when it's moving off screen, so you can still see where it goes on desktop/mobile.")]
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the OpenPutt instance")]
         public OpenPutt openPutt;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("The dedicated PiP camera (should render to a RenderTexture)")]
         public Camera pipCamera;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Root GameObject of the on-screen overlay (Canvas/RawImage) that displays the RenderTexture. Toggled on/off with the PiP")]
         public GameObject pipCanvasRoot;
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the main desktop ball cam. The PiP hides itself while this is active")]
         public OpenPuttBallCam mainBallCam;
 
-        [Header("Behaviour")]
+        [OpenPuttFoldoutGroup("Behaviour")]
         [Tooltip("Master switch - turn the whole PiP feature off for this world")]
         public bool pipEnabled = true;
+        [OpenPuttFoldoutGroup("Behaviour")]
         [Tooltip("Minimum ball speed (m/s) before the PiP is allowed to show")]
         public float minMoveSpeed = 0.2f;
+        [OpenPuttFoldoutGroup("Behaviour")]
         [Tooltip("If the ball is closer than this to the camera you're viewing through, don't bother showing the PiP")]
         public float minBallDistance = 2f;
+        [OpenPuttFoldoutGroup("Behaviour")]
         [Tooltip("How long to keep the PiP up after the show conditions stop (avoids flicker)")]
         public float hideDelay = 0.75f;
 
-        [Header("Camera Framing")]
+        [OpenPuttFoldoutGroup("Camera Framing")]
         [Tooltip("How far behind the ball the camera sits")]
         public float followDistance = 1.5f;
+        [OpenPuttFoldoutGroup("Camera Framing")]
         [Tooltip("How high above the ball the camera sits")]
         public float followHeight = 0.6f;
+        [OpenPuttFoldoutGroup("Camera Framing")]
         [Tooltip("How quickly the camera position catches up to the ball")]
         public float smoothingSpeed = 5f;
+        [OpenPuttFoldoutGroup("Camera Framing")]
         [Tooltip("How quickly the camera swings around to face the ball's travel direction")]
         public float followTurnSpeed = 3f;
 
-        [Header("Slide Animation")]
+        [OpenPuttFoldoutGroup("Slide Animation")]
         [Tooltip("Panel that slides on/off screen. Defaults to the canvas root if left empty")]
         public RectTransform pipPanel;
+        [OpenPuttFoldoutGroup("Slide Animation")]
         [Tooltip("Eases the slide from off-screen (0) to its resting position (1)")]
         public AnimationCurve slideCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [OpenPuttFoldoutGroup("Slide Animation")]
         [Tooltip("How long the slide in/out takes (seconds)")]
         public float slideDuration = 0.35f;
+        [OpenPuttFoldoutGroup("Slide Animation")]
         [Tooltip("Offset (in canvas units) applied to the panel when hidden. Negative X slides it off the left edge")]
         public Vector2 slideHiddenOffset = new Vector2(-600f, 0f);
 

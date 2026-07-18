@@ -8,6 +8,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class CourseHole : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Marks the hole a ball needs to enter to finish this course. Put a trigger collider on this object where the ball should fall in to score.")]
         public CourseManager courseManager;
 
         /// <summary>

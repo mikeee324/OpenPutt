@@ -8,6 +8,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttPedestalClubButton : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A button that, when interacted with, teleports the local player's golf club to a chosen position - handy for fetching a stuck or lost club.")]
         public OpenPutt openPutt;
 
         [Tooltip("Where the local player's club will be moved to when this button is interacted with")]

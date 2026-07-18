@@ -10,6 +10,7 @@ namespace dev.mikeee324.OpenPutt
         private const float VR_MIN_PLAYER_HEIGHT = 0.2f;
         private const float VR_MAX_PLAYER_HEIGHT = 5f;
 
+        [OpenPuttDescription("Shows a small UI panel above the players palm in VR when they turn their non-dominant hand upwards - used for quick access to menu options while playing.")]
         [Tooltip("Reference to OpenPutt for reading local handedness")]
         public OpenPutt openPutt;
 
@@ -19,14 +20,15 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Reference to the UI controller, used to force the palm UI open for the fetch ball panel")]
         public OpenPuttUIController uiController;
 
-        [Header("Height Scaling")]
+        [OpenPuttFoldoutGroup("Height Scaling")]
         [Tooltip("Reference player height in meters that corresponds to 1x UI scale")]
         public float vrReferenceHeight = 1.1f;
 
-        [Header("Visibility Animation")]
+        [OpenPuttFoldoutGroup("Visibility Animation")]
         [Tooltip("How many seconds VR UI takes to animate in/out when shown or hidden")]
         public float vrUIVisibilityAnimSeconds = 0.12f;
 
+        [OpenPuttFoldoutGroup("Visibility Animation")]
         [Tooltip("Curve used for VR UI visibility animation (0-1 input, 0-1 output)")]
         public AnimationCurve vrUIVisibilityAnimCurve = new AnimationCurve(
             new Keyframe(0f, 0f, 0f, 0f),

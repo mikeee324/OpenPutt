@@ -23,117 +23,200 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
-        [Header("This is a scoreboard that you can drag into the scene to display player scores. Make sure the ScoreboardManager has a reference to all scoreboards!")]
-        [Header("External References")]
+        [OpenPuttDescription("A scoreboard you can place in the scene to show player scores. Make sure the ScoreboardManager has a reference to every scoreboard in the world.")]
+        [OpenPuttFoldoutGroup("External References")]
         [Tooltip("This is needed to receive refresh events and give access to the player info")]
         public ScoreboardManager manager;
 
-        [Header("Internal References (All are required to be set)")]
         public ScoreboardPlayerRow[] scoreboardRows = new ScoreboardPlayerRow[0];
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform rectTransform;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas myCanvas;
 
         [Tooltip("Optional - the colliders the VRChat UI laser hits. Disabled when the player is too far away to keep the board visible but unclickable (see ScoreboardPositioner.interactionMaxRadius). Auto-found in children if left empty.")]
         public Collider[] interactionColliders = new Collider[0];
 
         private bool isInteractable = true;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform scoreboardHeader;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas settingsPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas infoPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas devModelPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas openPuttPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform parRowPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform topRowPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas parRowCanvas;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas topRowCanvas;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas scoreboardCanvas;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas playerListCanvas;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public GameObject rowPrefab;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public GameObject columnPrefab;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button scoreboardTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button scoreboardTimerTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button infoTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button settingsTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button devModeTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button openPuttTabBackground;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform leftTabsPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform rightTabsPanel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI creditsText;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI updateAvailableLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI changelogText;
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image scoreboardBackground;
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider clubPowerSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI clubPowerValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider sfxVolumeSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI sfxVolumeValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider bgmVolumeSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI bgmVolumeValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider worldVolumeSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI worldVolumeValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider ballRColorSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider ballGColorSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider ballBColorSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image ballColorPreview;
 
         #region Dev Mode Stuff
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeLastClubHitSpeed;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeLastClubHitDirBias;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeBallSpeed;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeClubSpeed;
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         [FormerlySerializedAs("devModeClubVelSmoothSlider")]
         public Slider devModeVelOffsetFrameSlider;
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeVelSmoothingFrameSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeBallWeightSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeHitWaitFramesSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeBallFrictionSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeBallDragSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Slider devModeBallADragSlider;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TMP_Dropdown devModeVelocityTypeDropdown;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeOffsetFrameValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeHitWaitFrameValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeSmoothingFrameValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeBallWeightValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeBallFrictionValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeBallDragValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public TextMeshProUGUI devModeBallADragValueLabel;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image devModeForAllCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image footColliderCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image clubRendererCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image balLGroundedCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image ballSnappingCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Transform devModeSettingsBox;
 
         #endregion
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public GameObject desktopModeBox;
 
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image verticalHitsCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image isPlayingCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image leftHandModeCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image clubThrowCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image clubAutoHoldCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image enableBigShaftCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image courseReplaysCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image invertCameraXCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Image invertCameraYCheckbox;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Sprite checkboxOn;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Sprite checkboxOff;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button resetButton;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button resetConfirmButton;
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button resetCancelButton;
 
-        [Space, Header("Sizing")]
+        [Space]
+        [OpenPuttFoldoutGroup("Sizing")]
         public float nameColumnWidth = 0.35f;
 
+        [OpenPuttFoldoutGroup("Sizing")]
         public float totalColumnWidth = 0.2f;
+        [OpenPuttFoldoutGroup("Sizing")]
         public float columnPadding = 0.005f;
+        [OpenPuttFoldoutGroup("Sizing")]
         public float rowPadding = 0.01f;
+        [OpenPuttFoldoutGroup("Sizing")]
         public float rowHeight = 0.15f;
 
         private bool initializedUI;

@@ -11,10 +11,14 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class CourseMarker : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Shows the hole number/name and par score on a sign or marker, using the settings from the course it is linked to.")]
         [Tooltip("The course that this marker is attached to")]
         public CourseManager courseManager;
 
+        [OpenPuttFoldoutGroup("UI References")]
         public TextMeshProUGUI topText;
+
+        [OpenPuttFoldoutGroup("UI References")]
         public TextMeshProUGUI bottomText;
 
         void Start()

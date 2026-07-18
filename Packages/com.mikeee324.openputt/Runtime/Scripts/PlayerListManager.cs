@@ -12,7 +12,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class PlayerListManager : UdonSharpBehaviour
     {
-        [Header("This script keeps track of what positions players are in on the scoreboards - You only need to assign OpenPutt in this script")]
+        [OpenPuttDescription("Keeps track of what positions players are in on the scoreboards - You only need to assign OpenPutt in this script")]
         public OpenPutt openPutt;
 
         [Range(0f, 2f), Tooltip("How much time in milliseconds we're allowed to spend repositioning players per frame - if there's more dirty players than we can get through in this time, the rest will be spread over the following frames")]

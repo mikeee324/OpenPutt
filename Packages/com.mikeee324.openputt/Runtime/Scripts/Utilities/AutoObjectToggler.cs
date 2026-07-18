@@ -7,6 +7,7 @@ using VRC.Udon;
 [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class AutoObjectToggler : UdonSharpBehaviour
 {
+    [OpenPuttDescription("Enables the listed scripts and objects while the local player is inside the collider below, and disables them again once they leave.")]
     public UdonBehaviour[] scriptsToDisable;
     public GameObject[] objectsToDisable;
     public BoxCollider colliderToMonitor;

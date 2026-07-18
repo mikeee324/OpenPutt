@@ -7,6 +7,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ScoreboardDevModeUpdater : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Continuously updates the dev mode debug readouts on the assigned scoreboard (club/ball speed etc) with the local player's live values.")]
         public Scoreboard scoreboard;
         private OpenPutt openPutt;
         private PlayerManager localPlayerManager;

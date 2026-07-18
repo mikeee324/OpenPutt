@@ -13,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class PlayerManager : UdonSharpBehaviour
     {
-        [Header("This prefab manages keeping/syncing scores by assigning one of these objects per player. It will also keep track of the objects the player interacts with.")]
+        [OpenPuttDescription("Manages one player's score and synced state - it tracks which course they are on, their scores/times, and keeps their golf club/ball in sync with everyone else.")]
         public GolfClub golfClub;
 
         public GolfBallController golfBall;
@@ -26,7 +26,7 @@ namespace dev.mikeee324.OpenPutt
         public Renderer ballGhostRenderer;
         public TrailRenderer trailRenderer;
 
-        [Header("Game Settings")]
+        [OpenPuttFoldoutGroup("Game Settings")]
         [UdonSynced]
         public bool isPlaying = true;
 
@@ -39,6 +39,7 @@ namespace dev.mikeee324.OpenPutt
         [UdonSynced]
         public CourseState[] courseStates = { };
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Range(5, 30), Tooltip("The number of seconds a ball can be away from the current course before being respawned back instantly")]
         public int ballOffCourseRespawnTime = 5;
 

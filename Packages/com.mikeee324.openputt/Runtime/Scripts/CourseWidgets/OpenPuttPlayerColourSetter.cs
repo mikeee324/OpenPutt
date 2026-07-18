@@ -10,6 +10,7 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
+        [OpenPuttDescription("Applies a colour to the local player's ball (and any other renderers listed below), either automatically on start, when interacted with, or when the ball/club touches this object.")]
         public OpenPutt openPutt;
 
         [Tooltip("The colour that will be applied to the local player's ball when this behaviour runs")]
@@ -18,9 +19,11 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Additional renderers that will also have this colour applied to their _Color/_EmissionColor properties")]
         public Renderer[] meshesToColour;
 
+        [OpenPuttFoldoutGroup("Activation Settings")]
         [Tooltip("If enabled the colour will be applied when this object is interacted with")]
         public bool enableInteract = true;
 
+        [OpenPuttFoldoutGroup("Activation Settings")]
         [Tooltip("If enabled the colour will be applied when the local player's ball or club enters this object's trigger collider")]
         public bool enableTriggerCollision = true;
 
@@ -79,13 +82,6 @@ namespace dev.mikeee324.OpenPutt
         private void Start()
         {
             ApplyColourToMeshes(ballColour);
-        }
-
-        public override void Interact()
-        {
-            if (!enableInteract) return;
-
-            SetColour();
         }
 
         private void OnTriggerEnter(Collider other)

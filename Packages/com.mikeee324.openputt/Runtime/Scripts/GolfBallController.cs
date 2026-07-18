@@ -14,107 +14,139 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("References")]
+        [OpenPuttDescription("Controls the golf ball's physics - rolling, bouncing off walls and slopes, ground snapping, respawning when it leaves the course, and being picked up or thrown by the player.")]
+        [OpenPuttFoldoutGroup("References")]
         public GolfClub club;
 
+        [OpenPuttFoldoutGroup("References")]
         [FormerlySerializedAs("puttSync")]
         public OpenPuttSync openPuttSync;
 
+        [OpenPuttFoldoutGroup("References")]
         public VRCPickup pickup;
+        [OpenPuttFoldoutGroup("References")]
         public GolfBallStartLineController startLine;
+        [OpenPuttFoldoutGroup("References")]
         public MaterialPropertyBlock materialPropertyBlock;
+        [OpenPuttFoldoutGroup("References")]
         public MaterialPropertyBlock ghostMaterialPropertyBlock;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Identifies a wall collider for bouncing")]
         public PhysicMaterial wallMaterial;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Identifies whether the ball stopped on the course")]
         public PhysicMaterial floorMaterial;
 
+        [OpenPuttFoldoutGroup("References")]
         public PlayerManager playerManager;
 
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         private TrailRenderer trail;
 
+        [OpenPuttFoldoutGroup("References")]
         public Rigidbody ballRigidbody;
 
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         private SphereCollider ballCollider;
 
         [Space]
-        [Header("General Settings")]
+        [OpenPuttFoldoutGroup("General Settings")]
         [Tooltip("Let players pick up their ball any time it's not moving")]
         public bool allowBallPickup;
 
+        [OpenPuttFoldoutGroup("General Settings")]
         [Tooltip("Let players pick up the ball when not playing a course and it's not moving")]
         public bool allowBallPickupWhenNotPlaying = true;
 
+        [OpenPuttFoldoutGroup("General Settings")]
         [Tooltip("Let players hit the ball while it's moving (default off: only when not playing a course)")]
         public bool allowBallHitWhileMoving;
 
         [Space]
-        [Header("Ball Physics")]
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("Gravity direction applied to the ball")]
         public Vector3 gravityDirection = Vector3.down;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         public float gravityMagnitude = 9.87f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, 1f), Tooltip("Caps spin (Magnus) force to this fraction of ball weight - stops backspin shots looping. 1 = matches gravity (max float), lower = less float/curve")]
         public float maxLiftGravityFraction = 0.85f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0, .5f), Tooltip("Default RigidBody drag (scripts can override for sand pits etc)")]
         public float defaultBallDrag = .055f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0, 1), Tooltip("Overrides the default drag above")]
         public float ballDragOverride = 0;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("Air resistance - helps the ball slow down in the air and on the ground")]
         public bool enableAirResistance = true;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, .2f), Tooltip("Below this speed (m/s) the ball counts as 'not moving' and stops after the time below")]
         public float minBallSpeed = 0.03f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, .2f), Tooltip("Below this speed (m/s) a hit ball counts as 'not moving'")]
         public float minBallHitSpeed = 0.1f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, 1f), Tooltip("How long the ball can keep rolling below the minimum speed")]
         public float minBallSpeedMaxTime = 1f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("How long a ball can roll before auto-stopping (seconds)")]
         public float maxBallRollingTime = 30f;
 
         [Space]
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Min(0f), Tooltip("Extra buffer for the grounded check (meters)")]
         float groundRaycastDistance = 0.02f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("Master toggle for script-driven ground snapping. Off = pure Unity physics. Wired to the dev-menu 'ball snapping' checkbox")]
         public bool enableBallSnap = true;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Min(0), Tooltip("Consecutive grounded frames before snapping engages, so a just-landed ball's bounce plays out first. 0 = snap immediately, higher = longer grace")]
         int snapMinGroundedSteps = 4;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Range(0, 90), Tooltip("Surfaces steeper than this (degrees from flat) are left to Unity physics instead of being snapped to")]
         float groundSnappingMaxGroundAngle = 45f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
         [Space]
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, 0.5f), Tooltip("How far a normal may tilt from vertical and still count as a 'wall'. 0.15≈8.6°. Keep below ~0.6 so ramps/floors aren't walls")]
         public float wallDetectionTolerance = 0.15f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0.1f, 2f), Tooltip("Energy kept after a wall bounce (only used if the collider has no PhysicMaterial)")]
         public float wallBounceSpeedMultiplier = 0.8f;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0, 0.5f)]
         [Tooltip("Wall reflection: 0 = perfect, 0.5 = half lost, 1 = runs along the wall")]
         public float wallBounceDeflection = .1f;
 
         [Space]
-        [Header("Respawn Settings")]
+        [OpenPuttFoldoutGroup("Respawn Settings")]
         [Tooltip("Send the ball to its respawn position if it stops outside a course")]
         public bool respawnAutomatically = true;
 
+        [OpenPuttFoldoutGroup("Respawn Settings")]
         [Tooltip("World-space respawn position if the ball stops off-course")]
         public Vector3 respawnWorldPosition = Vector3.positiveInfinity;
 
@@ -285,19 +317,23 @@ namespace dev.mikeee324.OpenPutt
         public bool ballGroundedDebug = false;
 
         [Space]
-        [Header("Rolling Sound")]
+        [OpenPuttFoldoutGroup("Rolling Sound")]
         [SerializeField, Tooltip("Looping audio source on the ball used for the rolling sound")]
         private AudioSource rollingAudioSource;
 
+        [OpenPuttFoldoutGroup("Rolling Sound")]
         [SerializeField, Range(0.5f, 20f), Tooltip("Ball speed (m/s) at which the rolling sound hits full volume/pitch")]
         private float rollingSoundMaxSpeed = 6f;
 
+        [OpenPuttFoldoutGroup("Rolling Sound")]
         [SerializeField, Range(0f, 1f), Tooltip("Rolling sound volume at max speed")]
         private float rollingSoundMaxVolume = 0.6f;
 
+        [OpenPuttFoldoutGroup("Rolling Sound")]
         [SerializeField, Tooltip("Pitch at min speed (x) and max speed (y)")]
         private Vector2 rollingSoundPitchRange = new Vector2(0.8f, 1.4f);
 
+        [OpenPuttFoldoutGroup("Rolling Sound")]
         [SerializeField, Range(1f, 30f), Tooltip("How fast the rolling volume eases in/out (units/sec)")]
         private float rollingSoundFade = 6f;
 

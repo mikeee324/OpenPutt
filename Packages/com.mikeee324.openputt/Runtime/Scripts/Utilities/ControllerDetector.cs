@@ -9,8 +9,11 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ControllerDetector : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Experimental (unfinished) helper for desktop users that tries to detect which type of gamepad is plugged in, so other scripts can read the correct button layout.")]
+        [OpenPuttFoldoutGroup("Detected State")]
         public Controller LastUsedJoystick = Controller.None;
 
+        [OpenPuttFoldoutGroup("Detected State")]
         public int LastKnownJoystickID = 1;
 
         public Controller[] Joysticks = new Controller[4] { Controller.None, Controller.None, Controller.None, Controller.None };

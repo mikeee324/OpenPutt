@@ -7,7 +7,11 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class SteppyThingHolder : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A small ledge that holds the ball in place at the edge of a step until something collides with it, then lets the ball roll past.")]
+        [OpenPuttFoldoutGroup("References")]
         public Collider myCollider;
+
+        [OpenPuttFoldoutGroup("References")]
         public MeshRenderer myRenderer;
 
         void Start()

@@ -12,44 +12,56 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("Sync Settings")]
+        [OpenPuttDescription("Handles keeping this object's position and rotation synced across the network, and optionally makes it a pickup that can be returned to its start point or respawned if dropped or knocked out of bounds.")]
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
         public float fastSyncTimeout = 0.25f;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve fastSyncIntervalCurve;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Tooltip("This defines how often this often will be updated for remote players (in seconds) based on how far away they are from this GameObject. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve remoteUpdateDistanceCurve;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Range(0.001f, 0.05f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
         public float remoteUpdateSmoothTime = 0.02f;
 
-        [Header("Pickup Settings")]
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
         public bool syncPositionAndRot = true;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Should this object be returned to its spawn position after players let go of it")]
         public bool returnAfterDrop;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Range(2f, 300f), Tooltip("If ReturnAfterDrop is enabled this object will be put back into its original position after this many seconds of not being held")]
         public float returnAfterDropTime = 10f;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Designate a script that is being called when object is returned. Calls the remote function written in the box below. ")]
         public UdonSharpBehaviour returnListener;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Method name to call on the Return Listener when this object respawns")]
         public string remoteReturnFunction = "";
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Should the object be respawned if it goes below the height specified below?")]
         public bool autoRespawn = true;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("The minimum height that this object can go to before being respawned (if enabled)")]
         public float autoRespawnHeight = -100f;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Lets PuttSync toggle the VRCPickup's pickupable state automatically")]
         public bool canManagePickupable = true;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Experimental: Tries to keep a dynamic rigidbody synced between players, haven't tested this much")]
         public bool syncDynamicRigidbody = false;
 

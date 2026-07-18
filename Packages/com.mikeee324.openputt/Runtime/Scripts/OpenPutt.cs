@@ -17,17 +17,18 @@ namespace dev.mikeee324.OpenPutt
         public readonly string CurrentVersion = "0.9.1";
 
         #region References
+        [OpenPuttDescription("The central OpenPutt controller for this world - it links all the player prefabs, courses and scoreboards together and does not need to be synced itself.")]
         public OpenPuttEventHandler eventHandler;
 
         public OpenPuttUIController uiController;
 
         public OpenPuttBallCam ballCam;
 
-        [Header("This is the Top Level object for OpenPutt that acts as the main API endpoint and links player prefabs to global objects that don't need syncing.")]
-        [Header("Internal References")]
+        [OpenPuttFoldoutGroup("Internal References")]
         [Tooltip("The PlayerListManager keeps an ordered list of all players for the scoreboards to use")]
         public PlayerListManager playerListManager;
 
+        [OpenPuttFoldoutGroup("Internal References")]
         [Tooltip("The ScoreboardManager looks after all scoreboards in the world (Moving them between positions and refreshing them)")]
         public ScoreboardManager scoreboardManager;
 
@@ -37,43 +38,53 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("This array holds a reference to the little canvases that display hole numbers/names/par score")]
         public CourseMarker[] courseMarkers;
 
+        [OpenPuttFoldoutGroup("Internal References")]
         [Tooltip("This curve is used to stop players sending syncs too often depending on the amount of players in the instance (If blank OpenPutt will populate this at runtime)")]
         public AnimationCurve syncTimeCurve;
 
-        [Header("Local Player Objects")]
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         public BodyMountedObject leftShoulderPickup;
 
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         public BodyMountedObject rightShoulderPickup;
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         public BodyMountedObject footCollider;
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         public ControllerTracker controllerTracker;
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         [FormerlySerializedAs("portableScoreboard")] public OpenPuttPortableMenu openPuttPortableScoreboard;
+        [OpenPuttFoldoutGroup("Local Player Objects")]
         public SFXController sfxController;
         public AudioSource[] bgmAudioSources;
         public AudioSource[] worldAudioSources;
 
-        [Header("External References")]
         public OpenPuttEventListener[] eventListeners;
 
         #endregion
 
         #region Game Settings
 
-        [Header("Game Settings")]
+        [OpenPuttFoldoutGroup("Game Settings")]
         [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
         public bool replayableCourses;
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
         public bool enableVerticalHits;
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
         public bool coursesCanBePlayedInAnyOrder;
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("When a player isn't playing a course, lets them switch to any golf club instead of being limited to the putter. Courses still control their own allowed clubs.")]
         public bool allowAnyClubOffCourse;
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Maximum amount of time in seconds that a players game state will be remembered for when using persistence. This only applies to incomplete games. Completed games will not be loaded back in and treated as a fresh start. (-1 = forever)")]
         public int scoreMaxPersistantTimeInSeconds = 900;
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [UdonSynced, Tooltip("Enables dev mode for all players in the instance")]
         public bool enableDevModeForAll;
 
@@ -81,16 +92,18 @@ namespace dev.mikeee324.OpenPutt
 
         #region Other Settings
 
-        [Header("Other Settings")]
+        [OpenPuttFoldoutGroup("Other Settings")]
         [Tooltip("Advanced: Can be used to adjust the ball render queue values (Useful when wanting to make balls render through walls.. you may have to lower the render queue of your world materials for this to work)")]
         public int ballRenderQueueBase = 2000;
 
         [Tooltip("A list of players that can access the dev mode tab by default")]
         public string[] devModePlayerWhitelist = { "mikeee324", "TummyTime", "Narfe" };
 
+        [OpenPuttFoldoutGroup("Other Settings")]
         [Tooltip("Enables logging for everybody in the instance (otherwise only whitelisted players will get logs)")]
         public bool debugMode;
 
+        [OpenPuttFoldoutGroup("Other Settings")]
         public VRCUrl versionURL;
 
         #endregion

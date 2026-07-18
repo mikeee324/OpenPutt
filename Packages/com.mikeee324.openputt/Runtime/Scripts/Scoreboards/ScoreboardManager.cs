@@ -29,7 +29,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(99)]
     public class ScoreboardManager : OpenPuttTimeSlicer
     {
-        [Header("The scoreboard manager handles refreshing all scoreboards in the scene and makes sure it doesn't happen too often.")]
+        [OpenPuttDescription("Handles refreshing all scoreboards in the scene and makes sure it doesn't happen too often.")]
         public OpenPutt openPutt;
 
         public Scoreboard[] scoreboards;
@@ -42,48 +42,63 @@ namespace dev.mikeee324.OpenPutt
 
         public ScoreboardPositioner[] scoreboardPositions;
 
-        [Space, Header("Settings")] [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
+        [Space, OpenPuttFoldoutGroup("Settings")] [Range(0f, 10f), Tooltip("Amount of time in seconds that must pass before a refresh will begin")]
         public float maxRefreshInterval = .25f;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Range(1f, 5f), Tooltip("Amount of time in seconds between scoreboard position updates")]
         public float scoreboardPositionUpdateInterval = 1f;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Range(1, 82), Tooltip("The total number of players that the scoreboards can display at once (Large numbers can cause VERY long build times and maybe performance issues too - haven't tested it above 12)")]
         public int numberOfPlayersToDisplay = 12;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("This should stay enabled unless you're debugging the scoreboard player lists")]
         public bool hideInactivePlayers = true;
 
-        [Header("Background Colours")]
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color nameBackground1 = Color.black;
 
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color scoreBackground1 = Color.black;
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color totalBackground1 = Color.black;
 
-        [Space]
+        [Space, OpenPuttFoldoutGroup("Background Colours")]
         public Color nameBackground2 = Color.black;
 
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color scoreBackground2 = Color.black;
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color totalBackground2 = Color.black;
 
-        [Space]
+        [Space, OpenPuttFoldoutGroup("Background Colours")]
         public Color currentCourseBackground = Color.black;
 
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color underParBackground = Color.green;
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color onParBackground = Color.green;
+        [OpenPuttFoldoutGroup("Background Colours")]
         public Color overParBackground = Color.red;
 
-        [Header("Text Colours")]
+        [OpenPuttFoldoutGroup("Text Colours")]
         public Color text = Color.white;
 
+        [OpenPuttFoldoutGroup("Text Colours")]
         public Color currentCourseText = Color.white;
+        [OpenPuttFoldoutGroup("Text Colours")]
         public Color underParText = Color.white;
+        [OpenPuttFoldoutGroup("Text Colours")]
         public Color onParText = Color.white;
+        [OpenPuttFoldoutGroup("Text Colours")]
         public Color overParText = Color.white;
 
-        [Header("Prefab References")]
+        [OpenPuttFoldoutGroup("Prefab References")]
         public GameObject rowPrefab;
 
+        [OpenPuttFoldoutGroup("Prefab References")]
         public GameObject colPrefab;
 
         #region Internal Vars

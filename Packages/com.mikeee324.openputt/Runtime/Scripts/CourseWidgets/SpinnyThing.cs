@@ -12,13 +12,20 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), RequireComponent(typeof(Rigidbody))]
     public class SpinnyThing : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A physics-driven spinning obstacle. It spins on the spot using the torque and mass settings below, while staying locked to its starting position.")]
+        [OpenPuttFoldoutGroup("Physics Settings")]
         public Vector3 rotationTorque = Vector3.zero;
+
+        [OpenPuttFoldoutGroup("Physics Settings")]
         public float rigidBodymass = 20f;
 
+        [OpenPuttFoldoutGroup("Physics Settings")]
         [Range(0.1f, 20f)]
         public float maxRotationSpeed;
 
         private Rigidbody rb;
+
+        [OpenPuttFoldoutGroup("Physics Settings")]
         public CollisionDetectionMode rigidbodyTargetCollisionMode = CollisionDetectionMode.ContinuousDynamic;
         public LayerMask layersToIgnore;
         public Collider[] myColliders;
@@ -36,6 +43,7 @@ namespace dev.mikeee324.OpenPutt
 
         private Quaternion originalRotationQuaternion;
 
+        [OpenPuttFoldoutGroup("Physics Settings")]
         [Tooltip("Changing this to EulerAngles can be useful if your spinny thing keeps rotating slightly on axises that are supposed to be locked")]
         public RotationLockType lockRotationUsing = RotationLockType.Quaternions;
 

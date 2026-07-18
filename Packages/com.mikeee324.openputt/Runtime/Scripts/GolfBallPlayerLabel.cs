@@ -10,6 +10,7 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
+        [OpenPuttDescription("Shows a floating name tag next to a player's golf ball that fades in as you get closer to it and fades out again as you move away.")]
         public PlayerManager playerManager;
         public GameObject attachToObject;
 
@@ -21,16 +22,20 @@ namespace dev.mikeee324.OpenPutt
         public Canvas canvas;
         public TextMeshProUGUI CurrentLabel { get; private set; }
 
-        [Space, Header("Visibility Settings")]
+        [Space]
+        [OpenPuttFoldoutGroup("Visibility Settings")]
         [Tooltip("The color to fade out to (usually has transparency on)")]
         public Color labelHideColor = new Color(94, 129, 172, 0);
 
+        [OpenPuttFoldoutGroup("Visibility Settings")]
         [Tooltip("The color to fade in to")]
         public Color labelVisibleColor = new Color(94, 129, 172);
 
+        [OpenPuttFoldoutGroup("Visibility Settings")]
         [Tooltip("A curve that describes how visible the label will be depending on the distance to the local player (Time=Distance In Meters)")]
         public AnimationCurve localLabelVisibilityCurve;
 
+        [OpenPuttFoldoutGroup("Visibility Settings")]
         [Tooltip("A curve that describes how visible the label will be depending on the distance to the local player (Time=Distance In Meters)")]
         public AnimationCurve remoteLabelVisibilityCurve;
 

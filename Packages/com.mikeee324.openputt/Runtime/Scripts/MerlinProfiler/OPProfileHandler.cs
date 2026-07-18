@@ -6,10 +6,12 @@ using TMPro;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
+using dev.mikeee324.OpenPutt;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(1000000000)]
 public class OPProfileHandler : UdonSharpBehaviour
 {
+    [OpenPuttDescription("Displays live Udon script execution time and frame rate on a TextMeshPro label, for profiling performance while testing in-editor.")]
     public TextMeshProUGUI _timeText;
     private OPProfileKickoff _kickoff;
 

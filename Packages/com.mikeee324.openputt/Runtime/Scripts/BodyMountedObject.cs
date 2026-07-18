@@ -12,11 +12,14 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("Object Settings")]
+        [OpenPuttDescription("A pickup object that gets mounted onto a bone on the players body (like a shoulder) so it follows them around and can be grabbed later.")]
+        [OpenPuttFoldoutGroup("Object Settings")]
         public ControllerDetector controllerDetector;
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         public Rigidbody rb;
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
 
@@ -34,39 +37,55 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player picks up this object it will send this an event with this name to the attached object")]
         public string pickupEventName = "_OnScriptPickup";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string dropEventName = "_OnScriptDrop";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player presses Use while holding this object it will send this event with this name to the attached object")]
         public string useEventName = "_OnScriptUse";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         public VRCPickup pickup;
 
-        [Header("Mounting Settings")] [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
+        [OpenPuttFoldoutGroup("Mounting Settings")]
+        [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public bool mountToPlayerPosition;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 mountingOffset = Vector3.zero;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         [Tooltip("Toggles scaling this offset based onthe local players height (allows you to move it further away from their head if they are taller)")]
         public bool mountingOffsetHeightScaling;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public AnimationCurve mountingOffsetHeightScale;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         [Tooltip("Allows the VRCPickup proximity to scale with the players height to hopefully make it easier to grab things")]
         public float defaultPickupProximity = 0.2f;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public KeyCode desktopInputKey = KeyCode.M;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public ControllerButtons controllerInputKey = ControllerButtons.None;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public VRC_Pickup.PickupHand pickupHandLimit = VRC_Pickup.PickupHand.None;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 desktopHeadOffset = new Vector3(0, 0, 1);
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 desktopRotationOffset = new Vector3(-90, 0, 0);
 
         [HideInInspector]

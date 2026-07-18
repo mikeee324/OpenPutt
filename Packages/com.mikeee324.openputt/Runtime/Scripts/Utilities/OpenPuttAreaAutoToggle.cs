@@ -7,7 +7,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttAreaAutoToggle : OpenPuttEventListener
     {
-        [Header("This component automatically toggles the shoulder pickups and portable menu depending on whether the player is inside this collider")]
+        [OpenPuttDescription("Automatically toggles the shoulder pickups and portable menu depending on whether the player is inside this collider")]
         public OpenPutt openPutt;
 
         public bool enabledAtStart = false;

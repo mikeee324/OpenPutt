@@ -2,10 +2,13 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 using VRC.SDKBase;
+using dev.mikeee324.OpenPutt;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-999)]
 public class ControllerTracker : UdonSharpBehaviour
 {
+    [OpenPuttDescription("Keeps a short history of the local player's head and hand movements each frame, so other scripts can calculate how fast they are moving (used for club swing speed).")]
+    [OpenPuttFoldoutGroup("Buffer Settings")]
     [Tooltip("Number of frames to store in history for velocity calculations")] [Range(2, 60)]
     public int bufferSize = 4;
 
@@ -23,10 +26,12 @@ public class ControllerTracker : UdonSharpBehaviour
     private int framesFilled = 0;
 
     // Define a fixed number of frames to use for velocity calculation
+    [OpenPuttFoldoutGroup("Buffer Settings")]
     [SerializeField] [Range(0, 60)]
     public int lookbackFrames = 2; // Number of frames to look back for calculating the velocity difference
 
     // Define a fixed offset from the most current frame to use as the 'end' point for velocity calculation
+    [OpenPuttFoldoutGroup("Buffer Settings")]
     [Tooltip("Offset from the most current frame (currentIndex) to use as the end point for velocity calculation. 0 means the current frame.")]
     [SerializeField, Range(0, 5)] // Added a range for the inspector, though it's a const here.
     public int endOffset = 0; // Using the most current frame as the end point by default

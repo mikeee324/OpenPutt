@@ -15,47 +15,64 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttPortableMenu : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A hand-held menu players can summon by spreading their hands apart (VR) or pressing a key (desktop). It can also be thrown like a pickup and hides itself again when the player walks away.")]
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         public ControllerTracker controllerTracker;
 
-        [Range(0f, 10f), Tooltip("Minimum speed required to initiate a throw (Normalised against a person that is 1.7m tall)")]
-        public float minThrowSpeed = 1f;
-
-        [SerializeField]
-        private KeyCode menuKey = KeyCode.N;
-
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         private GameObject visibleMenuObject;
 
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         private Rigidbody rigidBody;
 
+        [OpenPuttFoldoutGroup("References")]
         [SerializeField]
         private VRCPickup pickup;
 
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [SerializeField]
+        private KeyCode menuKey = KeyCode.N;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
         [SerializeField]
         private Vector3 desktopHeadOffset = Vector3.zero;
 
+        [OpenPuttFoldoutGroup("Menu Settings")]
         [SerializeField]
         private float hideDistance = 3f;
 
+        [OpenPuttFoldoutGroup("Menu Settings")]
         [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")]
         private float openThreshold = 2f;
 
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [Range(0f, 10f), Tooltip("Minimum speed required to initiate a throw (Normalised against a person that is 1.7m tall)")]
+        public float minThrowSpeed = 1f;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
         public bool hideOnStart = true;
 
+        [OpenPuttFoldoutGroup("Vibration Settings")]
         [Tooltip("The duration of the vibration in seconds.")]
         public float vibrationDuration = 0.1f;
 
+        [OpenPuttFoldoutGroup("Vibration Settings")]
         [Tooltip("The strength of the vibration (0.0 to 1.0).")]
         [Range(0f, 1f)]
         public float vibrationStrength = 0.5f;
 
+        [OpenPuttFoldoutGroup("Vibration Settings")]
         [Tooltip("The frequency of the vibration (roughly how many pulses per second).")]
         public float vibrationFrequency = 30f;
 
+        [OpenPuttFoldoutGroup("Event Settings")]
         public UdonBehaviour eventReceiver;
+        [OpenPuttFoldoutGroup("Event Settings")]
         public string eventToSendOnMenuOpen;
+        [OpenPuttFoldoutGroup("Event Settings")]
         public string eventToSendOnMenuClose;
 
         public bool golfClubHeldByPlayer;

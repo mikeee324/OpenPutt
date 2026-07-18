@@ -11,15 +11,22 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Setting/References
 
+        [OpenPuttDescription("Draws a line from the ball to the nearest start pad while it's picked up, and animates it snapping onto that pad when dropped so players can see where a hole will begin.")]
+        [OpenPuttFoldoutGroup("References")]
         public PlayerManager PlayerManager;
+
+        [OpenPuttFoldoutGroup("References")]
         public GolfBallController golfBall;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("A reference to the LineRenderer (Should be on the same GameObject)")]
         public LineRenderer lineRenderer;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Limits what layers to look for CourseStartPosition colliders on so there is less to loop through every time we check")]
         public LayerMask courseStartPosLayerMask;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Range(16, 64), Tooltip("If you have trouble starting courses because the line doesn't appear.. try increasing this number")]
         public int maximumNoOfColliders = 32;
 

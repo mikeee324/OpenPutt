@@ -1,24 +1,36 @@
 ﻿using UdonSharp;
 using UnityEngine;
 using UnityEngine.UI;
+using dev.mikeee324.OpenPutt;
 
 public class ShaderController : UdonSharpBehaviour
 {
-    [Header("Target Object")]
+    [OpenPuttDescription("Lets UI sliders control the appearance of a target shader's material in real time, and can reset it back to its original values.")]
+    [OpenPuttFoldoutGroup("Target Object")]
     public MeshRenderer targetRenderer;
+    [OpenPuttFoldoutGroup("Target Object")]
     public string targetShaderName = "OpenPutt/GolfCourse/LinesStandard3DNoise";
     private Material targetMaterial;
 
-    [Header("UI Sliders")]
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider smallNoiseAmountSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider bigNoiseAmountSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider bigNoiseStrengthSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider linesDarkenAmountSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider allNoiseStrengthSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider smoothstepMinSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider smoothstepMaxSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider heightOffsetSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider lineBlendSlider;
+    [OpenPuttFoldoutGroup("UI Sliders")]
     public Slider lineHeightCMSlider;
 
     private bool isInitializing = true;

@@ -10,6 +10,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPuttInputHandler : UdonSharpBehaviour
     {
         #region Public Variables
+        [OpenPuttDescription("Reads player input (keyboard/mouse, VR controllers, gamepad) and turns it into golf actions - charging and taking a shot, opening the ball camera, and cycling clubs.")]
         [Tooltip("Reference to the OpenPutt instance")]
         public OpenPutt openPutt;
 
@@ -32,13 +33,14 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public float CurrentShotPowerNormalized => currentShotPowerNormalized;
 
-        [Header("Power Settings")]
+        [OpenPuttFoldoutGroup("Power Settings")]
         [Tooltip("Speed at which power cycles up/down")]
         public float powerCycleSpeed = 50f;
 
-        [Header("Shot Charge Sensitivity")]
+        [OpenPuttFoldoutGroup("Shot Charge Sensitivity")]
         [Tooltip("Sensitivity multiplier for mouse Y movement during shot charging (desktop)"), Range(1f, 15f)]
         public float mouseSensitivity = 5f;
+        [OpenPuttFoldoutGroup("Shot Charge Sensitivity")]
         [Tooltip("Sensitivity multiplier for mouse Y movement during shot charging (mobile/UI)"), Range(1f, 15f)]
         public float mouseMobileSensitivity = 3f;
         #endregion

@@ -8,6 +8,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class SteppyThing : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A set of moving stairs that continuously cycle up and down, like an escalator, carrying the ball along with them.")]
         [Tooltip("The colliders for each step in SteppyThing")]
         public Collider[] steps;
         [Tooltip("Used for debug purposes to make it easier to see if SteppyThing is working properly")]
@@ -17,12 +18,15 @@ namespace dev.mikeee324.OpenPutt
         [FormerlySerializedAs("stepBallHolderNS")] [Tooltip("A list of colliders that reference the collider of the next step or the floor at the end of the staircase. If the ball holder for each step is in contact with the next step the ball holder will be enabled. When they no longer contact each each the holder is disabled so the ball can roll off.")]
         public Collider[] stepBallHolderNextStepCollider;
 
+        [OpenPuttFoldoutGroup("Cycle Settings")]
         [Range(1, 10f), Tooltip("Time in seconds for each full up/down cycle of the steps")]
         public float stepCycleTime = 1f;
 
+        [OpenPuttFoldoutGroup("Cycle Settings")]
         [Range(0, 5f), Tooltip("Time in seconds the steps will sit still for when they reach the up or down position")]
         public float stepStopTime = 0.5f;
 
+        [OpenPuttFoldoutGroup("Cycle Settings")]
         public AnimationCurve stepCycleCurve;
 
         public Collider[] collidersToIgnore;

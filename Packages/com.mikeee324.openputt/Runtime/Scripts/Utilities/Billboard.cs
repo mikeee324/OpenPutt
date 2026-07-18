@@ -7,6 +7,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class Billboard : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Makes this object always turn to face the local player's head, like a floating label. Optionally follows another object's position too.")]
         public GameObject attachToObject;
 
         void Start()

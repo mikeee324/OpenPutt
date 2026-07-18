@@ -7,13 +7,14 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class BGMController : UdonSharpBehaviour
     {
-        [Header("References")]
+        [OpenPuttDescription("Plays a looping playlist of background music tracks through an AudioSource, and can keep the currently playing track synced in position for every player in the instance.")]
+        [OpenPuttFoldoutGroup("References")]
         public AudioSource audioSource;
 
         [Header("BGM Tracks")]
         public AudioClip[] audioClips;
 
-        [Header("Settings")]
+        [OpenPuttFoldoutGroup("Settings")]
         public bool isSynced = true;
 
         [UdonSynced]

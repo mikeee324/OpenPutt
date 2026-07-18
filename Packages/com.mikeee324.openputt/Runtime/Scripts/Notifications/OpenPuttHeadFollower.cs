@@ -8,6 +8,7 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
+        [OpenPuttDescription("Makes this object continuously follow the local player's head position and rotation, e.g. for attaching a UI element or effect to the camera.")]
         public float _lerpSpeed = 10f;
 
         #endregion

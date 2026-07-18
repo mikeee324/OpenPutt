@@ -15,21 +15,27 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class ScoreboardPositioner : UdonSharpBehaviour
     {
-        [Header("References")]
+        [OpenPuttDescription("Marks a spot in the world where a scoreboard can be shown. The scoreboard manager decides which of these positions are currently visible to the player and moves a pooled scoreboard there.")]
+        [OpenPuttFoldoutGroup("References")]
         public ScoreboardManager manager;
 
+        [OpenPuttFoldoutGroup("References")]
         public Canvas backgroundCanvas;
+        [OpenPuttFoldoutGroup("References")]
         public Transform nearbyCenterTransform;
 
-        [Space, Header("Settings")]
+        [Space, OpenPuttFoldoutGroup("Settings")]
         public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("How close the player needs to be to this scoreboard if one of the 'nearby' settings are used above")]
         public float nearbyMaxRadius = 10f;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("How close the player needs to be to click this scoreboard's UI. The board stays visible past this distance but stops accepting clicks (stops players clicking it from across the map). Set to 0 for no limit.")]
         public float interactionMaxRadius = 0f;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
         public int attachedToCourse = -1;
 

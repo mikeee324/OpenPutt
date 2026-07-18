@@ -74,33 +74,43 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public int holeNumber;
 
-        [Header("Course Settings"), Tooltip("The par score for this hole")]
+        [OpenPuttDescription("Represents a single hole/course. Controls its scoring rules, which clubs are allowed, and links it to its ball spawn points, holes and floor meshes.")]
+        [OpenPuttFoldoutGroup("Course Settings"), Tooltip("The par score for this hole")]
         public int parScore;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("This will stop the player after this many hits, also used as the default score if a player skips this hole")]
         public int maxScore = 12;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("The par time in seconds for this hole (Default is 5 mins)")]
         public int parTime = 120;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("The maximum amount of seconds a player can have on this hole (Default is 5 mins)")]
         public int maxTime = 300;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("What type of course this is")]
         public CourseType courseType = CourseType.Standard;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("Clamps the ball speed after a hit to the club's typical max speed. Usually disabled on driving ranges so players can see how hard they can hit the ball.")]
         public bool clampClubSpeed = true;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("Overrides the global replayable courses setting")]
         public bool courseIsAlwaysReplayable;
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("Override the hole number column text on scoreboards (Can be used to give holes names or something I dunno..)")]
         public string scoreboardShortName = "";
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
         public string scoreboardLongName = "";
 
+        [OpenPuttFoldoutGroup("Course Settings")]
         [Tooltip("Which club types are allowed on this course. Leave as Nothing to only allow the putter. Driving ranges always allow every club.")]
         public GolfClubTypeMask allowedClubs = GolfClubTypeMask.Putter;
 
@@ -115,19 +125,19 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
         public GameObject[] floorObjects;
 
-        [SerializeField, Header("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
         private bool alwaysDisplayGizmos = true;
 
-        [SerializeField, Tooltip("Draw gizmos for ball spawn positions")]
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw gizmos for ball spawn positions")]
         private bool drawBallSpawns = true;
 
-        [SerializeField, Tooltip("Draw gizmos for holes")]
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw gizmos for holes")]
         private bool drawHoles = true;
 
-        [SerializeField, Tooltip("Draw a wireframe over meshes that are counted as a floor for this course")]
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw a wireframe over meshes that are counted as a floor for this course")]
         private bool drawFloorMeshes = true;
 
-        [SerializeField, Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
         private float ballSpawnGizmoRadius = 0.0225f;
 
         private void Start()

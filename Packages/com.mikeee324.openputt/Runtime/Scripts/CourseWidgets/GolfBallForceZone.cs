@@ -37,30 +37,38 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-500)]
     public class GolfBallForceZone : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Applies a force to the ball while it's inside this trigger area, such as pushing/pulling it or changing its gravity direction, depending on the force type selected below.")]
         [Tooltip("The magnitude of the force to apply in the forward direction of this object.")]
         public float forceMagnitude = 10f;
 
         [Tooltip("When ticked the balls rigidbody gravity will be disabled while inside this collider")]
         public GolfBalLForceZoneType forceType = GolfBalLForceZoneType.Normal;
 
-        [Header("Gizmo Settings")] [Tooltip("Color of the gizmo arrows.")]
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
+        [Tooltip("Color of the gizmo arrows.")]
         public Color gizmoColor = Color.yellow;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(0.2f, 10f), Tooltip("Desired minimum spacing between arrows along the local X-axis.")]
         public float xArrowSpacing = .3f;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(0.2f, 10f), Tooltip("Desired minimum spacing between arrows along the local Y-axis.")]
         public float yArrowSpacing = .3f;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(0.2f, 10f), Tooltip("Desired minimum spacing between arrows along the local Z-axis.")]
         public float zArrowSpacing = .3f;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(1, 100f), Tooltip("Maximum number of arrows to draw along any single axis")]
         public int maxArrowsPerAxis = 20;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(0.01f, 1f), Tooltip("Size of the arrowhead.")]
         public float arrowHeadSize = 0.05f;
 
+        [OpenPuttFoldoutGroup("Gizmo Settings")]
         [Range(0.01f, 1f), Tooltip("Length of the line segment before the arrowhead.")]
         public float arrowLineLength = 0.1f;
 

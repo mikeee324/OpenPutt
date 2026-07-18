@@ -64,30 +64,50 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), DefaultExecutionOrder(50)]
     public class GolfClub : UdonSharpBehaviour
     {
+        [OpenPuttDescription("The golf club a player holds and swings. Lets them switch club type, resizes the shaft to reach the ground, arms itself while the trigger is held so it can hit the ball, and throws the club if it's flung away quickly.")]
+        [OpenPuttFoldoutGroup("References")]
         public PlayerManager playerManager;
+        [OpenPuttFoldoutGroup("References")]
         public GolfBallController ball;
+        [OpenPuttFoldoutGroup("References")]
         public GolfClubCollider putter;
 
+        [OpenPuttFoldoutGroup("References")]
         [FormerlySerializedAs("puttSync")]
         public OpenPuttSync openPuttSync;
 
+        [OpenPuttFoldoutGroup("Mesh References")]
         public MeshRenderer handleMesh;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public MeshRenderer shaftMesh;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public MeshRenderer currentHeadMesh;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public MeshRenderer headHolderMesh;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public Transform headContainer;
         public MeshRenderer[] headMeshes;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public BoxCollider headBoxCollider;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public GameObject shaftEndPosition;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public VRCPickup pickup;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public Rigidbody clubRigidbody;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public Collider handleCollider;
+        [OpenPuttFoldoutGroup("Mesh References")]
         public BoxCollider shaftCollider;
 
+        [OpenPuttFoldoutGroup("Throw Settings")]
         public bool throwEnabled = true;
+        [OpenPuttFoldoutGroup("Throw Settings")]
         public float minThrowSpeed = 4f;
+        [OpenPuttFoldoutGroup("Throw Settings")]
         [Tooltip("Scales down the spin applied to the club when thrown (1 = raw hand rotation speed, lower values reduce spin)")]
         public float throwSpinMultiplier = 0.4f;
+        [OpenPuttFoldoutGroup("Throw Settings")]
         [Tooltip("Maximum angular velocity (degrees/sec) the club can be thrown with, clamped before the spin multiplier is applied")]
         public float maxThrowAngularVelocity = 720f;
 
@@ -96,6 +116,7 @@ namespace dev.mikeee324.OpenPutt
         public MaterialPropertyBlock shaftPB;
         public MaterialPropertyBlock headHolderPB;
 
+        [OpenPuttFoldoutGroup("Shaft Settings")]
         public LayerMask resizeLayerMask;
 
         public float forceMultiplier = 1f;
@@ -247,17 +268,24 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [OpenPuttFoldoutGroup("Shaft Settings")]
         [Tooltip("Allows player to extend golf club shaft to be 100m long")]
         public bool enableBigShaft;
 
+        [OpenPuttFoldoutGroup("Shaft Settings")]
         [Tooltip("When enabled the club scales to reach the ball's height below the hand, instead of raycasting down to the floor")]
         public bool scaleToBallHeight;
 
+        [OpenPuttFoldoutGroup("Colour Settings")]
         public Color offColour = Color.white;
+        [OpenPuttFoldoutGroup("Colour Settings")]
         public Color onColour = Color.red;
+        [OpenPuttFoldoutGroup("Colour Settings")]
         public Color offEmission = Color.black;
+        [OpenPuttFoldoutGroup("Colour Settings")]
         public Color onEmission = Color.red;
 
+        [OpenPuttFoldoutGroup("Colour Settings")]
         [Tooltip("When enabled, the club handle and head meshes are tinted with the players ball colour while the club is disarmed")]
         public bool tintWithBallColour = true;
 

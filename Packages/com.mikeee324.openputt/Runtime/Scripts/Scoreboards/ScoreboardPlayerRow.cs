@@ -14,13 +14,17 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(100)]
     public class ScoreboardPlayerRow : UdonSharpBehaviour
     {
+        [OpenPuttDescription("A single row in a scoreboard showing one player's scores across all holes. Part of the scoreboard row prefab - not usually placed by hand.")]
+        [OpenPuttFoldoutGroup("References")]
         public Scoreboard scoreboard;
 
         public ScoreboardPlayerRowType rowType;
 
         //public PlayerManager player;
         public ScoreboardPlayerColumn[] columns;
+        [OpenPuttFoldoutGroup("References")]
         public RectTransform rectTransform;
+        [OpenPuttFoldoutGroup("References")]
         public Canvas rowCanvas;
 
         public int CurrentPosition { get; private set; }

@@ -9,8 +9,12 @@ using VRC.SDKBase;
 [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(101)]
 public class ScoreboardPlayerColumn : UdonSharpBehaviour
 {
+    [OpenPuttDescription("A single cell in a scoreboard row, showing a player's name, score, or par for one hole. Part of the scoreboard row prefab - not usually placed by hand.")]
+    [OpenPuttFoldoutGroup("References")]
     public ScoreboardPlayerRow scoreboardRow;
+    [OpenPuttFoldoutGroup("References")]
     public Image colBackground;
+    [OpenPuttFoldoutGroup("References")]
     public TextMeshProUGUI colText;
 
     private Scoreboard scoreboard => scoreboardRow.scoreboard;

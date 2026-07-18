@@ -12,6 +12,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttEventHandler : UdonSharpBehaviour
     {
+        [OpenPuttDescription("Relays OpenPutt's gameplay events (ball hits, course starts/finishes, club changes and more) out to any OpenPuttEventListener scripts in the world, so other scripts can react to them.")]
         public OpenPutt openPutt;
 
         /// <summary>

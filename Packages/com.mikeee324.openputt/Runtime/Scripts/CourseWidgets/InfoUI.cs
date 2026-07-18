@@ -43,6 +43,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class InfoUI : OpenPuttEventListener
     {
+        [OpenPuttDescription("Displays a piece of live information as text, such as the ball's speed or the player's current score, updating automatically while they play.")]
         /// <summary>
         /// A referenc eto the OpenPutt instance in this world
         /// </summary>
@@ -55,15 +56,19 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Can be used to filter UI updates based on which course the player is currently playing on")]
         public CourseManager attachedToCourse;
 
+        [OpenPuttFoldoutGroup("Display Settings")]
         [Tooltip("What sort of information this UI element should display")]
         public InfoUIDisplayType displayType;
 
+        [OpenPuttFoldoutGroup("Display Settings")]
         [Tooltip("Time in seconds between UI updates (0=Every Frame)")]
         public float updateTime;
 
+        [OpenPuttFoldoutGroup("Display Settings")]
         [Tooltip("Toggle for swapping between metric and imperial")]
         public bool useMetric = true;
 
+        [OpenPuttFoldoutGroup("Display Settings")]
         public string defaultText = "-";
 
         private TextMeshProUGUI valueTextLabel;

@@ -9,26 +9,31 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Settings
 
-        [Header("References")]
+        [OpenPuttDescription("Plays all of the gameplay sound effects, like ball hits, holes, and score results (birdie, bogey etc), for both the local player and remote players.")]
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("A reference back to the game manager")]
         public OpenPutt openPutt;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("The audio source to use when the ball is hitby/hits something")]
         public AudioSource localBallHitSource;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("The audio source to use when the ball drops into a hole")]
         public AudioSource localBallEnteredHoleSource;
 
+        [OpenPuttFoldoutGroup("References")]
         [Tooltip("The audio source to use for all other game SFX (Infrequently used sounds - hole in one, ball reset etc)")]
         public AudioSource localExtraSoundSource;
 
         [Tooltip("A small pool of audio sources that play sounds for remote players")]
         public AudioSource[] remotePlayerAudioSources;
 
-        [Header("Settings")]
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Toggles whether hole noises are randomised or if each hole with have it's own unique sound")]
         public bool randomiseHoleSounds = true;
 
+        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Toggles the use of PlayOneShot instead of Play on the AudioSource (Use carefully!)")]
         public bool usePlayOneShot;
 
