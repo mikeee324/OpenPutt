@@ -17,6 +17,11 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("If enabled the ball will have BallIsMoving set to true after being moved so it can drop/roll instead of staying frozen in place")]
         public bool enableBallMovingAfterMove = false;
 
+        [Tooltip("How long the player has to interact again to confirm skipping their current course before the confirmation expires")]
+        public float confirmationWindow = 5f;
+
+        private bool awaitingSkipConfirmation;
+
         public override void Interact()
         {
             FetchItem();
@@ -31,6 +36,25 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = openPutt.LocalPlayerManager;
             var golfBall = playerManager.golfBall;
 
+            // Fetching the ball elsewhere abandons whatever course is currently being played, same as
+            // pressing Use while holding the ball on the shoulder mount (see GolfBallController._OnScriptUse) -
+            // require a second interact within the confirmation window so players don't lose a course by accident
+            if (Utilities.IsValid(playerManager.CurrentCourse))
+            {
+                if (!awaitingSkipConfirmation)
+                {
+                    awaitingSkipConfirmation = true;
+                    SendCustomEventDelayedSeconds(nameof(ClearSkipConfirmation), confirmationWindow);
+
+                    if (Utilities.IsValid(openPutt.notifications))
+                        openPutt.notifications.InstantiateCalloutBox("Click again to skip your current course and fetch the ball");
+                    return;
+                }
+
+                awaitingSkipConfirmation = false;
+                playerManager._SkipCurrentCourse();
+            }
+
             // Make sure the ball is active/visible before touching its physics, otherwise the
             // changes below won't take effect properly on a disabled GameObject
             playerManager.BallVisible = true;
@@ -44,6 +68,12 @@ namespace dev.mikeee324.OpenPutt
                 golfBall.BallIsMoving = true;
 
             playerManager._RequestSync(syncNow: true);
+        }
+
+        /// <summary>Called via SendCustomEventDelayedSeconds to expire a pending skip confirmation.</summary>
+        public void ClearSkipConfirmation()
+        {
+            awaitingSkipConfirmation = false;
         }
     }
 }

@@ -6,6 +6,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttCalloutBox : UdonSharpBehaviour
     {
         #region Public Settings

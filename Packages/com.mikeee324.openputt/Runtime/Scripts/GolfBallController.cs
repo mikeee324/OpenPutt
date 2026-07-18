@@ -889,6 +889,14 @@ namespace dev.mikeee324.OpenPutt
 
         public void _RespawnBall()
         {
+            // Force the ball out of the player's hand/shoulder mount so it doesn't just get dragged back out of position
+            if (Utilities.IsValid(pickup) && pickup.IsHeld)
+                pickup.Drop();
+
+            var ballShoulderPickup = shoulderPickup;
+            if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup) && ballShoulderPickup.pickup.IsHeld)
+                ballShoulderPickup.pickup.Drop();
+
             var respawnPos = respawnWorldPosition;
 
             BallIsMoving = false;

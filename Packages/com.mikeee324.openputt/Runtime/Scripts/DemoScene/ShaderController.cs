@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using dev.mikeee324.OpenPutt;
 
+[UdonBehaviourSyncMode(BehaviourSyncMode.None)]
 public class ShaderController : UdonSharpBehaviour
 {
     [OpenPuttDescription("Lets UI sliders control the appearance of a target shader's material in real time, and can reset it back to its original values.")]

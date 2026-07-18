@@ -35,6 +35,9 @@ namespace dev.mikeee324.OpenPutt
 
         [OpenPuttFoldoutGroup("Position Settings")]
         public Vector3 _vrTargetPos, _desktopTargetPos, _vrStartPos, _desktopStartPos;
+        [OpenPuttFoldoutGroup("Position Settings")]
+        [Tooltip("Used instead of the desktop positions above on Android/iOS")]
+        public Vector3 _mobileTargetPos, _mobileStartPos;
 
         [OpenPuttFoldoutGroup("Callout Sounds")]
         public AudioClip aceSound, condorSound, albatrossSound, eagleSound, birdieSound, parSound, bogeySound, doubleBogeySound, tripleBogeySound, strokeLimitSound;
@@ -212,8 +215,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            string calloutText = "This is an error!";
-
+            string calloutText;
             switch (currentCallout)
             {
                 case Callouts.Ace:
@@ -256,6 +258,8 @@ namespace dev.mikeee324.OpenPutt
                     _notificationSound = strokeLimitSound;
                     calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
                     break;
+                default:
+                    return;
             }
 
             InstantiateCalloutBox(calloutText, _notificationSound);
@@ -269,10 +273,32 @@ namespace dev.mikeee324.OpenPutt
             // Pass the reference of this script so the box can tell us when it dies
             calloutScript.manager = this;
 
-            calloutScript.targetPos = _playerIsInVR ? _vrTargetPos : _desktopTargetPos;
+            calloutScript.targetPos = GetTargetPos();
             calloutScript.SetCalloutText(callText, callAudio
-                , targetPosition: _playerIsInVR ? _vrTargetPos : _desktopTargetPos
-                , startPosition: _playerIsInVR ? _vrStartPos : _desktopStartPos);
+                , targetPosition: GetTargetPos()
+                , startPosition: GetStartPos());
+        }
+
+        private Vector3 GetTargetPos()
+        {
+            if (_playerIsInVR)
+                return _vrTargetPos;
+#if UNITY_ANDROID || UNITY_IOS
+            return _mobileTargetPos;
+#else
+            return _desktopTargetPos;
+#endif
+        }
+
+        private Vector3 GetStartPos()
+        {
+            if (_playerIsInVR)
+                return _vrStartPos;
+#if UNITY_ANDROID || UNITY_IOS
+            return _mobileStartPos;
+#else
+            return _desktopStartPos;
+#endif
         }
 
         // OpenPuttCalloutBox will trigger this when its destruction tween finishes
