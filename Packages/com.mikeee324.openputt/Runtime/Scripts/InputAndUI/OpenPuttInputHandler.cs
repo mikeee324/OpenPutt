@@ -170,14 +170,14 @@ namespace dev.mikeee324.OpenPutt
                 ToggleCamera();
             }
 
-            // Cycle Club Next - Right Bracket ]
-            if (Input.GetKeyDown(KeyCode.RightBracket))
+            // Cycle Club Next - Period .
+            if (Input.GetKeyDown(KeyCode.Period))
             {
                 CycleClubNext();
             }
 
-            // Cycle Club Previous - Left Bracket [
-            if (Input.GetKeyDown(KeyCode.LeftBracket))
+            // Cycle Club Previous - Comma ,
+            if (Input.GetKeyDown(KeyCode.Comma))
             {
                 CycleClubPrevious();
             }
