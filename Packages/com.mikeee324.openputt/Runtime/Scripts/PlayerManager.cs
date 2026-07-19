@@ -783,7 +783,8 @@ namespace dev.mikeee324.OpenPutt
                             golfBall.BallIsMoving = false;
                         else
                         {
-                            OpenPuttUtils.Log(this, $"Respawning ball at {golfBall.CurrentPosition} because it isn't on top of course {(Utilities.IsValid(CurrentCourse) ? CurrentCourse.holeNumber : -1)}. If this is incorrect, add the mesh it's standing on to that course's Floor Objects list.");
+                            if (openPutt.debugMode)
+                                OpenPuttUtils.Log(this, $"Respawning ball at {golfBall.CurrentPosition} because it isn't on top of course {(Utilities.IsValid(CurrentCourse) ? CurrentCourse.holeNumber : -1)}. If this is incorrect, add the mesh it's standing on to that course's Floor Objects list.");
                             golfBall._RespawnBallWithErrorNoise();
                         }
                     }
@@ -1111,16 +1112,16 @@ namespace dev.mikeee324.OpenPutt
                 // Collider col = hit.collider;
                 // bool rightKindOfFloor = Utilities.IsValid(col) && Utilities.IsValid(col.material) && Utilities.IsValid(col.material.name) && col.material.name.StartsWith(golfBall.floorMaterial.name);
 
-                foreach (var mesh in CurrentCourse.floorObjects)
+                foreach (var floorCollider in CurrentCourse.floorColliders)
                 {
-                    if (!Utilities.IsValid(mesh))
+                    if (!Utilities.IsValid(floorCollider))
                     {
                         OpenPuttUtils.LogError(CurrentCourse, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
                         continue;
                     }
 
                     // Does this floor belong to the course the player is currently playing?
-                    if (mesh.gameObject == hit.collider.gameObject)
+                    if (floorCollider == hit.collider)
                     {
                         return true;
                     }

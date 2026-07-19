@@ -123,6 +123,11 @@ namespace dev.mikeee324.OpenPutt
         public GameObject[] holes;
 
         [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
+        public Collider[] floorColliders;
+
+        // Legacy data - kept under its original field name/type so old scenes still deserialize into it.
+        // Migrated into floorColliders (and cleared) by OnValidate in the editor.
+        [HideInInspector]
         public GameObject[] floorObjects;
 
         [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
@@ -261,7 +266,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (drawFloorMeshes)
             {
-                foreach (var floor in floorObjects)
+                foreach (var floor in floorColliders)
                 {
                     if (!Utilities.IsValid(floor)) continue;
 
@@ -271,5 +276,28 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
         }
+
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
+        // Migrates the old GameObject[] floorObjects list to the new Collider[] floorColliders list
+        private void OnValidate()
+        {
+            if (floorObjects == null || floorObjects.Length == 0)
+                return;
+
+            var migrated = new System.Collections.Generic.List<Collider>(floorColliders ?? new Collider[0]);
+
+            foreach (var obj in floorObjects)
+            {
+                if (obj == null) continue;
+
+                var col = obj.GetComponent<Collider>();
+                if (col != null && !migrated.Contains(col))
+                    migrated.Add(col);
+            }
+
+            floorColliders = migrated.ToArray();
+            floorObjects = new GameObject[0];
+        }
+#endif
     }
 }
