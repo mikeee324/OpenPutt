@@ -9,6 +9,8 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttCalloutBox : UdonSharpBehaviour
     {
+        private readonly int ShineEnable = Shader.PropertyToID("_ShineEnable");
+
         #region Public Settings
 
         [OpenPuttDescription("A single floating notification bubble that tweens onto screen near the player, shows a message with an optional sound, then tweens away again after a delay. Spawned and managed internally by OpenPuttNotifications - you shouldn't need to set this up by hand.")]
@@ -17,8 +19,9 @@ namespace dev.mikeee324.OpenPutt
 
         [OpenPuttFoldoutGroup("References")]
         public TMP_Text _calloutTextField;
+        
         [OpenPuttFoldoutGroup("References")]
-        public AudioSource _notificationSound;
+        public UnityEngine.UI.Image calloutBackgroundImage;
 
         [OpenPuttFoldoutGroup("Tween Settings")]
         public float speed = 2f;
@@ -56,7 +59,7 @@ namespace dev.mikeee324.OpenPutt
                 _scaleTweenHandle.Kill();
         }
 
-        public void SetCalloutText(string callText, AudioClip sound, Vector3 targetPosition, Vector3 startPosition)
+        public void SetCalloutText(string callText, AudioClip sound, Vector3 targetPosition, Vector3 startPosition, bool shiny = false)
         {
             //Prep the things.
             targetObject = gameObject;
@@ -66,9 +69,23 @@ namespace dev.mikeee324.OpenPutt
 
             //Set the things
             _calloutTextField.text = callText;
-            _notificationSound.clip = sound;
             targetPos = targetPosition;
 
+            //Set material settings on the shared material
+            if (calloutBackgroundImage != null && calloutBackgroundImage.material != null)
+            {
+                if (shiny)
+                {
+                    calloutBackgroundImage.material.SetFloat(ShineEnable, 1f);
+                    calloutBackgroundImage.material.EnableKeyword("_SHINEENABLE_ON"); 
+                }
+                else
+                {
+                    calloutBackgroundImage.material.SetFloat(ShineEnable, 0f);
+                    calloutBackgroundImage.material.DisableKeyword("_SHINEENABLE_ON");
+                }
+            }
+            
             //Start the things
             _positionTweenHandle = targetObject.TweenLocalPosition(targetPos, speed, inTweenType);
             _scaleTweenHandle = targetObject.TweenScale(Vector3.one, speed, inTweenType).OnComplete(this, nameof(OnTweened));
@@ -77,7 +94,6 @@ namespace dev.mikeee324.OpenPutt
         public void OnTweened()
         {
             SendCustomEventDelayedSeconds(nameof(ReturnTween), delay);
-            PlayAudio();
         }
 
         public void ReturnTween()
@@ -86,7 +102,7 @@ namespace dev.mikeee324.OpenPutt
             _scaleTweenHandle = targetObject.TweenScale(Vector3.zero, speed, outTweenType).OnComplete(this, nameof(OnEvenMoreTweened));
         }
 
-        public void OnEvenMoreTweened() //I use stupid names. Fight me.
+        public void OnEvenMoreTweened()
         {
             if (Utilities.IsValid(manager))
             {
@@ -95,14 +111,6 @@ namespace dev.mikeee324.OpenPutt
             else Debug.LogError($"[OpenPuttCalloutBox] I have no reference to the notification script manager");
             Debug.Log("Destroying callout box.");
             Destroy(gameObject);
-        }
-
-        public void PlayAudio()
-        {
-            if (Utilities.IsValid(_notificationSound))
-            {
-                _notificationSound.PlayOneShot(_notificationSound.clip);
-            }
         }
     }
 }

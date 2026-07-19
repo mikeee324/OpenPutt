@@ -39,8 +39,6 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Used instead of the desktop positions above on Android/iOS")]
         public Vector3 _mobileTargetPos, _mobileStartPos;
 
-        [OpenPuttFoldoutGroup("Callout Sounds")]
-        public AudioClip aceSound, condorSound, albatrossSound, eagleSound, birdieSound, parSound, bogeySound, doubleBogeySound, tripleBogeySound, strokeLimitSound;
 
         #endregion
 
@@ -216,56 +214,48 @@ namespace dev.mikeee324.OpenPutt
             }
 
             string calloutText;
+            bool shiny = false;
             switch (currentCallout)
             {
                 case Callouts.Ace:
-                    _notificationSound = aceSound;
                     calloutText = player == Networking.LocalPlayer ? "ACE!" : $"{player.displayName} scored an ACE!";
+                    shiny = true;
                     break;
                 case Callouts.Condor:
-                    _notificationSound = condorSound;
                     calloutText = player == Networking.LocalPlayer ? "Condor!" : $"{player.displayName} scored a Condor!";
                     break;
                 case Callouts.Albatross:
-                    _notificationSound = albatrossSound;
                     calloutText = player == Networking.LocalPlayer ? "Albatross!" : $"{player.displayName} scored an Albatross!";
                     break;
                 case Callouts.Eagle:
-                    _notificationSound = eagleSound;
                     calloutText = player == Networking.LocalPlayer ? "Eagle!" : $"{player.displayName} scored an Eagle!";
                     break;
                 case Callouts.Birdie:
-                    _notificationSound = birdieSound;
                     calloutText = player == Networking.LocalPlayer ? "Birdie!" : $"{player.displayName} scored a Birdie!";
                     break;
                 case Callouts.Par:
-                    _notificationSound = parSound;
                     calloutText = player == Networking.LocalPlayer ? "Par!" : $"{player.displayName} scored a Par!";
                     break;
                 case Callouts.Bogey:
-                    _notificationSound = bogeySound;
                     calloutText = player == Networking.LocalPlayer ? "Bogey!" : $"{player.displayName} scored a Bogey.";
                     break;
                 case Callouts.DoubleBogey:
-                    _notificationSound = doubleBogeySound;
                     calloutText = player == Networking.LocalPlayer ? "Double Bogey!" : $"{player.displayName} scored a Double Bogey.";
                     break;
                 case Callouts.TripleBogey:
-                    _notificationSound = tripleBogeySound;
                     calloutText = player == Networking.LocalPlayer ? "Triple Bogey!" : $"{player.displayName} scored a Triple Bogey.";
                     break;
                 case Callouts.StrokeLimit:
-                    _notificationSound = strokeLimitSound;
                     calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
                     break;
                 default:
                     return;
             }
 
-            InstantiateCalloutBox(calloutText, _notificationSound);
+            InstantiateCalloutBox(calloutText, _notificationSound, shiny);
         }
 
-        public void InstantiateCalloutBox(string callText, AudioClip callAudio = null)
+        public void InstantiateCalloutBox(string callText, AudioClip callAudio = null, bool shiny = false)
         {
             GameObject lastCallout = Instantiate(_calloutBoxPrefab, _canvas.transform);
             var calloutScript = lastCallout.GetComponent<OpenPuttCalloutBox>();
@@ -274,9 +264,12 @@ namespace dev.mikeee324.OpenPutt
             calloutScript.manager = this;
 
             calloutScript.targetPos = GetTargetPos();
+            
+            // Pass the shiny variable to the callout box
             calloutScript.SetCalloutText(callText, callAudio
                 , targetPosition: GetTargetPos()
-                , startPosition: GetStartPos());
+                , startPosition: GetStartPos()
+                , shiny: shiny);
         }
 
         private Vector3 GetTargetPos()
