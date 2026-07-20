@@ -388,6 +388,8 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(creditsText))
             {
                 creditsText.text = creditsText.text.Replace("{OpenPuttCurrVer}", manager.openPutt.CurrentVersion);
+                if (!string.IsNullOrEmpty(manager.extraCreditsText))
+                    creditsText.text += "\n" + manager.extraCreditsText;
             }
 
             // The UI laser hits these colliders - disabling them blocks clicks without hiding the board

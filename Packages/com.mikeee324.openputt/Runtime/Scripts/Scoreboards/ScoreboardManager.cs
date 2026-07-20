@@ -57,6 +57,11 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("This should stay enabled unless you're debugging the scoreboard player lists")]
         public bool hideInactivePlayers = true;
 
+        [OpenPuttFoldoutGroup("Settings")]
+        [Tooltip("Extra text that gets appended to the end of the credits text on every scoreboard")]
+        [TextArea]
+        public string extraCreditsText = "";
+
         [OpenPuttFoldoutGroup("Background Colours")]
         public Color nameBackground1 = Color.black;
 
