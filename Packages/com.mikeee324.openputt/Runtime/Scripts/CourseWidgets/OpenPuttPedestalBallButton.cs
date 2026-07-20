@@ -36,6 +36,9 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = openPutt.LocalPlayerManager;
             var golfBall = playerManager.golfBall;
 
+            if (!Utilities.IsValid(golfBall.openPuttSync))
+                return;
+
             // Fetching the ball elsewhere abandons whatever course is currently being played, same as
             // pressing Use while holding the ball on the shoulder mount (see GolfBallController._OnScriptUse) -
             // require a second interact within the confirmation window so players don't lose a course by accident
@@ -68,6 +71,8 @@ namespace dev.mikeee324.OpenPutt
                 golfBall.BallIsMoving = true;
 
             playerManager._RequestSync(syncNow: true);
+
+            golfBall.openPuttSync._RequestFastSync(forceSync: true);
         }
 
         /// <summary>Called via SendCustomEventDelayedSeconds to expire a pending skip confirmation.</summary>

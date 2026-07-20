@@ -38,6 +38,9 @@ namespace dev.mikeee324.OpenPutt
             var playerManager = openPutt.LocalPlayerManager;
             var golfClub = playerManager.golfClub;
 
+            if (!Utilities.IsValid(golfClub.openPuttSync))
+                return;
+
             // Can't move the club while it's attached to a hand, so drop it first - the club can be
             // held either directly (golfClub.pickup) or via the shoulder holster (golfClub.shoulderPickup),
             // and only the one actually holding it will respond to Drop()
@@ -68,6 +71,8 @@ namespace dev.mikeee324.OpenPutt
             }
 
             playerManager._RequestSync(syncNow: true);
+
+            golfClub.openPuttSync._RequestFastSync(forceSync: true);
         }
 
         private void ShowBallCamHint()
