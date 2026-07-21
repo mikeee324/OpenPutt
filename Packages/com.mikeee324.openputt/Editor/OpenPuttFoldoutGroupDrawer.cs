@@ -21,6 +21,10 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
     // rendering instead of re-running the group logic (which would otherwise draw nothing for a non-leader field).
     private static bool drawingGroupMember;
 
+    // Keys of type+field combinations we've already warned about, so the misconfiguration is logged once per
+    // domain reload rather than every OnGUI frame.
+    private static readonly HashSet<string> WarnedDescriptionCombos = new HashSet<string>();
+
     private OpenPuttFoldoutGroupAttribute Attr => (OpenPuttFoldoutGroupAttribute)attribute;
 
 
@@ -33,10 +37,28 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
     private List<FieldInfo> GetGroupFields(SerializedProperty property)
     {
         var targetType = property.serializedObject.targetObject.GetType();
-        return targetType
+        var groupFields = targetType
             .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Where(f => !IsListLike(f) && f.GetCustomAttribute<OpenPuttFoldoutGroupAttribute>()?.GroupName == Attr.GroupName)
+            // Fields of non-serializable types (eg. MaterialPropertyBlock) have no backing SerializedProperty -
+            // skip them here rather than crashing later when FindProperty comes back null.
+            .Where(f => property.serializedObject.FindProperty(f.Name) != null)
             .ToList();
+
+        // [OpenPuttDescription] is a DecoratorDrawer and always draws itself in Unity's normal top-level iteration -
+        // it has no way to know its field was pulled into a foldout, so the help box ends up orphaned at the field's
+        // natural position while the field itself is relocated under the header. The two attributes don't compose;
+        // warn the developer (once) rather than silently rendering a broken inspector.
+        foreach (var f in groupFields)
+        {
+            if (f.GetCustomAttribute<OpenPuttDescriptionAttribute>() == null)
+                continue;
+            var warnKey = $"{targetType.FullName}.{f.Name}";
+            if (WarnedDescriptionCombos.Add(warnKey))
+                Debug.LogWarning($"[OpenPutt] Field '{targetType.Name}.{f.Name}' has both [OpenPuttDescription] and [OpenPuttFoldoutGroup]. These don't compose - the description box will render detached from the foldout. Move the description to a field that isn't in a group.");
+        }
+
+        return groupFields;
     }
 
     private bool IsGroupLeader(List<FieldInfo> groupFields) => groupFields.Count > 0 && groupFields[0] == fieldInfo;
@@ -86,10 +108,18 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
 
         // Mutate the shared style in place rather than copying it, so every layout metric (padding, margin, icon
         // rects) stays byte-identical to Unity's own native array foldouts - only the font weight changes.
+        // The restore runs in finally: EditorStyles.foldout is global, so if Foldout throws we must not leak the
+        // bold font onto every other foldout in the editor until the next domain reload.
         var previousFontStyle = EditorStyles.foldout.fontStyle;
         EditorStyles.foldout.fontStyle = FontStyle.Bold;
-        expanded = EditorGUI.Foldout(headerRect, expanded, Attr.GroupName, true, EditorStyles.foldout);
-        EditorStyles.foldout.fontStyle = previousFontStyle;
+        try
+        {
+            expanded = EditorGUI.Foldout(headerRect, expanded, Attr.GroupName, true, EditorStyles.foldout);
+        }
+        finally
+        {
+            EditorStyles.foldout.fontStyle = previousFontStyle;
+        }
 
         EditorGUI.indentLevel = previousIndent;
         FoldoutStates[key] = expanded;
