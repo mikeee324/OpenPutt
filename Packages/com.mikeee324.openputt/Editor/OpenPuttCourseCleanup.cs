@@ -63,6 +63,9 @@ namespace dev.mikeee324.OpenPutt
             if (openPutt.courses != null && valid.Length == openPutt.courses.Length)
                 return false; // already clean, don't touch anything
 
+            int removed = (openPutt.courses != null ? openPutt.courses.Length : 0) - valid.Length;
+            OpenPuttUtils.Log("OpenPutt Cleanup", $"Removed {removed} null/duplicate course reference(s) from '{openPutt.name}'", "cyan");
+
             if (recordSceneOverride)
             {
                 SerializedObject so = new SerializedObject(openPutt);

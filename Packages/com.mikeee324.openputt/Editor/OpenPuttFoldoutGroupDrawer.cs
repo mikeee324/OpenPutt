@@ -19,7 +19,11 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
     // While the leader is drawing a sibling field, that sibling's own drawer instance gets invoked again by Unity
     // (it carries the same attribute). This flag tells that nested call to fall back to the field's normal/default
     // rendering instead of re-running the group logic (which would otherwise draw nothing for a non-leader field).
+    // OpenPuttDescriptionDrawer also reads it (via DrawingGroupMember) to suppress its help box while a member is
+    // being drawn inside the group, so the leader's description doesn't render a second time under the header.
     private static bool drawingGroupMember;
+
+    internal static bool DrawingGroupMember => drawingGroupMember;
 
     // Keys of type+field combinations we've already warned about, so the misconfiguration is logged once per
     // domain reload rather than every OnGUI frame.
@@ -45,17 +49,21 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
             .Where(f => property.serializedObject.FindProperty(f.Name) != null)
             .ToList();
 
-        // [OpenPuttDescription] is a DecoratorDrawer and always draws itself in Unity's normal top-level iteration -
-        // it has no way to know its field was pulled into a foldout, so the help box ends up orphaned at the field's
-        // natural position while the field itself is relocated under the header. The two attributes don't compose;
-        // warn the developer (once) rather than silently rendering a broken inspector.
-        foreach (var f in groupFields)
+        // [OpenPuttDescription] is a DecoratorDrawer and always draws itself in Unity's normal top-level iteration.
+        // On the group LEADER that's exactly right: the field's natural position is the top of the component, so the
+        // help box lands directly above the foldout header (OpenPuttDescriptionDrawer suppresses the duplicate that
+        // would otherwise appear when the leader is redrawn as a member - see DrawingGroupMember). This composes, so
+        // it's the common, supported pattern and we don't warn.
+        // On a NON-leader member it can't compose: the decorator draws at that member's natural top-level slot while
+        // the field itself is relocated under the header, orphaning the help box. Warn (once) for that case only.
+        for (var i = 1; i < groupFields.Count; i++)
         {
+            var f = groupFields[i];
             if (f.GetCustomAttribute<OpenPuttDescriptionAttribute>() == null)
                 continue;
             var warnKey = $"{targetType.FullName}.{f.Name}";
             if (WarnedDescriptionCombos.Add(warnKey))
-                Debug.LogWarning($"[OpenPutt] Field '{targetType.Name}.{f.Name}' has both [OpenPuttDescription] and [OpenPuttFoldoutGroup]. These don't compose - the description box will render detached from the foldout. Move the description to a field that isn't in a group.");
+                Debug.LogWarning($"[OpenPutt] Field '{targetType.Name}.{f.Name}' has [OpenPuttDescription] but isn't the first field in its '{Attr.GroupName}' group, so the description box renders detached from the foldout. Put the description on the group's first field, or on a field that isn't in a group.");
         }
 
         return groupFields;
