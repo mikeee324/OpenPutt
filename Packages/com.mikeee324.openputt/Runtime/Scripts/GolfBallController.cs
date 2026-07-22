@@ -215,7 +215,10 @@ namespace dev.mikeee324.OpenPutt
                         speedDataLogging = new float[0];
                     }
 
-                    if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeDistance)
+                    // Only auto-complete/respawn when the ball came to rest on its own. If it "stopped"
+                    // because the player grabbed it (pickedUpByPlayer), skip this or we'd drop the shoulder
+                    // pickup and teleport the ball away the instant they grab a moving ball.
+                    if (!pickedUpByPlayer && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeDistance)
                     {
                         var course = playerManager.CurrentCourse;
 
@@ -226,7 +229,7 @@ namespace dev.mikeee324.OpenPutt
                         playerManager._OnCourseStarted(course);
                         _RespawnBall();
                     }
-                    else if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
+                    else if (!pickedUpByPlayer && Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
                     {
                         _RespawnBall();
                     }
