@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEditor;
 using System.Linq;
 using UnityEditor.SceneManagement;
-using Varneon.VUdon.ArrayExtensions;
 using UnityEditor.PackageManager.UI;
 
 namespace dev.mikeee324.OpenPutt
@@ -110,38 +109,54 @@ namespace dev.mikeee324.OpenPutt
 
                 coursesProp.InsertArrayElementAtIndex(coursesProp.arraySize);
                 coursesProp.GetArrayElementAtIndex(coursesProp.arraySize - 1).objectReferenceValue = newCourse;
-            }
 
-            // Remove any null course references
-            Object[] allCourses = new Object[0];
-            for (int i = 0; i < coursesProp.arraySize; i++)
-                if (coursesProp.GetArrayElementAtIndex(i).objectReferenceValue && !allCourses.Contains(coursesProp.GetArrayElementAtIndex(i).objectReferenceValue))
-                    allCourses = allCourses.Add(coursesProp.GetArrayElementAtIndex(i).objectReferenceValue);
-
-            if (allCourses.Length > 0 && coursesProp.arraySize != allCourses.Length)
-            {
-                coursesProp.ClearArray();
-                foreach (Object course in allCourses)
-                {
-                    coursesProp.InsertArrayElementAtIndex(coursesProp.arraySize);
-                    coursesProp.GetArrayElementAtIndex(coursesProp.arraySize - 1).objectReferenceValue = course;
-                }
+                // Apply + force-record the override immediately. When OpenPutt is nested inside
+                // another prefab this is required for the array change to persist, and it avoids
+                // mutating the serialized array mid-layout (which aborts the rest of OnGUI).
                 serializedOpenPutt.ApplyModifiedProperties();
+                PrefabUtility.RecordPrefabInstancePropertyModifications(openPutt);
+                EditorSceneManager.MarkSceneDirty(openPutt.gameObject.scene);
+                Repaint();
+                GUIUtility.ExitGUI();
             }
 
+            // Null/duplicate course references are NOT stripped here on purpose - doing it every
+            // OnGUI frame deletes empty slots before you can drag a hand-placed course into them.
+            // Cleanup happens on entering play mode and at build time (see OpenPuttCourseCleanup).
 
             bool hasCourses = false;
+            bool hasDuplicates = false;
+            List<Object> seenCourses = new List<Object>();
             for (int i = 0; i < coursesProp.arraySize; i++)
-                if (coursesProp.GetArrayElementAtIndex(i).objectReferenceValue)
-                    hasCourses = true;
+            {
+                Object course = coursesProp.GetArrayElementAtIndex(i).objectReferenceValue;
+                if (!course)
+                    continue;
+                hasCourses = true;
+                if (seenCourses.Contains(course))
+                    hasDuplicates = true;
+                else
+                    seenCourses.Add(course);
+            }
             if (!hasCourses)
             {
                 CenteredLabel("You need to add at least 1 course!", 13, Color.red);
                 CenteredLabel("OpenPutt will not work until you add one!", 13, Color.red);
             }
+            if (hasDuplicates)
+            {
+                CenteredLabel("The same course is listed more than once!", 13, Color.red);
+                CenteredLabel("Duplicates will be removed automatically when you enter play mode or build.", 12, Color.red);
+            }
 
 
+            // Unity's built-in "+" on the list copies the previous entry (a duplicate reference).
+            // Our custom "+ Add New Course" button bails out with ExitGUI, so any growth here came
+            // from the built-in "+" - null the new slot(s) so you get an empty entry to fill in.
+            int coursesSizeBefore = coursesProp.arraySize;
             EditorGUILayout.PropertyField(coursesProp, true);
+            for (int i = coursesSizeBefore; i < coursesProp.arraySize; i++)
+                coursesProp.GetArrayElementAtIndex(i).objectReferenceValue = null;
 
             GUILayout.Space(30);
             CenteredLabel("Scoreboard Setup", 14);
@@ -182,6 +197,12 @@ namespace dev.mikeee324.OpenPutt
 
                 scoreboardPostions.InsertArrayElementAtIndex(scoreboardPostions.arraySize);
                 scoreboardPostions.GetArrayElementAtIndex(scoreboardPostions.arraySize - 1).objectReferenceValue = newScoreboardPosition;
+
+                scoreboardManagerSerialized.ApplyModifiedProperties();
+                PrefabUtility.RecordPrefabInstancePropertyModifications(scoreboardManager);
+                EditorSceneManager.MarkSceneDirty(openPutt.gameObject.scene);
+                Repaint();
+                GUIUtility.ExitGUI();
             }
             EditorGUILayout.PropertyField(scoreboardPostions, true);
 
@@ -196,6 +217,9 @@ namespace dev.mikeee324.OpenPutt
             {
                 scoreboardManagerSerialized.ApplyModifiedProperties();
                 serializedOpenPutt.ApplyModifiedProperties();
+                // Force-record overrides so inline edits persist when OpenPutt is nested in another prefab.
+                PrefabUtility.RecordPrefabInstancePropertyModifications(scoreboardManager);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(openPutt);
                 EditorSceneManager.MarkSceneDirty(openPutt.gameObject.scene);
             }
             else if (Event.current.type == EventType.ExecuteCommand && (Event.current.commandName == "UndoRedoPerformed" || Event.current.commandName == "SoftDelete"))
