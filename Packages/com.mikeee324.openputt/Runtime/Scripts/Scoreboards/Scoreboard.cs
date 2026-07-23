@@ -20,6 +20,13 @@ namespace dev.mikeee324.OpenPutt
         OpenPutt
     }
 
+    public enum ScoreboardInfoTab
+    {
+        VR,
+        Desktop,
+        Mobile
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
@@ -45,6 +52,15 @@ namespace dev.mikeee324.OpenPutt
         public Canvas settingsPanel;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas infoPanel;
+        [Tooltip("Instructions content shown on the Info tab for VR players")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject infoVRCanvas;
+        [Tooltip("Instructions content shown on the Info tab for Desktop players")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject infoDesktopCanvas;
+        [Tooltip("Instructions content shown on the Info tab for Mobile players")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject infoMobileCanvas;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas devModelPanel;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -71,6 +87,15 @@ namespace dev.mikeee324.OpenPutt
         public Button scoreboardTimerTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button infoTabBackground;
+        [Tooltip("Header button that selects the VR instructions on the Info tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button infoVRTabBackground;
+        [Tooltip("Header button that selects the Desktop instructions on the Info tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button infoDesktopTabBackground;
+        [Tooltip("Header button that selects the Mobile instructions on the Info tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button infoMobileTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button settingsTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -223,6 +248,13 @@ namespace dev.mikeee324.OpenPutt
         public bool HasInitializedUI => initializedUI;
         private float totalHeightOfScrollViewport;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
+        private ScoreboardInfoTab _currentInfoTab = ScoreboardInfoTab.Desktop;
+
+        // The background colours the info tabs are given in the editor, captured before we ever recolour them
+        private bool infoTabDefaultsCaptured;
+        private Color infoVRTabDefaultColour;
+        private Color infoDesktopTabDefaultColour;
+        private Color infoMobileTabDefaultColour;
 
         public int NumberOfColumns => Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.courses.Length + 2 : 0;
 
@@ -251,6 +283,9 @@ namespace dev.mikeee324.OpenPutt
                             openPuttPanel.gameObject.SetActive(false);
                             infoPanel.enabled = true;
                             scoreboardCanvas.enabled = false;
+
+                            // Coming back to the Info tab always resets to the local player's platform instructions
+                            CurrentInfoTab = GetLocalPlayerInfoTab();
                             break;
                         case ScoreboardView.OpenPutt:
                             settingsPanel.gameObject.SetActive(false);
@@ -316,6 +351,17 @@ namespace dev.mikeee324.OpenPutt
                             break;
                     }
 
+                    // Info sub-canvases don't inherit the parent canvas.enabled state, so hide them when leaving the Info tab
+                    if (!infoPanel.enabled)
+                    {
+                        if (Utilities.IsValid(infoVRCanvas))
+                            infoVRCanvas.SetActive(false);
+                        if (Utilities.IsValid(infoDesktopCanvas))
+                            infoDesktopCanvas.SetActive(false);
+                        if (Utilities.IsValid(infoMobileCanvas))
+                            infoMobileCanvas.SetActive(false);
+                    }
+
                     // Toggle extra canvases (parent canvas.enabled doesn't seem to be passed down properly)
                     if (Utilities.IsValid(scoreboardCanvas))
                     {
@@ -351,6 +397,45 @@ namespace dev.mikeee324.OpenPutt
 
                 _currentScoreboardView = value;
                 UpdateTabColours();
+            }
+        }
+
+        /// <summary>
+        /// Which platform's instructions are shown on the Info tab. Setting it swaps the visible instructions canvas and updates the tab highlight.
+        /// </summary>
+        public ScoreboardInfoTab CurrentInfoTab
+        {
+            get => _currentInfoTab;
+            set
+            {
+                _currentInfoTab = value;
+
+                if (Utilities.IsValid(infoVRCanvas))
+                    infoVRCanvas.SetActive(value == ScoreboardInfoTab.VR);
+                if (Utilities.IsValid(infoDesktopCanvas))
+                    infoDesktopCanvas.SetActive(value == ScoreboardInfoTab.Desktop);
+                if (Utilities.IsValid(infoMobileCanvas))
+                    infoMobileCanvas.SetActive(value == ScoreboardInfoTab.Mobile);
+
+                UpdateInfoTabColours();
+            }
+        }
+
+        /// <summary>
+        /// Works out which instructions tab matches the local player's current platform (VR / Desktop / Mobile)
+        /// </summary>
+        private ScoreboardInfoTab GetLocalPlayerInfoTab()
+        {
+            // GetPlatform() already picks the right platform via #if UNITY_ANDROID/UNITY_IOS compiler directives
+            switch (Networking.LocalPlayer.GetPlatform())
+            {
+                case DevicePlatform.PCVR:
+                case DevicePlatform.AndroidVR:
+                    return ScoreboardInfoTab.VR;
+                case DevicePlatform.AndroidMobile:
+                    return ScoreboardInfoTab.Mobile;
+                default:
+                    return ScoreboardInfoTab.Desktop;
             }
         }
 
@@ -397,6 +482,24 @@ namespace dev.mikeee324.OpenPutt
                 interactionColliders = GetComponentsInChildren<Collider>(true);
 
             SendCustomEventDelayedSeconds(nameof(InitUI), 0.05f);
+
+            // IsUserInVR() is unreliable in the first frames after load, so re-pick the platform tab once it settles
+            SendCustomEventDelayedSeconds(nameof(SelectInfoTabForPlatform), 1f);
+        }
+
+        /// <summary>
+        /// Re-selects the info tab for the local player's platform. Retries until the local player is valid, then only applies while the Info view is showing so it doesn't yank a player who already switched tabs.
+        /// </summary>
+        public void SelectInfoTabForPlatform()
+        {
+            if (!OpenPuttUtils.LocalPlayerIsValid())
+            {
+                SendCustomEventDelayedSeconds(nameof(SelectInfoTabForPlatform), 1f);
+                return;
+            }
+
+            if (_currentScoreboardView == ScoreboardView.Info)
+                CurrentInfoTab = GetLocalPlayerInfoTab();
         }
 
         /// <summary>
@@ -847,6 +950,21 @@ namespace dev.mikeee324.OpenPutt
             CurrentScoreboardView = ScoreboardView.Info;
         }
 
+        public void OnToggleInfoVR()
+        {
+            CurrentInfoTab = ScoreboardInfoTab.VR;
+        }
+
+        public void OnToggleInfoDesktop()
+        {
+            CurrentInfoTab = ScoreboardInfoTab.Desktop;
+        }
+
+        public void OnToggleInfoMobile()
+        {
+            CurrentInfoTab = ScoreboardInfoTab.Mobile;
+        }
+
 
         public void OnShowPrefabInfo()
         {
@@ -1212,6 +1330,52 @@ namespace dev.mikeee324.OpenPutt
                 colorBlock.normalColor = newDevModeCol;
                 devModeTabBackground.colors = colorBlock;
             }
+
+            // Header colours are now current, so repaint the info tabs to match
+            UpdateInfoTabColours();
+        }
+
+        /// <summary>
+        /// Recolours the VR/Desktop/Mobile instructions tabs: the selected one takes the Scoreboard header button's colour, the rest keep their editor background.
+        /// </summary>
+        public void UpdateInfoTabColours()
+        {
+            CaptureInfoTabDefaultColours();
+
+            // Selected tab matches the "Scoreboard" button in the header
+            var selectedColour = Utilities.IsValid(scoreboardTabBackground) && Utilities.IsValid(scoreboardTabBackground.targetGraphic)
+                ? scoreboardTabBackground.targetGraphic.color
+                : Color.white;
+
+            SetInfoTabColour(infoVRTabBackground, _currentInfoTab == ScoreboardInfoTab.VR ? selectedColour : infoVRTabDefaultColour);
+            SetInfoTabColour(infoDesktopTabBackground, _currentInfoTab == ScoreboardInfoTab.Desktop ? selectedColour : infoDesktopTabDefaultColour);
+            SetInfoTabColour(infoMobileTabBackground, _currentInfoTab == ScoreboardInfoTab.Mobile ? selectedColour : infoMobileTabDefaultColour);
+        }
+
+        /// <summary>
+        /// Remembers the background colour each info tab was given in the editor so we can restore it when the tab is deselected
+        /// </summary>
+        private void CaptureInfoTabDefaultColours()
+        {
+            if (infoTabDefaultsCaptured)
+                return;
+
+            if (Utilities.IsValid(infoVRTabBackground) && Utilities.IsValid(infoVRTabBackground.targetGraphic))
+                infoVRTabDefaultColour = infoVRTabBackground.targetGraphic.color;
+            if (Utilities.IsValid(infoDesktopTabBackground) && Utilities.IsValid(infoDesktopTabBackground.targetGraphic))
+                infoDesktopTabDefaultColour = infoDesktopTabBackground.targetGraphic.color;
+            if (Utilities.IsValid(infoMobileTabBackground) && Utilities.IsValid(infoMobileTabBackground.targetGraphic))
+                infoMobileTabDefaultColour = infoMobileTabBackground.targetGraphic.color;
+
+            infoTabDefaultsCaptured = true;
+        }
+
+        private void SetInfoTabColour(Button tab, Color colour)
+        {
+            if (!Utilities.IsValid(tab) || !Utilities.IsValid(tab.targetGraphic) || tab.targetGraphic.color == colour)
+                return;
+
+            tab.targetGraphic.color = colour;
         }
 
         public void UpdateViewportHeight()
