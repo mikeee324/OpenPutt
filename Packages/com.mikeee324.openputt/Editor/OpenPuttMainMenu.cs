@@ -364,6 +364,15 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 EditorGUILayout.HelpBox($"Scoreboards have {builtCourseColumns}/{neededCourseColumns} course columns set up.", MessageType.Info);
+
+                // No rebuild is strictly required, but expose the button anyway so you can force a
+                // rebuild after changing the scoreboard prefabs (e.g. canvas/layout tweaks that don't
+                // change the course count and so don't trip needsRebuild).
+                if (GUILayout.Button("Rebuild Scoreboards", GUILayout.Height(26)))
+                {
+                    ScoreboardBuildProcessor.BuildScoreboards(scoreboardManager, scoreboards, true);
+                    GUIUtility.ExitGUI();
+                }
             }
 
             GUILayout.Space(10);
