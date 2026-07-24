@@ -75,10 +75,6 @@ namespace dev.mikeee324.OpenPutt
         public bool replayableCourses;
 
         [OpenPuttFoldoutGroup("Game Settings")]
-        [Tooltip("Allows balls to travel on the Y axis when hit by a club (Can be changed at runtime by the instance master) (Experimental)")]
-        public bool enableVerticalHits;
-
-        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
         public bool coursesCanBePlayedInAnyOrder;
 
@@ -348,7 +344,7 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(LocalPlayerManager)) return;
 
             // Save players ball colour
-            PlayerData.SetColor("OpenPutt-BallColor", LocalPlayerManager.BallColor);
+            PlayerData.SetColor("OpenPutt-BallColourHSV", LocalPlayerManager.BallColor);
             PlayerData.SetBool("OpenPutt-LeftHanded", LocalPlayerManager.IsInLeftHandedMode);
             PlayerData.SetBool("OpenPutt-ThrowEnabled", LocalPlayerManager.golfClub.throwEnabled);
             PlayerData.SetBool("OpenPutt-ClubAutoHold", LocalPlayerManager.golfClub.pickup.AutoHold == VRC_Pickup.AutoHoldMode.Yes);
@@ -374,8 +370,8 @@ namespace dev.mikeee324.OpenPutt
         public void _LoadPersistantData()
         {
             var localPlayer = Networking.LocalPlayer;
-            if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColor"))
-                LocalPlayerManager.BallColor = PlayerData.GetColor(localPlayer, "OpenPutt-BallColor");
+            if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColourHSV"))
+                LocalPlayerManager.BallColor = PlayerData.GetColor(localPlayer, "OpenPutt-BallColourHSV");
 
             if (PlayerData.HasKey(localPlayer, "OpenPutt-ThrowEnabled"))
                 LocalPlayerManager.golfClub.throwEnabled = PlayerData.GetBool(localPlayer, "OpenPutt-ThrowEnabled");

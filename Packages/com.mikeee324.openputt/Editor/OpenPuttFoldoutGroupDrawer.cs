@@ -78,6 +78,11 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
         if (drawingGroupMember)
             return EditorGUI.GetPropertyHeight(property, label, true);
 
+        // [OpenPuttFoldoutGroup] can't group an array/List field itself (see IsListLike) - if it's mistakenly
+        // put on one anyway, ignore it and fall back to the field's normal rendering rather than drawing nothing.
+        if (IsListLike(fieldInfo))
+            return EditorGUI.GetPropertyHeight(property, label, true);
+
         var groupFields = GetGroupFields(property);
         if (!IsGroupLeader(groupFields))
             return -EditorGUIUtility.standardVerticalSpacing;
@@ -97,6 +102,12 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         if (drawingGroupMember)
+        {
+            EditorGUI.PropertyField(position, property, label, true);
+            return;
+        }
+
+        if (IsListLike(fieldInfo))
         {
             EditorGUI.PropertyField(position, property, label, true);
             return;

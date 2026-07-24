@@ -149,7 +149,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Override: if the local player manager exists and the player isn't playing,
             // keep the palm UI hidden regardless of palm orientation.
-            bool overrideHideBecauseNotPlaying = Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager) && !openPutt.LocalPlayerManager.isPlaying;
+            bool overrideHideBecauseNotPlaying = Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager) && !openPutt.LocalPlayerManager.IsPlaying;
             if (overrideHideBecauseNotPlaying)
                 palmFacingUp = false;
 

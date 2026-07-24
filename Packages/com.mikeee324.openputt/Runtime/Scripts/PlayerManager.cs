@@ -27,8 +27,8 @@ namespace dev.mikeee324.OpenPutt
         public TrailRenderer trailRenderer;
 
         [OpenPuttFoldoutGroup("Game Settings")]
-        [UdonSynced]
-        public bool isPlaying = true;
+        [UdonSynced, FieldChangeCallback(nameof(IsPlaying))]
+        private bool _isPlaying = true;
 
         [UdonSynced]
         public int[] courseScores = { };
@@ -191,7 +191,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Needed to make sure this PlayerManager has been properly initialised before we try to use it
         /// </summary>
-        public bool IsReady => isPlaying && courseScores.Length > 0 && courseStates.Length > 0 && courseTimes.Length > 0;
+        public bool IsReady => IsPlaying && courseScores.Length > 0 && courseStates.Length > 0 && courseTimes.Length > 0;
 
         /// <summary>
         /// Works out the players total score across all courses
@@ -252,6 +252,71 @@ namespace dev.mikeee324.OpenPutt
                 // Tell everybody that this player changed which hand they use
                 if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
                     openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
+            }
+        }
+
+        /// <summary>
+        /// Whether this player is actively playing (false = spectating). The setter drops/re-homes the
+        /// shoulder-mounted club/ball pickups for the local owner and syncs the change to everyone else.
+        /// </summary>
+        public bool IsPlaying
+        {
+            get => _isPlaying;
+            set
+            {
+                if (_isPlaying == value)
+                    return;
+
+                _isPlaying = value;
+
+                if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
+                {
+                    if (_isPlaying)
+                    {
+                        openPutt.leftShoulderPickup.gameObject.SetActive(true);
+                        openPutt.rightShoulderPickup.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        // Drop the shoulder objects and set them back to Vector3.zero
+                        var attachedObject = openPutt.leftShoulderPickup.ObjectToAttach;
+                        VRCPickup pickup;
+                        if (Utilities.IsValid(attachedObject))
+                        {
+                            pickup = attachedObject.GetComponent<VRCPickup>();
+                            if (Utilities.IsValid(pickup))
+                                pickup.Drop();
+
+                            attachedObject.transform.localPosition = Vector3.zero;
+                        }
+
+                        attachedObject = openPutt.rightShoulderPickup.ObjectToAttach;
+                        if (Utilities.IsValid(attachedObject))
+                        {
+                            pickup = attachedObject.GetComponent<VRCPickup>();
+                            if (Utilities.IsValid(pickup))
+                                pickup.Drop();
+
+                            attachedObject.transform.localPosition = Vector3.zero;
+                        }
+
+                        // Drop the BodyMountedObjects
+                        pickup = openPutt.leftShoulderPickup.gameObject.GetComponent<VRCPickup>();
+                        if (Utilities.IsValid(pickup))
+                            pickup.Drop();
+                        pickup = openPutt.rightShoulderPickup.gameObject.GetComponent<VRCPickup>();
+                        if (Utilities.IsValid(pickup))
+                            pickup.Drop();
+
+                        openPutt.leftShoulderPickup.gameObject.SetActive(false);
+                        openPutt.rightShoulderPickup.gameObject.SetActive(false);
+                    }
+
+                    _RequestSync();
+                }
+
+                _UpdateTotals();
+                openPutt._OnPlayerUpdate(this);
             }
         }
 
@@ -712,13 +777,13 @@ namespace dev.mikeee324.OpenPutt
 
             var ballIsOnCurrentCourse = false;
             var shouldEnableBallShoulderPickup = true;
-            var shouldEnableClubShoulderPickup = isPlaying;
+            var shouldEnableClubShoulderPickup = IsPlaying;
 
             if (Utilities.IsValid(clubShoulderPickup) && Utilities.IsValid(clubShoulderPickup.ObjectToAttach))
             {
                 var pickupHelper = clubShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
                 if (Utilities.IsValid(pickupHelper))
-                    shouldEnableClubShoulderPickup = isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None;
+                    shouldEnableClubShoulderPickup = IsPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None;
             }
 
             if (Utilities.IsValid(CurrentCourse))
@@ -794,7 +859,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(clubShoulderPickup))
             {
-                if (!isPlaying)
+                if (!IsPlaying)
                     shouldEnableBallShoulderPickup = false;
                 else if (golfBall.pickedUpByPlayer)
                     shouldEnableBallShoulderPickup = true;
@@ -822,7 +887,7 @@ namespace dev.mikeee324.OpenPutt
             if (ownerName.Trim().Length == 0)
                 ownerName = "Eh?";
             var ready = IsReady ? "Ready" : "Not Ready";
-            var playing = isPlaying ? "Playing" : "Not Playing";
+            var playing = IsPlaying ? "Playing" : "Not Playing";
             var playerState = $"{gameObject.name} - {ownerName}({ready}/{playing})";
 
             playerState += $" - (Total:{PlayerTotalScore}) (";
@@ -934,7 +999,7 @@ namespace dev.mikeee324.OpenPutt
         public void _ResetPlayerScores()
         {
             // Reset score tracking
-            isPlaying = true;
+            IsPlaying = true;
             CurrentCourse = null;
             courseScores = new int[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             courseTimes = new long[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
