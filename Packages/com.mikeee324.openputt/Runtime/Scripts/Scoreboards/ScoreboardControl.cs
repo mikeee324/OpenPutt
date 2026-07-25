@@ -321,7 +321,13 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.ClubThrow: Player.golfClub.throwEnabled = v; break;
                 case SettingId.ClubAutoHold: Player.golfClub.AutoHoldEnabled = v; break;
                 case SettingId.EnableBigShaft: Player.golfClub.enableBigShaft = v; break;
-                case SettingId.CourseReplays: OpenPutt.replayableCourses = v; break;
+                case SettingId.CourseReplays:
+                {
+                    OpenPuttUtils.SetOwner(Networking.LocalPlayer, OpenPutt.gameObject);
+                    OpenPutt.replayableCourses = v;
+                    OpenPutt.RequestSerialization();
+                    break;
+                }
                 case SettingId.BallGrounded: Player.golfBall.ballGroundedDebug = v; break;
                 case SettingId.BallSnapping: Player.golfBall.enableBallSnap = v; break;
                 case SettingId.SpectatorMode: Player.IsPlaying = !v; break;
