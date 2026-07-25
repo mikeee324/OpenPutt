@@ -53,6 +53,7 @@ namespace dev.mikeee324.OpenPutt
         BallGrounded = 208,
         BallSnapping = 209,
         SpectatorMode = 210,
+        ShoulderPickupRenderer = 211,
 
         // int (Dropdown)
         // VelocityTracking = 300,
@@ -309,6 +310,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.BallGrounded: return Player.golfBall.ballGroundedDebug;
                 case SettingId.BallSnapping: return Player.golfBall.enableBallSnap;
                 case SettingId.SpectatorMode: return !Player.IsPlaying;
+                case SettingId.ShoulderPickupRenderer: return Utilities.IsValid(OpenPutt.leftShoulderPickup) && OpenPutt.leftShoulderPickup.MeshRendererEnabled;
             }
             return false;
         }
@@ -331,6 +333,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.BallGrounded: Player.golfBall.ballGroundedDebug = v; break;
                 case SettingId.BallSnapping: Player.golfBall.enableBallSnap = v; break;
                 case SettingId.SpectatorMode: Player.IsPlaying = !v; break;
+                case SettingId.ShoulderPickupRenderer:
+                    if (Utilities.IsValid(OpenPutt.leftShoulderPickup)) OpenPutt.leftShoulderPickup.MeshRendererEnabled = v;
+                    if (Utilities.IsValid(OpenPutt.rightShoulderPickup)) OpenPutt.rightShoulderPickup.MeshRendererEnabled = v;
+                    break;
                 case SettingId.ClubRenderer: Player.golfClubVisualiser.gameObject.SetActive(v); break;
                 case SettingId.FootCollider:
                     OpenPutt.footCollider.gameObject.SetActive(v);

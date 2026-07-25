@@ -56,6 +56,21 @@ namespace dev.mikeee324.OpenPutt
         [OpenPuttFoldoutGroup("Object Settings")]
         public VRCPickup pickup;
 
+        [OpenPuttFoldoutGroup("Object Settings")]
+        [Tooltip("The renderer showing this object's mesh while it's mounted/held - can be toggled off separately from the pickup itself")]
+        public MeshRenderer meshRenderer;
+
+        /// <summary>Shows/hides <see cref="meshRenderer"/> without disabling the pickup functionality</summary>
+        public bool MeshRendererEnabled
+        {
+            get => Utilities.IsValid(meshRenderer) && meshRenderer.enabled;
+            set
+            {
+                if (Utilities.IsValid(meshRenderer))
+                    meshRenderer.enabled = value;
+            }
+        }
+
         [OpenPuttFoldoutGroup("Mounting Settings")]
         [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
@@ -159,6 +174,9 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
+
+            if (!Utilities.IsValid(meshRenderer))
+                meshRenderer = GetComponent<MeshRenderer>();
 
             if (!Utilities.IsValid(mountingOffsetHeightScale) || mountingOffsetHeightScale.length == 0)
             {
