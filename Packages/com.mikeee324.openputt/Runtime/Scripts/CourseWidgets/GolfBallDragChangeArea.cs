@@ -11,7 +11,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(0)]
     public class GolfBallDragChangeArea : UdonSharpBehaviour
     {
-        [OpenPuttDescription("Slows down (or speeds up) golf balls while they are inside this trigger area, such as to simulate rough grass or a boost pad.")]
+        [OpenPuttDescription("Slows down (or speeds up) golf balls while they are inside this trigger area, such as to simulate rough grass or sand.")]
         [SerializeField]
         private float dragInArea;
 

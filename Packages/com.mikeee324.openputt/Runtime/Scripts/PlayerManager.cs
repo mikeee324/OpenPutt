@@ -626,6 +626,14 @@ namespace dev.mikeee324.OpenPutt
 
             var course = CurrentCourse;
 
+            if (course.courseType != CourseType.Standard)
+            {
+                // Driving ranges don't have a stroke limit - just end this attempt and let them start again
+                _OnCourseFinished(course, null, CourseState.Completed);
+                _OnCourseStarted(course);
+                return;
+            }
+
             _NotifyMaxScoreReached(course);
 
             _OnCourseFinished(course, null, CourseState.Skipped);
