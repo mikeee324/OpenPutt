@@ -134,6 +134,11 @@ namespace dev.mikeee324.OpenPutt
                 // If the state of the club has changed
                 if (ClubIsArmed != value)
                 {
+                    // Arming with a club that isn't allowed off course - swap to the putter before it locks in
+                    // (the ClubType setter refuses changes once _clubArmed is true)
+                    if (value)
+                        _ResetToPutterIfNotAllowedOffCourse();
+
                     _clubArmed = value;
 
                     if (this.LocalPlayerOwnsThisObject())
@@ -697,6 +702,23 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Picking the club back up usually means the player is done with their last shot/course - if clubs
+        /// other than the putter aren't allowed off course, swap them back to it now rather than waiting for
+        /// their next swing.
+        /// </summary>
+        public void _ResetToPutterIfNotAllowedOffCourse()
+        {
+            if (!Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.openPutt) || !this.LocalPlayerOwnsThisObject())
+                return;
+
+            if (Utilities.IsValid(playerManager.CurrentCourse) || playerManager.openPutt.allowAnyClubOffCourse)
+                return;
+
+            if (ClubType != GolfClubType.Putter)
+                ClubType = GolfClubType.Putter;
+        }
+
+        /// <summary>
         /// Called by external scripts when the club has been picked up
         /// </summary>
         public void _OnScriptPickup()
@@ -705,6 +727,8 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             framesHeld = 0;
+
+            _ResetToPutterIfNotAllowedOffCourse();
 
             var ballShoulderPickup = shoulderPickup;
             if (Utilities.IsValid(ballShoulderPickup))
@@ -814,6 +838,8 @@ namespace dev.mikeee324.OpenPutt
             SyncHandMode();
 
             framesHeld = 0;
+
+            _ResetToPutterIfNotAllowedOffCourse();
 
             ResetClubThrow();
 

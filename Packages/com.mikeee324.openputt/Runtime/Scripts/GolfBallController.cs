@@ -664,6 +664,11 @@ namespace dev.mikeee324.OpenPutt
 
             pickedUpByPlayer = true;
 
+            // Picking the ball up usually means the player is done with this shot/course - if clubs other than
+            // the putter aren't allowed off course, swap them back to it now rather than waiting for their next swing
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
+                playerManager.golfClub._ResetToPutterIfNotAllowedOffCourse();
+
             if (ballHeldInHand != VRC_Pickup.PickupHand.None && ballHeldInHand != shoulderBallHeldInHand)
             {
                 if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(ballShoulderPickup.pickup))
@@ -821,6 +826,11 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public void _OnScriptPickup()
         {
+            // Picking the ball up usually means the player is done with this shot/course - if clubs other than
+            // the putter aren't allowed off course, swap them back to it now rather than waiting for their next swing
+            if (Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.golfClub))
+                playerManager.golfClub._ResetToPutterIfNotAllowedOffCourse();
+
             var onCourse = Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.CurrentCourse);
             var onStandardCourse = onCourse && playerManager.CurrentCourse.courseType == CourseType.Standard;
 
