@@ -543,6 +543,9 @@ namespace dev.mikeee324.OpenPutt
             var currentCourse = playerManager.CurrentCourse;
             var currentCourseIsDrivingRange = Utilities.IsValid(currentCourse) && currentCourse.courseType != CourseType.Standard;
 
+            // Volleying an already-airborne ball shouldn't get relaunched at the club's loft angle/backspin - just redirect it
+            var isMidairHit = golfBall.BallIsMoving && !golfBall.OnGround;
+
             // Make sure the player isn't hitting with a club that isn't allowed on this course
             if (Utilities.IsValid(currentCourse))
             {
@@ -572,7 +575,8 @@ namespace dev.mikeee324.OpenPutt
 
             var isAttachedToClub = !Utilities.IsValid(targetOverride);
 
-            if (golfBall.gravityMagnitude > 0f)
+            // Midair hits keep their real (unflattened) swing direction instead of being flattened+relofted
+            if (golfBall.gravityMagnitude > 0f && !isMidairHit)
                 directionOfTravel = directionOfTravel.FlattenDirection(gravityUp);
 
             // Collider is following something other than the club - use its rigidbody velocity instead, no side spin
@@ -582,13 +586,14 @@ namespace dev.mikeee324.OpenPutt
                 velocityMagnitude = FrameVelocitySmoothed.magnitude;
             }
 
-            // Capture the horizontal (pre-loft) travel direction, used for face angle/spin calculations below
-            var flatDirectionOfTravel = directionOfTravel.normalized.Sanitized();
+            // Capture the horizontal travel direction, used for face angle/spin calculations below.
+            // Computed independently of the flatten skip above - faceDirection is always horizontal, so this must be too or the dot products below go wrong for midair hits.
+            var flatDirectionOfTravel = (hasGravity ? directionOfTravel.FlattenDirection(gravityUp) : directionOfTravel).normalized.Sanitized();
 
             // Dynamic loft: flattens launch loft/backspin as clubhead speed rises (driving range only)
             var loftFalloff = currentCourseIsDrivingRange ? loftSpeedFalloff.Evaluate(velocityMagnitude) : 1f;
 
-            if (hasGravity)
+            if (hasGravity && !isMidairHit)
             {
                 // Apply loft
                 var rotationAxis = Vector3.Cross(directionOfTravel, gravityUp);
@@ -676,10 +681,13 @@ namespace dev.mikeee324.OpenPutt
                         sideSpin = sideSpinAxis * sideSpinSpeed;
 
                         // Backspin from loft turns into lift so lofted shots float and land soft (independent of face angle)
-                        var backspinAxis = Vector3.Cross(gravityUp, flatDirectionOfTravel).normalized;
-                        var loftRadians = golfClub.ClubType.GetTypicalLoft() * Mathf.Deg2Rad;
-                        var backspinSpeed = Mathf.Sin(loftRadians) * velocityMagnitude * backspinMultiplier * loftFalloff;
-                        sideSpin += backspinAxis * backspinSpeed;
+                        if (!isMidairHit)
+                        {
+                            var backspinAxis = Vector3.Cross(gravityUp, flatDirectionOfTravel).normalized;
+                            var loftRadians = golfClub.ClubType.GetTypicalLoft() * Mathf.Deg2Rad;
+                            var backspinSpeed = Mathf.Sin(loftRadians) * velocityMagnitude * backspinMultiplier * loftFalloff;
+                            sideSpin += backspinAxis * backspinSpeed;
+                        }
                     }
                 }
             }
