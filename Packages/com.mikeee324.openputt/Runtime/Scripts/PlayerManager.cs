@@ -429,7 +429,7 @@ namespace dev.mikeee324.OpenPutt
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
-                    if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || CurrentCourse.courseIsAlwaysReplayable))
+                    if (Utilities.IsValid(openPutt) && (openPutt.practiceMode || CurrentCourse.courseIsAlwaysReplayable))
                     {
                         courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
                         if (CurrentCourse.courseType == CourseType.Standard)
@@ -529,7 +529,7 @@ namespace dev.mikeee324.OpenPutt
                 if (CurrentCourse == course)
                 {
                     _OnCourseFinished(course, null, CourseState.Completed);
-                    if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || course.courseIsAlwaysReplayable))
+                    if (Utilities.IsValid(openPutt) && (openPutt.practiceMode || course.courseIsAlwaysReplayable))
                         _OnCourseStarted(course);
                 }
                 else
@@ -568,7 +568,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            var canReplayCourses = Utilities.IsValid(openPutt) && openPutt.replayableCourses;
+            var canReplayCourses = Utilities.IsValid(openPutt) && openPutt.practiceMode;
 
             var newCourseOldState = courseStates[newCourse.holeNumber];
             if (newCourseOldState == CourseState.Completed || newCourseOldState == CourseState.PlayedAndSkipped)
@@ -636,7 +636,9 @@ namespace dev.mikeee324.OpenPutt
 
             _NotifyMaxScoreReached(course);
 
-            _OnCourseFinished(course, null, CourseState.Skipped);
+            // Skipped allows a free restart; PlayedAndSkipped is gated by practiceMode like Completed.
+            // They already started this course, so use PlayedAndSkipped to stop restart-spam via the shoulder skip.
+            _OnCourseFinished(course, null, CourseState.PlayedAndSkipped);
         }
 
         public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)

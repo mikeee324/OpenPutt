@@ -39,7 +39,13 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Defines which course this scoreboard is attached to. Used to toggle visibility when the player finishes a course")]
         public int attachedToCourse = -1;
 
+        [OpenPuttFoldoutGroup("Settings")]
+        [Tooltip("Within this distance the viewing angle check is skipped entirely (the board counts as visible no matter which way the player is facing). The required viewing angle widens smoothly from the normal FOV-based cone down to this radius.")]
+        public float closeRangeFullVisibilityRadius = 2f;
+
         public bool CanvasWasEnabledAtStart { get; private set; }
+
+        private Vector3[] _worldCorners = new Vector3[4];
 
         void Start()
         {
@@ -54,15 +60,23 @@ namespace dev.mikeee324.OpenPutt
         {
             var isNowActive = false;
 
-            // Distance uses the (optional) nearby center transform, but look direction targets the positioner itself
-            var nearbyPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+            // Distance and look direction both target the closest point on the board's physical surface (rather than
+            // a single pivot), so large boards behave consistently no matter which part of them the player is near/looking at
+            var closestPoint = ClosestPointOnBoard(viewPosition);
 
-            var scoreboardDistance = Vector3.Distance(viewPosition, nearbyPos);
+            var scoreboardDistance = Vector3.Distance(viewPosition, closestPoint);
             distanceToViewer = scoreboardDistance;
             var playerIsNearby = scoreboardDistance < nearbyMaxRadius;
 
-            var normalizedDirectionToScoreboard = (transform.position - viewPosition).normalized;
-            var playerIsLookingToward = Vector3.Dot(viewForward, normalizedDirectionToScoreboard) >= ViewDotThreshold(viewFieldOfView);
+            var normalizedDirectionToScoreboard = (closestPoint - viewPosition).normalized;
+
+            var proximity = 0f;
+            if (nearbyMaxRadius > closeRangeFullVisibilityRadius)
+                proximity = Mathf.Clamp01((nearbyMaxRadius - scoreboardDistance) / (nearbyMaxRadius - closeRangeFullVisibilityRadius));
+            else if (scoreboardDistance <= closeRangeFullVisibilityRadius)
+                proximity = 1f;
+
+            var playerIsLookingToward = Vector3.Dot(viewForward, normalizedDirectionToScoreboard) >= ViewDotThreshold(viewFieldOfView, proximity);
 
             // Board only readable from its front face, so ignore players standing behind it
             var boardIsFacingPlayer = Vector3.Dot(transform.forward, -normalizedDirectionToScoreboard) > 0f;
@@ -106,21 +120,53 @@ namespace dev.mikeee324.OpenPutt
             if (interactionMaxRadius <= 0f)
                 return true;
 
-            var scoreboardPos = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
-
-            return Vector3.Distance(viewPosition, scoreboardPos) <= interactionMaxRadius;
+            return Vector3.Distance(viewPosition, ClosestPointOnBoard(viewPosition)) <= interactionMaxRadius;
         }
 
         /// <summary>
-        /// Min dot product the scoreboard direction must clear to count as on screen. Loosens with wider FOV.
+        /// Closest point on the board's physical rectangle (from backgroundCanvas's RectTransform) to the given position.
+        /// Falls back to the (optional) nearby center transform or the positioner's own transform if no canvas is set.
         /// </summary>
-        private float ViewDotThreshold(float verticalFieldOfView)
+        private Vector3 ClosestPointOnBoard(Vector3 viewPosition)
+        {
+            RectTransform rectTransform = null;
+            if (Utilities.IsValid(backgroundCanvas))
+                rectTransform = backgroundCanvas.GetComponent<RectTransform>();
+
+            if (!Utilities.IsValid(rectTransform))
+                return Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+
+            rectTransform.GetWorldCorners(_worldCorners);
+
+            // Corners are ordered bottom-left, top-left, top-right, bottom-right
+            var origin = _worldCorners[0];
+            var uAxis = _worldCorners[3] - origin;
+            var vAxis = _worldCorners[1] - origin;
+            var uLen = uAxis.magnitude;
+            var vLen = vAxis.magnitude;
+            var uDir = uLen > 0f ? uAxis / uLen : transform.right;
+            var vDir = vLen > 0f ? vAxis / vLen : transform.up;
+
+            var toPoint = viewPosition - origin;
+            var u = Mathf.Clamp(Vector3.Dot(toPoint, uDir), 0f, uLen);
+            var v = Mathf.Clamp(Vector3.Dot(toPoint, vDir), 0f, vLen);
+
+            return origin + uDir * u + vDir * v;
+        }
+
+        /// <summary>
+        /// Min dot product the scoreboard direction must clear to count as on screen. Loosens with wider FOV, and widens all the way
+        /// to a full 360 degrees as proximity approaches 1 (player within closeRangeFullVisibilityRadius).
+        /// </summary>
+        private float ViewDotThreshold(float verticalFieldOfView, float proximity)
         {
             // Vertical FOV widened to horizontal half-angle, assuming 16:9 (Udon can't read Screen size)
             const float aspect = 16f / 9f;
             var halfVerticalRad = verticalFieldOfView * 0.5f * Mathf.Deg2Rad;
             var halfHorizontalRad = Mathf.Atan(Mathf.Tan(halfVerticalRad) * aspect);
-            return Mathf.Cos(halfHorizontalRad);
+            var baseThreshold = Mathf.Cos(halfHorizontalRad);
+
+            return Mathf.Lerp(baseThreshold, -1f, proximity);
         }
 
         private void OnDrawGizmosSelected()
@@ -135,6 +181,9 @@ namespace dev.mikeee324.OpenPutt
                 case ScoreboardVisibility.NearbyOnly:
                 case ScoreboardVisibility.NearbyAndCourseFinished:
                     Gizmos.DrawWireSphere(center, nearbyMaxRadius);
+
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawWireSphere(center, closeRangeFullVisibilityRadius);
                     break;
             }
 

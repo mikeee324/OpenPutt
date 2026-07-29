@@ -55,6 +55,10 @@ namespace dev.mikeee324.OpenPutt
         [OpenPuttFoldoutGroup("Menu Settings")]
         public bool hideOnStart = true;
 
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [Tooltip("How quickly the menu rotates to face the head. Lower values are snappier, higher values are smoother but can look laggy when turning quickly. Set to 0 to disable smoothing.")]
+        public float rotationSmoothTime = 0.08f;
+
         [OpenPuttFoldoutGroup("Vibration Settings")]
         [Tooltip("The duration of the vibration in seconds.")]
         public float vibrationDuration = 0.1f;
@@ -87,6 +91,7 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 menuSpawnPosition = Vector3.zero;
         private Quaternion menuSpawnRotation = Quaternion.identity;
         private Vector3 menuSpawnScale = Vector3.one;
+        private Quaternion currentMenuRotation = Quaternion.identity;
 
         void Start()
         {
@@ -136,6 +141,13 @@ namespace dev.mikeee324.OpenPutt
                     return;
                 }
 
+                // Don't fight VRC's own pickup transform tracking if the menu is already being held/thrown normally
+                if (Utilities.IsValid(pickup) && pickup.IsHeld)
+                {
+                    originalHandDistance = -1f;
+                    return;
+                }
+
                 var bothTriggersHeld = leftUseButtonDown && rightUseButtonDown;
 
                 if (!bothTriggersHeld) return;
@@ -147,6 +159,7 @@ namespace dev.mikeee324.OpenPutt
                 var currentDistance = Vector3.Distance(leftHand, rightHand);
 
                 var isVisibleNow = currentDistance > (originalHandDistance * openThreshold);
+                var justBecameVisible = isVisibleNow && !isCurrentlyVisible;
 
                 if (isCurrentlyVisible != isVisibleNow)
                 {
@@ -222,7 +235,18 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 // Flip the menu by 180 degrees so it faces the player correctly
-                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, finalRot * Quaternion.Euler(0f, 180f, 0f));
+                var targetMenuRotation = finalRot * Quaternion.Euler(0f, 180f, 0f);
+                if (justBecameVisible || rotationSmoothTime <= 0f)
+                {
+                    currentMenuRotation = targetMenuRotation;
+                }
+                else
+                {
+                    var rotationLerp = 1f - Mathf.Exp(-Time.deltaTime / rotationSmoothTime);
+                    currentMenuRotation = Quaternion.Slerp(currentMenuRotation, targetMenuRotation, rotationLerp);
+                }
+
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, currentMenuRotation);
                 visibleMenuObject.transform.localScale = menuScale * 1.2f;
             }
             else if (Input.GetKey(menuKey))

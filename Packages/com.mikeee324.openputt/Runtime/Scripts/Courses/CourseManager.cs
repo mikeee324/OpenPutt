@@ -28,7 +28,7 @@ namespace dev.mikeee324.OpenPutt
         Playing = 1,
 
         /// <summary>
-        /// This course has been completed by the player and can only be restarted if the global "Replayable courses" option is enabled
+        /// This course has been completed by the player and can only be restarted if the global "Practice Mode" option is enabled
         /// </summary>
         Completed = 2,
 
@@ -99,7 +99,7 @@ namespace dev.mikeee324.OpenPutt
         public bool clampClubSpeed = true;
 
         [OpenPuttFoldoutGroup("Course Settings")]
-        [Tooltip("Overrides the global replayable courses setting")]
+        [Tooltip("Overrides the global practice mode setting")]
         public bool courseIsAlwaysReplayable;
 
         [OpenPuttFoldoutGroup("Course Settings")]

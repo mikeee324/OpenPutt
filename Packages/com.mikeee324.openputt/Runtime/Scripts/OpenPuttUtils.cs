@@ -152,6 +152,12 @@ namespace dev.mikeee324.OpenPutt
         public static bool LocalPlayerIsValid() => Utilities.IsValid(Networking.LocalPlayer);
 
         /// <summary>
+        /// Checks if the local player is the current instance master (auto-migrates, unlike isInstanceOwner).
+        /// </summary>
+        /// <returns>True if the local player is the current instance master</returns>
+        public static bool LocalPlayerIsInstanceMaster() => LocalPlayerIsValid() && Networking.LocalPlayer.isMaster;
+
+        /// <summary>
         /// Gets a UNIX-like timestamp but starts at 2023-01-01 00:00:00 UTC so float precision is better (maybe?)
         /// </summary>
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>

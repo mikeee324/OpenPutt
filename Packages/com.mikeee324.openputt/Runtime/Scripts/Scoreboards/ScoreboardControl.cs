@@ -46,7 +46,7 @@ namespace dev.mikeee324.OpenPutt
         ClubThrow = 201,
         ClubAutoHold = 202,
         EnableBigShaft = 203,
-        CourseReplays = 204,
+        PracticeMode = 204,
         DevForAll = 205,
         FootCollider = 206,
         ClubRenderer = 207,
@@ -169,6 +169,10 @@ namespace dev.mikeee324.OpenPutt
         public void OnChanged()
         {
             if (suppressCallback || !IsReady)
+                return;
+
+            // Master-only setting - bail before touching anything
+            if (id == SettingId.PracticeMode && !OpenPuttUtils.LocalPlayerIsInstanceMaster())
                 return;
 
             switch (kind)
@@ -303,7 +307,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.ClubThrow: return Player.golfClub.throwEnabled;
                 case SettingId.ClubAutoHold: return Player.golfClub.AutoHoldEnabled;
                 case SettingId.EnableBigShaft: return Player.golfClub.enableBigShaft;
-                case SettingId.CourseReplays: return OpenPutt.replayableCourses;
+                case SettingId.PracticeMode: return OpenPutt.practiceMode;
                 case SettingId.DevForAll: return OpenPutt.enableDevModeForAll;
                 case SettingId.FootCollider: return OpenPutt.footCollider.gameObject.activeSelf;
                 case SettingId.ClubRenderer: return Player.golfClubVisualiser.gameObject.activeSelf;
@@ -323,10 +327,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.ClubThrow: Player.golfClub.throwEnabled = v; break;
                 case SettingId.ClubAutoHold: Player.golfClub.AutoHoldEnabled = v; break;
                 case SettingId.EnableBigShaft: Player.golfClub.enableBigShaft = v; break;
-                case SettingId.CourseReplays:
+                case SettingId.PracticeMode:
                 {
                     OpenPuttUtils.SetOwner(Networking.LocalPlayer, OpenPutt.gameObject);
-                    OpenPutt.replayableCourses = v;
+                    OpenPutt.practiceMode = v;
                     OpenPutt.RequestSerialization();
                     break;
                 }

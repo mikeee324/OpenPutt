@@ -436,12 +436,12 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Updates the settings page on all scoreboards if the settings tab is currently visible
         /// </summary>
-        public void RefreshSettingsIfVisible()
+        public void RefreshAllSettingsMenus()
         {
             if (requestedScoreboardView != ScoreboardView.Settings)
                 return;
 
-            foreach (var scoreboard in scoreboards)
+            foreach (var scoreboard in allScoreboards)
                 scoreboard.RefreshSettingsMenu();
         }
 

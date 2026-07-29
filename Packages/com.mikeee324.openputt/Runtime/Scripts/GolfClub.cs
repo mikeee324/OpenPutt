@@ -571,6 +571,9 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(handleCollider))
                 handleCollider.enabled = clubCanBePickedUp;
+
+            if (Utilities.IsValid(shaftCollider))
+                shaftCollider.enabled = clubCanBePickedUp;
         }
 
         /// <summary>
@@ -927,7 +930,7 @@ namespace dev.mikeee324.OpenPutt
                     playerManager.openPutt._SavePersistantData();
 
                 if (Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.scoreboardManager))
-                    playerManager.openPutt.scoreboardManager.RefreshSettingsIfVisible();
+                    playerManager.openPutt.scoreboardManager.RefreshAllSettingsMenus();
             }
         }
 

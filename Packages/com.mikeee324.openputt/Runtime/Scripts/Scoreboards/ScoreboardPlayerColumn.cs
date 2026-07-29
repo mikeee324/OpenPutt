@@ -56,8 +56,8 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     if (ct == CourseType.DrivingRangeDistance || ct == CourseType.DrivingRangeWithTargets)
                         continue;
                 }
-                // TODO: Maybe count skipped courses as completed too?
-                if (player.courseStates[i] != CourseState.Completed)
+                var state = player.courseStates[i];
+                if (state != CourseState.Completed && state != CourseState.PlayedAndSkipped)
                 {
                     finishedAllCourses = false;
                     break;

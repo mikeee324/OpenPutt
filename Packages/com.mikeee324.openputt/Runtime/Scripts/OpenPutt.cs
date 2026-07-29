@@ -71,8 +71,9 @@ namespace dev.mikeee324.OpenPutt
         #region Game Settings
 
         [OpenPuttFoldoutGroup("Game Settings")]
-        [UdonSynced, Tooltip("Toggles whether players can replay courses (Can be changed at runtime by the instance master)")]
-        public bool replayableCourses;
+        [FormerlySerializedAs("replayableCourses")]
+        [UdonSynced, Tooltip("Practice mode - lets players replay courses they've already completed/skipped. Can only be toggled at runtime by the current instance master")]
+        public bool practiceMode;
 
         [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Allows players to play courses in any order (Just stops skipped courses showing up red on scoreboards)")]
@@ -273,7 +274,7 @@ namespace dev.mikeee324.OpenPutt
         public override void OnDeserialization()
         {
             if (Utilities.IsValid(scoreboardManager))
-                scoreboardManager.RefreshSettingsIfVisible();
+                scoreboardManager.RefreshAllSettingsMenus();
         }
 
         public void _UpdateRefreshSettings(int numberOfPlayers)

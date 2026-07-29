@@ -50,6 +50,10 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Vertical offset from hand center for VR UI anchor")]
         public float handHeightOffset = 0.1f;
 
+        [OpenPuttFoldoutGroup("Visibility Animation")]
+        [Tooltip("How quickly the palm UI rotates to face the head. Lower values are snappier, higher values are smoother but can look laggy when turning quickly. Set to 0 to disable smoothing.")]
+        public float vrUIRotationSmoothTime = 0.08f;
+
         // [Header("Debug")]
         // [Tooltip("Line renderer to show palm direction")]
         // public LineRenderer debugPalmLine;
@@ -66,6 +70,7 @@ namespace dev.mikeee324.OpenPutt
         private float vrUIVisibilityDirection = 0f;
         private bool isInitialised = false;
         private bool isInVR = false;
+        private Quaternion vrUICurrentRotation = Quaternion.identity;
 
         private void UpdateScaleFromEyeHeight(float eyeHeightAsMeters)
         {
@@ -131,13 +136,24 @@ namespace dev.mikeee324.OpenPutt
             bool isLeftHandedMode = Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.LocalPlayerManager) && openPutt.LocalPlayerManager.IsInLeftHandedMode;
             bool nonDominantIsLeftHand = !isLeftHandedMode;
 
-            var handData = localPlayer.GetTrackingData(nonDominantIsLeftHand ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand);
+            // While the fetch ball panel is forced visible, anchor the UI to whichever hand is actually
+            // holding the ball on the shoulder mount rather than assuming it's the non-dominant hand.
+            bool showingFetchBallPanel = Utilities.IsValid(uiController) && uiController.FetchBallPanelVisible;
+            bool useLeftHand = nonDominantIsLeftHand;
+            if (showingFetchBallPanel && Utilities.IsValid(openPutt))
+            {
+                var ballShoulderPickup = isLeftHandedMode ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
+                if (Utilities.IsValid(ballShoulderPickup) && ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                    useLeftHand = ballShoulderPickup.heldInHand == VRC_Pickup.PickupHand.Left;
+            }
+
+            var handData = localPlayer.GetTrackingData(useLeftHand ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand);
             var headData = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
 
             Vector3 handPosition = handData.position;
             Vector3 targetPosition = handPosition + Vector3.up * (handHeightOffset * vrUIDistanceScaleMultiplier);
 
-            Vector3 palmUpDirection = handData.rotation * (nonDominantIsLeftHand ? Vector3.up : Vector3.down);
+            Vector3 palmUpDirection = handData.rotation * (useLeftHand ? Vector3.up : Vector3.down);
             float showThreshold = Mathf.Clamp01(palmUpShowThreshold);
             float hideThreshold = Mathf.Clamp01(palmUpHideThreshold);
             if (hideThreshold > showThreshold)
@@ -155,15 +171,19 @@ namespace dev.mikeee324.OpenPutt
 
             // Override: force the palm UI open while the fetch ball panel needs to be seen (ball held on
             // shoulder mount during a standard course), regardless of palm orientation.
-            if (Utilities.IsValid(uiController) && uiController.FetchBallPanelVisible)
+            if (showingFetchBallPanel)
                 palmFacingUp = true;
 
             if (palmFacingUp != vrUIVisibilityTarget)
                 vrUIVisibilityDirection = palmFacingUp ? 1f : -1f;
 
             vrUIVisibilityTarget = palmFacingUp;
+            bool vrUIJustActivated = false;
             if (vrUIVisibilityTarget && !vrUIRoot.gameObject.activeSelf)
+            {
                 vrUIRoot.gameObject.SetActive(true);
+                vrUIJustActivated = true;
+            }
 
             // draw debug lines for palm direction and world up when debugMode is enabled
             // if (Utilities.IsValid(openPutt) && openPutt.debugMode)
@@ -208,9 +228,23 @@ namespace dev.mikeee324.OpenPutt
             Vector3 toHeadDirection = (headData.position - animatedPosition).normalized;
 
             if (toHeadDirection.sqrMagnitude > 0.001f)
-                vrUIRoot.SetPositionAndRotation(animatedPosition, Quaternion.LookRotation(-toHeadDirection, Vector3.up));
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(-toHeadDirection, Vector3.up);
+                if (vrUIJustActivated || vrUIRotationSmoothTime <= 0f)
+                {
+                    vrUICurrentRotation = targetRotation;
+                }
+                else
+                {
+                    float rotationLerp = 1f - Mathf.Exp(-Time.deltaTime / vrUIRotationSmoothTime);
+                    vrUICurrentRotation = Quaternion.Slerp(vrUICurrentRotation, targetRotation, rotationLerp);
+                }
+                vrUIRoot.SetPositionAndRotation(animatedPosition, vrUICurrentRotation);
+            }
             else
+            {
                 vrUIRoot.position = animatedPosition;
+            }
 
             vrUIRoot.localScale = vrUITargetScale * curvedLerp;
 
