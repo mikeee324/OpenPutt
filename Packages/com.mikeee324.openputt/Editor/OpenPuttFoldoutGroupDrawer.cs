@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +32,29 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
 
     private OpenPuttFoldoutGroupAttribute Attr => (OpenPuttFoldoutGroupAttribute)attribute;
 
+    // Unity keeps one drawer instance per property, so anything that depends only on this drawer's field and its
+    // declaring type can be worked out once and reused for the lifetime of the instance. resolvedForType guards the
+    // (unlikely) case of an instance being recycled onto a different type.
+    private Type resolvedForType;
+    private bool resolvedIsListLike;
+    private bool resolvedIsLeader;
+    private List<FieldInfo> resolvedGroupFields;
+
+    // $"{id}_{group}" was being rebuilt on every GetPropertyHeight and OnGUI for every grouped field - 138 throwaway
+    // strings per event on Scoreboard. The instance id only changes when the inspector switches objects.
+    private int resolvedStateKeyId;
+    private string resolvedStateKey;
+
+    private GUIContent headerLabel;
+
+    // The leader needs a SerializedProperty and a height for each of its members, in both GetPropertyHeight and the
+    // OnGUI that immediately follows it. FindProperty is a linear walk of the property tree, so doing it 50 times in
+    // each of those two calls is the bulk of what is left. Build the list once in GetPropertyHeight and reuse it in
+    // OnGUI - the two run back to back within a single event, so the properties cannot go stale in between.
+    private SerializedObject memberCacheOwner;
+    private readonly List<SerializedProperty> memberProperties = new List<SerializedProperty>();
+    private readonly List<float> memberHeights = new List<float>();
+
 
     // Unity never routes an attribute-based PropertyDrawer to an array/List field's own container property (only
     // to its elements), so grouping one alongside our leader would draw it once via the leader's manual loop and
@@ -38,16 +62,35 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
     // means they just render at their normal default position instead - not grouped, but not duplicated either.
     private static bool IsListLike(FieldInfo f) => f.FieldType != typeof(string) && typeof(IList).IsAssignableFrom(f.FieldType);
 
+    // Both GetPropertyHeight and OnGUI run for every grouped field on every IMGUI event, and IMGUI fires several
+    // events per frame - so the reflection scan below used to run thousands of times a frame on big components like
+    // Scoreboard (69 grouped fields). Which fields carry the attribute is fixed for a type until the next domain
+    // reload (which clears these statics), so the whole result is cached per type + group name.
+    private static readonly Dictionary<Type, Dictionary<string, List<FieldInfo>>> GroupFieldCache = new Dictionary<Type, Dictionary<string, List<FieldInfo>>>();
+
     private List<FieldInfo> GetGroupFields(SerializedProperty property)
     {
         var targetType = property.serializedObject.targetObject.GetType();
+
+        if (!GroupFieldCache.TryGetValue(targetType, out var groupsForType))
+        {
+            groupsForType = new Dictionary<string, List<FieldInfo>>();
+            GroupFieldCache[targetType] = groupsForType;
+        }
+
+        if (groupsForType.TryGetValue(Attr.GroupName, out var cached))
+            return cached;
+
         var groupFields = targetType
             .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
             .Where(f => !IsListLike(f) && f.GetCustomAttribute<OpenPuttFoldoutGroupAttribute>()?.GroupName == Attr.GroupName)
             // Fields of non-serializable types (eg. MaterialPropertyBlock) have no backing SerializedProperty -
-            // skip them here rather than crashing later when FindProperty comes back null.
+            // skip them here rather than crashing later when FindProperty comes back null. Whether a field is
+            // serialized is a property of the type, so this stays valid for every instance we cache against.
             .Where(f => property.serializedObject.FindProperty(f.Name) != null)
             .ToList();
+
+        groupsForType[Attr.GroupName] = groupFields;
 
         // [OpenPuttDescription] is a DecoratorDrawer and always draws itself in Unity's normal top-level iteration.
         // On the group LEADER that's exactly right: the field's natural position is the top of the component, so the
@@ -69,34 +112,86 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
         return groupFields;
     }
 
-    private bool IsGroupLeader(List<FieldInfo> groupFields) => groupFields.Count > 0 && groupFields[0] == fieldInfo;
+    // Works out (once per drawer instance) whether this field is list-like and whether it leads its group.
+    private void Resolve(SerializedProperty property)
+    {
+        var targetType = property.serializedObject.targetObject.GetType();
+        if (resolvedForType == targetType)
+            return;
 
-    private string StateKey(SerializedProperty property) => $"{property.serializedObject.targetObject.GetInstanceID()}_{Attr.GroupName}";
+        resolvedForType = targetType;
+        resolvedIsListLike = IsListLike(fieldInfo);
+        resolvedGroupFields = resolvedIsListLike ? null : GetGroupFields(property);
+        resolvedIsLeader = !resolvedIsListLike && resolvedGroupFields.Count > 0 && resolvedGroupFields[0] == fieldInfo;
+    }
+
+    private string StateKey(SerializedProperty property)
+    {
+        var id = property.serializedObject.targetObject.GetInstanceID();
+        if (resolvedStateKey == null || resolvedStateKeyId != id)
+        {
+            resolvedStateKeyId = id;
+            resolvedStateKey = $"{id}_{Attr.GroupName}";
+        }
+
+        return resolvedStateKey;
+    }
+
+    private bool IsExpanded(SerializedProperty property) => FoldoutStates.TryGetValue(StateKey(property), out var expanded) ? expanded : Attr.DefaultExpanded;
+
+    // Fills memberProperties/memberHeights for the group and returns the total height of the members (excluding
+    // the header). Only the leader ever calls this, and only while the group is expanded.
+    private float BuildMemberCache(SerializedProperty property)
+    {
+        var serializedObject = property.serializedObject;
+        memberCacheOwner = serializedObject;
+        memberProperties.Clear();
+        memberHeights.Clear();
+
+        var total = 0f;
+        drawingGroupMember = true;
+        try
+        {
+            foreach (var f in resolvedGroupFields)
+            {
+                var prop = serializedObject.FindProperty(f.Name);
+                var height = EditorGUI.GetPropertyHeight(prop, true);
+                memberProperties.Add(prop);
+                memberHeights.Add(height);
+                total += height + EditorGUIUtility.standardVerticalSpacing;
+            }
+        }
+        finally
+        {
+            drawingGroupMember = false;
+        }
+
+        return total;
+    }
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         if (drawingGroupMember)
             return EditorGUI.GetPropertyHeight(property, label, true);
 
+        Resolve(property);
+
         // [OpenPuttFoldoutGroup] can't group an array/List field itself (see IsListLike) - if it's mistakenly
         // put on one anyway, ignore it and fall back to the field's normal rendering rather than drawing nothing.
-        if (IsListLike(fieldInfo))
+        if (resolvedIsListLike)
             return EditorGUI.GetPropertyHeight(property, label, true);
 
-        var groupFields = GetGroupFields(property);
-        if (!IsGroupLeader(groupFields))
+        if (!resolvedIsLeader)
             return -EditorGUIUtility.standardVerticalSpacing;
 
         var headerHeight = EditorGUIUtility.singleLineHeight;
-        if (!FoldoutStates.TryGetValue(StateKey(property), out var expanded))
-            expanded = Attr.DefaultExpanded;
-        if (!expanded)
+        if (!IsExpanded(property))
+        {
+            memberCacheOwner = null;
             return headerHeight;
+        }
 
-        var total = headerHeight;
-        foreach (var f in groupFields)
-            total += GetMemberHeight(property.serializedObject.FindProperty(f.Name)) + EditorGUIUtility.standardVerticalSpacing;
-        return total;
+        return headerHeight + BuildMemberCache(property);
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -107,14 +202,15 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
             return;
         }
 
-        if (IsListLike(fieldInfo))
+        Resolve(property);
+
+        if (resolvedIsListLike)
         {
             EditorGUI.PropertyField(position, property, label, true);
             return;
         }
 
-        var groupFields = GetGroupFields(property);
-        if (!IsGroupLeader(groupFields))
+        if (!resolvedIsLeader)
             return;
 
         var key = StateKey(property);
@@ -133,7 +229,9 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
         EditorStyles.foldout.fontStyle = FontStyle.Bold;
         try
         {
-            expanded = EditorGUI.Foldout(headerRect, expanded, Attr.GroupName, true, EditorStyles.foldout);
+            if (headerLabel == null)
+                headerLabel = new GUIContent(Attr.GroupName);
+            expanded = EditorGUI.Foldout(headerRect, expanded, headerLabel, true, EditorStyles.foldout);
         }
         finally
         {
@@ -146,42 +244,30 @@ public class OpenPuttFoldoutGroupDrawer : PropertyDrawer
         if (!expanded)
             return;
 
+        // Normally GetPropertyHeight has just run for this same event and left the members cached. It won't have if
+        // the click above is what expanded the group, so rebuild in that case (the rects will be a frame stale either
+        // way - the next repaint sorts it out, exactly as before).
+        if (memberCacheOwner != property.serializedObject)
+            BuildMemberCache(property);
+
         var y = position.y + EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
         EditorGUI.indentLevel++;
-        foreach (var f in groupFields)
+        drawingGroupMember = true;
+        try
         {
-            var prop = property.serializedObject.FindProperty(f.Name);
-            var height = GetMemberHeight(prop);
-            DrawMember(new Rect(position.x, y, position.width, height), prop);
-            y += height + EditorGUIUtility.standardVerticalSpacing;
+            for (var i = 0; i < memberProperties.Count; i++)
+            {
+                var height = memberHeights[i];
+                EditorGUI.PropertyField(new Rect(position.x, y, position.width, height), memberProperties[i], true);
+                y += height + EditorGUIUtility.standardVerticalSpacing;
+            }
         }
+        finally
+        {
+            drawingGroupMember = false;
+        }
+
         EditorGUI.indentLevel--;
-    }
-
-    private float GetMemberHeight(SerializedProperty prop)
-    {
-        drawingGroupMember = true;
-        try
-        {
-            return EditorGUI.GetPropertyHeight(prop, true);
-        }
-        finally
-        {
-            drawingGroupMember = false;
-        }
-    }
-
-    private void DrawMember(Rect rect, SerializedProperty prop)
-    {
-        drawingGroupMember = true;
-        try
-        {
-            EditorGUI.PropertyField(rect, prop, true);
-        }
-        finally
-        {
-            drawingGroupMember = false;
-        }
     }
 }
 #endif

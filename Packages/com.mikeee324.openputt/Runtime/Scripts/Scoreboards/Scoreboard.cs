@@ -25,6 +25,13 @@ namespace dev.mikeee324.OpenPutt
         Mobile
     }
 
+    public enum ScoreboardSettingsTab
+    {
+        Gameplay,
+        Appearance,
+        Audio
+    }
+
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
@@ -46,6 +53,9 @@ namespace dev.mikeee324.OpenPutt
         private bool isInteractable = true;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public RectTransform scoreboardHeader;
+        [Tooltip("Title label in the header - retitled to match whichever page is being shown (see the Header Titles group)")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public TextMeshProUGUI headerText;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas settingsPanel;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -59,6 +69,15 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Instructions content shown on the Info tab for Mobile players")]
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public GameObject infoMobileCanvas;
+        [Tooltip("Gameplay controls shown on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject settingsGameplayCanvas;
+        [Tooltip("Appearance controls shown on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject settingsAppearanceCanvas;
+        [Tooltip("Audio controls shown on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public GameObject settingsAudioCanvas;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas devModelPanel;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -96,6 +115,15 @@ namespace dev.mikeee324.OpenPutt
         public Button infoMobileTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button settingsTabBackground;
+        [Tooltip("Side button that selects the gameplay controls on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button settingsGameplayTabBackground;
+        [Tooltip("Side button that selects the appearance controls on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button settingsAppearanceTabBackground;
+        [Tooltip("Side button that selects the audio controls on the Settings tab")]
+        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
+        public Button settingsAudioTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button devModeTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -160,22 +188,69 @@ namespace dev.mikeee324.OpenPutt
         public float totalColumnWidth = 0.2f;
         [OpenPuttFoldoutGroup("Sizing")]
         public float columnPadding = 0.005f;
+        [Tooltip("Empty space left at the left and right edges of every row. Taken off the width the hole columns share between them.")]
+        [OpenPuttFoldoutGroup("Sizing")]
+        public float sidePadding = 0f;
         [OpenPuttFoldoutGroup("Sizing")]
         public float rowPadding = 0.01f;
         [OpenPuttFoldoutGroup("Sizing")]
         public float rowHeight = 0.15f;
+
+        [Space]
+        [Tooltip("Header title for the normal scores page")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleScoreboard = "Scoreboard";
+        [Tooltip("Header title for the scores page while it is showing lap times instead of shots")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleSpeedGolf = "Speed Golf";
+        [Tooltip("Header title for the Info page. {tab} is replaced with the name of the selected platform tab below.")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleInfo = "How To Play - {tab}";
+        [Tooltip("Header title for the Settings page. {tab} is replaced with the name of the selected settings tab below.")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleSettings = "Settings - {tab}";
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleDevMode = "Dev Mode";
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleOpenPutt = "OpenPutt";
+
+        [Tooltip("Name used for {tab} while the VR instructions are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleInfoVRTab = "VR";
+        [Tooltip("Name used for {tab} while the Desktop instructions are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleInfoDesktopTab = "Desktop";
+        [Tooltip("Name used for {tab} while the Mobile instructions are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleInfoMobileTab = "Mobile";
+        [Tooltip("Name used for {tab} while the gameplay settings are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleSettingsGameplayTab = "Gameplay";
+        [Tooltip("Name used for {tab} while the appearance settings are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleSettingsAppearanceTab = "Appearance";
+        [Tooltip("Name used for {tab} while the audio settings are showing")]
+        [OpenPuttFoldoutGroup("Header Titles")]
+        public string titleSettingsAudioTab = "Audio";
 
         private bool initializedUI;
         public bool HasInitializedUI => initializedUI;
         private float totalHeightOfScrollViewport;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
         private ScoreboardInfoTab _currentInfoTab = ScoreboardInfoTab.Desktop;
+        private ScoreboardSettingsTab _currentSettingsTab = ScoreboardSettingsTab.Gameplay;
 
         // The background colours the info tabs are given in the editor, captured before we ever recolour them
         private bool infoTabDefaultsCaptured;
         private Color infoVRTabDefaultColour;
         private Color infoDesktopTabDefaultColour;
         private Color infoMobileTabDefaultColour;
+
+        // Same again for the settings tabs
+        private bool settingsTabDefaultsCaptured;
+        private Color settingsGameplayTabDefaultColour;
+        private Color settingsAppearanceTabDefaultColour;
+        private Color settingsAudioTabDefaultColour;
 
         public int NumberOfColumns => Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.courses.Length + 2 : 0;
 
@@ -252,7 +327,8 @@ namespace dev.mikeee324.OpenPutt
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
-                            RefreshSettingsMenu();
+                            // Re-applies the panel visibility for whichever settings tab was last picked (this also refreshes the controls)
+                            CurrentSettingsTab = _currentSettingsTab;
 
                             OnResetCancel();
                             break;
@@ -304,6 +380,7 @@ namespace dev.mikeee324.OpenPutt
 
                 _currentScoreboardView = value;
                 UpdateTabColours();
+                RefreshHeaderText();
             }
         }
 
@@ -325,6 +402,32 @@ namespace dev.mikeee324.OpenPutt
                     infoMobileCanvas.SetActive(value == ScoreboardInfoTab.Mobile);
 
                 UpdateInfoTabColours();
+                RefreshHeaderText();
+            }
+        }
+
+        /// <summary>
+        /// Which group of settings is shown on the Settings tab. Setting it swaps the visible panel, updates the tab highlight and refreshes the controls that just became visible.
+        /// </summary>
+        public ScoreboardSettingsTab CurrentSettingsTab
+        {
+            get => _currentSettingsTab;
+            set
+            {
+                _currentSettingsTab = value;
+
+                if (Utilities.IsValid(settingsGameplayCanvas))
+                    settingsGameplayCanvas.SetActive(value == ScoreboardSettingsTab.Gameplay);
+                if (Utilities.IsValid(settingsAppearanceCanvas))
+                    settingsAppearanceCanvas.SetActive(value == ScoreboardSettingsTab.Appearance);
+                if (Utilities.IsValid(settingsAudioCanvas))
+                    settingsAudioCanvas.SetActive(value == ScoreboardSettingsTab.Audio);
+
+                UpdateSettingsTabColours();
+                RefreshHeaderText();
+
+                // Controls sitting on a hidden panel can't update themselves, so refresh once the new panel is active
+                RefreshSettingsMenu();
             }
         }
 
@@ -361,6 +464,9 @@ namespace dev.mikeee324.OpenPutt
                 parRowCanvas = parRowPanel.transform.GetChild(0).GetComponent<Canvas>();
 
             CurrentScoreboardView = ScoreboardView.Info;
+
+            // Puts the settings panels in sync with the default tab before the player ever opens Settings
+            CurrentSettingsTab = _currentSettingsTab;
 
             // This is here because i haven't figured out how to make editor scripts properly yet
             scoreboardRows = new ScoreboardPlayerRow[playerListCanvas.transform.childCount];
@@ -497,6 +603,21 @@ namespace dev.mikeee324.OpenPutt
             CurrentInfoTab = ScoreboardInfoTab.Mobile;
         }
 
+        public void OnToggleSettingsGameplay()
+        {
+            CurrentSettingsTab = ScoreboardSettingsTab.Gameplay;
+        }
+
+        public void OnToggleSettingsAppearance()
+        {
+            CurrentSettingsTab = ScoreboardSettingsTab.Appearance;
+        }
+
+        public void OnToggleSettingsAudio()
+        {
+            CurrentSettingsTab = ScoreboardSettingsTab.Audio;
+        }
+
 
         public void OnShowPrefabInfo()
         {
@@ -611,6 +732,76 @@ namespace dev.mikeee324.OpenPutt
                 scrollRect.content.anchoredPosition = (Vector2)scrollRect.transform.InverseTransformPoint(scrollRect.transform.position) - (Vector2)scrollRect.transform.InverseTransformPoint(target.position);
         }
 
+        /// <summary>
+        /// Retitles the header label to match the page that is currently showing. The Info/Settings titles can include a {tab} placeholder which is swapped for the selected sub tab's name.
+        /// </summary>
+        public void RefreshHeaderText()
+        {
+            if (!Utilities.IsValid(headerText))
+                return;
+
+            var newTitle = "";
+            switch (_currentScoreboardView)
+            {
+                case ScoreboardView.Scoreboard:
+                    newTitle = Utilities.IsValid(manager) && manager.SpeedGolfMode ? titleSpeedGolf : titleScoreboard;
+                    break;
+                case ScoreboardView.Info:
+                    newTitle = titleInfo;
+                    break;
+                case ScoreboardView.Settings:
+                    newTitle = titleSettings;
+                    break;
+                case ScoreboardView.DevMode:
+                    newTitle = titleDevMode;
+                    break;
+                case ScoreboardView.OpenPutt:
+                    newTitle = titleOpenPutt;
+                    break;
+            }
+
+            if (newTitle == null)
+                newTitle = "";
+
+            var subTabName = CurrentSubTabName();
+            newTitle = newTitle.Replace("{tab}", subTabName == null ? "" : subTabName);
+
+            if (headerText.text != newTitle)
+                headerText.text = newTitle;
+        }
+
+        /// <summary>
+        /// The name of the sub tab that is selected on the page currently showing, or an empty string for pages that don't have any
+        /// </summary>
+        private string CurrentSubTabName()
+        {
+            switch (_currentScoreboardView)
+            {
+                case ScoreboardView.Info:
+                    switch (_currentInfoTab)
+                    {
+                        case ScoreboardInfoTab.VR:
+                            return titleInfoVRTab;
+                        case ScoreboardInfoTab.Mobile:
+                            return titleInfoMobileTab;
+                        default:
+                            return titleInfoDesktopTab;
+                    }
+                case ScoreboardView.Settings:
+                    switch (_currentSettingsTab)
+                    {
+                        case ScoreboardSettingsTab.Appearance:
+                            return titleSettingsAppearanceTab;
+                        case ScoreboardSettingsTab.Audio:
+                            return titleSettingsAudioTab;
+                        default:
+                            return titleSettingsGameplayTab;
+                    }
+                default:
+                    return "";
+            }
+        }
+
         public void UpdateTabColours()
         {
             // Update Tab Background Colours
@@ -673,8 +864,9 @@ namespace dev.mikeee324.OpenPutt
                 devModeTabBackground.colors = colorBlock;
             }
 
-            // Header colours are now current, so repaint the info tabs to match
+            // Header colours are now current, so repaint the sub tabs to match
             UpdateInfoTabColours();
+            UpdateSettingsTabColours();
         }
 
         /// <summary>
@@ -689,9 +881,26 @@ namespace dev.mikeee324.OpenPutt
                 ? scoreboardTabBackground.targetGraphic.color
                 : Color.white;
 
-            SetInfoTabColour(infoVRTabBackground, _currentInfoTab == ScoreboardInfoTab.VR ? selectedColour : infoVRTabDefaultColour);
-            SetInfoTabColour(infoDesktopTabBackground, _currentInfoTab == ScoreboardInfoTab.Desktop ? selectedColour : infoDesktopTabDefaultColour);
-            SetInfoTabColour(infoMobileTabBackground, _currentInfoTab == ScoreboardInfoTab.Mobile ? selectedColour : infoMobileTabDefaultColour);
+            SetSubTabColour(infoVRTabBackground, _currentInfoTab == ScoreboardInfoTab.VR ? selectedColour : infoVRTabDefaultColour);
+            SetSubTabColour(infoDesktopTabBackground, _currentInfoTab == ScoreboardInfoTab.Desktop ? selectedColour : infoDesktopTabDefaultColour);
+            SetSubTabColour(infoMobileTabBackground, _currentInfoTab == ScoreboardInfoTab.Mobile ? selectedColour : infoMobileTabDefaultColour);
+        }
+
+        /// <summary>
+        /// Recolours the Gameplay/Appearance/Audio settings tabs: the selected one takes the Scoreboard header button's colour, the rest keep their editor background.
+        /// </summary>
+        public void UpdateSettingsTabColours()
+        {
+            CaptureSettingsTabDefaultColours();
+
+            // Selected tab matches the "Scoreboard" button in the header
+            var selectedColour = Utilities.IsValid(scoreboardTabBackground) && Utilities.IsValid(scoreboardTabBackground.targetGraphic)
+                ? scoreboardTabBackground.targetGraphic.color
+                : Color.white;
+
+            SetSubTabColour(settingsGameplayTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Gameplay ? selectedColour : settingsGameplayTabDefaultColour);
+            SetSubTabColour(settingsAppearanceTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Appearance ? selectedColour : settingsAppearanceTabDefaultColour);
+            SetSubTabColour(settingsAudioTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Audio ? selectedColour : settingsAudioTabDefaultColour);
         }
 
         /// <summary>
@@ -712,7 +921,25 @@ namespace dev.mikeee324.OpenPutt
             infoTabDefaultsCaptured = true;
         }
 
-        private void SetInfoTabColour(Button tab, Color colour)
+        /// <summary>
+        /// Remembers the background colour each settings tab was given in the editor so we can restore it when the tab is deselected
+        /// </summary>
+        private void CaptureSettingsTabDefaultColours()
+        {
+            if (settingsTabDefaultsCaptured)
+                return;
+
+            if (Utilities.IsValid(settingsGameplayTabBackground) && Utilities.IsValid(settingsGameplayTabBackground.targetGraphic))
+                settingsGameplayTabDefaultColour = settingsGameplayTabBackground.targetGraphic.color;
+            if (Utilities.IsValid(settingsAppearanceTabBackground) && Utilities.IsValid(settingsAppearanceTabBackground.targetGraphic))
+                settingsAppearanceTabDefaultColour = settingsAppearanceTabBackground.targetGraphic.color;
+            if (Utilities.IsValid(settingsAudioTabBackground) && Utilities.IsValid(settingsAudioTabBackground.targetGraphic))
+                settingsAudioTabDefaultColour = settingsAudioTabBackground.targetGraphic.color;
+
+            settingsTabDefaultsCaptured = true;
+        }
+
+        private void SetSubTabColour(Button tab, Color colour)
         {
             if (!Utilities.IsValid(tab) || !Utilities.IsValid(tab.targetGraphic) || tab.targetGraphic.color == colour)
                 return;
@@ -812,6 +1039,10 @@ namespace dev.mikeee324.OpenPutt
             var scoreboardColumnCount = scoreboard.manager.openPutt.courses.Length + 2; // + Name + Total
             var newRow = GameObject.Instantiate(scoreboard.manager.rowPrefab).GetComponent<RectTransform>();
 
+            var isPlayerListRow = !Utilities.IsValid(parent);
+            if (isPlayerListRow)
+                parent = scoreboard.playerListCanvas.GetComponent<RectTransform>();
+
             var row = newRow.GetComponent<ScoreboardPlayerRow>();
             row.name = $"Player {rowID}";
             row.gameObject.SetActive(true);
@@ -822,9 +1053,21 @@ namespace dev.mikeee324.OpenPutt
             row.rectTransform = newRow;
             row.columns = new ScoreboardPlayerColumn[scoreboardColumnCount];
 
+            // Parent the row first so it picks up the panel width before we lay any columns out
+            newRow.SetParent(parent, false);
+
             row.rectTransform.anchoredPosition = new Vector3(0f, -(scoreboard.rowHeight + scoreboard.rowPadding) * rowID);
 
-            var columnXOffset = 0f;
+            // Rows stretch to fill the panel they sit in, which is inset from the scoreboard canvas - measuring the
+            // row itself keeps the side padding even on both edges instead of dumping the difference on the right
+            var rowWidth = newRow.rect.width;
+            if (rowWidth <= 0f)
+                rowWidth = scoreboard.rectTransform.sizeDelta.x;
+
+            // Width the columns actually get to use once the side padding is taken off both edges
+            var usableWidth = rowWidth - (scoreboard.sidePadding * 2f);
+
+            var columnXOffset = scoreboard.sidePadding;
             for (var col = 0; col < scoreboardColumnCount; col++)
             {
                 var rect = GameObject.Instantiate(scoreboard.manager.colPrefab).GetComponent<RectTransform>();
@@ -855,8 +1098,8 @@ namespace dev.mikeee324.OpenPutt
                 }
                 else
                 {
-                    var widthForEachHole = (scoreboard.rectTransform.sizeDelta.x - scoreboard.nameColumnWidth - scoreboard.totalColumnWidth - (scoreboard.columnPadding * (scoreboardColumnCount - 1))) / (scoreboardColumnCount - 2);
-                    rect.sizeDelta = new Vector2(widthForEachHole, scoreboard.rowHeight);
+                    var widthForEachHole = (usableWidth - scoreboard.nameColumnWidth - scoreboard.totalColumnWidth - (scoreboard.columnPadding * (scoreboardColumnCount - 1))) / (scoreboardColumnCount - 2);
+                    rect.sizeDelta = new Vector2(Mathf.Max(widthForEachHole, 0f), scoreboard.rowHeight);
                 }
 
                 rect.GetChild(0).GetComponent<RectTransform>().sizeDelta = rect.sizeDelta;
@@ -864,14 +1107,7 @@ namespace dev.mikeee324.OpenPutt
                 columnXOffset += rect.sizeDelta.x + scoreboard.columnPadding;
             }
 
-            // Position this row in the list
-            if (!Utilities.IsValid(parent))
-                newRow.SetParent(scoreboard.playerListCanvas.GetComponent<RectTransform>(), false);
-            else
-                newRow.SetParent(parent, false);
-
-
-            if (!Utilities.IsValid(parent) && rowID < scoreboard.scoreboardRows.Length)
+            if (isPlayerListRow && rowID < scoreboard.scoreboardRows.Length)
                 scoreboard.scoreboardRows[rowID] = row;
 
             return row;
