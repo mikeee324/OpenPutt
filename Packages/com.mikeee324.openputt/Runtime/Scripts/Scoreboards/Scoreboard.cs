@@ -25,13 +25,6 @@ namespace dev.mikeee324.OpenPutt
         Mobile
     }
 
-    public enum ScoreboardSettingsTab
-    {
-        Gameplay,
-        Appearance,
-        Audio
-    }
-
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(10)]
     public class Scoreboard : UdonSharpBehaviour
     {
@@ -69,15 +62,6 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Instructions content shown on the Info tab for Mobile players")]
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public GameObject infoMobileCanvas;
-        [Tooltip("Gameplay controls shown on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public GameObject settingsGameplayCanvas;
-        [Tooltip("Appearance controls shown on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public GameObject settingsAppearanceCanvas;
-        [Tooltip("Audio controls shown on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public GameObject settingsAudioCanvas;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Canvas devModelPanel;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -115,15 +99,6 @@ namespace dev.mikeee324.OpenPutt
         public Button infoMobileTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button settingsTabBackground;
-        [Tooltip("Side button that selects the gameplay controls on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public Button settingsGameplayTabBackground;
-        [Tooltip("Side button that selects the appearance controls on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public Button settingsAppearanceTabBackground;
-        [Tooltip("Side button that selects the audio controls on the Settings tab")]
-        [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
-        public Button settingsAudioTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
         public Button devModeTabBackground;
         [OpenPuttFoldoutGroup("Internal References (All are required to be set)")]
@@ -206,9 +181,9 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Header title for the Info page. {tab} is replaced with the name of the selected platform tab below.")]
         [OpenPuttFoldoutGroup("Header Titles")]
         public string titleInfo = "How To Play - {tab}";
-        [Tooltip("Header title for the Settings page. {tab} is replaced with the name of the selected settings tab below.")]
+        [Tooltip("Header title for the Settings page")]
         [OpenPuttFoldoutGroup("Header Titles")]
-        public string titleSettings = "Settings - {tab}";
+        public string titleSettings = "Settings";
         [OpenPuttFoldoutGroup("Header Titles")]
         public string titleDevMode = "Dev Mode";
         [OpenPuttFoldoutGroup("Header Titles")]
@@ -223,34 +198,18 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Name used for {tab} while the Mobile instructions are showing")]
         [OpenPuttFoldoutGroup("Header Titles")]
         public string titleInfoMobileTab = "Mobile";
-        [Tooltip("Name used for {tab} while the gameplay settings are showing")]
-        [OpenPuttFoldoutGroup("Header Titles")]
-        public string titleSettingsGameplayTab = "Gameplay";
-        [Tooltip("Name used for {tab} while the appearance settings are showing")]
-        [OpenPuttFoldoutGroup("Header Titles")]
-        public string titleSettingsAppearanceTab = "Appearance";
-        [Tooltip("Name used for {tab} while the audio settings are showing")]
-        [OpenPuttFoldoutGroup("Header Titles")]
-        public string titleSettingsAudioTab = "Audio";
 
         private bool initializedUI;
         public bool HasInitializedUI => initializedUI;
         private float totalHeightOfScrollViewport;
         private ScoreboardView _currentScoreboardView = ScoreboardView.Settings;
         private ScoreboardInfoTab _currentInfoTab = ScoreboardInfoTab.Desktop;
-        private ScoreboardSettingsTab _currentSettingsTab = ScoreboardSettingsTab.Gameplay;
 
         // The background colours the info tabs are given in the editor, captured before we ever recolour them
         private bool infoTabDefaultsCaptured;
         private Color infoVRTabDefaultColour;
         private Color infoDesktopTabDefaultColour;
         private Color infoMobileTabDefaultColour;
-
-        // Same again for the settings tabs
-        private bool settingsTabDefaultsCaptured;
-        private Color settingsGameplayTabDefaultColour;
-        private Color settingsAppearanceTabDefaultColour;
-        private Color settingsAudioTabDefaultColour;
 
         public int NumberOfColumns => Utilities.IsValid(manager) && Utilities.IsValid(manager.openPutt) ? manager.openPutt.courses.Length + 2 : 0;
 
@@ -327,8 +286,7 @@ namespace dev.mikeee324.OpenPutt
                             infoPanel.enabled = false;
                             scoreboardCanvas.enabled = false;
 
-                            // Re-applies the panel visibility for whichever settings tab was last picked (this also refreshes the controls)
-                            CurrentSettingsTab = _currentSettingsTab;
+                            RefreshSettingsMenu();
 
                             OnResetCancel();
                             break;
@@ -407,31 +365,6 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Which group of settings is shown on the Settings tab. Setting it swaps the visible panel, updates the tab highlight and refreshes the controls that just became visible.
-        /// </summary>
-        public ScoreboardSettingsTab CurrentSettingsTab
-        {
-            get => _currentSettingsTab;
-            set
-            {
-                _currentSettingsTab = value;
-
-                if (Utilities.IsValid(settingsGameplayCanvas))
-                    settingsGameplayCanvas.SetActive(value == ScoreboardSettingsTab.Gameplay);
-                if (Utilities.IsValid(settingsAppearanceCanvas))
-                    settingsAppearanceCanvas.SetActive(value == ScoreboardSettingsTab.Appearance);
-                if (Utilities.IsValid(settingsAudioCanvas))
-                    settingsAudioCanvas.SetActive(value == ScoreboardSettingsTab.Audio);
-
-                UpdateSettingsTabColours();
-                RefreshHeaderText();
-
-                // Controls sitting on a hidden panel can't update themselves, so refresh once the new panel is active
-                RefreshSettingsMenu();
-            }
-        }
-
-        /// <summary>
         /// Works out which instructions tab matches the local player's current platform (VR / Desktop / Mobile)
         /// </summary>
         private ScoreboardInfoTab GetLocalPlayerInfoTab()
@@ -464,9 +397,6 @@ namespace dev.mikeee324.OpenPutt
                 parRowCanvas = parRowPanel.transform.GetChild(0).GetComponent<Canvas>();
 
             CurrentScoreboardView = ScoreboardView.Info;
-
-            // Puts the settings panels in sync with the default tab before the player ever opens Settings
-            CurrentSettingsTab = _currentSettingsTab;
 
             // This is here because i haven't figured out how to make editor scripts properly yet
             scoreboardRows = new ScoreboardPlayerRow[playerListCanvas.transform.childCount];
@@ -603,22 +533,6 @@ namespace dev.mikeee324.OpenPutt
             CurrentInfoTab = ScoreboardInfoTab.Mobile;
         }
 
-        public void OnToggleSettingsGameplay()
-        {
-            CurrentSettingsTab = ScoreboardSettingsTab.Gameplay;
-        }
-
-        public void OnToggleSettingsAppearance()
-        {
-            CurrentSettingsTab = ScoreboardSettingsTab.Appearance;
-        }
-
-        public void OnToggleSettingsAudio()
-        {
-            CurrentSettingsTab = ScoreboardSettingsTab.Audio;
-        }
-
-
         public void OnShowPrefabInfo()
         {
             if (Utilities.IsValid(manager))
@@ -733,7 +647,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Retitles the header label to match the page that is currently showing. The Info/Settings titles can include a {tab} placeholder which is swapped for the selected sub tab's name.
+        /// Retitles the header label to match the page that is currently showing. The Info title can include a {tab} placeholder which is swapped for the selected sub tab's name.
         /// </summary>
         public void RefreshHeaderText()
         {
@@ -786,16 +700,6 @@ namespace dev.mikeee324.OpenPutt
                             return titleInfoMobileTab;
                         default:
                             return titleInfoDesktopTab;
-                    }
-                case ScoreboardView.Settings:
-                    switch (_currentSettingsTab)
-                    {
-                        case ScoreboardSettingsTab.Appearance:
-                            return titleSettingsAppearanceTab;
-                        case ScoreboardSettingsTab.Audio:
-                            return titleSettingsAudioTab;
-                        default:
-                            return titleSettingsGameplayTab;
                     }
                 default:
                     return "";
@@ -866,7 +770,6 @@ namespace dev.mikeee324.OpenPutt
 
             // Header colours are now current, so repaint the sub tabs to match
             UpdateInfoTabColours();
-            UpdateSettingsTabColours();
         }
 
         /// <summary>
@@ -887,23 +790,6 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Recolours the Gameplay/Appearance/Audio settings tabs: the selected one takes the Scoreboard header button's colour, the rest keep their editor background.
-        /// </summary>
-        public void UpdateSettingsTabColours()
-        {
-            CaptureSettingsTabDefaultColours();
-
-            // Selected tab matches the "Scoreboard" button in the header
-            var selectedColour = Utilities.IsValid(scoreboardTabBackground) && Utilities.IsValid(scoreboardTabBackground.targetGraphic)
-                ? scoreboardTabBackground.targetGraphic.color
-                : Color.white;
-
-            SetSubTabColour(settingsGameplayTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Gameplay ? selectedColour : settingsGameplayTabDefaultColour);
-            SetSubTabColour(settingsAppearanceTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Appearance ? selectedColour : settingsAppearanceTabDefaultColour);
-            SetSubTabColour(settingsAudioTabBackground, _currentSettingsTab == ScoreboardSettingsTab.Audio ? selectedColour : settingsAudioTabDefaultColour);
-        }
-
-        /// <summary>
         /// Remembers the background colour each info tab was given in the editor so we can restore it when the tab is deselected
         /// </summary>
         private void CaptureInfoTabDefaultColours()
@@ -919,24 +805,6 @@ namespace dev.mikeee324.OpenPutt
                 infoMobileTabDefaultColour = infoMobileTabBackground.targetGraphic.color;
 
             infoTabDefaultsCaptured = true;
-        }
-
-        /// <summary>
-        /// Remembers the background colour each settings tab was given in the editor so we can restore it when the tab is deselected
-        /// </summary>
-        private void CaptureSettingsTabDefaultColours()
-        {
-            if (settingsTabDefaultsCaptured)
-                return;
-
-            if (Utilities.IsValid(settingsGameplayTabBackground) && Utilities.IsValid(settingsGameplayTabBackground.targetGraphic))
-                settingsGameplayTabDefaultColour = settingsGameplayTabBackground.targetGraphic.color;
-            if (Utilities.IsValid(settingsAppearanceTabBackground) && Utilities.IsValid(settingsAppearanceTabBackground.targetGraphic))
-                settingsAppearanceTabDefaultColour = settingsAppearanceTabBackground.targetGraphic.color;
-            if (Utilities.IsValid(settingsAudioTabBackground) && Utilities.IsValid(settingsAudioTabBackground.targetGraphic))
-                settingsAudioTabDefaultColour = settingsAudioTabBackground.targetGraphic.color;
-
-            settingsTabDefaultsCaptured = true;
         }
 
         private void SetSubTabColour(Button tab, Color colour)
