@@ -157,12 +157,17 @@ namespace dev.mikeee324.OpenPutt
             get => _speedGolfMode;
             set
             {
-                if (value != _speedGolfMode)
-                {
-                    RequestRefresh();
-                }
+                var modeChanged = value != _speedGolfMode;
 
                 _speedGolfMode = value;
+
+                if (modeChanged)
+                {
+                    // The queued refresh only covers player rows, so swap the par row (par times/scores) on every scoreboard here
+                    _OnUpdateItem(-2);
+
+                    RequestRefresh();
+                }
             }
         }
 

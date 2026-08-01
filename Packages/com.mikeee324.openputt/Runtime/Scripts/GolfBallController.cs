@@ -395,6 +395,10 @@ namespace dev.mikeee324.OpenPutt
 
         public bool isHeldInTeleporter { get; set; }
 
+        /// Last course this ball was placed on a start pad for - used to put the player back on a driving range
+        /// after a respawn, as respawning doesn't go through the start pad drop
+        private CourseManager lastStartPadCourse;
+
         /// Converts ball speed (m/s) to an audio volume scale
         private const float VelocityToAudioScale = 14.285714f;
 
@@ -636,6 +640,8 @@ namespace dev.mikeee324.OpenPutt
             StopBallVelocity();
 
             _SetRespawnPosition(position.transform.position);
+
+            lastStartPadCourse = courseThatIsBeingStarted;
 
             if (Utilities.IsValid(playerManager))
                 playerManager._OnCourseStarted(courseThatIsBeingStarted);
@@ -917,6 +923,18 @@ namespace dev.mikeee324.OpenPutt
             _SetPosition(respawnPos);
 
             _SetRespawnPosition(respawnPos);
+
+            // Throwing/dropping the ball off a driving range ends that course (OnDrop), but respawning doesn't go
+            // through a start pad so nothing puts them back on it - restore it here or they're stuck off-course
+            // with no club choice. Only driving ranges - a finished hole shouldn't restart itself.
+            if (Utilities.IsValid(playerManager) && !Utilities.IsValid(playerManager.CurrentCourse) &&
+                Utilities.IsValid(lastStartPadCourse) && lastStartPadCourse.IsDrivingRange)
+            {
+                if (DebugMode)
+                    OpenPuttUtils.Log(this, $"Ball respawned with no current course - restarting course {lastStartPadCourse.holeNumber}");
+
+                playerManager._OnCourseStarted(lastStartPadCourse);
+            }
         }
 
         public void _SetPosition(Vector3 worldPos)

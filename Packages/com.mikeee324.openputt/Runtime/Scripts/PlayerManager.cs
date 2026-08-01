@@ -570,10 +570,13 @@ namespace dev.mikeee324.OpenPutt
 
             var canReplayCourses = Utilities.IsValid(openPutt) && openPutt.practiceMode;
 
+            // Driving ranges have no "complete once" state - they can always be started again
+            var courseIsReplayable = canReplayCourses || newCourse.courseIsAlwaysReplayable || newCourse.IsDrivingRange;
+
             var newCourseOldState = courseStates[newCourse.holeNumber];
             if (newCourseOldState == CourseState.Completed || newCourseOldState == CourseState.PlayedAndSkipped)
             {
-                if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
+                if (!courseIsReplayable)
                 {
                     if (openPutt.debugMode)
                         OpenPuttUtils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
@@ -600,6 +603,10 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (!newCourse._IsClubAllowed(golfClub.ClubType))
                     golfClub.ClubType = newCourse._GetFirstAllowedClub();
+
+                // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
+                if (Utilities.IsValid(openPutt.uiController))
+                    openPutt.uiController.UpdateButtonStates();
             }
 
             newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));

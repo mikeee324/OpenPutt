@@ -152,11 +152,16 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// True for the driving range course types - they have no "complete once" state and allow all clubs
+        /// </summary>
+        public bool IsDrivingRange => courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets;
+
+        /// <summary>
         /// Whether a club can be used here. Driving ranges allow all; otherwise only configured clubs (putter if none).
         /// </summary>
         public bool _IsClubAllowed(GolfClubType clubType)
         {
-            if (courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets)
+            if (IsDrivingRange)
                 return true;
 
             if (allowedClubs == GolfClubTypeMask.None)
