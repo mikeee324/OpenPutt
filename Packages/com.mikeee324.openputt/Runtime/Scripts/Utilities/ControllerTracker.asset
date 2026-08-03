@@ -44,7 +44,7 @@ MonoBehaviour:
       Data: 
     - Name: 
       Entry: 12
-      Data: 13
+      Data: 16
     - Name: 
       Entry: 7
       Data: 
@@ -92,7 +92,8 @@ MonoBehaviour:
       Data: 5|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
     - Name: tooltip
       Entry: 1
-      Data: Number of frames to store in history for velocity calculations
+      Data: Number of frames of history to store. Needs to cover the longest sampling
+        window at the highest framerate you expect - 30 frames is ~200ms at 144Hz.
     - Name: 
       Entry: 8
       Data: 
@@ -629,19 +630,25 @@ MonoBehaviour:
       Data: 
     - Name: $k
       Entry: 1
-      Data: lookbackFrames
+      Data: trackingSmoothingSeconds
     - Name: $v
       Entry: 7
       Data: 31|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
     - Name: <Name>k__BackingField
       Entry: 1
-      Data: lookbackFrames
+      Data: trackingSmoothingSeconds
     - Name: <UserType>k__BackingField
-      Entry: 9
-      Data: 3
+      Entry: 7
+      Data: 32|System.RuntimeType, mscorlib
+    - Name: 
+      Entry: 1
+      Data: System.Single, mscorlib
+    - Name: 
+      Entry: 8
+      Data: 
     - Name: <SystemType>k__BackingField
       Entry: 9
-      Data: 3
+      Data: 32
     - Name: <SyncMode>k__BackingField
       Entry: 7
       Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
@@ -656,25 +663,36 @@ MonoBehaviour:
       Data: true
     - Name: _fieldAttributes
       Entry: 7
-      Data: 32|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+      Data: 33|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
     - Name: 
       Entry: 12
-      Data: 2
+      Data: 3
     - Name: 
       Entry: 7
-      Data: 33|UnityEngine.SerializeField, UnityEngine.CoreModule
+      Data: 34|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
+    - Name: tooltip
+      Entry: 1
+      Data: How much recent hand movement is averaged into one velocity reading.
+        Higher = smoother and more repeatable, but flattens the peak of fast swings
+        and drags the aim toward the swing arc. Lower = more responsive but noisier.
     - Name: 
       Entry: 8
       Data: 
     - Name: 
       Entry: 7
-      Data: 34|UnityEngine.RangeAttribute, UnityEngine.CoreModule
+      Data: 35|UnityEngine.SerializeField, UnityEngine.CoreModule
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 36|UnityEngine.RangeAttribute, UnityEngine.CoreModule
     - Name: min
       Entry: 4
       Data: 0
     - Name: max
       Entry: 4
-      Data: 60
+      Data: 0.1
     - Name: 
       Entry: 8
       Data: 
@@ -695,13 +713,90 @@ MonoBehaviour:
       Data: 
     - Name: $k
       Entry: 1
-      Data: endOffset
+      Data: trackingRewindSeconds
     - Name: $v
       Entry: 7
-      Data: 35|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
+      Data: 37|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
     - Name: <Name>k__BackingField
       Entry: 1
-      Data: endOffset
+      Data: trackingRewindSeconds
+    - Name: <UserType>k__BackingField
+      Entry: 9
+      Data: 32
+    - Name: <SystemType>k__BackingField
+      Entry: 9
+      Data: 32
+    - Name: <SyncMode>k__BackingField
+      Entry: 7
+      Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
+    - Name: 
+      Entry: 6
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: <IsSerialized>k__BackingField
+      Entry: 5
+      Data: true
+    - Name: _fieldAttributes
+      Entry: 7
+      Data: 38|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 3
+    - Name: 
+      Entry: 7
+      Data: 39|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
+    - Name: tooltip
+      Entry: 1
+      Data: Rewinds the measurement this far before reading it. Adds no delay to
+        the shot itself - only changes which frames get measured. Leave at 0 unless
+        the newest tracking frame is unreliable.
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 40|UnityEngine.SerializeField, UnityEngine.CoreModule
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 41|UnityEngine.RangeAttribute, UnityEngine.CoreModule
+    - Name: min
+      Entry: 4
+      Data: 0
+    - Name: max
+      Entry: 4
+      Data: 0.05
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 1
+      Data: windowNewestIdx
+    - Name: $v
+      Entry: 7
+      Data: 42|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
+    - Name: <Name>k__BackingField
+      Entry: 1
+      Data: windowNewestIdx
     - Name: <UserType>k__BackingField
       Entry: 9
       Data: 3
@@ -719,41 +814,109 @@ MonoBehaviour:
       Data: 
     - Name: <IsSerialized>k__BackingField
       Entry: 5
-      Data: true
+      Data: false
     - Name: _fieldAttributes
       Entry: 7
-      Data: 36|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+      Data: 43|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
     - Name: 
       Entry: 12
-      Data: 3
-    - Name: 
-      Entry: 7
-      Data: 37|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
-    - Name: tooltip
-      Entry: 1
-      Data: Offset from the most current frame (currentIndex) to use as the end point
-        for velocity calculation. 0 means the current frame.
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 38|UnityEngine.SerializeField, UnityEngine.CoreModule
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 39|UnityEngine.RangeAttribute, UnityEngine.CoreModule
-    - Name: min
-      Entry: 4
       Data: 0
-    - Name: max
-      Entry: 4
-      Data: 5
+    - Name: 
+      Entry: 13
+      Data: 
     - Name: 
       Entry: 8
       Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 1
+      Data: windowOldestIdx
+    - Name: $v
+      Entry: 7
+      Data: 44|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
+    - Name: <Name>k__BackingField
+      Entry: 1
+      Data: windowOldestIdx
+    - Name: <UserType>k__BackingField
+      Entry: 9
+      Data: 3
+    - Name: <SystemType>k__BackingField
+      Entry: 9
+      Data: 3
+    - Name: <SyncMode>k__BackingField
+      Entry: 7
+      Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
+    - Name: 
+      Entry: 6
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: <IsSerialized>k__BackingField
+      Entry: 5
+      Data: false
+    - Name: _fieldAttributes
+      Entry: 7
+      Data: 45|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 1
+      Data: windowDeltaTime
+    - Name: $v
+      Entry: 7
+      Data: 46|UdonSharp.Compiler.FieldDefinition, UdonSharp.Editor
+    - Name: <Name>k__BackingField
+      Entry: 1
+      Data: windowDeltaTime
+    - Name: <UserType>k__BackingField
+      Entry: 9
+      Data: 32
+    - Name: <SystemType>k__BackingField
+      Entry: 9
+      Data: 32
+    - Name: <SyncMode>k__BackingField
+      Entry: 7
+      Data: System.Nullable`1[[UdonSharp.UdonSyncMode, UdonSharp.Runtime]], mscorlib
+    - Name: 
+      Entry: 6
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: <IsSerialized>k__BackingField
+      Entry: 5
+      Data: false
+    - Name: _fieldAttributes
+      Entry: 7
+      Data: 47|System.Collections.Generic.List`1[[System.Attribute, mscorlib]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
     - Name: 
       Entry: 13
       Data: 

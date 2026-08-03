@@ -37,9 +37,13 @@ namespace dev.mikeee324.OpenPutt
         DevBallFriction = 108,
         DevBallDrag = 109,
         DevBallADrag = 110,
-        DevVelOffsetFrame = 111,
-        DevVelSmoothingFrame = 112,
-        DevHitWaitFrames = 113,
+        // 111-113 were the frame-based velocity/hit-wait settings, replaced by the ms-based ones below.
+        // Safe to retire rather than migrate - none of the dev sliders set saveOnChange, so no
+        // saved player data ever held a frame count.
+        DevTrackingRewindMs = 114,
+        DevTrackingSmoothingMs = 115,
+        DevHitAimDelayMs = 116,
+        DevMinTimeBetweenHitsMs = 117,
 
         // bool (Toggle) - explicit values: id is serialized as an int, so never renumber an existing entry
         LeftHandMode = 200,
@@ -86,14 +90,12 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("Optional colour swatch for the ball-colour sliders - shows the combined RGB")]
         [OpenPuttFoldoutGroup("Display")]
         public Image colorPreview;
-        [Tooltip("HSV ball-colour slider track. Assign the matching gradient sprite: Hue = rainbow (drawn untinted), Value = black->white (tinted to the colour), Saturation = a plain solid (tinted to the pure colour, with gradientOverlay on top).")]
+        [Tooltip("HSV ball-colour slider track: an Image stretched over the slider's Background, sharing its rounded-rect material, with the matching ramp as its sprite. Hue = rainbow (drawn untinted), Value = black->white (tinted to the colour), Saturation = no sprite (tinted to the pure colour, with gradientOverlay on top).")]
         [OpenPuttFoldoutGroup("Display")]
         public Image gradientImage;
         [Tooltip("Saturation slider only: a white->transparent gradient sprite layered on top of gradientImage, tinted to grey to complete the grey->colour ramp. Leave empty for Hue/Value.")]
         [OpenPuttFoldoutGroup("Display")]
         public Image gradientOverlay;
-        [Tooltip("HSV ball-colour slider track only: a strip of solid Images tinted to steps of the channel's gradient")]
-        public Image[] gradientSegments;
         [OpenPuttFoldoutGroup("Display")]
         public TMP_Dropdown dropdown;
 
@@ -248,9 +250,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevBallFriction: return Player.golfBall.BallFriction;
                 case SettingId.DevBallDrag: return Player.golfBall.BallDrag;
                 case SettingId.DevBallADrag: return Player.golfBall.BallAngularDrag;
-                case SettingId.DevVelOffsetFrame: return OpenPutt.controllerTracker.endOffset;
-                case SettingId.DevVelSmoothingFrame: return OpenPutt.controllerTracker.lookbackFrames;
-                case SettingId.DevHitWaitFrames: return Player.golfClubHead.hitWaitFrames;
+                case SettingId.DevTrackingRewindMs: return OpenPutt.controllerTracker.trackingRewindSeconds * 1000f;
+                case SettingId.DevTrackingSmoothingMs: return OpenPutt.controllerTracker.trackingSmoothingSeconds * 1000f;
+                case SettingId.DevHitAimDelayMs: return Player.golfClubHead.hitAimDelaySeconds * 1000f;
+                case SettingId.DevMinTimeBetweenHitsMs: return Player.golfClubHead.minSecondsBetweenHits * 1000f;
             }
             return 0f;
         }
@@ -270,9 +273,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevBallFriction: Player.golfBall.BallFriction = v; break;
                 case SettingId.DevBallDrag: Player.golfBall.BallDrag = float.Parse($"{v:F3}"); break;
                 case SettingId.DevBallADrag: Player.golfBall.BallAngularDrag = v; break;
-                case SettingId.DevVelOffsetFrame: OpenPutt.controllerTracker.endOffset = (int)v; break;
-                case SettingId.DevVelSmoothingFrame: OpenPutt.controllerTracker.lookbackFrames = (int)v; break;
-                case SettingId.DevHitWaitFrames: Player.golfClubHead.hitWaitFrames = (int)v; break;
+                case SettingId.DevTrackingRewindMs: OpenPutt.controllerTracker.trackingRewindSeconds = v / 1000f; break;
+                case SettingId.DevTrackingSmoothingMs: OpenPutt.controllerTracker.trackingSmoothingSeconds = v / 1000f; break;
+                case SettingId.DevHitAimDelayMs: Player.golfClubHead.hitAimDelaySeconds = v / 1000f; break;
+                case SettingId.DevMinTimeBetweenHitsMs: Player.golfClubHead.minSecondsBetweenHits = v / 1000f; break;
             }
         }
 
@@ -295,7 +299,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevBallFriction: Player.golfBall.BallFriction = Player.golfBall.DefaultBallFriction; break;
                 case SettingId.DevBallDrag: Player.golfBall.BallDrag = Player.golfBall.DefaultBallDrag; break;
                 case SettingId.DevBallADrag: Player.golfBall.BallAngularDrag = Player.golfBall.DefaultBallAngularDrag; break;
-                case SettingId.DevHitWaitFrames: Player.golfClubHead.hitWaitFrames = 0; break;
+                case SettingId.DevTrackingRewindMs: OpenPutt.controllerTracker.trackingRewindSeconds = 0f; break;
+                case SettingId.DevTrackingSmoothingMs: OpenPutt.controllerTracker.trackingSmoothingSeconds = 0.022f; break;
+                case SettingId.DevHitAimDelayMs: Player.golfClubHead.hitAimDelaySeconds = 0f; break;
+                case SettingId.DevMinTimeBetweenHitsMs: Player.golfClubHead.minSecondsBetweenHits = 0.1f; break;
             }
         }
 
@@ -386,36 +393,17 @@ namespace dev.mikeee324.OpenPutt
 
         #region Helpers
 
-        // Gradient track for HSV ball-colour sliders: a strip of solid Images, each tinted to one step of the
-        // channel's gradient. Rebuilt whenever the HSV changes - just colour assignments, no textures.
+        // Gradient track for HSV ball-colour sliders. Each ramp is an Image stretched over the slider's
+        // Background, drawn by the rounded-rect shader with the channel's ramp as its sprite, so all that is
+        // needed here is a retint whenever the HSV changes. Sharing the Background's rect and material is what
+        // keeps the corners smooth - the shader rounds each ramp itself, where clipping one to shape with a
+        // Mask would stairstep it, a stencil test being 1 bit wide with no partial coverage.
         private void UpdateGradient()
         {
             var h = scoreboard.ballColorHsvH;
             var s = scoreboard.ballColorHsvS;
             var val = scoreboard.ballColorHsvV;
 
-            if (gradientSegments != null && gradientSegments.Length > 0)
-            {
-                var steps = gradientSegments.Length;
-                for (var i = 0; i < steps; i++)
-                {
-                    if (!Utilities.IsValid(gradientSegments[i]))
-                        continue;
-
-                    var t = steps == 1 ? 0f : i / (float)(steps - 1);
-                    if (id == SettingId.BallColorH)
-                        gradientSegments[i].color = Color.HSVToRGB(t, 1f, 1f); // full rainbow
-                    else if (id == SettingId.BallColorS)
-                        gradientSegments[i].color = Color.HSVToRGB(h, t, val); // grey -> current colour
-                    else if (id == SettingId.BallColorV)
-                        gradientSegments[i].color = Color.HSVToRGB(h, s, t); // black -> current colour
-                    else
-                        return; // not an HSV slider - nothing to draw
-                }
-                return;
-            }
-
-            // Fallback for controls not yet migrated to gradientSegments: tint the single gradient sprite directly.
             switch (id)
             {
                 case SettingId.BallColorH:

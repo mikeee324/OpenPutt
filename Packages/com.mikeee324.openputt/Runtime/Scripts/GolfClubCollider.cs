@@ -69,9 +69,27 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("How much the collider can be scaled up depending on its current velocity")]
         public Vector3 maxSpeedScale = new Vector3(3, 1, 1);
 
+        // How long the ball waits after contact before it actually launches.
+        //
+        // TUNING: this buys aim accuracy on tiny taps, where there isn't enough pre-contact movement
+        // to get a clean direction from - waiting lets the club follow through so there's real motion
+        // to measure. It costs nothing in power (the speed comes from the swing's peak, not from
+        // whenever this fires), but it does hurt aim on fast swings, because the swing arc has
+        // already turned by the time the direction is read. Raise it only if short putts misfire,
+        // and check drives afterwards. 0 disables the wait entirely.
+        //
+        // Only affects club-to-ball contact - nothing else reads it.
         [OpenPuttFoldoutGroup("Settings")]
-        [Range(0, 8), Tooltip("How many frames to wait after a hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)")]
-        public int hitWaitFrames = 1;
+        [Range(0f, 0.05f), Tooltip("Delays the ball launch after contact to get a cleaner aim on tiny taps. Costs no power (speed comes from the swing peak) but worsens aim on fast swings, where the arc has already turned. Raise only if short putts misfire. 0 = launch immediately.")]
+        public float hitAimDelaySeconds = 0f;
+
+        // Lockout after a hit lands, so one swing can't register twice.
+        //
+        // TUNING: rarely needs changing. Too low and a single swing can hit twice while the club is
+        // still overlapping the ball; too high and a genuine fast second tap gets swallowed.
+        [OpenPuttFoldoutGroup("Settings")]
+        [Range(0f, 0.5f), Tooltip("Lockout after a hit before another can register. Stops one swing double-hitting while the club is still overlapping the ball. Too high will swallow genuine quick second taps.")]
+        public float minSecondsBetweenHits = 0.1f;
 
         [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Maps club face squareness to the ball's travel direction onto a side spin amount. Leave empty to use the built-in default curve.")]
@@ -117,16 +135,39 @@ namespace dev.mikeee324.OpenPutt
         private Quaternion[] lastPositionRotations = new Quaternion[16];
 
         /// <summary>
-        /// Frame counter since the ball was hit (-1 = no pending hit).
+        /// True while a detected hit is waiting out hitAimDelaySeconds before being passed to the ball.
         /// </summary>
-        private int framesSinceHit = -1;
-
-        private Vector3 lastHitWorldPos = Vector3.zero;
+        private bool hitPending;
 
         /// <summary>
-        /// How many frames we should wait after the hit is registered before passing it to the ball (Helps with tiny hits to get a proper direction of travel)
+        /// Time.time when the pending hit was detected. The velocity window is anchored to this rather
+        /// than to whatever frame the hit ends up being applied on.
         /// </summary>
-        private int framesToWaitAfterHit = 0;
+        private float hitTime;
+
+        /// <summary>
+        /// Club head position in the tracked hand's local space, latched at detection. Latching matters
+        /// because the wrist keeps rotating during the wait, which would move the lever arm under us.
+        /// </summary>
+        private Vector3 hitClubHeadOffset;
+
+        /// <summary>
+        /// Which hand the pending hit was swung with, latched at detection alongside hitClubHeadOffset.
+        /// </summary>
+        private VRCPlayerApi.TrackingDataType hitHand;
+
+        /// <summary>
+        /// Fastest club head speed seen between detection and the hit being applied. The hand decelerates
+        /// on contact, so sampling only at apply time would quietly rob power from every waited hit.
+        /// </summary>
+        private float peakSwingSpeed;
+
+        /// <summary>
+        /// Time.time after which the club is allowed to register another hit.
+        /// </summary>
+        private float nextHitAllowedTime = -1f;
+
+        private Vector3 lastHitWorldPos = Vector3.zero;
 
         [NonSerialized]
         private AnimationCurve easeInOut = AnimationCurve.EaseInOut(0, 0, 1, 1);
@@ -161,9 +202,20 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public string LastKnownHitType { get; private set; }
 
+        /// <summary>
+        /// Minimum smoothed club head speed (m/s) before the anti-tunneling sweep test is worth running
+        /// </summary>
+        private const float MIN_SWEEP_SPEED = 0.005f;
+
         private bool clubIsTouchingBall;
 
-        private bool CanTrackHitsAndVel => framesSinceClubArmed > 3 && framesSinceHit < 0;
+        private bool CanTrackVelocity => framesSinceClubArmed > 3 && !hitPending;
+
+        /// <summary>
+        /// Whether a new hit may be registered right now. Separate from CanTrackVelocity so the
+        /// post-hit cooldown blocks double-hits without also freezing velocity tracking and collider scaling.
+        /// </summary>
+        private bool CanRegisterHit => CanTrackVelocity && Time.time >= nextHitAllowedTime;
         private int framesSinceClubArmed = -1;
         private bool _initialized = false;
 
@@ -275,6 +327,12 @@ namespace dev.mikeee324.OpenPutt
             framesSinceClubArmed = 0;
             golfClubHeadCollider.isTrigger = true;
             clubIsTouchingBall = false;
+            hitPending = false;
+            nextHitAllowedTime = -1f;
+
+            // Start each swing with clean debug lines - leftovers from the last hit read as current tracking
+            if (Utilities.IsValid(visual))
+                visual.ClearLines();
 
             MoveToClubWithoutVelocity();
         }
@@ -284,6 +342,8 @@ namespace dev.mikeee324.OpenPutt
             framesSinceClubArmed = 0;
             golfClubHeadCollider.isTrigger = true;
             clubIsTouchingBall = false;
+            hitPending = false;
+            nextHitAllowedTime = -1f;
         }
 
         /// <summary>
@@ -296,7 +356,7 @@ namespace dev.mikeee324.OpenPutt
 
             var speed = FrameVelocitySmoothedForScaling.magnitude;
 
-            if (!CanTrackHitsAndVel)
+            if (!CanTrackVelocity)
                 speed = 0f;
 
             if (speed <= 0f || float.IsNaN(speed) || float.IsInfinity(speed))
@@ -337,7 +397,7 @@ namespace dev.mikeee324.OpenPutt
                 framesSinceClubArmed += 1;
 
             // Non-trigger colliders can actually track fast hits
-            golfClubHeadCollider.isTrigger = !CanTrackHitsAndVel || clubIsTouchingBall;
+            golfClubHeadCollider.isTrigger = !CanTrackVelocity || clubIsTouchingBall;
 
             // Most recent position is at the previous index
             var previousIndex = (bufferIndex == 0) ? lastPositions.Length - 1 : bufferIndex - 1;
@@ -368,29 +428,21 @@ namespace dev.mikeee324.OpenPutt
                 myRigidbody.angularVelocity = axis * (angle * Mathf.Deg2Rad / Time.fixedDeltaTime * rotT);
             }
 
-            if (CanTrackHitsAndVel && !clubIsTouchingBall)
+            if (CanRegisterHit && !clubIsTouchingBall)
             {
                 var sweepDir = -newVel;
 
-                // Perform a sweep test to see if we'll be hitting the ball in the next frame
-                if (FrameVelocity.magnitude > 0.005f && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.deltaTime))
+                // Perform a sweep test to see if we'll be hitting the ball in the next frame.
+                // Gated on the smoothed velocity so a single noisy tracking frame during a slow putt
+                // can't drop us under the threshold and skip the tunneling check.
+                if (FrameVelocitySmoothed.sqrMagnitude > MIN_SWEEP_SPEED * MIN_SWEEP_SPEED && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.deltaTime))
                 {
                     // We only care if this collided with the local players ball
                     if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
                     {
                         LastKnownHitType = "(B-Sweep)";
-                        framesSinceHit = 0;
-                        framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
                         lastHitWorldPos = playerManager.golfClubHead.transform.position;
-
-                        if (framesToWaitAfterHit == 0)
-                        {
-                            // Consume the hit event
-                            framesSinceHit = -1;
-
-                            // Send the velocity to the ball
-                            HandleBallHit(Vector3.zero, Vector3.zero);
-                        }
+                        BeginHit();
                     }
                 }
             }
@@ -431,7 +483,7 @@ namespace dev.mikeee324.OpenPutt
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
 
             // Skip velocity smoothing on first frame only
-            if (!CanTrackHitsAndVel)
+            if (!CanTrackVelocity)
             {
                 FrameVelocity = Vector3.zero;
                 FrameVelocitySmoothed = Vector3.zero;
@@ -456,15 +508,62 @@ namespace dev.mikeee324.OpenPutt
             ResizeClubCollider();
 
             // If the ball has not been hit, we do nothing
-            if (framesSinceHit < 0) return;
+            if (!hitPending) return;
 
-            // If we have waited for enough frames after the hit (helps with people starting the hit from mm away from the ball)
-            if (framesSinceHit++ < framesToWaitAfterHit) return;
+            // Keep the peak up to date while we wait. The swing usually peaks right around contact,
+            // so this is what stops the wait below from costing the player any power.
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.controllerTracker))
+            {
+                var currentSpeed = openPutt.controllerTracker.GetVelocityAtOffset(hitHand, hitClubHeadOffset).magnitude;
+                if (currentSpeed > peakSwingSpeed)
+                    peakSwingSpeed = currentSpeed;
+            }
 
-            // Consume the hit event
-            framesSinceHit = -1;
+            // Wait a moment after the hit before passing it on (helps with people starting the hit from mm away from the ball)
+            if (Time.time - hitTime < hitAimDelaySeconds) return;
 
-            // Send the velocity to the ball
+            ApplyPendingHit();
+        }
+
+        /// <summary>
+        /// Latches everything about a freshly detected hit, then either applies it immediately or
+        /// leaves it pending until hitAimDelaySeconds has elapsed.
+        /// </summary>
+        private void BeginHit()
+        {
+            hitPending = true;
+            hitTime = Time.time;
+            hitHand = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+            peakSwingSpeed = 0f;
+
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.controllerTracker))
+            {
+                var tracker = openPutt.controllerTracker;
+
+                // Latch the lever arm now - the wrist keeps rotating during the wait, and re-deriving
+                // this at apply time would anchor the velocity to a pose the hit didn't happen in
+                hitClubHeadOffset = tracker.CalculateLocalOffsetFromWorldPosition(hitHand, golfClubHeadCollider.transform.TransformPoint(golfClubHeadCollider.center));
+
+                // Seed the peak with the swing speed at contact. With no wait configured this is the
+                // only sample taken, which keeps the default behaviour identical to a direct reading.
+                peakSwingSpeed = tracker.GetVelocityAtOffset(hitHand, hitClubHeadOffset).magnitude;
+            }
+
+            if (hitAimDelaySeconds <= 0f)
+                ApplyPendingHit();
+        }
+
+        /// <summary>
+        /// Consumes the pending hit, opens the cooldown window and sends the result to the ball.
+        /// </summary>
+        private void ApplyPendingHit()
+        {
+            hitPending = false;
+
+            // Hold off further detections briefly - the club is still overlapping the ball right now,
+            // so without this a single swing can register a second hit on the very next frame
+            nextHitAllowedTime = Time.time + minSecondsBetweenHits;
+
             HandleBallHit(Vector3.zero, Vector3.zero);
         }
 
@@ -474,12 +573,9 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(collision) || !Utilities.IsValid(collision.rigidbody) || collision.rigidbody.gameObject != golfBall.gameObject)
                 return;
 
-            // Stops players from launching the ball by placing the club inside the ball and arming it
-            if (!CanTrackHitsAndVel)
-                return;
-
-            // Ignore extra hits to the ball until we have processed the first
-            if (framesSinceHit >= 0)
+            // Stops players from launching the ball by placing the club inside the ball and arming it,
+            // and stops the same swing registering again while the club is still overlapping the ball
+            if (!CanRegisterHit)
                 return;
 
             LastKnownHitType = "(Collision)";
@@ -491,21 +587,15 @@ namespace dev.mikeee324.OpenPutt
                     lastHitWorldPos = contact.point;
             }
 
-            framesSinceHit = 0;
-            framesToWaitAfterHit = hitWaitFrames; //Mathf.CeilToInt(hitWaitFrames * (60f * Time.deltaTime));
-
-            if (framesToWaitAfterHit == 0)
-            {
-                // Consume the hit event
-                framesSinceHit = -1;
-
-                // Send the velocity to the ball
-                HandleBallHit(Vector3.zero, Vector3.zero);
-            }
+            BeginHit();
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            // Only the local player's ball should affect the club's contact state - without this any
+            // trigger volume in the world flips it and changes whether hits get tracked
+            if (!Utilities.IsValid(other) || other.gameObject != golfBall.gameObject) return;
+
             if (framesSinceClubArmed > 5) return;
 
             clubIsTouchingBall = true;
@@ -515,6 +605,8 @@ namespace dev.mikeee324.OpenPutt
 
         private void OnTriggerExit(Collider other)
         {
+            if (!Utilities.IsValid(other) || other.gameObject != golfBall.gameObject) return;
+
             clubIsTouchingBall = false;
             if (openPutt.debugMode)
                 OpenPuttUtils.Log(this, "Club is no longer in contact with the ball");
@@ -557,11 +649,19 @@ namespace dev.mikeee324.OpenPutt
                 golfClub.ClubType = GolfClubType.Putter;
             }
 
-            var hand = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
-            var headOffset = playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, golfClubHeadCollider.transform.TransformPoint(golfClubHeadCollider.center));
-            var headVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtOffset(hand, headOffset);
-            var directionOfTravel = headVelocity;
-            var velocityMagnitude = headVelocity.magnitude;
+            // Hits detected by this collider latch the hand and club head offset at the moment of
+            // contact. External callers (desktop input, volleying an airborne ball) pass an override
+            // velocity instead, so they get a fresh reading.
+            var usingLatchedHit = overrideHitVelocity.sqrMagnitude <= 0f;
+
+            var hand = usingLatchedHit ? hitHand : (golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand);
+            var clubHeadOffset = usingLatchedHit ? hitClubHeadOffset : playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, golfClubHeadCollider.transform.TransformPoint(golfClubHeadCollider.center));
+            var clubHeadVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtOffset(hand, clubHeadOffset);
+            var directionOfTravel = clubHeadVelocity;
+
+            // Direction comes from the current window (post-wait, which is what makes tiny hits aim
+            // properly) but the speed comes from the swing's peak, so waiting never costs power
+            var velocityMagnitude = usingLatchedHit ? Mathf.Max(clubHeadVelocity.magnitude, peakSwingSpeed) : clubHeadVelocity.magnitude;
 
             if (overrideHitVelocity.sqrMagnitude > 0f)
             {
@@ -671,7 +771,7 @@ namespace dev.mikeee324.OpenPutt
                     if (hasGravity && golfClub.ClubType != GolfClubType.Putter)
                     {
                         // Determine the 'horizontal' swing path direction relative to gravity
-                        var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? headVelocity : headVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
+                        var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? clubHeadVelocity : clubHeadVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
 
                         // More angle difference => Faster side spin
                         var rawSpinMagnitude = sideSpinMagnitudeCurve.Evaluate(faceAngleDiffToDirection);

@@ -30,6 +30,9 @@ namespace dev.mikeee324.OpenPutt
         public bool _othersNotificationsToggle = true;
         [OpenPuttFoldoutGroup("Notification Settings")]
         public int maxQueueSize = 20;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        [Tooltip("How long handedness has to stay settled before it pops up a notification")]
+        public float _handednessDebounceTime = 0.5f;
 
         public bool _playerIsInVR = true;
 
@@ -49,6 +52,9 @@ namespace dev.mikeee324.OpenPutt
         private int[] _queuedPlayerIds;
         private int _queueCount = 0;
         private bool _isDisplayingCallout = false;
+        private bool _pendingLeftHanded = false;
+        private bool _lastNotifiedLeftHanded = false;
+        private int _handednessDebounceCount = 0;
 
         #endregion
 
@@ -112,6 +118,39 @@ namespace dev.mikeee324.OpenPutt
         public override void OnPlayerHitCourseMaxScore(VRCPlayerApi player, CourseManager course)
         {
             Callout(Callouts.StrokeLimit, player.playerId);
+        }
+
+        public override void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
+        {
+            // Only tell the local player about their own hand swapping
+            if (player != Networking.LocalPlayer) return;
+
+            _pendingLeftHanded = newHand == VRC_Pickup.PickupHand.Left;
+
+            // Don't pop one up for the saved setting being restored when they join - just take it as the state we last told them about
+            if (Utilities.IsValid(openPutt) && openPutt.IsLoadingPersistantData)
+            {
+                _lastNotifiedLeftHanded = _pendingLeftHanded;
+                return;
+            }
+
+            // Passing the club between hands can flip this several times in a row, so wait for it to settle down first
+            _handednessDebounceCount++;
+            SendCustomEventDelayedSeconds(nameof(_ShowHandednessCallout), _handednessDebounceTime);
+        }
+
+        public void _ShowHandednessCallout()
+        {
+            // Another change came in while we were waiting - let the last one do the talking
+            _handednessDebounceCount--;
+            if (_handednessDebounceCount > 0) return;
+
+            // They ended up back on the hand they were already using
+            if (_pendingLeftHanded == _lastNotifiedLeftHanded) return;
+
+            _lastNotifiedLeftHanded = _pendingLeftHanded;
+
+            Callout(_pendingLeftHanded ? Callouts.LeftHandedMode : Callouts.RightHandedMode, Networking.LocalPlayer.playerId);
         }
 
         //This is just to check if the player is in vr once.
@@ -248,6 +287,12 @@ namespace dev.mikeee324.OpenPutt
                 case Callouts.StrokeLimit:
                     calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
                     break;
+                case Callouts.LeftHandedMode:
+                    calloutText = "Switched to Left Handed";
+                    break;
+                case Callouts.RightHandedMode:
+                    calloutText = "Switched to Right Handed";
+                    break;
                 default:
                     return;
             }
@@ -320,6 +365,9 @@ namespace dev.mikeee324.OpenPutt
         Bogey,
         DoubleBogey,
         TripleBogey,
-        StrokeLimit
+        StrokeLimit,
+        // Local only callouts - keep these after StrokeLimit so SendTestNotification doesn't pick them
+        LeftHandedMode,
+        RightHandedMode
     }
 }

@@ -135,6 +135,12 @@ namespace dev.mikeee324.OpenPutt
         public PlayerManager LocalPlayerManager;
 
         /// <summary>
+        /// True while _LoadPersistantData() is restoring the local players saved settings - lets things ignore the settings changes that happen on join
+        /// </summary>
+        [HideInInspector]
+        public bool IsLoadingPersistantData = false;
+
+        /// <summary>
         /// Is a list of all PlayerManagers from the object pool - Can be used as a shortcut to getting player data without any GetComponent calls etc
         /// </summary>
         [HideInInspector]
@@ -370,6 +376,8 @@ namespace dev.mikeee324.OpenPutt
 
         public void _LoadPersistantData()
         {
+            IsLoadingPersistantData = true;
+
             var localPlayer = Networking.LocalPlayer;
             if (PlayerData.HasKey(localPlayer, "OpenPutt-BallColourHSV"))
                 LocalPlayerManager.BallColor = PlayerData.GetColor(localPlayer, "OpenPutt-BallColourHSV");
@@ -446,6 +454,8 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
             }
+
+            IsLoadingPersistantData = false;
         }
 
         public void _CheckForUpdate()

@@ -369,6 +369,10 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private ScoreboardInfoTab GetLocalPlayerInfoTab()
         {
+            // The local player isn't always around yet when this first runs (Start) - SelectInfoTabForPlatform picks it up again later
+            if (!OpenPuttUtils.LocalPlayerIsValid())
+                return _currentInfoTab;
+
             // GetPlatform() already picks the right platform via #if UNITY_ANDROID/UNITY_IOS compiler directives
             switch (Networking.LocalPlayer.GetPlatform())
             {

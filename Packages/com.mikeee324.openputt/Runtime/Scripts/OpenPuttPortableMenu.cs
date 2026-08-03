@@ -6,6 +6,7 @@ using dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.Rendering;
 using VRC.SDKBase;
 using VRC.Udon;
 using VRC.Udon.Common;
@@ -92,6 +93,11 @@ namespace dev.mikeee324.OpenPutt
         private Quaternion menuSpawnRotation = Quaternion.identity;
         private Vector3 menuSpawnScale = Vector3.one;
         private Quaternion currentMenuRotation = Quaternion.identity;
+
+        /// <summary>
+        /// The FOV the desktop menu size was designed around - the menu is scaled relative to this so it covers the same amount of screen at any FOV
+        /// </summary>
+        private const float DESKTOP_BASE_FOV = 60f;
 
         void Start()
         {
@@ -251,17 +257,29 @@ namespace dev.mikeee324.OpenPutt
             }
             else if (Input.GetKey(menuKey))
             {
-                var menuScale = Vector3.one * 1.7f;
+                // The screen camera is not attached to the head in third person, so drive the menu from whatever is actually rendering to the screen
+                var screenCamera = VRCCameraSettings.ScreenCamera;
+                var cameraIsValid = Utilities.IsValid(screenCamera);
 
                 var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                var viewPosition = cameraIsValid ? screenCamera.Position : head.position;
+                var viewRotation = cameraIsValid ? screenCamera.Rotation : head.rotation;
+
+                // Keep the menu covering the same amount of the screen whatever FOV the player (or third person mode) is using
+                var fovScale = 1f;
+                if (cameraIsValid)
+                    fovScale = Mathf.Tan(screenCamera.FieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(DESKTOP_BASE_FOV * 0.5f * Mathf.Deg2Rad);
+
+                var menuScale = Vector3.one * 1.7f * fovScale;
+
                 // Scale the offset by player height (1.7m reference) so the menu doesn't float too far away when scaled down
                 var heightScale = Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f) / 1.7f;
-                var menuPosition = head.position + head.rotation * (desktopHeadOffset * heightScale);
+                var menuPosition = viewPosition + viewRotation * (desktopHeadOffset * heightScale);
 
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
 
-                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, head.rotation);
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, viewRotation);
                 visibleMenuObject.transform.localScale = menuScale;
             }
         }
@@ -277,6 +295,11 @@ namespace dev.mikeee324.OpenPutt
             var menuPos = visibleMenuObject.transform.position;
 
             var distanceToMenu = Vector3.Distance(playerPos, menuPos);
+
+            // In third person the menu sits at the camera rather than the head, so measure from there too or we'd hide a menu the player is looking straight at
+            var screenCamera = VRCCameraSettings.ScreenCamera;
+            if (Utilities.IsValid(screenCamera))
+                distanceToMenu = Mathf.Min(distanceToMenu, Vector3.Distance(screenCamera.Position, menuPos));
 
             var shouldHideMenu = hideDistance > 0f && distanceToMenu > hideDistance;
 
@@ -340,6 +363,11 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        /// <summary>
+        /// Window used to measure hand spin when throwing the menu (was 5 frames, which is this long at 90Hz)
+        /// </summary>
+        private const float THROW_SPIN_WINDOW_SECONDS = 0.055f;
+
         public override void OnPickup()
         {
             if (Utilities.IsValid(pickup))
@@ -374,7 +402,7 @@ namespace dev.mikeee324.OpenPutt
             var throwLinearVelocity = controllerTracker.GetVelocityAtOffset(hand, offset);
 
             // Get the angular velocity of the hand. This is the angular velocity of the rigid body.
-            var throwAngularVelocity = controllerTracker.GetAngularVelocity(hand, 5);
+            var throwAngularVelocity = controllerTracker.GetAngularVelocity(hand, THROW_SPIN_WINDOW_SECONDS);
 
             // Apply the calculated velocities to the rigidbody
             rigidBody.velocity = throwLinearVelocity * pickup.ThrowVelocityBoostScale;

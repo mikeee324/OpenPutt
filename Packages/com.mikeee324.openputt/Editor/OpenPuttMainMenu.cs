@@ -411,9 +411,10 @@ namespace dev.mikeee324.OpenPutt
         private void DrawHomeTab(OpenPutt openPutt)
         {
             SectionHeader("About");
-            Description("This window is your hub for setting up OpenPutt in your world. Use the tabs to:");
-            Description("•  Courses - add and order your holes");
-            Description("•  Scoreboards - rebuild and place them");
+            Description("This window is contains a few helpful bits to help set up Openputt in your world.");
+            Description("Tabs:");
+            Description("•  Courses - add/order your courses + holes");
+            Description("•  Scoreboards - rebuild and place them around your world");
 
             GUILayout.Space(12);
             SectionHeader("Updates");
