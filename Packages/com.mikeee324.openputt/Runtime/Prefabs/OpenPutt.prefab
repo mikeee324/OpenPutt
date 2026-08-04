@@ -194,7 +194,7 @@ RectTransform:
   m_GameObject: {fileID: 866499976700606677}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.00025, y: 0.00025, z: 0.00025}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 2638333989475641777}
@@ -203,7 +203,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0.0256, y: -0.06035}
-  m_SizeDelta: {x: 0.25, y: 0.1}
+  m_SizeDelta: {x: 1000, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!223 &5005698720182702365
 Canvas:
@@ -2860,6 +2860,7 @@ MonoBehaviour:
     url: https://mikeee324.github.io/OpenPutt/Ver.txt
   playerSyncType: 0
   LocalPlayerManager: {fileID: 0}
+  IsLoadingPersistantData: 0
   allPlayerManagers: []
   latestOpenPuttVer: 
   openPuttChangelog: 
@@ -4271,6 +4272,11 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 1195899566040700380, guid: 597976162999e8942b21ca2e15549ef0,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 1708304974450821140, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
       propertyPath: m_LocalScale.x
@@ -4370,31 +4376,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_AnchorMin.y
       value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 25
-      objectReference: {fileID: 0}
-    - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 10
-      objectReference: {fileID: 0}
-    - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.x
-      value: 0.01
-      objectReference: {fileID: 0}
-    - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.y
-      value: 0.01
-      objectReference: {fileID: 0}
-    - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.z
-      value: 0.01
       objectReference: {fileID: 0}
     - target: {fileID: 3387976233457321165, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
@@ -4505,21 +4486,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_ConstrainProportionsScale
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 7201764247312201277, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.x
-      value: 0.005
-      objectReference: {fileID: 0}
-    - target: {fileID: 7201764247312201277, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.y
-      value: 0.005
-      objectReference: {fileID: 0}
-    - target: {fileID: 7201764247312201277, guid: 597976162999e8942b21ca2e15549ef0,
-        type: 3}
-      propertyPath: m_LocalScale.z
-      value: 0.005
       objectReference: {fileID: 0}
     - target: {fileID: 7201764247312201277, guid: 597976162999e8942b21ca2e15549ef0,
         type: 3}
