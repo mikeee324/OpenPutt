@@ -33,6 +33,10 @@ namespace dev.mikeee324.OpenPutt
         [SerializeField]
         private VRCPickup pickup;
 
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField, Tooltip("The scoreboard on this menu. Auto-found in children if left empty")]
+        private Scoreboard menuScoreboard;
+
         [OpenPuttFoldoutGroup("Menu Settings")]
         [SerializeField]
         private KeyCode menuKey = KeyCode.N;
@@ -93,14 +97,18 @@ namespace dev.mikeee324.OpenPutt
         private Quaternion menuSpawnRotation = Quaternion.identity;
         private Vector3 menuSpawnScale = Vector3.one;
         private Quaternion currentMenuRotation = Quaternion.identity;
+        private bool thirdPersonMenuShowing;
 
         /// <summary>
-        /// The FOV the desktop menu size was designed around - the menu is scaled relative to this so it covers the same amount of screen at any FOV
+        /// The FOV the desktop menu size was designed around
         /// </summary>
         private const float DESKTOP_BASE_FOV = 60f;
 
         void Start()
         {
+            if (!Utilities.IsValid(menuScoreboard))
+                menuScoreboard = visibleMenuObject.GetComponentInChildren<Scoreboard>(true);
+
             if (hideOnStart)
             {
                 visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
@@ -185,16 +193,7 @@ namespace dev.mikeee324.OpenPutt
 
                 if (!isVisibleNow)
                 {
-                    if (hideOnStart)
-                    {
-                        visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                        visibleMenuObject.transform.localScale = Vector3.zero;
-                    }
-                    else
-                    {
-                        visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
-                        visibleMenuObject.transform.localScale = menuSpawnScale;
-                    }
+                    HideMenu();
                     return;
                 }
 
@@ -257,30 +256,72 @@ namespace dev.mikeee324.OpenPutt
             }
             else if (Input.GetKey(menuKey))
             {
-                // The screen camera is not attached to the head in third person, so drive the menu from whatever is actually rendering to the screen
                 var screenCamera = VRCCameraSettings.ScreenCamera;
                 var cameraIsValid = Utilities.IsValid(screenCamera);
 
                 var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                var viewPosition = cameraIsValid ? screenCamera.Position : head.position;
-                var viewRotation = cameraIsValid ? screenCamera.Rotation : head.rotation;
+                var thirdPerson = cameraIsValid && screenCamera.CameraMode == VRCCameraMode.ThirdPersonView;
 
-                // Keep the menu covering the same amount of the screen whatever FOV the player (or third person mode) is using
-                var fovScale = 1f;
+                // The tabs can't be clicked in third person, so open on the scores - speed golf mode picks which variant that shows
+                if (thirdPerson && !thirdPersonMenuShowing && Utilities.IsValid(menuScoreboard))
+                    menuScoreboard.CurrentScoreboardView = ScoreboardView.Scoreboard;
+
+                thirdPersonMenuShowing = thirdPerson;
+
+                // Keep the on screen size the same at any FOV
+                var menuScale = 1.7f;
                 if (cameraIsValid)
-                    fovScale = Mathf.Tan(screenCamera.FieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(DESKTOP_BASE_FOV * 0.5f * Mathf.Deg2Rad);
-
-                var menuScale = Vector3.one * 1.7f * fovScale;
+                    menuScale *= Mathf.Tan(screenCamera.FieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(DESKTOP_BASE_FOV * 0.5f * Mathf.Deg2Rad);
 
                 // Scale the offset by player height (1.7m reference) so the menu doesn't float too far away when scaled down
                 var heightScale = Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f) / 1.7f;
-                var menuPosition = viewPosition + viewRotation * (desktopHeadOffset * heightScale);
+                var menuOffset = desktopHeadOffset * heightScale;
+
+                // Tiny avatars can put the menu inside the near clip plane - push it out and scale to match
+                if (cameraIsValid)
+                {
+                    var minDistance = screenCamera.NearClipPlane + 0.01f;
+                    var distance = menuOffset.magnitude;
+                    if (distance > 0f && distance < minDistance)
+                    {
+                        var pushOut = minDistance / distance;
+                        menuOffset *= pushOut;
+                        menuScale *= pushOut;
+                    }
+                }
+
+                // Third person tracks the camera, first person stays on the head where the cursor can reach it
+                var menuRotation = thirdPerson ? screenCamera.Rotation : head.rotation;
+                var menuPosition = (thirdPerson ? screenCamera.Position : head.position) + menuRotation * menuOffset;
 
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
 
-                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, viewRotation);
-                visibleMenuObject.transform.localScale = menuScale;
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, menuRotation);
+                visibleMenuObject.transform.localScale = Vector3.one * menuScale;
+            }
+            else if (thirdPersonMenuShowing)
+            {
+                // Nothing holds a third person menu in place, so drop it as soon as the key is released
+                thirdPersonMenuShowing = false;
+                HideMenu();
+            }
+        }
+
+        /// <summary>
+        /// Parks the menu out of sight, or back at its spawn point if it started visible
+        /// </summary>
+        private void HideMenu()
+        {
+            if (hideOnStart)
+            {
+                visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                visibleMenuObject.transform.localScale = Vector3.zero;
+            }
+            else
+            {
+                visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
+                visibleMenuObject.transform.localScale = menuSpawnScale;
             }
         }
 
@@ -296,7 +337,7 @@ namespace dev.mikeee324.OpenPutt
 
             var distanceToMenu = Vector3.Distance(playerPos, menuPos);
 
-            // In third person the menu sits at the camera rather than the head, so measure from there too or we'd hide a menu the player is looking straight at
+            // In third person the menu sits at the camera, not the head, so measure from there too
             var screenCamera = VRCCameraSettings.ScreenCamera;
             if (Utilities.IsValid(screenCamera))
                 distanceToMenu = Mathf.Min(distanceToMenu, Vector3.Distance(screenCamera.Position, menuPos));
@@ -307,17 +348,8 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (Utilities.IsValid(rigidBody))
                     rigidBody.isKinematic = true;
-                    
-                if (hideOnStart)
-                {
-                    visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
-                    visibleMenuObject.transform.localScale = Vector3.zero;
-                }
-                else
-                {
-                    visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
-                    visibleMenuObject.transform.localScale = menuSpawnScale;
-                }
+
+                HideMenu();
             }
 
             SendCustomEventDelayedSeconds(nameof(ShouldHideMenu), 5);
