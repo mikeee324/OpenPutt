@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 5032810705522641105}
   - component: {fileID: 8877022280582352304}
   - component: {fileID: 8503300051792731244}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: HeadPosition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -93,7 +93,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5785247926710769327}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: VR
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -126,7 +126,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6328143093329264118}
   - component: {fileID: 8431840198736161534}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Desktop
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -187,7 +187,7 @@ GameObject:
   - component: {fileID: 4056243271506801068}
   - component: {fileID: 1919847777832958927}
   - component: {fileID: 4177025083914630893}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Plane
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -292,7 +292,7 @@ GameObject:
   - component: {fileID: 822291244105729187}
   - component: {fileID: 640609761339339320}
   - component: {fileID: 5837668776906220877}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -375,7 +375,7 @@ GameObject:
   - component: {fileID: 205798175817242977}
   - component: {fileID: 2981169738237149432}
   - component: {fileID: 4505204410308885561}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: OpenPuttNotifications
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -423,29 +423,21 @@ MonoBehaviour:
   _udonSharpBackingUdonBehaviour: {fileID: 4505204410308885561}
   _canvas: {fileID: 640609761339339320}
   _headFollower: {fileID: 8877022280582352304}
+  _calloutBoxPrefab: {fileID: 8194396697069291042, guid: 3ce06f06391c6d0448af7b32fc03fcb7,
+    type: 3}
+  openPutt: {fileID: 0}
   _vrSmoothing: 12
   _notificationToggle: 1
   _othersNotificationsToggle: 1
+  maxQueueSize: 20
+  _handednessDebounceTime: 0.5
   _playerIsInVR: 1
-  _calloutBoxPrefab: {fileID: 8194396697069291042, guid: 3ce06f06391c6d0448af7b32fc03fcb7,
-    type: 3}
   _vrTargetPos: {x: 0, y: 80, z: 0}
   _desktopTargetPos: {x: 0, y: 150, z: 0}
   _vrStartPos: {x: 300, y: 250, z: 0}
   _desktopStartPos: {x: 300, y: 250, z: 0}
   _mobileTargetPos: {x: 0, y: -150, z: 0}
   _mobileStartPos: {x: 300, y: -250, z: 0}
-  aceSound: {fileID: 0}
-  condorSound: {fileID: 0}
-  albatrossSound: {fileID: 0}
-  eagleSound: {fileID: 0}
-  birdieSound: {fileID: 0}
-  parSound: {fileID: 0}
-  bogeySound: {fileID: 0}
-  doubleBogeySound: {fileID: 0}
-  tripleBogeySound: {fileID: 0}
-  strokeLimitSound: {fileID: 0}
-  openPutt: {fileID: 0}
 --- !u!114 &4505204410308885561
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -465,7 +457,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 1
+  _syncMethod: 3
   serializedProgramAsset: {fileID: 11400000, guid: ccddd0f1e7de6784fa8d1b839d0035ef,
     type: 2}
   programSource: {fileID: 11400000, guid: ee44f07dc5b543f46ac04a32109a9545, type: 2}
