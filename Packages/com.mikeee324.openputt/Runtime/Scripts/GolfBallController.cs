@@ -168,6 +168,10 @@ namespace dev.mikeee324.OpenPutt
                 // Store the new value
                 _ballMoving = value;
 
+                // Shot is over - don't let leftover spin carry into whatever happens next (pickup/throw, re-hit, etc)
+                if (ballWasMoving && !_ballMoving)
+                    _currentSpin = Vector3.zero;
+
                 if (resetBallTimers)
                 {
                     timeNotMoving = 0f;
@@ -246,13 +250,19 @@ namespace dev.mikeee324.OpenPutt
                         }
                         else if (HasRespawnPosition)
                         {
+                            // If the ball is already sitting at the respawn position it's stuck off-course - moving it there again is a no-op, so skip the noise
+                            var alreadyAtRespawnPosition = Vector3.Distance(ballRigidbody.position, respawnWorldPosition) < 0.01f;
+
                             // It is not on top of a course floor so move it to the previous position
                             ballRigidbody.position = respawnWorldPosition;
 
-                            // Play the reset noise
-                            var sfx = SfxController;
-                            if (Utilities.IsValid(sfx))
-                                sfx.PlayBallResetSoundAtPosition(respawnWorldPosition);
+                            if (!alreadyAtRespawnPosition)
+                            {
+                                // Play the reset noise
+                                var sfx = SfxController;
+                                if (Utilities.IsValid(sfx))
+                                    sfx.PlayBallResetSoundAtPosition(respawnWorldPosition);
+                            }
                         }
                     }
 
@@ -930,10 +940,20 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(playerManager) && !Utilities.IsValid(playerManager.CurrentCourse) &&
                 Utilities.IsValid(lastStartPadCourse) && lastStartPadCourse.IsDrivingRange)
             {
-                if (DebugMode)
-                    OpenPuttUtils.Log(this, $"Ball respawned with no current course - restarting course {lastStartPadCourse.holeNumber}");
+                // The respawn position can drift away from this course's floor for unrelated reasons (e.g. ground
+                // snapping while the ball was in flight elsewhere) - only restart the course if we're still on it,
+                // otherwise we'd flag the ball as playing a course it isn't physically on and get stuck resetting forever
+                if (playerManager.IsOnTopOfCourse(lastStartPadCourse, respawnPos))
+                {
+                    if (DebugMode)
+                        OpenPuttUtils.Log(this, $"Ball respawned with no current course - restarting course {lastStartPadCourse.holeNumber}");
 
-                playerManager._OnCourseStarted(lastStartPadCourse);
+                    playerManager._OnCourseStarted(lastStartPadCourse);
+                }
+                else
+                {
+                    lastStartPadCourse = null;
+                }
             }
         }
 
@@ -952,7 +972,13 @@ namespace dev.mikeee324.OpenPutt
 
         public void _RespawnBallWithErrorNoise()
         {
+            // If the ball is already sitting at the respawn position, it's stuck off-course - respawning is a no-op, so skip the noise or it'll spam on every retrigger
+            var wasAlreadyAtRespawnPosition = HasRespawnPosition && Vector3.Distance(ballRigidbody.position, respawnWorldPosition) < 0.01f;
+
             _RespawnBall();
+
+            if (wasAlreadyAtRespawnPosition)
+                return;
 
             // Only play the reset noise if the player is actually partway through a course
             if (!Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.CurrentCourse))

@@ -1185,10 +1185,12 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public bool IsOnTopOfCurrentCourse(Vector3 position, float maxDistance = 0.1f)
+        public bool IsOnTopOfCurrentCourse(Vector3 position, float maxDistance = 0.1f) => IsOnTopOfCourse(CurrentCourse, position, maxDistance);
+
+        public bool IsOnTopOfCourse(CourseManager course, Vector3 position, float maxDistance = 0.1f)
         {
-            // If we aren't playing a course the ball can be wherever
-            if (!Utilities.IsValid(CurrentCourse) || !Utilities.IsValid(golfBall.floorMaterial) || !Utilities.IsValid(golfBall.floorMaterial.name))
+            // If there's no course to check against the ball can be wherever
+            if (!Utilities.IsValid(course) || !Utilities.IsValid(golfBall.floorMaterial) || !Utilities.IsValid(golfBall.floorMaterial.name))
                 return false;
 
             // Check what is underneath the ball
@@ -1198,15 +1200,15 @@ namespace dev.mikeee324.OpenPutt
                 // Collider col = hit.collider;
                 // bool rightKindOfFloor = Utilities.IsValid(col) && Utilities.IsValid(col.material) && Utilities.IsValid(col.material.name) && col.material.name.StartsWith(golfBall.floorMaterial.name);
 
-                foreach (var floorCollider in CurrentCourse.floorColliders)
+                foreach (var floorCollider in course.floorColliders)
                 {
                     if (!Utilities.IsValid(floorCollider))
                     {
-                        OpenPuttUtils.LogError(CurrentCourse, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
+                        OpenPuttUtils.LogError(course, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
                         continue;
                     }
 
-                    // Does this floor belong to the course the player is currently playing?
+                    // Does this floor belong to the course we're checking against?
                     if (floorCollider == hit.collider)
                     {
                         return true;
