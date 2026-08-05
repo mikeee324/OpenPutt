@@ -63,6 +63,11 @@ namespace dev.mikeee324.OpenPutt
         public string extraCreditsText = "";
 
         [OpenPuttFoldoutGroup("Background Colours")]
+        public Color headerBackground = Color.black;
+        [OpenPuttFoldoutGroup("Background Colours")]
+        public Color parBackground = Color.black;
+
+        [Space, OpenPuttFoldoutGroup("Background Colours")]
         public Color nameBackground1 = Color.black;
 
         [OpenPuttFoldoutGroup("Background Colours")]
@@ -211,7 +216,9 @@ namespace dev.mikeee324.OpenPutt
             allScoreboards = scoreboards.AddRange(staticScoreboards);
 
             numberOfObjects = numberOfPlayersToDisplay;
-            enabled = false;
+            // Don't run if nothing is queued - but don't clobber a refresh that was already requested
+            // before Start() ran (eg. a player restoring persisted scores during the join sequence)
+            enabled = updatesRequested > 0;
 
             // Update positions of all scoreboards a bit quicker at startup
             SendCustomEventDelayedSeconds(nameof(UpdateScoreboardVisibility), .5f);
@@ -222,6 +229,11 @@ namespace dev.mikeee324.OpenPutt
             numberOfObjects = numberOfPlayersToDisplay;
             updatesRequested += 1;
             enabled = true;
+
+            // If a cycle is already mid-flight, restart it from the top so _OnUpdateStarted() re-fires
+            // and CurrentPlayerList gets recomputed with whatever just changed - otherwise this request
+            // just rides along on the tail of the stale in-progress cycle and gets silently dropped.
+            _currentUpdateIndex = 0;
         }
 
         protected override void _StartUpdateFrame()

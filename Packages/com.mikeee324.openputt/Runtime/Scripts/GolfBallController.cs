@@ -954,7 +954,10 @@ namespace dev.mikeee324.OpenPutt
         {
             _RespawnBall();
 
-            // Play the reset noise
+            // Only play the reset noise if the player is actually partway through a course
+            if (!Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.CurrentCourse))
+                return;
+
             var sfx = SfxController;
             if (Utilities.IsValid(sfx))
                 sfx.PlayBallResetSoundAtPosition(respawnWorldPosition);

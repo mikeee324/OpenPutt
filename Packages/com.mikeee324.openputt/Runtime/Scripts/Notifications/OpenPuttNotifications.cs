@@ -120,6 +120,13 @@ namespace dev.mikeee324.OpenPutt
             Callout(Callouts.StrokeLimit, player.playerId);
         }
 
+        public override void OnPlayerStartCourseBlocked(VRCPlayerApi player, CourseManager course, CourseState previousState)
+        {
+            if (player != Networking.LocalPlayer) return;
+
+            Callout(previousState == CourseState.PlayedAndSkipped ? Callouts.AlreadySkipped : Callouts.AlreadyCompleted, player.playerId);
+        }
+
         public override void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
         {
             // Only tell the local player about their own hand swapping
@@ -293,6 +300,12 @@ namespace dev.mikeee324.OpenPutt
                 case Callouts.RightHandedMode:
                     calloutText = "Switched to Right Handed";
                     break;
+                case Callouts.AlreadyCompleted:
+                    calloutText = "You already completed this course!";
+                    break;
+                case Callouts.AlreadySkipped:
+                    calloutText = "You already skipped this course!";
+                    break;
                 default:
                     return;
             }
@@ -368,6 +381,8 @@ namespace dev.mikeee324.OpenPutt
         StrokeLimit,
         // Local only callouts - keep these after StrokeLimit so SendTestNotification doesn't pick them
         LeftHandedMode,
-        RightHandedMode
+        RightHandedMode,
+        AlreadyCompleted,
+        AlreadySkipped
     }
 }

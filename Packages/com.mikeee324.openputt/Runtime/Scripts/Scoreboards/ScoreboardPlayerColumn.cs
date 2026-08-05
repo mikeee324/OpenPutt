@@ -268,7 +268,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     }
 
                     SetTextColour(scoreboardManager.text);
-                    SetBackgroundColour(scoreboardManager.nameBackground2);
+                    SetBackgroundColour(scoreboardManager.parBackground);
                 }
 
                 break;
@@ -295,7 +295,7 @@ public class ScoreboardPlayerColumn : UdonSharpBehaviour
                     }
 
                     SetTextColour(scoreboardManager.text);
-                    SetBackgroundColour(scoreboardManager.nameBackground2);
+                    SetBackgroundColour(scoreboardManager.headerBackground);
                 }
 
                 break;

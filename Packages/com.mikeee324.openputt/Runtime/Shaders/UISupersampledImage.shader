@@ -10,8 +10,15 @@ Shader "OpenPutt/UI/SupersampledImage"
         _Color ("Tint", Color) = (1,1,1,1)
 
         // LEqual matches what a world space Canvas would set, Always draws over solid
-        // geometry. Leave the render queue alone - overriding it on a material inside a
-        // Canvas breaks hierarchy draw order and the element paints over its own children.
+        // geometry. Always is not enough on its own for hand-attached UI: it only decides
+        // whether this draw passes, and with ZWrite Off nothing is left in the depth buffer
+        // to stop a later draw covering it. A personal mirror set to hide the world has a
+        // transparent surface that no queue can beat - it still draws later at 5000, the top
+        // of the range. Hand-attached materials sit at Queue 4000 anyway, to stay ahead of
+        // ordinary transparent world geometry; the rounded rect behind these icons writes
+        // depth (_DepthPrime) and that is what handles the mirror. Move the whole Canvas
+        // together - a queue split inside one Canvas overrides hierarchy order and elements
+        // paint over their own children.
         [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest ("Depth Test", Float) = 4
 
         _StencilComp ("Stencil Comparison", Float) = 8

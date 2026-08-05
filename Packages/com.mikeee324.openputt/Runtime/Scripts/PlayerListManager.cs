@@ -28,8 +28,9 @@ namespace dev.mikeee324.OpenPutt
 
         void Start()
         {
-            // We don't want to run on first start - nothing to do anyway
-            enabled = false;
+            // Don't run if nothing is queued - but don't clobber a refresh that was already requested
+            // before Start() ran (eg. a player restoring persisted scores during the join sequence)
+            enabled = dirtyPlayers.Length > 0;
         }
 
         /// <summary>

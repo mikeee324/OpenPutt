@@ -178,6 +178,21 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Called when a player drops their ball on a course start pad but the course can't be (re)started because they've already completed or skipped it and it isn't replayable
+        /// <br/>
+        /// <b>Fired for the local player only (for now)</b>
+        /// </summary>
+        /// <param name="player">The player who dropped the ball on the pad</param>
+        /// <param name="course">The course they tried to start</param>
+        /// <param name="previousState">The player's existing state for this course (Completed or PlayedAndSkipped)</param>
+        public void OnPlayerStartCourseBlocked(VRCPlayerApi player, CourseManager course, CourseState previousState)
+        {
+            foreach (var listener in openPutt.eventListeners)
+                if (Utilities.IsValid(listener))
+                    listener.OnPlayerStartCourseBlocked(player, course, previousState);
+        }
+
+        /// <summary>
         /// Called when the portable scoreboard UI is opened by the local player
         /// <br/>
         /// <b>Fired for the local player only (for now)</b>

@@ -13,9 +13,19 @@ Shader "OpenPutt/UI/RoundedRect"
         _BorderColor ("Border Colour", Color) = (0.29803922,0.3372549,0.41568628,1)
         [Toggle(_SUPERSAMPLE)] _Supersample ("Supersample Edges (2x2 RGSS)", Float) = 1
         // LEqual matches what a world space Canvas would set, Always draws over solid
-        // geometry. Leave the render queue alone - overriding it on a material inside a
-        // Canvas breaks hierarchy draw order and the element paints over its own children.
+        // geometry. Always is not enough on its own for hand-attached UI: it only decides
+        // whether this draw passes, and with ZWrite Off nothing is left in the depth buffer
+        // to stop a later draw covering it. A personal mirror set to hide the world has a
+        // transparent surface that no queue can beat - it still draws later at 5000, the top
+        // of the range. Hand-attached materials sit at Queue 4000 anyway, to stay ahead of
+        // ordinary transparent world geometry; _DepthPrime is what handles the mirror. Move
+        // the whole Canvas together - a queue split inside one Canvas overrides hierarchy
+        // order and elements paint over their own children.
         [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest ("Depth Test", Float) = 4
+        // Stamps the panel's depth, so a draw that lands after us fails its own depth test
+        // across the solid interior instead of covering us. This is what actually beats the
+        // mirror. Only for hand-attached UI: it makes the panel occlude later draws.
+        [Enum(Off, 0, On, 1)] _DepthPrime ("Write Depth (beat later draws)", Float) = 0
 
         // Diagonal highlight sweep, ported from OpenPutt/AlwaysOnTopUI. Property names
         // match that shader so values carry across. _Color0 alpha is unused, as there.
@@ -183,6 +193,46 @@ Shader "OpenPutt/UI/RoundedRect"
             #endif
             }
         ENDCG
+
+        // Depth prime - no colour, depth only, and only across fully covered pixels so
+        // rounded corners and the gaps between elements still show what is behind. Declared
+        // first so the depth is down before the colour pass blends over it.
+        Pass
+        {
+            Name "DepthPrime"
+
+            // Same as the colour pass - respect an enclosing mask, never write the stencil.
+            Stencil
+            {
+                Ref [_Stencil]
+                Comp [_StencilComp]
+                Pass Keep
+                ReadMask [_StencilReadMask]
+                WriteMask 0
+            }
+
+            ColorMask 0
+            ZWrite On
+
+        CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma target 3.0
+
+            #pragma multi_compile_local _ UNITY_UI_CLIP_RECT
+            #pragma shader_feature_local _SUPERSAMPLE
+
+            float _DepthPrime;
+
+            fixed4 frag(v2f i) : SV_Target
+            {
+                clip(_DepthPrime - 0.5);
+                // Full coverage only - antialiased edges must stay blendable.
+                clip(ShapeCoverage(i).x * RectClip(i) - 0.999);
+                return 0;
+            }
+        ENDCG
+        }
 
         // Colour pass - draws fill and border, never writes the stencil.
         Pass

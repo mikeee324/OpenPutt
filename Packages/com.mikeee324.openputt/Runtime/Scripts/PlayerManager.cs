@@ -580,6 +580,10 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (openPutt.debugMode)
                         OpenPuttUtils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
+
+                    if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
+                        openPutt.eventHandler.OnPlayerStartCourseBlocked(Owner, newCourse, newCourseOldState);
+
                     CurrentCourse = null;
                     return;
                 }

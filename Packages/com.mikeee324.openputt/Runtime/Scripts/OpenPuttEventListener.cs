@@ -65,6 +65,19 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Called when a player drops their ball on a course start pad but the course can't be (re)started because they've already completed or skipped it and it isn't replayable
+        /// <br/>
+        /// <b>Fired for the local player only (for now)</b>
+        /// </summary>
+        /// <param name="player">The player who dropped the ball on the pad</param>
+        /// <param name="course">The course they tried to start</param>
+        /// <param name="previousState">The player's existing state for this course (Completed or PlayedAndSkipped)</param>
+        public virtual void OnPlayerStartCourseBlocked(VRCPlayerApi player, CourseManager course, CourseState previousState)
+        {
+
+        }
+
+        /// <summary>
         /// Called when a player ball drops into a course hole
         /// <br/>
         /// <b>Fired for all players</b>
