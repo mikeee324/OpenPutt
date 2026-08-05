@@ -292,8 +292,10 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.BallColorS:
                 case SettingId.BallColorV:
                     Player.BallColor = Player.Owner.ToColor();
+#if !OPENPUTT_DEMO_MODE
                     if (OpenPutt.playerSyncType < PlayerSyncType.FinishOnly)
                         Player.RequestSerialization();
+#endif
                     break;
                 case SettingId.DevBallWeight: Player.golfBall.BallWeight = Player.golfBall.DefaultBallWeight; break;
                 case SettingId.DevBallFriction: Player.golfBall.BallFriction = Player.golfBall.DefaultBallFriction; break;
@@ -338,7 +340,9 @@ namespace dev.mikeee324.OpenPutt
                 {
                     OpenPuttUtils.SetOwner(Networking.LocalPlayer, OpenPutt.gameObject);
                     OpenPutt.practiceMode = v;
+#if !OPENPUTT_DEMO_MODE
                     OpenPutt.RequestSerialization();
+#endif
                     break;
                 }
                 case SettingId.BallGrounded: Player.golfBall.ballGroundedDebug = v; break;
@@ -361,7 +365,9 @@ namespace dev.mikeee324.OpenPutt
                     {
                         OpenPuttUtils.SetOwner(Networking.LocalPlayer, OpenPutt.gameObject);
                         OpenPutt.enableDevModeForAll = v;
+#if !OPENPUTT_DEMO_MODE
                         OpenPutt.RequestSerialization();
+#endif
                     }
                     break;
                 }
@@ -446,8 +452,10 @@ namespace dev.mikeee324.OpenPutt
                 colorPreview.color = c;
 
             // Push the change to other players straight away when the sync mode allows it
+#if !OPENPUTT_DEMO_MODE
             if (OpenPutt.playerSyncType < PlayerSyncType.FinishOnly)
                 Player.RequestSerialization();
+#endif
         }
 
         // Reseed the cached HSV from the stored colour only when they've diverged - i.e. the colour was changed

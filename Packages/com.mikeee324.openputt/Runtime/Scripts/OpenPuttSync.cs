@@ -254,8 +254,10 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // If allowed to send a sync - do it!
+#if !OPENPUTT_DEMO_MODE
             if (canSync)
                 RequestSerialization();
+#endif
 
             // If we still have time left to sync or player is holding object (so we can check if the offsets have changed), schedule in the next sync
             if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
@@ -265,7 +267,11 @@ namespace dev.mikeee324.OpenPutt
             else
             {
                 fastSyncStopTime = -1f;
+#if OPENPUTT_DEMO_MODE
+                SendCustomEvent(nameof(OnStopSendingSync));
+#else
                 SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnStopSendingSync));
+#endif
             }
         }
 
@@ -498,7 +504,11 @@ namespace dev.mikeee324.OpenPutt
             // Keep a track of which hand the player is holding the pickup in
             _UpdatePickupCurrentHand();
 
+#if OPENPUTT_DEMO_MODE
+            SendCustomEvent(nameof(ForceDrop));
+#else
             SendCustomNetworkEvent(NetworkEventTarget.All, nameof(ForceDrop));
+#endif
         }
 
         [NetworkCallable(maxEventsPerSecond: 5)]

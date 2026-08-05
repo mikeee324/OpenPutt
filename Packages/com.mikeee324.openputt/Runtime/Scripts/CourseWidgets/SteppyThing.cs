@@ -132,7 +132,9 @@ namespace dev.mikeee324.OpenPutt
                     if (OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
                     {
                         _masterUpCycleState = globalUpCycle;
+#if !OPENPUTT_DEMO_MODE
                         RequestSerialization();
+#endif
                     }
                 }
             }

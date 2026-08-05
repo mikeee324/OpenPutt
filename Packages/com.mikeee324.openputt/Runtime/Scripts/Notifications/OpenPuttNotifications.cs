@@ -196,7 +196,12 @@ namespace dev.mikeee324.OpenPutt
         public void SendCallout(Callouts callout)
         {
             //You can't pass a playerobject through networking. So we recreate it after the network.
+#if OPENPUTT_DEMO_MODE
+            // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+            Callout(callout, Networking.LocalPlayer.playerId);
+#else
             SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)callout, Networking.LocalPlayer.playerId);
+#endif
         }
 
         [NetworkCallable]
@@ -363,7 +368,12 @@ namespace dev.mikeee324.OpenPutt
             //You can't pass a playerobject through networking. So we recreate it after the network.
             int randomIndex = Random.Range(0, (int)Callouts.StrokeLimit + 1);
             Callouts randomResult = (Callouts)randomIndex;
+#if OPENPUTT_DEMO_MODE
+            // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+            Callout(randomResult, Networking.LocalPlayer.playerId);
+#else
             SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)randomResult, Networking.LocalPlayer.playerId);
+#endif
         }
     }
 

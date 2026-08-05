@@ -70,10 +70,14 @@ namespace dev.mikeee324.OpenPutt
 
                 if (Utilities.IsValid(teleportEnterAudio))
                 {
+#if OPENPUTT_DEMO_MODE
+                    PlayEnterAudio();
+#else
                     if (networkAudio)
                         SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayEnterAudio));
                     else
                         PlayEnterAudio();
+#endif
                 }
 
                 SendCustomEventDelayedSeconds(nameof(_Teleport), teleportDelay);
@@ -113,10 +117,14 @@ namespace dev.mikeee324.OpenPutt
 
             if (Utilities.IsValid(teleportExitAudio))
             {
+#if OPENPUTT_DEMO_MODE
+                PlayExitAudio();
+#else
                 if (networkAudio)
                     SendCustomNetworkEvent(NetworkEventTarget.All, nameof(PlayExitAudio));
                 else
                     PlayExitAudio();
+#endif
             }
 
             golfBall = null;

@@ -87,8 +87,10 @@ namespace dev.mikeee324.OpenPutt
             audioSource.Play();
 
             // Tell other clients to start playing this track
+#if !OPENPUTT_DEMO_MODE
             if (isSynced && this.LocalPlayerOwnsThisObject())
                 RequestSerialization();
+#endif
         }
 
         public override void OnDeserialization()

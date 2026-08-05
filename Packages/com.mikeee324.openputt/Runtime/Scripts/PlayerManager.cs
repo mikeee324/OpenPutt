@@ -613,7 +613,11 @@ namespace dev.mikeee324.OpenPutt
                     openPutt.uiController.UpdateButtonStates();
             }
 
+#if OPENPUTT_DEMO_MODE
+            newCourse.SendCustomEvent(nameof(CourseManager.OnPlayerStartedCourse));
+#else
             newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));
+#endif
         }
 
         /// <summary>
@@ -621,7 +625,11 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private void _NotifyMaxScoreReached(CourseManager course)
         {
+#if OPENPUTT_DEMO_MODE
+            course.SendCustomEvent(nameof(CourseManager.OnPlayerHitMaxScore));
+#else
             course.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
+#endif
 
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
                 openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
@@ -713,7 +721,14 @@ namespace dev.mikeee324.OpenPutt
             {
                 // Send the finish course event to everybody
                 if (Utilities.IsValid(hole))
+                {
+#if OPENPUTT_DEMO_MODE
+                    // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+                    hole.OnBallEnteredHole(hitsOnCurrentCourse, courseScores[course.holeNumber]);
+#else
                     hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
+#endif
+                }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync
                 _RequestSync();
@@ -777,7 +792,9 @@ namespace dev.mikeee324.OpenPutt
 
         public void _SyncNow()
         {
+#if !OPENPUTT_DEMO_MODE
             RequestSerialization();
+#endif
             syncRequested = false;
         }
 

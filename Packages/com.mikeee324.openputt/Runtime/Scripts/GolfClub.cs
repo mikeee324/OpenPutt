@@ -384,7 +384,9 @@ namespace dev.mikeee324.OpenPutt
 
             TrySeedShaftScaleFromEyeHeight();
 
+#if !OPENPUTT_DEMO_MODE
             RequestSerialization();
+#endif
         }
 
         /// <summary>
@@ -869,7 +871,9 @@ namespace dev.mikeee324.OpenPutt
 
             _RefreshState();
 
+#if !OPENPUTT_DEMO_MODE
             RequestSerialization();
+#endif
         }
 
         public override void OnDrop()

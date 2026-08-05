@@ -7,6 +7,9 @@ using Random = UnityEngine.Random;
 namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    // Add OPENPUTT_DEMO_MODE to Project Settings > Player > Scripting Define Symbols to build a copy of the
+    // world that never sends state over the network (RequestSerialization/SendCustomNetworkEvent calls become
+    // no-ops or local-only calls) - useful for running in a busy instance without adding to network traffic.
     public class OpenPuttUtils : UdonSharpBehaviour
     {
         public static void Log(string tag, string message, string tagColor = "green")
