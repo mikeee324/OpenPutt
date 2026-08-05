@@ -262,6 +262,17 @@ namespace dev.mikeee324.OpenPutt
                                 var sfx = SfxController;
                                 if (Utilities.IsValid(sfx))
                                     sfx.PlayBallResetSoundAtPosition(respawnWorldPosition);
+
+                                // Only show the notification for normal courses - driving ranges reset constantly by design
+                                if (!hasShownOffCourseResetNotification && Utilities.IsValid(playerManager.CurrentCourse) && playerManager.CurrentCourse.courseType == CourseType.Standard)
+                                {
+                                    var notifications = NotificationsController;
+                                    if (Utilities.IsValid(notifications))
+                                    {
+                                        notifications.InstantiateCalloutBox("Off course - ball reset");
+                                        hasShownOffCourseResetNotification = true;
+                                    }
+                                }
                             }
                         }
                     }
@@ -417,6 +428,15 @@ namespace dev.mikeee324.OpenPutt
             Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.sfxController)
                 ? playerManager.openPutt.sfxController
                 : null;
+
+        /// Notifications controller, or null when the playerManager/openPutt/notifications chain isn't fully wired yet
+        private OpenPuttNotifications NotificationsController =>
+            Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && Utilities.IsValid(playerManager.openPutt.notifications)
+                ? playerManager.openPutt.notifications
+                : null;
+
+        /// Only show the off-course reset notification once per session so it doesn't nag on every stray shot
+        private bool hasShownOffCourseResetNotification = false;
 
         /// True only when the playerManager/openPutt chain is wired up and debug mode is on
         private bool DebugMode => Utilities.IsValid(playerManager) && Utilities.IsValid(playerManager.openPutt) && playerManager.openPutt.debugMode;
@@ -987,6 +1007,17 @@ namespace dev.mikeee324.OpenPutt
             var sfx = SfxController;
             if (Utilities.IsValid(sfx))
                 sfx.PlayBallResetSoundAtPosition(respawnWorldPosition);
+
+            // Only show the notification for normal courses - driving ranges reset constantly by design
+            if (!hasShownOffCourseResetNotification && playerManager.CurrentCourse.courseType == CourseType.Standard)
+            {
+                var notifications = NotificationsController;
+                if (Utilities.IsValid(notifications))
+                {
+                    notifications.InstantiateCalloutBox("Off course - ball reset");
+                    hasShownOffCourseResetNotification = true;
+                }
+            }
         }
 
         public void _OnBallHit(Vector3 withVelocity, Vector3 sideSpin)
