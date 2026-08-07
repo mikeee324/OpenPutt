@@ -69,6 +69,10 @@ namespace dev.mikeee324.OpenPutt
 
             // If this object isn't already registered as an event listener, register it here automatically
             openPutt._RegisterEventListener(this);
+
+            // Let the follower know about the ball cam so notifications stay on screen while it's open
+            if (Utilities.IsValid(_headFollower) && Utilities.IsValid(openPutt.ballCam))
+                _headFollower.ballCam = openPutt.ballCam;
         }
 
         public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar,
@@ -166,6 +170,25 @@ namespace dev.mikeee324.OpenPutt
             if (player != Networking.LocalPlayer) return;
             _playerIsInVR = player.IsUserInVR();
 
+            UpdateCanvasScale();
+        }
+
+        /// <summary>
+        /// Called by OpenPuttBallCam whenever the ball camera is turned on or off
+        /// </summary>
+        public void OnBallCameraToggled()
+        {
+            if (Utilities.IsValid(_headFollower) && Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.ballCam))
+                _headFollower.ballCam = openPutt.ballCam;
+
+            UpdateCanvasScale();
+        }
+
+        /// <summary>
+        /// Rescales the canvas so callouts take up the same amount of screen no matter what FOV we're rendering at
+        /// </summary>
+        private void UpdateCanvasScale()
+        {
             Vector3 baseScale = new Vector3(0.01f, 0.01f, 0.01f); // Your default canvas scale
             if (_playerIsInVR)
             {
@@ -179,8 +202,8 @@ namespace dev.mikeee324.OpenPutt
                 // 1. Define the baseline values you used when designing the UI
                 float baseFOV = 60f; // The FOV where the UI looks perfect
 
-                // 2. Get the player's current FOV (e.g., 50, 90, 100)
-                float currentFOV = VRCCameraSettings.ScreenCamera.FieldOfView;
+                // 2. Get the FOV of whatever camera the player is actually looking through
+                float currentFOV = BallCamIsActive ? openPutt.ballCam.ballCam.fieldOfView : VRCCameraSettings.ScreenCamera.FieldOfView;
 
                 // 3. Calculate the multiplier
                 // We divide by 2, and multiply by Mathf.Deg2Rad because Mathf.Tan expects radians!
@@ -192,6 +215,8 @@ namespace dev.mikeee324.OpenPutt
                 _canvas.transform.localScale = baseScale * scaleMultiplier;
             }
         }
+
+        private bool BallCamIsActive => Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.ballCam) && Utilities.IsValid(openPutt.ballCam.ballCam) && openPutt.ballCam.BallCamActive;
 
         public void SendCallout(Callouts callout)
         {
@@ -297,7 +322,7 @@ namespace dev.mikeee324.OpenPutt
                     calloutText = player == Networking.LocalPlayer ? "Triple Bogey!" : $"{player.displayName} scored a Triple Bogey.";
                     break;
                 case Callouts.StrokeLimit:
-                    calloutText = player == Networking.LocalPlayer ? "Stroke Limit!" : $"{player.displayName} hit the Stroke Limit.";
+                    calloutText = player == Networking.LocalPlayer ? "You hit the stroke limit!" : $"{player.displayName} hit the Stroke Limit.";
                     break;
                 case Callouts.LeftHandedMode:
                     calloutText = "Switched to Left Handed";

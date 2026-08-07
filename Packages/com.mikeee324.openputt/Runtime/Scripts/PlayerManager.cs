@@ -445,6 +445,8 @@ namespace dev.mikeee324.OpenPutt
 
                     break;
                 case CourseState.Playing:
+                    hitsOnCurrentCourse += 1;
+
                     if (CurrentCourse.courseType == CourseType.Standard)
                     {
                         courseScores[CurrentCourse.holeNumber] += 1;
@@ -459,15 +461,10 @@ namespace dev.mikeee324.OpenPutt
 
                             _NotifyMaxScoreReached(CurrentCourse);
 
-                            // Lock in the time spent on this course now that max score is reached
-                            courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[CurrentCourse.holeNumber];
-
-                            // Prevents the sound from being heard again
-                            courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
+                            // Close the course off like a skip does so the player isn't left on it
+                            _OnCourseFinished(CurrentCourse, null, CourseState.Completed);
                         }
                     }
-
-                    hitsOnCurrentCourse += 1;
 
                     break;
             }
@@ -697,7 +694,7 @@ namespace dev.mikeee324.OpenPutt
                     courseTimes[course.holeNumber] = course.maxTime;
                     break;
                 default:
-                    // Calculate time spent on this course, unless it was already locked in when maxed out
+                    // Calculate time spent on this course, unless they never actually started playing it
                     if (courseStates[course.holeNumber] != CourseState.Completed)
                         courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
                     break;

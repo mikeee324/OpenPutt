@@ -309,6 +309,8 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(uiController))
                 uiController.OnBallCameraToggled();
 
+            NotifyNotificationsOfCameraToggle();
+
             // This can be overridden on the playermanager
             if (Utilities.IsValid(localPlayerManager))
                 localPlayerManager.PlayerIsCurrentlyFrozen = true;
@@ -331,9 +333,20 @@ namespace dev.mikeee324.OpenPutt
             if (Utilities.IsValid(uiController))
                 uiController.OnBallCameraToggled();
 
+            NotifyNotificationsOfCameraToggle();
+
             // This can be overridden on the playermanager
             if (Utilities.IsValid(localPlayerManager))
                 localPlayerManager.PlayerIsCurrentlyFrozen = false;
+        }
+
+        /// <summary>
+        /// Lets the notification system know the cam changed state so callouts follow whatever we're looking through
+        /// </summary>
+        private void NotifyNotificationsOfCameraToggle()
+        {
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.notifications))
+                openPutt.notifications.OnBallCameraToggled();
         }
 
         /// <summary>
@@ -361,7 +374,21 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar, int totalHits)
         {
-            if (player.isLocal && BallCamActive)
+            CloseCameraIfLocalPlayer(player);
+        }
+
+        public override void OnPlayerHitCourseMaxScore(VRCPlayerApi player, CourseManager course)
+        {
+            CloseCameraIfLocalPlayer(player);
+        }
+
+        /// <summary>
+        /// Turns the ball camera off when the local player is done with a course
+        /// </summary>
+        /// <param name="player">The player the event was fired for</param>
+        private void CloseCameraIfLocalPlayer(VRCPlayerApi player)
+        {
+            if (Utilities.IsValid(player) && player.isLocal && BallCamActive)
             {
                 inputHandler.SendCustomEventDelayedSeconds(nameof(OpenPuttInputHandler.ToggleCamera), .1f);
             }
