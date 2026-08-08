@@ -117,7 +117,7 @@ namespace dev.mikeee324.OpenPutt
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Min(0), Tooltip("Consecutive grounded frames before snapping engages, so a just-landed ball's bounce plays out first. 0 = snap immediately, higher = longer grace")]
-        int snapMinGroundedSteps = 4;
+        int snapMinGroundedSteps = 3;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Range(0, 90), Tooltip("Surfaces steeper than this (degrees from flat) are left to Unity physics instead of being snapped to")]

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System.Linq;
+using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEditor.PackageManager.UI;
 
@@ -128,6 +129,40 @@ namespace dev.mikeee324.OpenPutt
             GUILayout.EndHorizontal();
         }
 
+        private Texture2D demoModeBackground = null;
+
+        /// <summary>Big orange banner shown while OPENPUTT_DEMO_MODE is enabled, since it silently disables networking.</summary>
+        private void DrawDemoModeWarning()
+        {
+            Color orange = new Color(1f, 0.55f, 0f);
+
+            if (demoModeBackground == null)
+            {
+                demoModeBackground = new Texture2D(1, 1) { hideFlags = HideFlags.HideAndDontSave };
+                demoModeBackground.SetPixel(0, 0, new Color(orange.r, orange.g, orange.b, 0.25f));
+                demoModeBackground.Apply();
+            }
+
+            GUIStyle boxStyle = new GUIStyle(EditorStyles.helpBox)
+            {
+                normal = { background = demoModeBackground },
+                padding = new RectOffset(8, 8, 6, 6),
+                margin = new RectOffset(0, 0, 0, 6)
+            };
+
+            GUIStyle textStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                wordWrap = true,
+                fontSize = 12,
+                normal = { textColor = orange },
+                alignment = TextAnchor.MiddleCenter
+            };
+
+            GUILayout.BeginVertical(boxStyle);
+            GUILayout.Label("⚠ DEMO MODE BUILD IS ENABLED ⚠\nSyncing is turned off - scores and state will not be networked to other players.", textStyle);
+            GUILayout.EndVertical();
+        }
+
         /// <summary>Builds a tab label with an item count and an optional error/warning badge icon.</summary>
         private GUIContent MakeTabContent(string title, int count, bool error, bool warning)
         {
@@ -165,6 +200,9 @@ namespace dev.mikeee324.OpenPutt
             GUILayout.Space(4);
             DrawTitleWithLogos("OpenPutt", firstOpenPutt.CurrentVersion + "  •  by mikeee324");
             GUILayout.Space(4);
+
+            if (IsDemoModeBuildEnabled())
+                DrawDemoModeWarning();
 
             OpenPutt openPutt = EditorGUILayout.ObjectField("OpenPutt", firstOpenPutt, typeof(OpenPutt), true) as OpenPutt;
 
@@ -486,6 +524,48 @@ namespace dev.mikeee324.OpenPutt
                 sample.Import();
 
             EditorUtility.DisplayDialog("Sample Import Finished", "The samples have been imported into your project.\r\nYou can find them in the Assets/Samples/OpenPutt folder.", "OK");
+        }
+
+        private const string DemoModeDefine = "OPENPUTT_DEMO_MODE";
+
+        private static readonly NamedBuildTarget[] DemoModeBuildTargets =
+        {
+            NamedBuildTarget.Standalone,
+            NamedBuildTarget.Android
+        };
+
+        private static bool IsDemoModeBuildEnabled()
+        {
+            PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out string[] defines);
+            return defines.Contains(DemoModeDefine);
+        }
+
+        [MenuItem("OpenPutt/Demo Mode Build (disables syncing)")]
+        public static void ToggleDemoModeBuild()
+        {
+            bool enable = !IsDemoModeBuildEnabled();
+
+            foreach (NamedBuildTarget target in DemoModeBuildTargets)
+            {
+                PlayerSettings.GetScriptingDefineSymbols(target, out string[] defines);
+                List<string> defineList = defines.ToList();
+
+                if (enable && !defineList.Contains(DemoModeDefine))
+                    defineList.Add(DemoModeDefine);
+                else if (!enable)
+                    defineList.Remove(DemoModeDefine);
+
+                PlayerSettings.SetScriptingDefineSymbols(target, defineList.ToArray());
+            }
+
+            OpenPuttUtils.Log("OpenPutt Setup", $"Demo mode build is now {(enable ? "ENABLED" : "DISABLED")}", "cyan");
+        }
+
+        [MenuItem("OpenPutt/Demo Mode Build (disables syncing)", true)]
+        public static bool ToggleDemoModeBuildValidate()
+        {
+            Menu.SetChecked("OpenPutt/Demo Mode Build (disables syncing)", IsDemoModeBuildEnabled());
+            return true;
         }
     }
 }
