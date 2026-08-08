@@ -1,6 +1,7 @@
 ﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 
@@ -11,39 +12,58 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("Sync Settings")] [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
+        [OpenPuttDescription("Handles keeping this object's position and rotation synced across the network, and optionally makes it a pickup that can be returned to its start point or respawned if dropped or knocked out of bounds.")]
+        [OpenPuttFoldoutGroup("Sync Settings")]
+        [Range(0, 1f), Tooltip("How long the object should keep syncing fast for after requesting a fast sync")]
         public float fastSyncTimeout = 0.25f;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Tooltip("This lets you define a curve to scale back the speed of fast updates based on the number on players in the instance. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve fastSyncIntervalCurve;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Tooltip("This defines how often this often will be updated for remote players (in seconds) based on how far away they are from this GameObject. You can leave this empty and a default curve will be applied when the game loads")]
         public AnimationCurve remoteUpdateDistanceCurve;
 
+        [OpenPuttFoldoutGroup("Sync Settings")]
         [Range(0.001f, 0.05f), Tooltip("Approximately the time it will take to catch up with the position of remote objects. A smaller value will reach the target faster.")]
         public float remoteUpdateSmoothTime = 0.02f;
 
-        [Header("Pickup Settings")] [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
+        [OpenPuttFoldoutGroup("Pickup Settings")]
+        [Tooltip("If enabled PuttSync will operate similar to VRC Object Sync")]
         public bool syncPositionAndRot = true;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Should this object be returned to its spawn position after players let go of it")]
         public bool returnAfterDrop;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Range(2f, 300f), Tooltip("If ReturnAfterDrop is enabled this object will be put back into its original position after this many seconds of not being held")]
         public float returnAfterDropTime = 10f;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Designate a script that is being called when object is returned. Calls the remote function written in the box below. ")]
         public UdonSharpBehaviour returnListener;
 
-        public string remoteReturnFunction = "ReturnFunction";
+        [OpenPuttFoldoutGroup("Pickup Settings")]
+        [Tooltip("Method name to call on the Return Listener when this object respawns")]
+        public string remoteReturnFunction = "";
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("Should the object be respawned if it goes below the height specified below?")]
         public bool autoRespawn = true;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
         [Tooltip("The minimum height that this object can go to before being respawned (if enabled)")]
         public float autoRespawnHeight = -100f;
 
+        [OpenPuttFoldoutGroup("Pickup Settings")]
+        [Tooltip("Lets PuttSync toggle the VRCPickup's pickupable state automatically")]
         public bool canManagePickupable = true;
+
+        [OpenPuttFoldoutGroup("Pickup Settings")]
+        [Tooltip("Experimental: Tries to keep a dynamic rigidbody synced between players, haven't tested this much")]
+        public bool syncDynamicRigidbody = false;
 
         #endregion
 
@@ -71,6 +91,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// The respawn position for this object in world space
         /// </summary>
+        [Tooltip("World-space position this object respawns to")]
         public Vector3 originalPosition;
 
         /// <summary>
@@ -87,6 +108,7 @@ namespace dev.mikeee324.OpenPutt
             set => currentOwnerHandInt = (int)value;
         }
 
+        [Tooltip("Capture this object's transform as the respawn point on Start")]
         public bool grabOriginalPosOnStart = true;
 
         #endregion
@@ -119,7 +141,7 @@ namespace dev.mikeee324.OpenPutt
         private bool isHandlingRemoteUpdates;
 
         /// <summary>
-        /// Makes sure at least 1 data sync is sent on the next HandleSendSync
+        /// Makes sure at least 1 data sync is sent on the next _HandleSendSync
         /// </summary>
         private bool forceNextSync;
 
@@ -130,6 +152,8 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 lastSyncVelocity = Vector3.zero;
         private Vector3 lastSyncPos = Vector3.zero;
         private Quaternion lastSyncRot = Quaternion.identity;
+        private int lastReceivedOwnerHandInt = (int)VRC_Pickup.PickupHand.None;
+        private bool isKinematic;
 
         #endregion
 
@@ -140,6 +164,9 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(objectRB))
                 objectRB = GetComponent<Rigidbody>();
 
+            if (Utilities.IsValid(objectRB))
+                isKinematic = objectRB.isKinematic;
+
             if (grabOriginalPosOnStart)
             {
                 originalPosition = transform.position;
@@ -149,7 +176,7 @@ namespace dev.mikeee324.OpenPutt
             syncPosition = transform.localPosition;
             syncRotation = transform.localRotation;
 
-            if (!Utilities.IsValid(fastSyncIntervalCurve) || fastSyncIntervalCurve.length == 0)
+            if (fastSyncIntervalCurve == null || fastSyncIntervalCurve.length == 0)
             {
                 fastSyncIntervalCurve = new AnimationCurve();
                 fastSyncIntervalCurve.AddKey(0f, 0.03f);
@@ -158,22 +185,24 @@ namespace dev.mikeee324.OpenPutt
                 fastSyncIntervalCurve.AddKey(82f, 1f);
             }
 
-            if (!Utilities.IsValid(remoteUpdateDistanceCurve) || remoteUpdateDistanceCurve.length == 0)
+            if (remoteUpdateDistanceCurve == null || remoteUpdateDistanceCurve.length == 0)
             {
                 remoteUpdateDistanceCurve = new AnimationCurve();
                 remoteUpdateDistanceCurve.AddKey(0f, 0);
-                remoteUpdateDistanceCurve.AddKey(30f, 0);
-                remoteUpdateDistanceCurve.AddKey(100f, 1f);
-                remoteUpdateDistanceCurve.AddKey(200f, 5f);
+                remoteUpdateDistanceCurve.AddKey(100f, 0);
+                remoteUpdateDistanceCurve.AddKey(200f, 1f);
+                remoteUpdateDistanceCurve.AddKey(500f, 5f);
             }
 
             fastSyncInterval = fastSyncIntervalCurve.Evaluate(VRCPlayerApi.GetPlayerCount());
+
+            localPlayer = Networking.LocalPlayer;
         }
 
         /// <summary>
         /// This function is where the data is gathered and then sent if needed
         /// </summary>
-        public void HandleSendSync()
+        public void _HandleSendSync()
         {
             if (isHandlingRemoteUpdates)
             {
@@ -188,7 +217,7 @@ namespace dev.mikeee324.OpenPutt
                 if (originalPosition.y < autoRespawnHeight)
                     originalPosition = new Vector3(originalPosition.x, autoRespawnHeight, originalPosition.z);
 
-                Respawn();
+                _Respawn();
             }
 
             // Extra data changed is an override thing
@@ -204,9 +233,16 @@ namespace dev.mikeee324.OpenPutt
                 // Nobody is holding the object, sync normal pos/rot
                 syncPosition = transform.localPosition;
                 syncRotation = transform.localRotation;
-                
+
                 // If the object has moved since last time reset the flag
                 canSync = transform.hasChanged;
+
+                if (Utilities.IsValid(objectRB) && !objectRB.IsSleeping())
+                {
+                    _RequestFastSync(true);
+                    canSync = true;
+                }
+
                 transform.hasChanged = false;
             }
 
@@ -218,23 +254,41 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // If allowed to send a sync - do it!
+#if !OPENPUTT_DEMO_MODE
             if (canSync)
                 RequestSerialization();
+#endif
 
             // If we still have time left to sync or player is holding object (so we can check if the offsets have changed), schedule in the next sync
-            if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt > 0)
-                SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
+            if (fastSyncStopTime > Time.timeSinceLevelLoad || currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
+            {
+                SendCustomEventDelayedSeconds(nameof(_HandleSendSync), fastSyncInterval);
+            }
             else
+            {
                 fastSyncStopTime = -1f;
+#if OPENPUTT_DEMO_MODE
+                SendCustomEvent(nameof(OnStopSendingSync));
+#else
+                SendCustomNetworkEvent(NetworkEventTarget.All, nameof(OnStopSendingSync));
+#endif
+            }
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 1)]
+        public void OnStopSendingSync()
+        {
+            if (syncDynamicRigidbody && Utilities.IsValid(objectRB) && !isKinematic)
+                objectRB.isKinematic = false;
         }
 
         /// <summary>
         /// This handles syncing the positions up and smoothing the mnotion for remote players
         /// </summary>
-        public void HandleRemoteUpdate()
+        public void _HandleRemoteUpdate()
         {
             var owner = Networking.GetOwner(gameObject);
-            if (owner == Networking.LocalPlayer)
+            if (owner == localPlayer)
             {
                 isHandlingRemoteUpdates = false;
                 return;
@@ -290,8 +344,9 @@ namespace dev.mikeee324.OpenPutt
 
                     if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue <= 0f)
                     {
-                        posOffset = Vector3.Lerp(lastSyncPos, syncPosition, Time.deltaTime * 10f);
-                        rotOffset = Quaternion.Slerp(lastSyncRot, syncRotation, Time.deltaTime * 10f);
+                        var lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
+                        posOffset = Vector3.Lerp(lastSyncPos, syncPosition, lerpProgress);
+                        rotOffset = Quaternion.Slerp(lastSyncRot, syncRotation, lerpProgress);
 
                         lastSyncPos = posOffset;
                         lastSyncRot = rotOffset;
@@ -300,15 +355,18 @@ namespace dev.mikeee324.OpenPutt
                         newOffsetRot = handRotation * rotOffset;
                     }
 
+                    if (syncDynamicRigidbody && Utilities.IsValid(objectRB))
+                        objectRB.isKinematic = true;
+
                     transform.SetPositionAndRotation(newPosition, newOffsetRot);
 
                     // Run this for the next frame too
-                    SendCustomEventDelayedSeconds(nameof(HandleRemoteUpdate), lastKnownDistanceUpdateValue);
+                    SendCustomEventDelayedSeconds(nameof(_HandleRemoteUpdate), lastKnownDistanceUpdateValue);
 
                     return;
                 }
 
-                if ((transform.localPosition - syncPosition).magnitude > 0.001f || Quaternion.Dot(transform.localRotation, syncRotation) < 0.999f)
+                if ((transform.localPosition - syncPosition).magnitude > 0.001f || Mathf.Abs(Quaternion.Dot(transform.localRotation, syncRotation)) < 0.999f)
                 {
                     var newPosition = syncPosition;
                     var newRotation = syncRotation;
@@ -323,7 +381,7 @@ namespace dev.mikeee324.OpenPutt
                     }
 
                     // If we're allowed to smooth the movement (If object is far away then we should just snap to where we last saw it)
-                    if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue == 0f)
+                    if (!isFirstSync && hasSynced && lastKnownDistanceUpdateValue <= 0f)
                     {
                         // Try to smooth out the lerps
                         var lerpProgress = 1.0f - Mathf.Pow(0.001f, Time.deltaTime);
@@ -338,7 +396,7 @@ namespace dev.mikeee324.OpenPutt
                     transform.SetLocalPositionAndRotation(newPosition, newRotation);
 
                     // Run this for the next frame too
-                    SendCustomEventDelayedSeconds(nameof(HandleRemoteUpdate), lastKnownDistanceUpdateValue);
+                    SendCustomEventDelayedSeconds(nameof(_HandleRemoteUpdate), lastKnownDistanceUpdateValue);
 
                     return;
                 }
@@ -354,6 +412,14 @@ namespace dev.mikeee324.OpenPutt
                 isFirstSync = true;
             hasSynced = true;
 
+            // Reset lerp source on hand-state transitions so we don't lerp from a stale offset captured during a previous grab
+            if (currentOwnerHandInt != lastReceivedOwnerHandInt)
+            {
+                lastSyncPos = syncPosition;
+                lastSyncRot = syncRotation;
+                lastReceivedOwnerHandInt = currentOwnerHandInt;
+            }
+
             if (!isHandlingRemoteUpdates)
             {
                 isHandlingRemoteUpdates = true;
@@ -361,7 +427,7 @@ namespace dev.mikeee324.OpenPutt
                 if (!Utilities.IsValid(localPlayer) && OpenPuttUtils.LocalPlayerIsValid())
                     localPlayer = Networking.LocalPlayer;
 
-                HandleRemoteUpdate();
+                _HandleRemoteUpdate();
             }
 
             isFirstSync = false;
@@ -370,7 +436,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Is called whenever a player drops this pickup.. if they drop it multiple times quickly this should only respawn once when it receives the last check
         /// </summary>
-        public void ReturnAfterDropTimer()
+        public void _ReturnAfterDropTimer()
         {
             if (!this.LocalPlayerOwnsThisObject() || returnAfterDropEndTime < 0)
                 return;
@@ -380,7 +446,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 // Schedule another check in the future
                 //Utils.Log(this, "Can't check for a respawn yet!");
-                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
+                SendCustomEventDelayedSeconds(nameof(_ReturnAfterDropTimer), 1);
                 return;
             }
 
@@ -388,12 +454,12 @@ namespace dev.mikeee324.OpenPutt
             if (pickup.currentHand == VRC_Pickup.PickupHand.None)
             {
                 // We can respawn it
-                Respawn();
+                _Respawn();
                 returnAfterDropEndTime = -1;
             }
         }
 
-        public void UpdatePickupCurrentHand()
+        public void _UpdatePickupCurrentHand()
         {
             if (!this.LocalPlayerOwnsThisObject() || !Utilities.IsValid(pickup))
                 return;
@@ -407,26 +473,23 @@ namespace dev.mikeee324.OpenPutt
             {
                 currentOwnerHandInt = (int)handStateThisFrame;
 
-                RequestFastSync(forceSync: true);
+                _UpdatePickupHandOffsets();
+
+                _RequestFastSync(forceSync: true);
             }
 
             // If we are still holding something - check again soon
             if ((int)currentOwnerHand != (int)VRC_Pickup.PickupHand.None)
-                SendCustomEventDelayedSeconds(nameof(UpdatePickupCurrentHand), 1f);
+                SendCustomEventDelayedSeconds(nameof(_UpdatePickupCurrentHand), 1f);
         }
 
         public override void OnPickup()
         {
-            if (!Utilities.IsValid(pickup) || !Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid()) return;
+            if (!Utilities.IsValid(pickup) || !Utilities.IsValid(localPlayer) || !localPlayer.IsValid()) return;
 
             returnAfterDropEndTime = -1;
 
-            var shouldDropPickup = false;
-            if (pickup.DisallowTheft && !this.LocalPlayerOwnsThisObject() && currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None)
-                shouldDropPickup = true;
-            if (!pickup.pickupable)
-                shouldDropPickup = true;
-
+            var shouldDropPickup = !pickup.pickupable || (pickup.DisallowTheft && currentOwnerHandInt != (int)VRC_Pickup.PickupHand.None && !this.LocalPlayerOwnsThisObject());
             if (shouldDropPickup && (int)pickup.currentHand != (int)VRC_Pickup.PickupHand.None)
             {
                 if (Utilities.IsValid(pickup))
@@ -434,21 +497,21 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
+            OpenPuttUtils.SetOwner(localPlayer, gameObject);
 
             currentOwnerHand = VRC_Pickup.PickupHand.None;
 
-            syncPosition = Vector3.zero;
-            syncRotation = Quaternion.identity;
-
             // Keep a track of which hand the player is holding the pickup in
-            UpdatePickupCurrentHand();
+            _UpdatePickupCurrentHand();
 
-            _UpdatePickupHandOffsets();
-
+#if OPENPUTT_DEMO_MODE
+            SendCustomEvent(nameof(ForceDrop));
+#else
             SendCustomNetworkEvent(NetworkEventTarget.All, nameof(ForceDrop));
+#endif
         }
 
+        [NetworkCallable(maxEventsPerSecond: 5)]
         public void ForceDrop()
         {
             if (this.LocalPlayerOwnsThisObject()) return;
@@ -460,31 +523,31 @@ namespace dev.mikeee324.OpenPutt
         {
             isBeingHeldByExternalScript = false;
 
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !this.LocalPlayerOwnsThisObject()) return;
 
             if (returnAfterDrop && returnAfterDropEndTime < 0)
             {
                 returnAfterDropEndTime = Time.timeSinceLevelLoad + returnAfterDropTime;
-                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
+                SendCustomEventDelayedSeconds(nameof(_ReturnAfterDropTimer), 1);
             }
 
             syncPosition = transform.localPosition;
             syncRotation = transform.localRotation;
 
             // Keep a track of which hand the player is holding the pickup in
-            UpdatePickupCurrentHand();
+            _UpdatePickupCurrentHand();
         }
 
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
-            if (Networking.GetOwner(gameObject) != Networking.LocalPlayer) return;
-            RequestFastSync(true);
+            if (Networking.GetOwner(gameObject) != localPlayer) return;
+            _RequestFastSync(true);
         }
 
         /// <summary>
         /// Called by external scripts when the object has been picked up
         /// </summary>
-        public void OnScriptPickup()
+        public void _OnScriptPickup()
         {
             isBeingHeldByExternalScript = true;
             OnPickup();
@@ -493,7 +556,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Called by external scripts when the object has been dropped
         /// </summary>
-        public void OnScriptDrop()
+        public void _OnScriptDrop()
         {
             OnDrop();
         }
@@ -520,14 +583,14 @@ namespace dev.mikeee324.OpenPutt
         /// Triggers PuttSync to start sending fast position updates for an amount of time (fastSyncTimeout)<br/>
         /// Having this slight delay for stopping lets the sync catch up and show where the object came to stop
         /// </summary>
-        public void RequestFastSync(bool forceSync = false)
+        public void _RequestFastSync(bool forceSync = false)
         {
             if (forceSync)
                 forceNextSync = true;
 
             // If there isn't a sync running already, schedule it in
             if (fastSyncStopTime < 0)
-                SendCustomEventDelayedSeconds(nameof(HandleSendSync), fastSyncInterval);
+                SendCustomEventDelayedSeconds(nameof(_HandleSendSync), fastSyncInterval);
 
             // Update the stop time for fast updates
             fastSyncStopTime = Time.timeSinceLevelLoad + fastSyncTimeout;
@@ -536,9 +599,9 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Resets the position of this object to it's original position/rotation and sends a sync (Only the owner can perform this!)
         /// </summary>
-        public void Respawn()
+        public void _Respawn()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !localPlayer.IsOwner(gameObject))
                 return;
 
             returnAfterDropEndTime = -1;
@@ -563,22 +626,22 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            if (Utilities.IsValid(returnListener) && Utilities.IsValid(remoteReturnFunction) && remoteReturnFunction.Length > 0)
+            if (Utilities.IsValid(returnListener) && !string.IsNullOrEmpty(remoteReturnFunction))
                 returnListener.SendCustomEvent(remoteReturnFunction);
 
-            RequestFastSync();
+            _RequestFastSync();
         }
 
-        public void ResetReturnTimer()
+        public void _ResetReturnTimer()
         {
             if (!returnAfterDrop)
                 return;
 
-            OpenPuttUtils.SetOwner(Networking.LocalPlayer, gameObject);
+            OpenPuttUtils.SetOwner(localPlayer, gameObject);
 
             // If there isn't a timer running, start one
             if (returnAfterDropEndTime < 0)
-                SendCustomEventDelayedSeconds(nameof(ReturnAfterDropTimer), 1);
+                SendCustomEventDelayedSeconds(nameof(_ReturnAfterDropTimer), 1);
 
             // Update the timer end stop
             returnAfterDropEndTime = Time.timeSinceLevelLoad + returnAfterDropTime;
@@ -589,16 +652,16 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         /// <param name="position">The new spawn position in world space</param>
         /// <param name="rotation">The new spawn rotation for this object</param>
-        public void SetSpawnPosition(Vector3 position, Quaternion rotation)
+        public void _SetSpawnPosition(Vector3 position, Quaternion rotation)
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
+            if (!Utilities.IsValid(localPlayer) || !localPlayer.IsValid() || !localPlayer.IsOwner(gameObject))
                 return;
 
 
             originalPosition = position;
             originalRotation = rotation;
 
-            RequestFastSync();
+            _RequestFastSync();
         }
 
         public override void OnPlayerJoined(VRCPlayerApi player)
@@ -613,54 +676,45 @@ namespace dev.mikeee324.OpenPutt
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
         {
-            var localPlayerIsOwner = Networking.LocalPlayer == player;
+            var localPlayerIsOwner = localPlayer == player;
             var isPickupable = OpenPuttUtils.LocalPlayerIsValid() && localPlayerIsOwner;
             // Enable pickup for the owner
             if (canManagePickupable && Utilities.IsValid(pickup) && !pickup.pickupable)
                 pickup.pickupable = isPickupable;
+            if (syncDynamicRigidbody && !isKinematic && Utilities.IsValid(objectRB))
+                objectRB.isKinematic = false;
         }
 
         private bool _UpdatePickupHandOffsets()
         {
-            if (currentOwnerHandInt == (int)VRC_Pickup.PickupHand.None)
+            if (currentOwnerHand == VRC_Pickup.PickupHand.None)
                 return false;
 
             // Cache old values so we can check for changes that need syncing
             var oldOffset = syncPosition;
             var oldRotationOffset = syncRotation;
 
-            GetPickupHandOffsets(Networking.LocalPlayer, out var newOwnerHandOffset, out var newOwnerHandOffsetRotation);
-
-            var offsetPosDiff = (oldOffset - newOwnerHandOffset).magnitude;
-            var offsetRotDiff = Quaternion.Angle(oldRotationOffset, newOwnerHandOffsetRotation);
-
-            // If the offsets from the players hand change - send a sync
-            if (offsetPosDiff > 0.02f || offsetRotDiff > 1f)
-            {
-                syncPosition = newOwnerHandOffset;
-                syncRotation = newOwnerHandOffsetRotation;
-                return true;
-            }
-
-            return false;
-        }
-
-        private void GetPickupHandOffsets(VRCPlayerApi player, out Vector3 posOffset, out Quaternion rotOffset)
-        {
-            if (!Utilities.IsValid(player) || !player.IsValid())
-            {
-                posOffset = Vector3.zero;
-                rotOffset = Quaternion.identity;
-                return;
-            }
-
             var currentTrackedBone = currentOwnerHand == VRC_Pickup.PickupHand.Left ? HumanBodyBones.LeftHand : HumanBodyBones.RightHand;
 
-            var handPosition = player.GetBonePosition(currentTrackedBone);
-            var handRotation = player.GetBoneRotation(currentTrackedBone);
+            var handPosition = localPlayer.GetBonePosition(currentTrackedBone);
+            var handRotation = localPlayer.GetBoneRotation(currentTrackedBone);
 
-            posOffset = Quaternion.Inverse(handRotation) * (transform.position - handPosition);
-            rotOffset = Quaternion.Inverse(handRotation) * transform.rotation;
+            var posOffset = Quaternion.Inverse(handRotation) * (transform.position - handPosition);
+            var rotOffset = Quaternion.Inverse(handRotation) * transform.rotation;
+
+            var offsetPosDiff = (oldOffset - posOffset).magnitude;
+            var offsetRotDiff = Quaternion.Angle(oldRotationOffset, rotOffset);
+
+            var posMovedEnough = offsetPosDiff >= .1f;
+            // VR controllers have constant micro-rotation, so don't gate on rotation there
+            var rotMovedEnough = !localPlayer.IsUserInVR() && offsetRotDiff >= 5f;
+
+            if (!posMovedEnough && !rotMovedEnough)
+                return false;
+
+            syncPosition = posOffset;
+            syncRotation = rotOffset;
+            return true;
         }
     }
 }

@@ -3,6 +3,7 @@ using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
+using VRC.Udon.Common;
 
 namespace dev.mikeee324.OpenPutt
 {
@@ -11,11 +12,14 @@ namespace dev.mikeee324.OpenPutt
     {
         #region Public Settings
 
-        [Header("Object Settings")]
+        [OpenPuttDescription("A pickup object that gets mounted onto a bone on the players body (like a shoulder) so it follows them around and can be grabbed later.")]
+        [OpenPuttFoldoutGroup("Object Settings")]
         public ControllerDetector controllerDetector;
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         public Rigidbody rb;
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [SerializeField, Tooltip("The actual object you want the player to see when they grab this body mounted object")]
         private GameObject objectToAttach;
 
@@ -33,36 +37,70 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player picks up this object it will send this an event with this name to the attached object")]
-        public string pickupEventName = "OnScriptPickup";
+        public string pickupEventName = "_OnScriptPickup";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
-        public string dropEventName = "OnScriptDrop";
+        public string dropEventName = "_OnScriptDrop";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
+        [Tooltip("When the player presses Use while holding this object it will send this event with this name to the attached object")]
+        public string useEventName = "_OnScriptUse";
+
+        [OpenPuttFoldoutGroup("Object Settings")]
         [Tooltip("When the player drops this object it will send this an event with this name to the attached object")]
         public string currentHandVariableName = "currentOwnerHideOverride";
 
+        [OpenPuttFoldoutGroup("Object Settings")]
         public VRCPickup pickup;
 
-        [Header("Mounting Settings")] [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
+        [OpenPuttFoldoutGroup("Object Settings")]
+        [Tooltip("The renderer showing this object's mesh while it's mounted/held - can be toggled off separately from the pickup itself")]
+        public MeshRenderer meshRenderer;
+
+        /// <summary>Shows/hides <see cref="meshRenderer"/> without disabling the pickup functionality</summary>
+        public bool MeshRendererEnabled
+        {
+            get => Utilities.IsValid(meshRenderer) && meshRenderer.enabled;
+            set
+            {
+                if (Utilities.IsValid(meshRenderer))
+                    meshRenderer.enabled = value;
+            }
+        }
+
+        [OpenPuttFoldoutGroup("Mounting Settings")]
+        [Tooltip("Defines which bone this pickup gets mounted to on the players avatar")]
         public HumanBodyBones mountToBone = HumanBodyBones.Head;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public bool mountToPlayerPosition;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 mountingOffset = Vector3.zero;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         [Tooltip("Toggles scaling this offset based onthe local players height (allows you to move it further away from their head if they are taller)")]
         public bool mountingOffsetHeightScaling;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public AnimationCurve mountingOffsetHeightScale;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         [Tooltip("Allows the VRCPickup proximity to scale with the players height to hopefully make it easier to grab things")]
         public float defaultPickupProximity = 0.2f;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public KeyCode desktopInputKey = KeyCode.M;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public ControllerButtons controllerInputKey = ControllerButtons.None;
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public VRC_Pickup.PickupHand pickupHandLimit = VRC_Pickup.PickupHand.None;
 
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 desktopHeadOffset = new Vector3(0, 0, 1);
+        [OpenPuttFoldoutGroup("Mounting Settings")]
         public Vector3 desktopRotationOffset = new Vector3(-90, 0, 0);
 
         [HideInInspector]
@@ -73,6 +111,9 @@ namespace dev.mikeee324.OpenPutt
 
         [HideInInspector]
         public bool tempDisableAttachment = false;
+
+        [HideInInspector, Tooltip("When true the desktop/controller pickup key is ignored (e.g. while the ball cam is active)")]
+        public bool ignorePickupKey = false;
 
         #endregion
 
@@ -134,6 +175,9 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(pickup))
                 pickup = GetComponent<VRCPickup>();
 
+            if (!Utilities.IsValid(meshRenderer))
+                meshRenderer = GetComponent<MeshRenderer>();
+
             if (!Utilities.IsValid(mountingOffsetHeightScale) || mountingOffsetHeightScale.length == 0)
             {
                 mountingOffsetHeightScale.AddKey(0.2f, 0.1f);
@@ -143,7 +187,7 @@ namespace dev.mikeee324.OpenPutt
 
             currentOffset = mountingOffset;
 
-            SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
+            SendCustomEventDelayedSeconds(nameof(_UpdateObjectOffset), 1f);
         }
 
         public override void PostLateUpdate()
@@ -170,8 +214,8 @@ namespace dev.mikeee324.OpenPutt
                 if (!userIsInVR)
                 {
                     pickupHandLimit = VRC_Pickup.PickupHand.None;
-                    currentHand = desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRC_Pickup.PickupHand.Right : VRC_Pickup.PickupHand.None;
-                    if (controllerInputKey != ControllerButtons.None)
+                    currentHand = !ignorePickupKey && desktopInputKey != KeyCode.None && Input.GetKey(desktopInputKey) ? VRC_Pickup.PickupHand.Right : VRC_Pickup.PickupHand.None;
+                    if (!ignorePickupKey && controllerInputKey != ControllerButtons.None)
                     {
                         if (Utilities.IsValid(controllerDetector) && controllerDetector.LastUsedJoystick.IsKeyPressed(controllerInputKey, controllerDetector.LastKnownJoystickID))
                             currentHand = VRC_Pickup.PickupHand.Right;
@@ -197,7 +241,13 @@ namespace dev.mikeee324.OpenPutt
             {
                 if (mountToPlayerPosition)
                 {
-                    gameObject.transform.SetPositionAndRotation(localPlayer.GetPosition(), localPlayer.GetRotation());
+                    // GetPosition() only tracks the playspace origin (X/Z), so it doesn't move when the
+                    // player crouches or their playspace is raised above the floor. Use the real tracked
+                    // head height for Y instead of a fixed eye-height offset so it follows both cases.
+                    var rootPos = localPlayer.GetPosition();
+                    rootPos.y = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position.y;
+                    var rootRot = localPlayer.GetRotation();
+                    gameObject.transform.SetPositionAndRotation(rootPos + rootRot * currentOffset, rootRot);
                 }
                 else
                 {
@@ -228,7 +278,7 @@ namespace dev.mikeee324.OpenPutt
             if (!userIsInVR)
             {
                 var head = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
-                currPos = head.position + head.rotation * desktopHeadOffset;
+                currPos = head.position + head.rotation * GetScaledDesktopHeadOffset();
                 currRot = head.rotation;
             }
 
@@ -251,6 +301,26 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        public override void InputUse(bool value, UdonInputEventArgs args)
+        {
+            if (!value || heldInHand == VRC_Pickup.PickupHand.None)
+                return;
+
+            // Only fire from the hand actually holding this object, otherwise pressing Use with the
+            // other hand (e.g. while it's holding something else) would incorrectly trigger this too.
+            bool useFromHeldHand = (heldInHand == VRC_Pickup.PickupHand.Left && args.handType == HandType.LEFT) ||
+                                    (heldInHand == VRC_Pickup.PickupHand.Right && args.handType == HandType.RIGHT);
+            if (!useFromHeldHand)
+                return;
+
+            if (string.IsNullOrEmpty(useEventName) || !Utilities.IsValid(objectToAttach))
+                return;
+
+            var listeners = objectToAttach.GetComponents<UdonBehaviour>();
+            foreach (var listener in listeners)
+                listener.SendCustomEvent(useEventName);
+        }
+
         private void ActivateAndTakeOwnership()
         {
             if (!Utilities.IsValid(objectToAttach)) return;
@@ -267,13 +337,22 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player) || !player.isLocal)
                 return;
 
-            UpdateObjectOffset();
+            _UpdateObjectOffset();
+        }
+
+        /// <summary>
+        /// Returns the desktop head offset scaled to the local player's height.
+        /// </summary>
+        public Vector3 GetScaledDesktopHeadOffset()
+        {
+            var eyeHeight = OpenPuttUtils.LocalPlayerIsValid() ? Networking.LocalPlayer.GetAvatarEyeHeightAsMeters() : 1.7f;
+            return desktopHeadOffset * (Mathf.Clamp(eyeHeight, 0.2f, 5f) / 1.7f);
         }
 
         /// <summary>
         /// Allows for scaling the position offset based on the players height
         /// </summary>
-        public void UpdateObjectOffset()
+        public void _UpdateObjectOffset()
         {
             if (!mountingOffsetHeightScaling)
             {
@@ -283,7 +362,7 @@ namespace dev.mikeee324.OpenPutt
 
             if (!OpenPuttUtils.LocalPlayerIsValid())
             {
-                SendCustomEventDelayedSeconds(nameof(UpdateObjectOffset), 1f);
+                SendCustomEventDelayedSeconds(nameof(_UpdateObjectOffset), 1f);
                 return;
             }
 

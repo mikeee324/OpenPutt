@@ -1,0 +1,421 @@
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Persistence;
+using VRC.SDK3.Rendering;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
+namespace dev.mikeee324.OpenPutt
+{
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    public class OpenPuttNotifications : OpenPuttEventListener
+    {
+        #region Public Settings
+
+        [OpenPuttDescription("Shows score callouts (Ace, Eagle, Birdie, Stroke Limit etc.) with sound whenever a player finishes a hole, queuing them one at a time so they don't overlap on screen.")]
+        [OpenPuttFoldoutGroup("References")]
+        public Canvas _canvas;
+        [OpenPuttFoldoutGroup("References")]
+        public OpenPuttHeadFollower _headFollower;
+        [OpenPuttFoldoutGroup("References")]
+        public GameObject _calloutBoxPrefab;
+
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        [Range(1, 20)] public float _vrSmoothing = 10f;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        public bool _notificationToggle = true;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        public bool _othersNotificationsToggle = true;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        public int maxQueueSize = 20;
+        [OpenPuttFoldoutGroup("Notification Settings")]
+        [Tooltip("How long handedness has to stay settled before it pops up a notification")]
+        public float _handednessDebounceTime = 0.5f;
+
+        public bool _playerIsInVR = true;
+
+        [OpenPuttFoldoutGroup("Position Settings")]
+        public Vector3 _vrTargetPos, _desktopTargetPos, _vrStartPos, _desktopStartPos;
+        [OpenPuttFoldoutGroup("Position Settings")]
+        [Tooltip("Used instead of the desktop positions above on Android/iOS")]
+        public Vector3 _mobileTargetPos, _mobileStartPos;
+
+
+        #endregion
+
+        #region Internal Vars
+
+        private AudioClip _notificationSound;
+        private int[] _queuedCallouts;
+        private int[] _queuedPlayerIds;
+        private int _queueCount = 0;
+        private bool _isDisplayingCallout = false;
+        private bool _pendingLeftHanded = false;
+        private bool _lastNotifiedLeftHanded = false;
+        private int _handednessDebounceCount = 0;
+
+        #endregion
+
+        void Start()
+        {
+            // Initialize our queue arrays
+            _queuedCallouts = new int[maxQueueSize];
+            _queuedPlayerIds = new int[maxQueueSize];
+
+            if (!Utilities.IsValid(openPutt))
+                return;
+
+            // If this object isn't already registered as an event listener, register it here automatically
+            openPutt._RegisterEventListener(this);
+
+            // Let the follower know about the ball cam so notifications stay on screen while it's open
+            if (Utilities.IsValid(_headFollower) && Utilities.IsValid(openPutt.ballCam))
+                _headFollower.ballCam = openPutt.ballCam;
+        }
+
+        public override void OnPlayerFinishCourse(VRCPlayerApi player, CourseManager course, CourseHole hole, int score, int scoreRelativeToPar,
+            int totalHits)
+        {
+            if (totalHits == 0)
+            {
+                Debug.LogError($"The player  {player.displayName} finished {course} with no hits. This isn't good...");
+                return;
+            }
+
+            if (totalHits == 1)
+            {
+                Callout(Callouts.Ace, player.playerId);
+                return;
+            }
+
+            switch (scoreRelativeToPar)
+            {
+                case -4:
+                    Callout(Callouts.Condor, player.playerId);
+                    break;
+                case -3:
+                    Callout(Callouts.Albatross, player.playerId);
+                    break;
+                case -2:
+                    Callout(Callouts.Eagle, player.playerId);
+                    break;
+                case -1:
+                    Callout(Callouts.Birdie, player.playerId);
+                    break;
+                case 0:
+                    Callout(Callouts.Par, player.playerId);
+                    break;
+                case 1:
+                    Callout(Callouts.Bogey, player.playerId);
+                    break;
+                case 2:
+                    Callout(Callouts.DoubleBogey, player.playerId);
+                    break;
+                case 3:
+                    Callout(Callouts.TripleBogey, player.playerId);
+                    break;
+            }
+        }
+
+        public override void OnPlayerHitCourseMaxScore(VRCPlayerApi player, CourseManager course)
+        {
+            Callout(Callouts.StrokeLimit, player.playerId);
+        }
+
+        public override void OnPlayerStartCourseBlocked(VRCPlayerApi player, CourseManager course, CourseState previousState)
+        {
+            if (player != Networking.LocalPlayer) return;
+
+            Callout(previousState == CourseState.PlayedAndSkipped ? Callouts.AlreadySkipped : Callouts.AlreadyCompleted, player.playerId);
+        }
+
+        public override void OnPlayerHandednessChanged(VRCPlayerApi player, VRC_Pickup.PickupHand newHand)
+        {
+            // Only tell the local player about their own hand swapping
+            if (player != Networking.LocalPlayer) return;
+
+            _pendingLeftHanded = newHand == VRC_Pickup.PickupHand.Left;
+
+            // Don't pop one up for the saved setting being restored when they join - just take it as the state we last told them about
+            if (Utilities.IsValid(openPutt) && openPutt.IsLoadingPersistantData)
+            {
+                _lastNotifiedLeftHanded = _pendingLeftHanded;
+                return;
+            }
+
+            // Passing the club between hands can flip this several times in a row, so wait for it to settle down first
+            _handednessDebounceCount++;
+            SendCustomEventDelayedSeconds(nameof(_ShowHandednessCallout), _handednessDebounceTime);
+        }
+
+        public void _ShowHandednessCallout()
+        {
+            // Another change came in while we were waiting - let the last one do the talking
+            _handednessDebounceCount--;
+            if (_handednessDebounceCount > 0) return;
+
+            // They ended up back on the hand they were already using
+            if (_pendingLeftHanded == _lastNotifiedLeftHanded) return;
+
+            _lastNotifiedLeftHanded = _pendingLeftHanded;
+
+            Callout(_pendingLeftHanded ? Callouts.LeftHandedMode : Callouts.RightHandedMode, Networking.LocalPlayer.playerId);
+        }
+
+        //This is just to check if the player is in vr once.
+        public override void OnPlayerDataUpdated(VRCPlayerApi player, PlayerData.Info[] infos)
+        {
+            if (player != Networking.LocalPlayer) return;
+            _playerIsInVR = player.IsUserInVR();
+
+            UpdateCanvasScale();
+        }
+
+        /// <summary>
+        /// Called by OpenPuttBallCam whenever the ball camera is turned on or off
+        /// </summary>
+        public void OnBallCameraToggled()
+        {
+            if (Utilities.IsValid(_headFollower) && Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.ballCam))
+                _headFollower.ballCam = openPutt.ballCam;
+
+            UpdateCanvasScale();
+        }
+
+        /// <summary>
+        /// Rescales the canvas so callouts take up the same amount of screen no matter what FOV we're rendering at
+        /// </summary>
+        private void UpdateCanvasScale()
+        {
+            Vector3 baseScale = new Vector3(0.01f, 0.01f, 0.01f); // Your default canvas scale
+            if (_playerIsInVR)
+            {
+                _headFollower._lerpSpeed = _vrSmoothing;
+                _canvas.transform.localScale = baseScale;
+            }
+            else
+            {
+                _headFollower._lerpSpeed = 1000;
+
+                // 1. Define the baseline values you used when designing the UI
+                float baseFOV = 60f; // The FOV where the UI looks perfect
+
+                // 2. Get the FOV of whatever camera the player is actually looking through
+                float currentFOV = BallCamIsActive ? openPutt.ballCam.ballCam.fieldOfView : VRCCameraSettings.ScreenCamera.FieldOfView;
+
+                // 3. Calculate the multiplier
+                // We divide by 2, and multiply by Mathf.Deg2Rad because Mathf.Tan expects radians!
+                float currentTan = Mathf.Tan((currentFOV / 2f) * Mathf.Deg2Rad);
+                float baseTan = Mathf.Tan((baseFOV / 2f) * Mathf.Deg2Rad);
+                float scaleMultiplier = currentTan / baseTan;
+
+                // 4. Apply the exact scale to your Canvas/UI
+                _canvas.transform.localScale = baseScale * scaleMultiplier;
+            }
+        }
+
+        private bool BallCamIsActive => Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.ballCam) && Utilities.IsValid(openPutt.ballCam.ballCam) && openPutt.ballCam.BallCamActive;
+
+        public void SendCallout(Callouts callout)
+        {
+            //You can't pass a playerobject through networking. So we recreate it after the network.
+#if OPENPUTT_DEMO_MODE
+            // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+            Callout(callout, Networking.LocalPlayer.playerId);
+#else
+            SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)callout, Networking.LocalPlayer.playerId);
+#endif
+        }
+
+        [NetworkCallable]
+        public void Callout(Callouts callout, int playerId)
+        {
+            // Preliminary checks
+            VRCPlayerApi player = VRCPlayerApi.GetPlayerById(playerId);
+            if (player == null) return;
+            if (!_notificationToggle) return;
+            if (!_othersNotificationsToggle && player != Networking.LocalPlayer) return;
+
+            // Add to queue if we have space
+            if (_queueCount < maxQueueSize)
+            {
+                _queuedCallouts[_queueCount] = (int)callout;
+                _queuedPlayerIds[_queueCount] = playerId;
+                _queueCount++;
+            }
+            else
+            {
+                Debug.LogWarning("Callout queue is full! Dropping notification.");
+            }
+
+            // If nothing is playing, start the queue
+            if (!_isDisplayingCallout)
+            {
+                ProcessNextQueueItem();
+            }
+        }
+
+        private void ProcessNextQueueItem()
+        {
+            // If the queue is empty, flag that we are done and wait for the next call
+            if (_queueCount == 0)
+            {
+                _isDisplayingCallout = false;
+                return;
+            }
+
+            _isDisplayingCallout = true;
+
+            // Pop the first item
+            Callouts currentCallout = (Callouts)_queuedCallouts[0];
+            int currentPlayerId = _queuedPlayerIds[0];
+
+            // Shift the remaining items down the arrays
+            for (int i = 0; i < _queueCount - 1; i++)
+            {
+                _queuedCallouts[i] = _queuedCallouts[i + 1];
+                _queuedPlayerIds[i] = _queuedPlayerIds[i + 1];
+            }
+            _queueCount--;
+
+            // It's possible the player left while sitting in the queue, check again
+            VRCPlayerApi player = VRCPlayerApi.GetPlayerById(currentPlayerId);
+            if (player == null)
+            {
+                // Player left, skip this one and instantly process the next
+                ProcessNextQueueItem();
+                return;
+            }
+
+            string calloutText;
+            bool shiny = false;
+            switch (currentCallout)
+            {
+                case Callouts.Ace:
+                    calloutText = player == Networking.LocalPlayer ? "ACE!" : $"{player.displayName} scored an ACE!";
+                    shiny = true;
+                    break;
+                case Callouts.Condor:
+                    calloutText = player == Networking.LocalPlayer ? "Condor!" : $"{player.displayName} scored a Condor!";
+                    break;
+                case Callouts.Albatross:
+                    calloutText = player == Networking.LocalPlayer ? "Albatross!" : $"{player.displayName} scored an Albatross!";
+                    break;
+                case Callouts.Eagle:
+                    calloutText = player == Networking.LocalPlayer ? "Eagle!" : $"{player.displayName} scored an Eagle!";
+                    break;
+                case Callouts.Birdie:
+                    calloutText = player == Networking.LocalPlayer ? "Birdie!" : $"{player.displayName} scored a Birdie!";
+                    break;
+                case Callouts.Par:
+                    calloutText = player == Networking.LocalPlayer ? "Par!" : $"{player.displayName} scored a Par!";
+                    break;
+                case Callouts.Bogey:
+                    calloutText = player == Networking.LocalPlayer ? "Bogey!" : $"{player.displayName} scored a Bogey.";
+                    break;
+                case Callouts.DoubleBogey:
+                    calloutText = player == Networking.LocalPlayer ? "Double Bogey!" : $"{player.displayName} scored a Double Bogey.";
+                    break;
+                case Callouts.TripleBogey:
+                    calloutText = player == Networking.LocalPlayer ? "Triple Bogey!" : $"{player.displayName} scored a Triple Bogey.";
+                    break;
+                case Callouts.StrokeLimit:
+                    calloutText = player == Networking.LocalPlayer ? "You hit the stroke limit!" : $"{player.displayName} hit the Stroke Limit.";
+                    break;
+                case Callouts.LeftHandedMode:
+                    calloutText = "Switched to Left Handed";
+                    break;
+                case Callouts.RightHandedMode:
+                    calloutText = "Switched to Right Handed";
+                    break;
+                case Callouts.AlreadyCompleted:
+                    calloutText = "You already completed this course!";
+                    break;
+                case Callouts.AlreadySkipped:
+                    calloutText = "You already skipped this course!";
+                    break;
+                default:
+                    return;
+            }
+
+            InstantiateCalloutBox(calloutText, _notificationSound, shiny);
+        }
+
+        public void InstantiateCalloutBox(string callText, AudioClip callAudio = null, bool shiny = false)
+        {
+            GameObject lastCallout = Instantiate(_calloutBoxPrefab, _canvas.transform);
+            var calloutScript = lastCallout.GetComponent<OpenPuttCalloutBox>();
+
+            // Pass the reference of this script so the box can tell us when it dies
+            calloutScript.manager = this;
+
+            calloutScript.targetPos = GetTargetPos();
+            
+            // Pass the shiny variable to the callout box
+            calloutScript.SetCalloutText(callText, callAudio
+                , targetPosition: GetTargetPos()
+                , startPosition: GetStartPos()
+                , shiny: shiny);
+        }
+
+        private Vector3 GetTargetPos()
+        {
+            if (_playerIsInVR)
+                return _vrTargetPos;
+#if UNITY_ANDROID || UNITY_IOS
+            return _mobileTargetPos;
+#else
+            return _desktopTargetPos;
+#endif
+        }
+
+        private Vector3 GetStartPos()
+        {
+            if (_playerIsInVR)
+                return _vrStartPos;
+#if UNITY_ANDROID || UNITY_IOS
+            return _mobileStartPos;
+#else
+            return _desktopStartPos;
+#endif
+        }
+
+        // OpenPuttCalloutBox will trigger this when its destruction tween finishes
+        public void OnCalloutFinished()
+        {
+            ProcessNextQueueItem();
+        }
+
+        public void SendTestNotification()
+        {
+            //You can't pass a playerobject through networking. So we recreate it after the network.
+            int randomIndex = Random.Range(0, (int)Callouts.StrokeLimit + 1);
+            Callouts randomResult = (Callouts)randomIndex;
+#if OPENPUTT_DEMO_MODE
+            // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+            Callout(randomResult, Networking.LocalPlayer.playerId);
+#else
+            SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, nameof(Callout), (int)randomResult, Networking.LocalPlayer.playerId);
+#endif
+        }
+    }
+
+    public enum Callouts
+    {
+        Ace,
+        Condor,
+        Albatross,
+        Eagle,
+        Birdie,
+        Par,
+        Bogey,
+        DoubleBogey,
+        TripleBogey,
+        StrokeLimit,
+        // Local only callouts - keep these after StrokeLimit so SendTestNotification doesn't pick them
+        LeftHandedMode,
+        RightHandedMode,
+        AlreadyCompleted,
+        AlreadySkipped
+    }
+}

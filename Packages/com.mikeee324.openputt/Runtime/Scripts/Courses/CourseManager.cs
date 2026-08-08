@@ -1,0 +1,308 @@
+﻿using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.UdonNetworkCalling;
+using VRC.SDKBase;
+
+namespace dev.mikeee324.OpenPutt
+{
+    public enum CourseType
+    {
+        Standard = 0,
+        DrivingRangeDistance = 1,
+        DrivingRangeWithTargets = 2
+    }
+
+    /// <summary>
+    /// Used to track exactly what state each course is in for a player
+    /// </summary>
+    public enum CourseState
+    {
+        /// <summary>
+        /// Player has not started this course yet (They can start it if they want to)
+        /// </summary>
+        NotStarted = 0,
+
+        /// <summary>
+        /// The course that the player is currently playing
+        /// </summary>
+        Playing = 1,
+
+        /// <summary>
+        /// This course has been completed by the player and can only be restarted if the global "Practice Mode" option is enabled
+        /// </summary>
+        Completed = 2,
+
+        /// <summary>
+        /// Player skipped this course without playing it. Assigned maxScore until restarted.
+        /// </summary>
+        Skipped = 3,
+
+        /// <summary>
+        /// Player started but didn't finish this course before moving on. Assigned maxScore until restarted.
+        /// </summary>
+        PlayedAndSkipped = 4
+    }
+
+    /// <summary>
+    /// Helper functions for working with the CourseState enum
+    /// </summary>
+    static class CourseStateMethods
+    {
+        public static string GetString(this CourseState state)
+        {
+            switch (state)
+            {
+                case CourseState.NotStarted:
+                    return "Not Playing";
+                case CourseState.Playing:
+                    return "Playing";
+                case CourseState.PlayedAndSkipped:
+                    return "Played And Skipped";
+                case CourseState.Completed:
+                    return "Completed";
+                case CourseState.Skipped:
+                    return "Skipped";
+                default:
+                    return "Unknown";
+            }
+        }
+    }
+
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    public class CourseManager : UdonSharpBehaviour
+    {
+        [HideInInspector]
+        public int holeNumber;
+
+        [OpenPuttDescription("Represents a single hole/course. Controls its scoring rules, which clubs are allowed, and links it to its ball spawn points, holes and floor meshes.")]
+        [OpenPuttFoldoutGroup("Course Settings"), Tooltip("The par score for this hole")]
+        public int parScore;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("This will stop the player after this many hits, also used as the default score if a player skips this hole")]
+        public int maxScore = 12;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("The par time in seconds for this hole (Default is 5 mins)")]
+        public int parTime = 120;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("The maximum amount of seconds a player can have on this hole (Default is 5 mins)")]
+        public int maxTime = 300;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("What type of course this is")]
+        public CourseType courseType = CourseType.Standard;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("Clamps the ball speed after a hit to the club's typical max speed. Usually disabled on driving ranges so players can see how hard they can hit the ball.")]
+        public bool clampClubSpeed = true;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("Overrides the global practice mode setting")]
+        public bool courseIsAlwaysReplayable;
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("Override the hole number column text on scoreboards (Can be used to give holes names or something I dunno..)")]
+        public string scoreboardShortName = "";
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("This name will be displayed on course markers (If you have them attached to the courses)")]
+        public string scoreboardLongName = "";
+
+        [OpenPuttFoldoutGroup("Course Settings")]
+        [Tooltip("Which club types are allowed on this course. Leave as Nothing to only allow the putter. Driving ranges always allow every club.")]
+        public GolfClubTypeMask allowedClubs = GolfClubTypeMask.Putter;
+
+        [HideInInspector]
+        public OpenPutt openPutt;
+
+        [Header("Object References")]
+        public CourseStartPosition[] ballSpawns;
+
+        public GameObject[] holes;
+
+        [Tooltip("A reference to all floor meshes for this course - used to detect if the ball is on the correct hole")]
+        public Collider[] floorColliders;
+
+        // Legacy data - kept under its original field name/type so old scenes still deserialize into it.
+        // Migrated into floorColliders (and cleared) by OnValidate in the editor.
+        [HideInInspector]
+        public GameObject[] floorObjects;
+
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Toggles display of the gizmos on courses between always/on selection")]
+        private bool alwaysDisplayGizmos = true;
+
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw gizmos for ball spawn positions")]
+        private bool drawBallSpawns = true;
+
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw gizmos for holes")]
+        private bool drawHoles = true;
+
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Draw a wireframe over meshes that are counted as a floor for this course")]
+        private bool drawFloorMeshes = true;
+
+        [SerializeField, OpenPuttFoldoutGroup("Gizmo Settings"), Tooltip("Set this to be the same size as your ball sphere colliders to draw the gizmos at the right size")]
+        private float ballSpawnGizmoRadius = 0.0225f;
+
+        private void Start()
+        {
+            if (!Utilities.IsValid(ballSpawns))
+                ballSpawns = new CourseStartPosition[0];
+        }
+
+        /// <summary>
+        /// True for the driving range course types - they have no "complete once" state and allow all clubs
+        /// </summary>
+        public bool IsDrivingRange => courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets;
+
+        /// <summary>
+        /// Whether a club can be used here. Driving ranges allow all; otherwise only configured clubs (putter if none).
+        /// </summary>
+        public bool _IsClubAllowed(GolfClubType clubType)
+        {
+            if (IsDrivingRange)
+                return true;
+
+            if (allowedClubs == GolfClubTypeMask.None)
+                return clubType == GolfClubType.Putter;
+
+            return ((int)allowedClubs & (1 << (int)clubType)) != 0;
+        }
+
+        /// <summary>
+        /// Club to swap to when arriving with a disallowed club: lowest allowed club, or putter if unrestricted.
+        /// </summary>
+        public GolfClubType _GetFirstAllowedClub()
+        {
+            var clubCount = (int)GolfClubType.Hybrid + 1;
+            for (var i = 0; i < clubCount; i++)
+            {
+                if (((int)allowedClubs & (1 << i)) != 0)
+                    return (GolfClubType)i;
+            }
+
+            return GolfClubType.Putter;
+        }
+
+        /// <summary>
+        /// True if more than one club type is allowed here (so the club cycling UI should show).
+        /// </summary>
+        public bool _HasClubChoice()
+        {
+            if (courseType == CourseType.DrivingRangeDistance || courseType == CourseType.DrivingRangeWithTargets)
+                return true;
+
+            // True only when two or more bits are set
+            var bits = (int)allowedClubs;
+            return bits != 0 && (bits & (bits - 1)) != 0;
+        }
+
+        /// <summary>
+        /// Called when something enters a CourseHole. If it's the local player's ball, triggers course completion.
+        /// </summary>
+        /// <param name="hole">The hole that received a trigger collision</param>
+        /// <param name="collider">The collider that entered the hole</param>
+        public void _OnLocalPlayerBallEnterHole(CourseHole hole, Collider collider)
+        {
+            // If this is the local players ball - tell their player manager the hole is now completed (Locks in the score etc)
+            var golfBall = collider.gameObject.GetComponent<GolfBallController>();
+            if (Utilities.IsValid(golfBall) && Networking.LocalPlayer.IsOwner(golfBall.gameObject))
+            {
+                if (golfBall.BallIsMoving && !golfBall.pickedUpByPlayer)
+                {
+                    golfBall.playerManager._OnCourseFinished(this, hole, CourseState.Completed);
+                }
+            }
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 2)]
+        public void OnPlayerHitMaxScore()
+        {
+            if (Utilities.IsValid(openPutt.eventHandler))
+                openPutt.eventHandler.OnPlayerHitCourseMaxScore(NetworkCalling.CallingPlayer, this);
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 1)]
+        public void OnPlayerStartedCourse()
+        {
+            if (Utilities.IsValid(openPutt.eventHandler))
+                openPutt.eventHandler.OnPlayerStartCourse(NetworkCalling.CallingPlayer, this);
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!alwaysDisplayGizmos)
+                DrawGizmos();
+        }
+
+        private void OnDrawGizmos()
+        {
+            if (alwaysDisplayGizmos)
+                DrawGizmos();
+        }
+
+        private void DrawGizmos()
+        {
+            if (drawBallSpawns)
+            {
+                Gizmos.color = Color.green;
+                foreach (var ballSpawn in ballSpawns)
+                {
+                    if (!Utilities.IsValid(ballSpawn)) continue;
+
+                    Gizmos.DrawWireSphere(ballSpawn.transform.position, ballSpawnGizmoRadius);
+                }
+            }
+
+            if (drawHoles)
+            {
+                Gizmos.color = Color.red;
+                foreach (var hole in holes)
+                {
+                    if (!Utilities.IsValid(hole)) continue;
+
+                    if (hole.GetComponent<Collider>() != null && !hole.GetComponent<Collider>().enabled)
+                        continue;
+
+                    OpenPuttGizmoUtils.DrawWireCollider(hole);
+                }
+            }
+
+            if (drawFloorMeshes)
+            {
+                foreach (var floor in floorColliders)
+                {
+                    if (!Utilities.IsValid(floor)) continue;
+
+                    Gizmos.color = Color.blue;
+
+                    OpenPuttGizmoUtils.DrawWireCollider(floor);
+                }
+            }
+        }
+
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
+        // Migrates the old GameObject[] floorObjects list to the new Collider[] floorColliders list
+        private void OnValidate()
+        {
+            if (floorObjects == null || floorObjects.Length == 0)
+                return;
+
+            var migrated = new System.Collections.Generic.List<Collider>(floorColliders ?? new Collider[0]);
+
+            foreach (var obj in floorObjects)
+            {
+                if (obj == null) continue;
+
+                var col = obj.GetComponent<Collider>();
+                if (col != null && !migrated.Contains(col))
+                    migrated.Add(col);
+            }
+
+            floorColliders = migrated.ToArray();
+            floorObjects = new GameObject[0];
+        }
+#endif
+    }
+}

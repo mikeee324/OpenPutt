@@ -1,0 +1,448 @@
+﻿/**
+ * Made by TummyTime
+ */
+
+using dev.mikeee324.OpenPutt;
+using UdonSharp;
+using UnityEngine;
+using VRC.SDK3.Components;
+using VRC.SDK3.Rendering;
+using VRC.SDKBase;
+using VRC.Udon;
+using VRC.Udon.Common;
+
+namespace dev.mikeee324.OpenPutt
+{
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    public class OpenPuttPortableMenu : UdonSharpBehaviour
+    {
+        [OpenPuttDescription("A hand-held menu players can summon by spreading their hands apart (VR) or pressing a key (desktop). It can also be thrown like a pickup and hides itself again when the player walks away.")]
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField]
+        public ControllerTracker controllerTracker;
+
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField]
+        private GameObject visibleMenuObject;
+
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField]
+        private Rigidbody rigidBody;
+
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField]
+        private VRCPickup pickup;
+
+        [OpenPuttFoldoutGroup("References")]
+        [SerializeField, Tooltip("The scoreboard on this menu. Auto-found in children if left empty")]
+        private Scoreboard menuScoreboard;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [SerializeField]
+        private KeyCode menuKey = KeyCode.N;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [SerializeField]
+        private Vector3 desktopHeadOffset = Vector3.zero;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [SerializeField]
+        private float hideDistance = 3f;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [SerializeField, Range(1f, 5f), Tooltip("How large the menu has to be before it shows initially (relative to the initial opening size)")]
+        private float openThreshold = 2f;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [Range(0f, 10f), Tooltip("Minimum speed required to initiate a throw (Normalised against a person that is 1.7m tall)")]
+        public float minThrowSpeed = 1f;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        public bool hideOnStart = true;
+
+        [OpenPuttFoldoutGroup("Menu Settings")]
+        [Tooltip("How quickly the menu rotates to face the head. Lower values are snappier, higher values are smoother but can look laggy when turning quickly. Set to 0 to disable smoothing.")]
+        public float rotationSmoothTime = 0.08f;
+
+        [OpenPuttFoldoutGroup("Vibration Settings")]
+        [Tooltip("The duration of the vibration in seconds.")]
+        public float vibrationDuration = 0.1f;
+
+        [OpenPuttFoldoutGroup("Vibration Settings")]
+        [Tooltip("The strength of the vibration (0.0 to 1.0).")]
+        [Range(0f, 1f)]
+        public float vibrationStrength = 0.5f;
+
+        [OpenPuttFoldoutGroup("Vibration Settings")]
+        [Tooltip("The frequency of the vibration (roughly how many pulses per second).")]
+        public float vibrationFrequency = 30f;
+
+        [OpenPuttFoldoutGroup("Event Settings")]
+        public UdonBehaviour eventReceiver;
+        [OpenPuttFoldoutGroup("Event Settings")]
+        public string eventToSendOnMenuOpen;
+        [OpenPuttFoldoutGroup("Event Settings")]
+        public string eventToSendOnMenuClose;
+
+        public bool golfClubHeldByPlayer;
+        public bool golfBallHeldByPlayer;
+
+        private bool leftUseButtonDown;
+        private bool rightUseButtonDown;
+        private float originalHandDistance = -1f;
+        private bool userIsInVR;
+        private bool isCurrentlyVisible = false;
+        private VRC_Pickup.PickupHand currentHand = VRC_Pickup.PickupHand.None;
+        private Vector3 menuSpawnPosition = Vector3.zero;
+        private Quaternion menuSpawnRotation = Quaternion.identity;
+        private Vector3 menuSpawnScale = Vector3.one;
+        private Quaternion currentMenuRotation = Quaternion.identity;
+        private bool thirdPersonMenuShowing;
+
+        /// <summary>
+        /// The FOV the desktop menu size was designed around
+        /// </summary>
+        private const float DESKTOP_BASE_FOV = 60f;
+
+        void Start()
+        {
+            if (!Utilities.IsValid(menuScoreboard))
+                menuScoreboard = visibleMenuObject.GetComponentInChildren<Scoreboard>(true);
+
+            if (hideOnStart)
+            {
+                visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                visibleMenuObject.transform.localScale = Vector3.zero;
+            }
+            else
+            {
+                menuSpawnPosition = visibleMenuObject.transform.position;
+                menuSpawnRotation = visibleMenuObject.transform.rotation;
+                menuSpawnScale = visibleMenuObject.transform.localScale;
+            }
+
+            SendCustomEventDelayedSeconds(nameof(IsUserInVRCheck), 1);
+            SendCustomEventDelayedSeconds(nameof(ShouldHideMenu), 5);
+        }
+
+        /// <summary>
+        /// Checks if the user is in VR after Start()
+        /// </summary>
+        public void IsUserInVRCheck()
+        {
+            if (OpenPuttUtils.LocalPlayerIsValid())
+            {
+                userIsInVR = Networking.LocalPlayer.IsUserInVR();
+
+                if (!userIsInVR)
+                {
+                    pickup.pickupable = true;
+                }
+            }
+            else
+            {
+                SendCustomEventDelayedSeconds(nameof(IsUserInVRCheck), 1);
+            }
+        }
+
+        public override void PostLateUpdate()
+        {
+            if (userIsInVR)
+            {
+                if (golfBallHeldByPlayer || golfClubHeldByPlayer)
+                {
+                    originalHandDistance = -1f;
+                    return;
+                }
+
+                // Don't fight VRC's own pickup transform tracking if the menu is already being held/thrown normally
+                if (Utilities.IsValid(pickup) && pickup.IsHeld)
+                {
+                    originalHandDistance = -1f;
+                    return;
+                }
+
+                var bothTriggersHeld = leftUseButtonDown && rightUseButtonDown;
+
+                if (!bothTriggersHeld) return;
+                if (originalHandDistance < 0f) return;
+
+                // Use controller tracking positions instead of avatar finger bones
+                var leftHand = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.LeftHand).position;
+                var rightHand = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).position;
+                var currentDistance = Vector3.Distance(leftHand, rightHand);
+
+                var isVisibleNow = currentDistance > (originalHandDistance * openThreshold);
+                var justBecameVisible = isVisibleNow && !isCurrentlyVisible;
+
+                if (isCurrentlyVisible != isVisibleNow)
+                {
+                    Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Left, vibrationStrength, vibrationFrequency, vibrationDuration);
+                    Networking.LocalPlayer.PlayHapticEventInHand(VRC_Pickup.PickupHand.Right, vibrationStrength, vibrationFrequency, vibrationDuration);
+                    
+                    if (Utilities.IsValid(eventReceiver))
+                    {
+                        if (isVisibleNow)
+                            eventReceiver.SendCustomEvent(eventToSendOnMenuOpen);
+                        else if (!isVisibleNow)
+                            eventReceiver.SendCustomEvent(eventToSendOnMenuClose);
+                    }
+                }
+
+                isCurrentlyVisible = isVisibleNow;
+
+                if (!isVisibleNow)
+                {
+                    HideMenu();
+                    return;
+                }
+
+                var directionBetweenHands = leftHand - rightHand;
+                var menuScale = Vector3.one * directionBetweenHands.magnitude;
+                var menuPosition = (directionBetweenHands * 0.5f) + rightHand;
+
+                if (Utilities.IsValid(rigidBody))
+                    rigidBody.isKinematic = true;
+
+                // Orient the menu so it spans the hands and faces the player's head
+                var headPos = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+
+                Quaternion finalRot;
+                // Fallback to the original simple rotation if vectors are degenerate
+                if (directionBetweenHands.sqrMagnitude < 1e-6f || (headPos - menuPosition).sqrMagnitude < 1e-6f)
+                {
+                    finalRot = Quaternion.LookRotation(directionBetweenHands) * Quaternion.Euler(0, 90, 0);
+                }
+                else
+                {
+                        var desiredRight = directionBetweenHands.normalized;
+                        var toHead = headPos - menuPosition;
+
+                        // Project head direction onto the plane orthogonal to the hand axis
+                        var forward = toHead - Vector3.Project(toHead, desiredRight);
+
+                        // Fallback forward if projection is degenerate
+                        if (forward.sqrMagnitude < 1e-6f)
+                        {
+                            forward = Vector3.Cross(Vector3.up, desiredRight);
+                            if (forward.sqrMagnitude < 1e-6f)
+                                forward = Vector3.Cross(Vector3.forward, desiredRight);
+                        }
+
+                        forward.Normalize();
+
+                        // Make sure forward points toward the head
+                        if (Vector3.Dot(forward, toHead) < 0f)
+                            forward = -forward;
+
+                        var up = Vector3.Cross(forward, desiredRight).normalized;
+                        finalRot = Quaternion.LookRotation(forward, up);
+                }
+
+                // Flip the menu by 180 degrees so it faces the player correctly
+                var targetMenuRotation = finalRot * Quaternion.Euler(0f, 180f, 0f);
+                if (justBecameVisible || rotationSmoothTime <= 0f)
+                {
+                    currentMenuRotation = targetMenuRotation;
+                }
+                else
+                {
+                    var rotationLerp = 1f - Mathf.Exp(-Time.deltaTime / rotationSmoothTime);
+                    currentMenuRotation = Quaternion.Slerp(currentMenuRotation, targetMenuRotation, rotationLerp);
+                }
+
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, currentMenuRotation);
+                visibleMenuObject.transform.localScale = menuScale * 1.2f;
+            }
+            else if (Input.GetKey(menuKey))
+            {
+                var screenCamera = VRCCameraSettings.ScreenCamera;
+                var cameraIsValid = Utilities.IsValid(screenCamera);
+
+                var head = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
+                var thirdPerson = cameraIsValid && screenCamera.CameraMode == VRCCameraMode.ThirdPersonView;
+
+                // The tabs can't be clicked in third person, so open on the scores - speed golf mode picks which variant that shows
+                if (thirdPerson && !thirdPersonMenuShowing && Utilities.IsValid(menuScoreboard))
+                    menuScoreboard.CurrentScoreboardView = ScoreboardView.Scoreboard;
+
+                thirdPersonMenuShowing = thirdPerson;
+
+                // Keep the on screen size the same at any FOV
+                var menuScale = 1.7f;
+                if (cameraIsValid)
+                    menuScale *= Mathf.Tan(screenCamera.FieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Tan(DESKTOP_BASE_FOV * 0.5f * Mathf.Deg2Rad);
+
+                // Scale the offset by player height (1.7m reference) so the menu doesn't float too far away when scaled down
+                var heightScale = Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f) / 1.7f;
+                var menuOffset = desktopHeadOffset * heightScale;
+
+                // Tiny avatars can put the menu inside the near clip plane - push it out and scale to match
+                if (cameraIsValid)
+                {
+                    var minDistance = screenCamera.NearClipPlane + 0.01f;
+                    var distance = menuOffset.magnitude;
+                    if (distance > 0f && distance < minDistance)
+                    {
+                        var pushOut = minDistance / distance;
+                        menuOffset *= pushOut;
+                        menuScale *= pushOut;
+                    }
+                }
+
+                // Third person tracks the camera, first person stays on the head where the cursor can reach it
+                var menuRotation = thirdPerson ? screenCamera.Rotation : head.rotation;
+                var menuPosition = (thirdPerson ? screenCamera.Position : head.position) + menuRotation * menuOffset;
+
+                if (Utilities.IsValid(rigidBody))
+                    rigidBody.isKinematic = true;
+
+                visibleMenuObject.transform.SetPositionAndRotation(menuPosition, menuRotation);
+                visibleMenuObject.transform.localScale = Vector3.one * menuScale;
+            }
+            else if (thirdPersonMenuShowing)
+            {
+                // Nothing holds a third person menu in place, so drop it as soon as the key is released
+                thirdPersonMenuShowing = false;
+                HideMenu();
+            }
+        }
+
+        /// <summary>
+        /// Parks the menu out of sight, or back at its spawn point if it started visible
+        /// </summary>
+        private void HideMenu()
+        {
+            if (hideOnStart)
+            {
+                visibleMenuObject.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+                visibleMenuObject.transform.localScale = Vector3.zero;
+            }
+            else
+            {
+                visibleMenuObject.transform.SetPositionAndRotation(menuSpawnPosition, menuSpawnRotation);
+                visibleMenuObject.transform.localScale = menuSpawnScale;
+            }
+        }
+
+        /// <summary>
+        /// Checks at a regular interval to see if the player has walked away from the menu and hides it if they did
+        /// </summary>
+        public void ShouldHideMenu()
+        {
+            if (!OpenPuttUtils.LocalPlayerIsValid()) return;
+
+            var playerPos = Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head).position;
+            var menuPos = visibleMenuObject.transform.position;
+
+            var distanceToMenu = Vector3.Distance(playerPos, menuPos);
+
+            // In third person the menu sits at the camera, not the head, so measure from there too
+            var screenCamera = VRCCameraSettings.ScreenCamera;
+            if (Utilities.IsValid(screenCamera))
+                distanceToMenu = Mathf.Min(distanceToMenu, Vector3.Distance(screenCamera.Position, menuPos));
+
+            var shouldHideMenu = hideDistance > 0f && distanceToMenu > hideDistance;
+
+            if (shouldHideMenu)
+            {
+                if (Utilities.IsValid(rigidBody))
+                    rigidBody.isKinematic = true;
+
+                HideMenu();
+            }
+
+            SendCustomEventDelayedSeconds(nameof(ShouldHideMenu), 5);
+        }
+
+        /// <summary>
+        /// Used to monitor inputs of VR players
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="args"></param>
+        public override void InputUse(bool value, UdonInputEventArgs args)
+        {
+            if (!userIsInVR)
+                return;
+
+            if (args.eventType == UdonInputEventType.BUTTON)
+            {
+                switch (args.handType)
+                {
+                    case HandType.RIGHT:
+                        rightUseButtonDown = value;
+                        break;
+                    case HandType.LEFT:
+                        leftUseButtonDown = value;
+                        break;
+                }
+
+                if (leftUseButtonDown && rightUseButtonDown)
+                {
+                    if (golfBallHeldByPlayer || golfClubHeldByPlayer)
+                        return;
+
+                    pickup.pickupable = false;
+
+                    if (originalHandDistance < 0)
+                        originalHandDistance = Vector3.Distance(Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.LeftHand).position, Networking.LocalPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.RightHand).position);
+                }
+                else
+                {
+                    pickup.pickupable = true;
+                    originalHandDistance = -1;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Window used to measure hand spin when throwing the menu (was 5 frames, which is this long at 90Hz)
+        /// </summary>
+        private const float THROW_SPIN_WINDOW_SECONDS = 0.055f;
+
+        public override void OnPickup()
+        {
+            if (Utilities.IsValid(pickup))
+                currentHand = pickup.currentHand;
+        }
+
+        public override void OnDrop()
+        {
+            if (!Utilities.IsValid(controllerTracker)) return;
+            if (!Utilities.IsValid(rigidBody)) return;
+
+            var hand = currentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand;
+            var offset = controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, rigidBody.worldCenterOfMass);
+            var controllerVel = controllerTracker.GetVelocityAtOffset(hand, offset);
+
+            // Get raw velocity without player velocity
+            var rawSpeed = controllerVel.magnitude - Networking.LocalPlayer.GetVelocity().magnitude;
+
+            // Normalize speed based on player height (Using 1.7m as reference height)
+            var heightRatio = 1.7f / Mathf.Clamp(Networking.LocalPlayer.GetAvatarEyeHeightAsMeters(), 0.2f, 5f);
+            var normalizedSpeed = rawSpeed * heightRatio;
+
+            if (normalizedSpeed < minThrowSpeed)
+            {
+                rigidBody.isKinematic = true;
+                return;
+            }
+
+            rigidBody.isKinematic = false;
+
+            // Get the linear velocity of the Rigidbody's center of mass using the stored offset
+            var throwLinearVelocity = controllerTracker.GetVelocityAtOffset(hand, offset);
+
+            // Get the angular velocity of the hand. This is the angular velocity of the rigid body.
+            var throwAngularVelocity = controllerTracker.GetAngularVelocity(hand, THROW_SPIN_WINDOW_SECONDS);
+
+            // Apply the calculated velocities to the rigidbody
+            rigidBody.velocity = throwLinearVelocity * pickup.ThrowVelocityBoostScale;
+            rigidBody.angularVelocity = throwAngularVelocity * Mathf.Deg2Rad; // Convert degrees/sec to radians/sec for Rigidbody.angularVelocity
+
+
+            if (Utilities.IsValid(pickup))
+                currentHand = pickup.currentHand;
+        }
+    }
+}

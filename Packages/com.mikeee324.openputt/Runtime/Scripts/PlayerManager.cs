@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using com.dev.mikeee324.OpenPutt;
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
+using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
 using Random = UnityEngine.Random;
@@ -12,7 +13,7 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
     public class PlayerManager : UdonSharpBehaviour
     {
-        [Header("This prefab manages keeping/syncing scores by assigning one of these objects per player. It will also keep track of the objects the player interacts with.")]
+        [OpenPuttDescription("Manages one player's score and synced state - it tracks which course they are on, their scores/times, and keeps their golf club/ball in sync with everyone else.")]
         public GolfClub golfClub;
 
         public GolfBallController golfBall;
@@ -22,10 +23,12 @@ namespace dev.mikeee324.OpenPutt
         public GameObject desktopCamera;
         public GolfClubColliderVisualiser golfClubVisualiser;
         public Renderer ballRenderer;
+        public Renderer ballGhostRenderer;
         public TrailRenderer trailRenderer;
 
-        [Header("Game Settings")] [UdonSynced]
-        public bool isPlaying = true;
+        [OpenPuttFoldoutGroup("Game Settings")]
+        [UdonSynced, FieldChangeCallback(nameof(IsPlaying))]
+        private bool _isPlaying = true;
 
         [UdonSynced]
         public int[] courseScores = { };
@@ -36,11 +39,22 @@ namespace dev.mikeee324.OpenPutt
         [UdonSynced]
         public CourseState[] courseStates = { };
 
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Range(5, 30), Tooltip("The number of seconds a ball can be away from the current course before being respawned back instantly")]
         public int ballOffCourseRespawnTime = 5;
 
-        [HideInInspector]
-        public VRCPlayerApi Owner;
+        private VRCPlayerApi _owner;
+
+        public VRCPlayerApi Owner
+        {
+            get
+            {
+                if (!Utilities.IsValid(_owner))
+                    _owner = Networking.GetOwner(gameObject);
+                return _owner;
+            }
+            private set => _owner = value;
+        }
 
         [UdonSynced, FieldChangeCallback(nameof(BallColor))]
         private Color _ballColor = Color.black;
@@ -50,8 +64,16 @@ namespace dev.mikeee324.OpenPutt
             set
             {
                 if (_ballColor == value) return;
-                
+
                 _ballColor = value;
+
+                // Tint the club handle/heads to match the players ball colour
+                if (Utilities.IsValid(golfClub))
+                {
+                    golfClub.ballColour = _ballColor;
+                    golfClub._UpdateClubColour();
+                }
+
                 if (!Utilities.IsValid(golfBall)) return;
 
                 // Create a new MaterialPropertyBlock
@@ -65,6 +87,18 @@ namespace dev.mikeee324.OpenPutt
 
                 // Apply the MaterialPropertyBlock to the GameObject
                 ballRenderer.SetPropertyBlock(golfBall.materialPropertyBlock);
+
+                if (Utilities.IsValid(ballGhostRenderer))
+                {
+                    if (!Utilities.IsValid(golfBall.ghostMaterialPropertyBlock))
+                        golfBall.ghostMaterialPropertyBlock = new MaterialPropertyBlock();
+                    ballGhostRenderer.GetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
+
+                    golfBall.ghostMaterialPropertyBlock.SetColor("_Color", _ballColor);
+
+                    // Apply the MaterialPropertyBlock to the GameObject
+                    ballGhostRenderer.SetPropertyBlock(golfBall.ghostMaterialPropertyBlock);
+                }
 
                 // A simple 2 color gradient with a fixed alpha of 1.0f.
                 var alpha = 1.0f;
@@ -101,6 +135,12 @@ namespace dev.mikeee324.OpenPutt
         [UdonSynced, FieldChangeCallback(nameof(BallVisible))]
         private bool _ballVisible;
 
+        [UdonSynced, FieldChangeCallback(nameof(IsInLeftHandedMode))]
+        private bool _isInLeftHandedMode;
+
+        [UdonSynced]
+        private bool _weirdThingHappened = false;
+
         public int PlayerID => transform.GetSiblingIndex();
 
         /// <summary>
@@ -114,15 +154,15 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(golfClub) && golfClub.gameObject.activeInHierarchy != value)
                 {
                     golfClub.gameObject.SetActive(value);
-                    golfClub.UpdateClubState();
+                    golfClub._UpdateClubState();
 
                     if (!value)
                     {
                         // Club was disabled - reset it
-                        golfClub.RescaleClub(true);
+                        golfClub._RescaleClub(true);
 
                         if (Utilities.IsValid(golfClub.openPuttSync))
-                            golfClub.openPuttSync.Respawn();
+                            golfClub.openPuttSync._Respawn();
                     }
                 }
 
@@ -141,7 +181,7 @@ namespace dev.mikeee324.OpenPutt
                 if (Utilities.IsValid(golfBall) && golfBall.gameObject.activeInHierarchy != value)
                 {
                     golfBall.gameObject.SetActive(value);
-                    golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
+                    golfBall._UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
                 }
 
                 _ballVisible = value;
@@ -151,7 +191,7 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Needed to make sure this PlayerManager has been properly initialised before we try to use it
         /// </summary>
-        public bool IsReady => isPlaying && courseScores.Length > 0 && courseStates.Length > 0 && courseTimes.Length > 0;
+        public bool IsReady => IsPlaying && courseScores.Length > 0 && courseStates.Length > 0 && courseTimes.Length > 0;
 
         /// <summary>
         /// Works out the players total score across all courses
@@ -185,14 +225,124 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         public CourseManager CurrentCourse { get; private set; }
 
+        [HideInInspector]
+        public int hitsOnCurrentCourse = 0;
+
         public bool IsInLeftHandedMode
         {
-            get => Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup) && Utilities.IsValid(openPutt.leftShoulderPickup.ObjectToAttach) && openPutt.leftShoulderPickup.ObjectToAttach == golfClub.gameObject;
+            get => _isInLeftHandedMode;
             set
             {
-                openPutt.leftShoulderPickup.ObjectToAttach = value ? golfClub.gameObject : golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = value ? golfBall.gameObject : golfClub.gameObject;
+                if (_isInLeftHandedMode == value)
+                    return;
+
+                _isInLeftHandedMode = value;
+
+                // Just re-set the club type to update the head meshes (automatically picks which orientation)
+                golfClub.ClubType = golfClub.ClubType;
+
+                if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
+                {
+                    // Move the club/ball onto the correct shoulders for the new handedness
+                    _UpdateShoulderPickupAttachments();
+
+                    _RequestSync(syncNow: true);
+                }
+
+                // Tell everybody that this player changed which hand they use
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
+                    openPutt.eventHandler.OnPlayerHandednessChanged(Owner, value ? VRC_Pickup.PickupHand.Left : VRC_Pickup.PickupHand.Right);
             }
+        }
+
+        /// <summary>
+        /// Whether this player is actively playing (false = spectating). The setter drops/re-homes the
+        /// shoulder-mounted club/ball pickups for the local owner and syncs the change to everyone else.
+        /// </summary>
+        public bool IsPlaying
+        {
+            get => _isPlaying;
+            set
+            {
+                if (_isPlaying == value)
+                    return;
+
+                _isPlaying = value;
+
+                if (Networking.LocalPlayer == Networking.GetOwner(gameObject))
+                {
+                    if (_isPlaying)
+                    {
+                        openPutt.leftShoulderPickup.gameObject.SetActive(true);
+                        openPutt.rightShoulderPickup.gameObject.SetActive(true);
+                    }
+                    else
+                    {
+                        // Drop the shoulder objects and set them back to Vector3.zero
+                        var attachedObject = openPutt.leftShoulderPickup.ObjectToAttach;
+                        VRCPickup pickup;
+                        if (Utilities.IsValid(attachedObject))
+                        {
+                            pickup = attachedObject.GetComponent<VRCPickup>();
+                            if (Utilities.IsValid(pickup))
+                                pickup.Drop();
+
+                            attachedObject.transform.localPosition = Vector3.zero;
+                        }
+
+                        attachedObject = openPutt.rightShoulderPickup.ObjectToAttach;
+                        if (Utilities.IsValid(attachedObject))
+                        {
+                            pickup = attachedObject.GetComponent<VRCPickup>();
+                            if (Utilities.IsValid(pickup))
+                                pickup.Drop();
+
+                            attachedObject.transform.localPosition = Vector3.zero;
+                        }
+
+                        // Drop the BodyMountedObjects
+                        pickup = openPutt.leftShoulderPickup.gameObject.GetComponent<VRCPickup>();
+                        if (Utilities.IsValid(pickup))
+                            pickup.Drop();
+                        pickup = openPutt.rightShoulderPickup.gameObject.GetComponent<VRCPickup>();
+                        if (Utilities.IsValid(pickup))
+                            pickup.Drop();
+
+                        openPutt.leftShoulderPickup.gameObject.SetActive(false);
+                        openPutt.rightShoulderPickup.gameObject.SetActive(false);
+                    }
+
+                    _RequestSync();
+                }
+
+                _UpdateTotals();
+                openPutt._OnPlayerUpdate(this);
+            }
+        }
+
+        /// <summary>
+        /// Points the shoulder pickups at the correct object (club/ball) for the current handedness. Leaves held pickups alone.
+        /// </summary>
+        public void _UpdateShoulderPickupAttachments()
+        {
+            if (Networking.LocalPlayer != Networking.GetOwner(gameObject))
+                return;
+
+            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.leftShoulderPickup) || !Utilities.IsValid(openPutt.rightShoulderPickup))
+                return;
+
+            if (openPutt.leftShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None || openPutt.rightShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None)
+                return;
+
+            var isLeftHanded = IsInLeftHandedMode;
+
+            var golfClubAutoHold = golfClub.AutoHoldEnabled;
+
+            openPutt.leftShoulderPickup.pickup.AutoHold = golfClubAutoHold && isLeftHanded ? VRC_Pickup.AutoHoldMode.Yes : VRC_Pickup.AutoHoldMode.No;
+            openPutt.leftShoulderPickup.ObjectToAttach = isLeftHanded ? golfClub.gameObject : golfBall.gameObject;
+
+            openPutt.rightShoulderPickup.pickup.AutoHold = golfClubAutoHold && !isLeftHanded ? VRC_Pickup.AutoHoldMode.Yes : VRC_Pickup.AutoHoldMode.No;
+            openPutt.rightShoulderPickup.ObjectToAttach = isLeftHanded ? golfBall.gameObject : golfClub.gameObject;
         }
 
         public bool canFreezeDesktopPlayers;
@@ -205,21 +355,15 @@ namespace dev.mikeee324.OpenPutt
             get => _isImmobilized;
             set
             {
-                var ownerIsValid = Utilities.IsValid(Owner) && Owner.IsValid();
-
-                _isImmobilized = value;
-
-                if (!freezePlayerWhileClubIsArmed)
+                if (!Networking.IsOwner(gameObject))
+                {
                     _isImmobilized = false;
+                    return;
+                }
 
-                // Don't freeze desktop players (they can just not press any keys to not move anyway)
-                if (ownerIsValid && !canFreezeDesktopPlayers && !Owner.IsUserInVR())
-                    _isImmobilized = false;
-
-                if (Owner.isLocal)
-                    Owner.Immobilize(_isImmobilized);
-                else
-                    _isImmobilized = false;
+                var local = Networking.LocalPlayer;
+                _isImmobilized = value && freezePlayerWhileClubIsArmed && (canFreezeDesktopPlayers || local.IsUserInVR());
+                local.Immobilize(_isImmobilized);
             }
         }
 
@@ -259,15 +403,12 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public bool ownerIsInVR;
 
-        public void OnBallHit(float speed)
+        public void _OnBallHit(float speed)
         {
             if (!Utilities.IsValid(CurrentCourse) || courseStates.Length != openPutt.courses.Length)
             {
-                if (Utilities.IsValid(openPutt))
-                {
-                    foreach (var eventListener in openPutt.eventListeners)
-                        eventListener.OnLocalPlayerBallHit(speed);
-                }
+                if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
+                    openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
 
                 return;
             }
@@ -280,45 +421,48 @@ namespace dev.mikeee324.OpenPutt
                 case CourseState.Skipped:
                 case CourseState.NotStarted:
                     courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
-                    if (!CurrentCourse.drivingRangeMode)
+                    if (CurrentCourse.courseType == CourseType.Standard)
                         courseScores[CurrentCourse.holeNumber] = 1;
                     courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
+
+                    hitsOnCurrentCourse += 1;
                     break;
                 case CourseState.Completed:
                 case CourseState.PlayedAndSkipped:
-                    if (Utilities.IsValid(openPutt) && (openPutt.replayableCourses || CurrentCourse.courseIsAlwaysReplayable))
+                    if (Utilities.IsValid(openPutt) && (openPutt.practiceMode || CurrentCourse.courseIsAlwaysReplayable))
                     {
                         courseStates[CurrentCourse.holeNumber] = CourseState.Playing;
-                        if (!CurrentCourse.drivingRangeMode)
+                        if (CurrentCourse.courseType == CourseType.Standard)
                             courseScores[CurrentCourse.holeNumber] = 1;
                         courseTimes[CurrentCourse.holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
                     }
                     else
                     {
                         if (openPutt.debugMode)
-                            OpenPuttUtils.Log(this, $"Player tried to restart course {CurrentCourse.holeNumber}. They have already completed or skipped it though. (OnBallHit)");
+                            OpenPuttUtils.Log(this, $"Player tried to restart course {CurrentCourse.holeNumber}. They have already completed or skipped it though. (_OnBallHit)");
                         CurrentCourse = null;
                     }
 
                     break;
                 case CourseState.Playing:
-                    if (!CurrentCourse.drivingRangeMode)
+                    hitsOnCurrentCourse += 1;
+
+                    if (CurrentCourse.courseType == CourseType.Standard)
                     {
                         courseScores[CurrentCourse.holeNumber] += 1;
-                        if (courseScores[CurrentCourse.holeNumber] > CurrentCourse.maxScore)
-                            courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
 
                         if (openPutt.debugMode)
-                            OpenPuttUtils.Log(this, $"Player hit ball on course {CurrentCourse.holeNumber}. Score is now {courseScores[CurrentCourse.holeNumber]}. (OnBallHit)");
+                            OpenPuttUtils.Log(this, $"Player hit ball on course {CurrentCourse.holeNumber}. Score is now {courseScores[CurrentCourse.holeNumber]}. (_OnBallHit)");
 
-                        if (courseScores[CurrentCourse.holeNumber] == CurrentCourse.maxScore)
+                        if (courseScores[CurrentCourse.holeNumber] >= CurrentCourse.maxScore)
                         {
-                            // Play max score reached sound
-                            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.SFXController))
-                                openPutt.SFXController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+                            // Clamp score to the max
+                            courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
 
-                            // Prevents the sound from being heard again
-                            courseStates[CurrentCourse.holeNumber] = CourseState.Completed;
+                            _NotifyMaxScoreReached(CurrentCourse);
+
+                            // Close the course off like a skip does so the player isn't left on it
+                            _OnCourseFinished(CurrentCourse, null, CourseState.Completed);
                         }
                     }
 
@@ -326,24 +470,93 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // Update the state of all courses
-            UpdateTotals();
+            _UpdateTotals();
 
             // Update local scoreboards
             if (Utilities.IsValid(openPutt))
-                openPutt.OnPlayerUpdate(this);
+                openPutt._OnPlayerUpdate(this);
 
             // If fast updates are on send current state of player to everybody - otherwise it will be done when the player finishes the course
             if (sendSync)
-                RequestSync();
+                _RequestSync();
 
-            if (Utilities.IsValid(openPutt))
-            {
-                foreach (var eventListener in openPutt.eventListeners)
-                    eventListener.OnLocalPlayerBallHit(speed);
-            }
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
+                openPutt.eventHandler.OnPlayerBallHit(Owner, speed);
         }
 
-        public void OnCourseStarted(CourseManager newCourse)
+        /// <summary>
+        /// Adds points to a course score from an external source (e.g. a driving range target) and syncs/refreshes scoreboards like a normal ball hit
+        /// </summary>
+        /// <param name="course">The course to add the score to</param>
+        /// <param name="amount">How many points to add</param>
+        public void _AddToCourseScore(CourseManager course, int amount)
+        {
+            if (!Utilities.IsValid(course) || !Utilities.IsValid(openPutt))
+                return;
+
+            if (courseStates.Length != openPutt.courses.Length)
+                return;
+
+            var holeNumber = course.holeNumber;
+            if (holeNumber < 0 || holeNumber >= courseScores.Length)
+                return;
+
+            // Make sure this is their current course before scoring, in case they skipped the starting pad
+            if (course.courseType != CourseType.DrivingRangeWithTargets && CurrentCourse != course)
+            {
+                _OnCourseStarted(course);
+
+                // Bail out if the course couldn't be (re)started
+                if (CurrentCourse != course)
+                    return;
+            }
+
+            // First contact with the course - transition it to Playing and stamp the start time
+            if (courseStates[holeNumber] == CourseState.NotStarted || courseStates[holeNumber] == CourseState.Skipped)
+            {
+                courseStates[holeNumber] = CourseState.Playing;
+                courseScores[holeNumber] = 0;
+                courseTimes[holeNumber] = DateTime.UtcNow.GetUnixTimestamp();
+            }
+
+            courseScores[holeNumber] += amount;
+
+            if (course.courseType == CourseType.DrivingRangeWithTargets)
+            {
+                if (CurrentCourse == course)
+                {
+                    _OnCourseFinished(course, null, CourseState.Completed);
+                    if (Utilities.IsValid(openPutt) && (openPutt.practiceMode || course.courseIsAlwaysReplayable))
+                        _OnCourseStarted(course);
+                }
+                else
+                {
+                    // Player is on a different course - update state directly without touching CurrentCourse
+                    if (courseStates[holeNumber] != CourseState.Completed)
+                    {
+                        courseTimes[holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[holeNumber];
+                        courseStates[holeNumber] = CourseState.Completed;
+                    }
+                    _UpdateTotals();
+                    openPutt._OnPlayerUpdate(this);
+                    if (openPutt.playerSyncType == PlayerSyncType.All)
+                        _RequestSync();
+                }
+                return;
+            }
+
+            // Update the state of all courses
+            _UpdateTotals();
+
+            // Refresh local scoreboards + save persistent data
+            openPutt._OnPlayerUpdate(this);
+
+            // If fast updates are on send current state of player to everybody - otherwise it will be done when the player finishes the course
+            if (openPutt.playerSyncType == PlayerSyncType.All)
+                _RequestSync();
+        }
+
+        public void _OnCourseStarted(CourseManager newCourse)
         {
             if (!Utilities.IsValid(newCourse))
             {
@@ -352,15 +565,22 @@ namespace dev.mikeee324.OpenPutt
                 return;
             }
 
-            var canReplayCourses = Utilities.IsValid(openPutt) && openPutt.replayableCourses;
+            var canReplayCourses = Utilities.IsValid(openPutt) && openPutt.practiceMode;
+
+            // Driving ranges have no "complete once" state - they can always be started again
+            var courseIsReplayable = canReplayCourses || newCourse.courseIsAlwaysReplayable || newCourse.IsDrivingRange;
 
             var newCourseOldState = courseStates[newCourse.holeNumber];
             if (newCourseOldState == CourseState.Completed || newCourseOldState == CourseState.PlayedAndSkipped)
             {
-                if (!canReplayCourses && !newCourse.courseIsAlwaysReplayable)
+                if (!courseIsReplayable)
                 {
                     if (openPutt.debugMode)
                         OpenPuttUtils.Log(this, $"Player tried to restart course {newCourse.holeNumber}. They have already completed or skipped it though.");
+
+                    if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.eventHandler) && Utilities.IsValid(Owner))
+                        openPutt.eventHandler.OnPlayerStartCourseBlocked(Owner, newCourse, newCourseOldState);
+
                     CurrentCourse = null;
                     return;
                 }
@@ -372,13 +592,72 @@ namespace dev.mikeee324.OpenPutt
             // If the player is already on a hole say they skipped it
             if (Utilities.IsValid(CurrentCourse) && CurrentCourse.holeNumber != newCourse.holeNumber)
             {
-                OnCourseFinished(CurrentCourse, null, courseScores[CurrentCourse.holeNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped);
+                _OnCourseFinished(CurrentCourse, null, courseScores[CurrentCourse.holeNumber] > 0 ? CourseState.PlayedAndSkipped : CourseState.Skipped);
             }
 
             CurrentCourse = newCourse;
+
+            hitsOnCurrentCourse = 0;
+
+            // If the local player is carrying a club that isn't allowed on this course, swap to the first allowed one
+            if (this == openPutt.LocalPlayerManager && Utilities.IsValid(golfClub) && golfClub.LocalPlayerOwnsThisObject())
+            {
+                if (!newCourse._IsClubAllowed(golfClub.ClubType))
+                    golfClub.ClubType = newCourse._GetFirstAllowedClub();
+
+                // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
+                if (Utilities.IsValid(openPutt.uiController))
+                    openPutt.uiController.UpdateButtonStates();
+            }
+
+#if OPENPUTT_DEMO_MODE
+            newCourse.SendCustomEvent(nameof(CourseManager.OnPlayerStartedCourse));
+#else
+            newCourse.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerStartedCourse));
+#endif
         }
 
-        public void OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
+        /// <summary>
+        /// Tells everybody this player hit the max score on this course and plays the associated sound
+        /// </summary>
+        private void _NotifyMaxScoreReached(CourseManager course)
+        {
+#if OPENPUTT_DEMO_MODE
+            course.SendCustomEvent(nameof(CourseManager.OnPlayerHitMaxScore));
+#else
+            course.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseManager.OnPlayerHitMaxScore));
+#endif
+
+            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.sfxController))
+                openPutt.sfxController.PlayMaxScoreReachedSoundAtPosition(golfBall.CurrentPosition);
+        }
+
+        /// <summary>
+        /// Skips the course currently being played, giving the same feedback as reaching the max score
+        /// </summary>
+        public void _SkipCurrentCourse()
+        {
+            if (!Utilities.IsValid(CurrentCourse))
+                return;
+
+            var course = CurrentCourse;
+
+            if (course.courseType != CourseType.Standard)
+            {
+                // Driving ranges don't have a stroke limit - just end this attempt and let them start again
+                _OnCourseFinished(course, null, CourseState.Completed);
+                _OnCourseStarted(course);
+                return;
+            }
+
+            _NotifyMaxScoreReached(course);
+
+            // Skipped allows a free restart; PlayedAndSkipped is gated by practiceMode like Completed.
+            // They already started this course, so use PlayedAndSkipped to stop restart-spam via the shoulder skip.
+            _OnCourseFinished(course, null, CourseState.PlayedAndSkipped);
+        }
+
+        public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
         {
             // Player either isn't playing a course already or they put the ball in the wrong hole - ignore event
             if (!Utilities.IsValid(course) || CurrentCourse != course)
@@ -390,13 +669,17 @@ namespace dev.mikeee324.OpenPutt
 
             CurrentCourse = null;
 
+            // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
+            if (Utilities.IsValid(openPutt.uiController))
+                openPutt.uiController.UpdateButtonStates();
+
             // Add on any extra points to the players score that this particular hole has
             if (Utilities.IsValid(hole))
                 courseScores[course.holeNumber] += hole.holeScoreAddition;
 
-            if (course.drivingRangeMode)
+            if (course.courseType == CourseType.DrivingRangeDistance)
             {
-                golfBall.GetLastHitData(out var maxDistance, out var totalDistance);
+                golfBall._GetLastHitData(out var maxDistance, out var totalDistance);
                 // Driving ranges will just track the highest score - use a separate canvas for live/previous hit distance
                 if (maxDistance > courseScores[course.holeNumber])
                     courseScores[course.holeNumber] = Mathf.FloorToInt(maxDistance);
@@ -411,8 +694,9 @@ namespace dev.mikeee324.OpenPutt
                     courseTimes[course.holeNumber] = course.maxTime;
                     break;
                 default:
-                    // Calculate the amount of time player spent on this course
-                    courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
+                    // Calculate time spent on this course, unless they never actually started playing it
+                    if (courseStates[course.holeNumber] != CourseState.Completed)
+                        courseTimes[course.holeNumber] = DateTime.UtcNow.GetUnixTimestamp() - courseTimes[course.holeNumber];
                     break;
             }
 
@@ -423,42 +707,37 @@ namespace dev.mikeee324.OpenPutt
             // Update the current state for this course
             courseStates[course.holeNumber] = newCourseState;
 
-            if (newCourseState == CourseState.Completed && courseScores[course.holeNumber] == 1)
-            {
-                if (Utilities.IsValid(hole))
-                {
-                    if (courseScores[course.holeNumber] <= 1)
-                        hole.localPlayerHoleInOneEvent = true;
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, "OnHoleInOne");
-                }
-            }
-
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.scoreboardManager))
             {
                 openPutt.scoreboardManager.requestedScoreboardView = ScoreboardView.Scoreboard;
-                UpdateTotals();
-                openPutt.OnPlayerUpdate(this);
+                _UpdateTotals();
+                openPutt._OnPlayerUpdate(this);
             }
 
             if (newCourseState == CourseState.Completed)
             {
+                // Send the finish course event to everybody
                 if (Utilities.IsValid(hole))
                 {
-                    hole.localPlayerBallEnteredEvent = true;
-                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, "OnBallEntered");
+#if OPENPUTT_DEMO_MODE
+                    // SendCustomEvent can't carry arguments, so call it directly instead (local-only, same as SendCustomEvent)
+                    hole.OnBallEnteredHole(hitsOnCurrentCourse, courseScores[course.holeNumber]);
+#else
+                    hole.SendCustomNetworkEvent(NetworkEventTarget.All, nameof(CourseHole.OnBallEnteredHole), hitsOnCurrentCourse, courseScores[course.holeNumber]);
+#endif
                 }
 
                 // If the player actually finished the hole - send a sync.. otherwise we'll wait for them to do something else that sends a sync
-                RequestSync();
+                _RequestSync();
             }
 
             if (Utilities.IsValid(openPutt))
-                openPutt.SavePersistantData();
+                openPutt._SavePersistantData();
         }
 
         void Start()
         {
-            ResetPlayerScores();
+            _ResetPlayerScores();
         }
 
         public override void OnDeserialization()
@@ -470,73 +749,77 @@ namespace dev.mikeee324.OpenPutt
                 OpenPuttUtils.Log(this, $"Received update from {Owner.displayName}!\r\n{ToString()}");
 
             if (Utilities.IsValid(openPutt))
-                openPutt.OnPlayerUpdate(this);
+                openPutt._OnPlayerUpdate(this);
 
             // Check if the synced state of the club is different from what it actually is (Maybe fixes #49)
             if (Utilities.IsValid(golfClub) && ClubVisible != golfClub.gameObject.activeInHierarchy)
             {
                 golfClub.gameObject.SetActive(ClubVisible);
-                golfClub.UpdateClubState();
+                golfClub._UpdateClubState();
             }
 
             // Check if the synced state of the club is different from what it actually is (Maybe fixes #49)
             if (Utilities.IsValid(golfBall) && BallVisible != golfBall.gameObject.activeInHierarchy)
             {
                 golfBall.gameObject.SetActive(BallVisible);
-                golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
+                golfBall._UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
         }
 
         /// <summary>
         /// Requests OpenPutt to perform a debounced network sync of scores etc.
         /// </summary>
-        public void RequestSync(bool syncNow = false)
+        public void _RequestSync(bool syncNow = false)
         {
             if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Networking.LocalPlayer.IsOwner(gameObject))
                 return;
 
             if (syncNow)
             {
-                SyncNow();
+                _SyncNow();
             }
             else if (!syncRequested)
             {
                 // If we aren't already waiting for a sync to happen schedule one in
                 syncRequested = true;
                 var maxRefreshInterval = Utilities.IsValid(openPutt) ? openPutt.maxRefreshInterval : 1f;
-                SendCustomEventDelayedSeconds(nameof(SyncNow), maxRefreshInterval);
+                SendCustomEventDelayedSeconds(nameof(_SyncNow), maxRefreshInterval);
             }
         }
 
-        public void SyncNow()
+        public void _SyncNow()
         {
+#if !OPENPUTT_DEMO_MODE
             RequestSerialization();
+#endif
             syncRequested = false;
         }
 
-        public void CheckPlayerLocation()
+        public void _CheckPlayerLocation()
         {
             if (!OpenPuttUtils.LocalPlayerIsValid())
             {
-                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
+                SendCustomEventDelayedSeconds(nameof(_CheckPlayerLocation), 1);
                 return;
             }
 
-            // Toggle golf club shoulder pickup on/off depending on if the player is holding the club or not
-            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.rightShoulderPickup) && Utilities.IsValid(openPutt.rightShoulderPickup.ObjectToAttach))
-            {
-                var pickupHelper = openPutt.rightShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
-                if (Utilities.IsValid(pickupHelper))
-                    openPutt.rightShoulderPickup.gameObject.SetActive(isPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None);
-            }
-            
-            // TODO: Instead of disabling the pickup while stood on the course, we could use the line renderer to point towards where the ball is
-            // Might be less confusing when they can't grab their ball from their shoulder is it draws a line to where their ball is
-            
+            var hasValidShoulderPickups = Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup) && Utilities.IsValid(openPutt.rightShoulderPickup);
+            var isLeftHanded = hasValidShoulderPickups && IsInLeftHandedMode;
+            var ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup : openPutt.leftShoulderPickup;
+            var clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup : openPutt.rightShoulderPickup;
+
+
 
             var ballIsOnCurrentCourse = false;
             var shouldEnableBallShoulderPickup = true;
-            var shouldEnableClubShoulderPickup = isPlaying;
+            var shouldEnableClubShoulderPickup = IsPlaying;
+
+            if (Utilities.IsValid(clubShoulderPickup) && Utilities.IsValid(clubShoulderPickup.ObjectToAttach))
+            {
+                var pickupHelper = clubShoulderPickup.ObjectToAttach.GetComponent<VRCPickup>();
+                if (Utilities.IsValid(pickupHelper))
+                    shouldEnableClubShoulderPickup = IsPlaying && pickupHelper.currentHand == VRC_Pickup.PickupHand.None;
+            }
 
             if (Utilities.IsValid(CurrentCourse))
             {
@@ -545,7 +828,7 @@ namespace dev.mikeee324.OpenPutt
                 var maxTimeOffCourse = ballOffCourseRespawnTime;
 
                 // Live driving range updates (kinda)
-                if (CurrentCourse.drivingRangeMode)
+                if (CurrentCourse.courseType == CourseType.DrivingRangeDistance)
                 {
                     if (golfBall.BallIsMoving)
                     {
@@ -557,9 +840,24 @@ namespace dev.mikeee324.OpenPutt
                             ballNotOnCourseCounter++;
 
                         // If the players new score is above the previous driving range score, then overwrite it
-                        golfBall.GetLastHitData(out var maxDistance, out var totalDistance);
+                        golfBall._GetLastHitData(out var maxDistance, out var totalDistance);
                         if (maxDistance > courseScores[CurrentCourse.holeNumber])
                             courseScores[CurrentCourse.holeNumber] = Mathf.FloorToInt(maxDistance);
+                    }
+
+                    // Increase max floor time for driving ranges
+                    maxTimeOffCourse *= 2;
+                }
+                else if (CurrentCourse.courseType == CourseType.DrivingRangeWithTargets)
+                {
+                    if (golfBall.BallIsMoving)
+                    {
+                        // If the ball is fairly close to any floor, start the count down to reset the ball
+                        ballIsOnCurrentCourse = !golfBall.OnGround;
+
+                        // We half the amount of time on the ground for driving ranges before resetting
+                        if (golfBall.OnGround)
+                            ballNotOnCourseCounter++;
                     }
 
                     // Increase max floor time for driving ranges
@@ -581,37 +879,41 @@ namespace dev.mikeee324.OpenPutt
                         if (openPutt.debugMode)
                             OpenPuttUtils.Log(this, "Ball has been off its course for too long");
                         ballNotOnCourseCounter = 0;
-                        golfBall.BallIsMoving = false;
+                        if (golfBall.BallIsMoving)
+                            golfBall.BallIsMoving = false;
+                        else
+                        {
+                            if (openPutt.debugMode)
+                                OpenPuttUtils.Log(this, $"Respawning ball at {golfBall.CurrentPosition} because it isn't on top of course {(Utilities.IsValid(CurrentCourse) ? CurrentCourse.holeNumber : -1)}. If this is incorrect, add the mesh it's standing on to that course's Floor Objects list.");
+                            golfBall._RespawnBallWithErrorNoise();
+                        }
                     }
                 }
 
-                // Toggle pickup on/off based on where the player and ball currently are
-                // Player On + Ball On Current Course = Pickup Off (Helps prevent ball being reset to last pos by accidental pickups)
-                // Player On + Ball Off Current Course = Pickup On (Allows them to quickly reset ball to last valid pos if ball gets lost)
-                if (IsOnTopOfCurrentCourse(Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Spine), 5f))
-                    shouldEnableBallShoulderPickup = !ballIsOnCurrentCourse;
             }
 
-            if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.leftShoulderPickup))
+            if (Utilities.IsValid(ballShoulderPickup) && Utilities.IsValid(clubShoulderPickup))
             {
-                if (!isPlaying)
+                if (!IsPlaying)
                     shouldEnableBallShoulderPickup = false;
                 else if (golfBall.pickedUpByPlayer)
                     shouldEnableBallShoulderPickup = true;
 
-                // Toggle the shoulder pickups if needed
-                var isLeftHanded = IsInLeftHandedMode;
-                var ballShoulderPickup = isLeftHanded ? openPutt.rightShoulderPickup.gameObject : openPutt.leftShoulderPickup.gameObject;
-                var clubShoulderPickup = isLeftHanded ? openPutt.leftShoulderPickup.gameObject : openPutt.rightShoulderPickup.gameObject;
-                if (shouldEnableBallShoulderPickup != ballShoulderPickup.activeInHierarchy)
-                    ballShoulderPickup.SetActive(shouldEnableBallShoulderPickup);
-                if (shouldEnableClubShoulderPickup != clubShoulderPickup.activeInHierarchy)
-                    clubShoulderPickup.SetActive(shouldEnableClubShoulderPickup);
+                var keepBallShoulderActive = ballShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None;
+                var keepClubShoulderActive = clubShoulderPickup.heldInHand != VRC_Pickup.PickupHand.None;
+
+                var targetBallShoulderActive = shouldEnableBallShoulderPickup || keepBallShoulderActive;
+                var targetClubShoulderActive = shouldEnableClubShoulderPickup || keepClubShoulderActive;
+
+                if (targetBallShoulderActive != ballShoulderPickup.gameObject.activeInHierarchy)
+                    ballShoulderPickup.gameObject.SetActive(targetBallShoulderActive);
+                if (targetClubShoulderActive != clubShoulderPickup.gameObject.activeInHierarchy)
+                    clubShoulderPickup.gameObject.SetActive(targetClubShoulderActive);
             }
 
             // If the local player still owns this PlayerManager check for their location again in another second
             if (this.LocalPlayerOwnsThisObject())
-                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
+                SendCustomEventDelayedSeconds(nameof(_CheckPlayerLocation), 1);
         }
 
         public override string ToString()
@@ -620,7 +922,7 @@ namespace dev.mikeee324.OpenPutt
             if (ownerName.Trim().Length == 0)
                 ownerName = "Eh?";
             var ready = IsReady ? "Ready" : "Not Ready";
-            var playing = isPlaying ? "Playing" : "Not Playing";
+            var playing = IsPlaying ? "Playing" : "Not Playing";
             var playerState = $"{gameObject.name} - {ownerName}({ready}/{playing})";
 
             playerState += $" - (Total:{PlayerTotalScore}) (";
@@ -633,6 +935,11 @@ namespace dev.mikeee324.OpenPutt
             return playerState;
         }
 
+        public override void OnOwnershipTransferred(VRCPlayerApi player)
+        {
+            Owner = player;
+        }
+
         public override void OnPlayerRestored(VRCPlayerApi player)
         {
             if (Networking.GetOwner(gameObject) != player) return;
@@ -641,7 +948,7 @@ namespace dev.mikeee324.OpenPutt
 
             PlayerIsCurrentlyFrozen = false;
 
-            var localPlayerIsNowOwner = Owner == Networking.LocalPlayer;
+            var localPlayerIsNowOwner = Networking.LocalPlayer == Networking.GetOwner(gameObject);
 
             if (localPlayerIsNowOwner)
             {
@@ -653,12 +960,12 @@ namespace dev.mikeee324.OpenPutt
                 OpenPuttUtils.Log(this, $"{Owner.displayName}({(localPlayerIsNowOwner ? "me" : "not me")}) now owns this object!");
 
             if (localPlayerIsNowOwner || (courseScores.Length == 0 && courseStates.Length == 0 && courseTimes.Length == 0))
-                ResetPlayerScores();
+                _ResetPlayerScores();
 
             if (localPlayerIsNowOwner)
             {
-                BallColor = new Color(Random.Range(0, 1f), Random.Range(0, 1f), Random.Range(0, 1f));
-                openPutt.LoadPersistantData();
+                BallColor = Owner.ToColor();
+                openPutt._LoadPersistantData();
             }
 
             if (Utilities.IsValid(golfClub))
@@ -666,13 +973,13 @@ namespace dev.mikeee324.OpenPutt
                 if (localPlayerIsNowOwner)
                 {
                     if (Utilities.IsValid(golfClub.openPuttSync))
-                        golfClub.openPuttSync.Respawn();
+                        golfClub.openPuttSync._Respawn();
                     else
                         golfClub.transform.position = new Vector3(0, -90, 0);
-                    golfClub.RescaleClub(true);
+                    golfClub._RescaleClub(true);
                 }
 
-                golfClub.UpdateClubState();
+                golfClub._UpdateClubState();
             }
 
             if (Utilities.IsValid(golfBall))
@@ -680,17 +987,17 @@ namespace dev.mikeee324.OpenPutt
                 if (localPlayerIsNowOwner)
                 {
                     if (Utilities.IsValid(golfBall.openPuttSync))
-                        golfBall.openPuttSync.Respawn();
+                        golfBall.openPuttSync._Respawn();
                     else
-                        golfBall.SetPosition(new Vector3(0, -90, 0));
+                        golfBall._SetPosition(new Vector3(0, -90, 0));
 
                     if (Utilities.IsValid(golfBall.openPuttSync))
                     {
-                        golfBall.SetRespawnPosition(golfBall.openPuttSync.originalPosition);
+                        golfBall._SetRespawnPosition(golfBall.openPuttSync.originalPosition);
                     }
                 }
 
-                golfBall.UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
+                golfBall._UpdateBallState(golfBall.LocalPlayerOwnsThisObject());
             }
 
             if (Utilities.IsValid(playerLabel))
@@ -701,34 +1008,33 @@ namespace dev.mikeee324.OpenPutt
 
             if (localPlayerIsNowOwner)
             {
-                openPutt.leftShoulderPickup.ObjectToAttach = golfBall.gameObject;
-                openPutt.rightShoulderPickup.ObjectToAttach = golfClub.gameObject;
+                _UpdateShoulderPickupAttachments();
 
                 openPutt.leftShoulderPickup.gameObject.SetActive(true);
                 openPutt.rightShoulderPickup.gameObject.SetActive(true);
 
                 // Do a regular check for the players location
-                SendCustomEventDelayedSeconds(nameof(CheckPlayerLocation), 1);
+                SendCustomEventDelayedSeconds(nameof(_CheckPlayerLocation), 1);
             }
 
-            UpdateTotals();
+            _UpdateTotals();
 
             // Get the local player to send their current score
-            RequestSync();
+            _RequestSync();
 
             // Refresh scoreboards
             if (Utilities.IsValid(openPutt) && Utilities.IsValid(openPutt.scoreboardManager))
             {
-                if (Owner == Networking.LocalPlayer)
-                    openPutt.OnLocalPlayerInitialised(this);
-                openPutt.OnPlayerUpdate(this);
+                if (localPlayerIsNowOwner)
+                    openPutt._OnLocalPlayerInitialised(this);
+                openPutt._OnPlayerUpdate(this);
             }
         }
 
-        public void ResetPlayerScores()
+        public void _ResetPlayerScores()
         {
             // Reset score tracking
-            isPlaying = true;
+            IsPlaying = true;
             CurrentCourse = null;
             courseScores = new int[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
             courseTimes = new long[Utilities.IsValid(openPutt) ? openPutt.courses.Length : 0];
@@ -740,13 +1046,13 @@ namespace dev.mikeee324.OpenPutt
                 courseStates[i] = CourseState.NotStarted;
             }
 
-            UpdateTotals();
+            _UpdateTotals();
         }
 
         /// <summary>
         /// Updates the players total score/time properties and fixes any incorrect course states
         /// </summary>
-        public void UpdateTotals()
+        public void _UpdateTotals()
         {
             if (!Utilities.IsValid(openPutt))
                 return;
@@ -759,7 +1065,7 @@ namespace dev.mikeee324.OpenPutt
                 for (var i = 0; i < courseScores.Length; i++)
                 {
                     // We don't count driving range scores
-                    if (Utilities.IsValid(openPutt.courses[i]) && openPutt.courses[i].drivingRangeMode)
+                    if (Utilities.IsValid(openPutt.courses[i]) && (openPutt.courses[i].courseType == CourseType.DrivingRangeDistance || openPutt.courses[i].courseType == CourseType.DrivingRangeWithTargets))
                         continue;
 
                     UpdateCourseState(openPutt.courses[i]);
@@ -820,7 +1126,7 @@ namespace dev.mikeee324.OpenPutt
                 return;
 
             // Driving ranges don't do much
-            if (course.drivingRangeMode)
+            if (course.courseType == CourseType.DrivingRangeDistance || course.courseType == CourseType.DrivingRangeWithTargets)
             {
                 courseStates[course.holeNumber] = CourseState.NotStarted;
                 return;
@@ -893,29 +1199,31 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public bool IsOnTopOfCurrentCourse(Vector3 position, float maxDistance = 0.1f)
+        public bool IsOnTopOfCurrentCourse(Vector3 position, float maxDistance = 0.1f) => IsOnTopOfCourse(CurrentCourse, position, maxDistance);
+
+        public bool IsOnTopOfCourse(CourseManager course, Vector3 position, float maxDistance = 0.1f)
         {
-            // If we aren't playing a course the ball can be wherever
-            if (!Utilities.IsValid(CurrentCourse) || !Utilities.IsValid(golfBall.floorMaterial) || !Utilities.IsValid(golfBall.floorMaterial.name))
+            // If there's no course to check against the ball can be wherever
+            if (!Utilities.IsValid(course) || !Utilities.IsValid(golfBall.floorMaterial) || !Utilities.IsValid(golfBall.floorMaterial.name))
                 return false;
 
             // Check what is underneath the ball
-            if (Physics.Raycast(position, Vector3.down, out var hit, maxDistance) && Utilities.IsValid(hit.collider))
+            if (Physics.Raycast(position, golfBall.gravityDirection, out var hit, maxDistance) && Utilities.IsValid(hit.collider))
             {
                 // Is it the kind of floor we are looking for?
                 // Collider col = hit.collider;
                 // bool rightKindOfFloor = Utilities.IsValid(col) && Utilities.IsValid(col.material) && Utilities.IsValid(col.material.name) && col.material.name.StartsWith(golfBall.floorMaterial.name);
 
-                foreach (var mesh in CurrentCourse.floorObjects)
+                foreach (var floorCollider in course.floorColliders)
                 {
-                    if (!Utilities.IsValid(mesh))
+                    if (!Utilities.IsValid(floorCollider))
                     {
-                        OpenPuttUtils.LogError(CurrentCourse, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
+                        OpenPuttUtils.LogError(course, "There is a null object in the list of floor objects for this course! Please fix by assigning it or removing the null entry!");
                         continue;
                     }
 
-                    // Does this floor belong to the course the player is currently playing?
-                    if (mesh.gameObject == hit.collider.gameObject)
+                    // Does this floor belong to the course we're checking against?
+                    if (floorCollider == hit.collider)
                     {
                         return true;
                     }
@@ -949,5 +1257,12 @@ namespace dev.mikeee324.OpenPutt
 
             return courseState;
         }
+
+        public void _OnWeirdThingHappened()
+        {
+            _weirdThingHappened = true;
+        }
+
+        public bool DidWeirdThingHappen() => _weirdThingHappened;
     }
 }

@@ -5,7 +5,7 @@ using System.Diagnostics;
 using UdonSharp;
 using UnityEngine;
 
-[DefaultExecutionOrder(-1000000000)]
+[UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-1000000000)]
 public class OPProfileKickoff : UdonSharpBehaviour
 {
     [NonSerialized]

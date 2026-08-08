@@ -7,6 +7,9 @@ using Random = UnityEngine.Random;
 namespace dev.mikeee324.OpenPutt
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
+    // Add OPENPUTT_DEMO_MODE to Project Settings > Player > Scripting Define Symbols to build a copy of the
+    // world that never sends state over the network (RequestSerialization/SendCustomNetworkEvent calls become
+    // no-ops or local-only calls) - useful for running in a busy instance without adding to network traffic.
     public class OpenPuttUtils : UdonSharpBehaviour
     {
         public static void Log(string tag, string message, string tagColor = "green")
@@ -152,6 +155,12 @@ namespace dev.mikeee324.OpenPutt
         public static bool LocalPlayerIsValid() => Utilities.IsValid(Networking.LocalPlayer);
 
         /// <summary>
+        /// Checks if the local player is the current instance master (auto-migrates, unlike isInstanceOwner).
+        /// </summary>
+        /// <returns>True if the local player is the current instance master</returns>
+        public static bool LocalPlayerIsInstanceMaster() => LocalPlayerIsValid() && Networking.LocalPlayer.isMaster;
+
+        /// <summary>
         /// Gets a UNIX-like timestamp but starts at 2023-01-01 00:00:00 UTC so float precision is better (maybe?)
         /// </summary>
         /// <returns>Number of seconds since 2023-01-01 00:00:00 UTC</returns>
@@ -160,6 +169,24 @@ namespace dev.mikeee324.OpenPutt
 
     public static class Extensions
     {
+        /// <summary>
+        /// Gets the OpenPutt PlayerManager for a particular player (Contains scores and other player-specific info)
+        /// </summary>
+        /// <returns>
+        /// The PlayerManager for this player
+        /// </returns>
+        public static PlayerManager GetOpenPuttPlayerManager(this VRCPlayerApi player)
+        {
+            var objects = Networking.GetPlayerObjects(player);
+            for (int i = 0; i < objects.Length; i++)
+            {
+                if (!Utilities.IsValid(objects[i])) continue;
+                PlayerManager foundScript = objects[i].GetComponentInChildren<PlayerManager>();
+                if (Utilities.IsValid(foundScript)) return foundScript;
+            }
+            return null;
+        }
+
         /// <summary>
         /// Checks if a float is within the deadzone near 0
         /// </summary>
@@ -171,7 +198,7 @@ namespace dev.mikeee324.OpenPutt
         public static bool IsNear(this float a, float b, float deadzone = .05f)
         {
             if (float.IsNaN(a) || float.IsNaN(b))
-                return false; 
+                return false;
             if (float.IsInfinity(a) || float.IsInfinity(b))
                 return a == b;
             return Math.Abs(a - b) < deadzone;
@@ -179,19 +206,15 @@ namespace dev.mikeee324.OpenPutt
 
         public static bool LocalPlayerOwnsThisObject(this UdonSharpBehaviour behaviour) => behaviour.gameObject.LocalPlayerOwnsThisObject();
         public static bool LocalPlayerOwnsThisObject(this GameObject gameObject) => OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject);
-        
+
         /// <summary>
         /// Returns a sanitized Vector3 with NaN and infinity values replaced with 0
         /// </summary>
         public static Vector3 Sanitized(this Vector3 vector)
         {
-            return new Vector3(
-                float.IsNaN(vector.x) || float.IsInfinity(vector.x) ? 0f : vector.x,
-                float.IsNaN(vector.y) || float.IsInfinity(vector.y) ? 0f : vector.y,
-                float.IsNaN(vector.z) || float.IsInfinity(vector.z) ? 0f : vector.z
-            );
+            return new Vector3(float.IsNaN(vector.x) || float.IsInfinity(vector.x) ? 0f : vector.x, float.IsNaN(vector.y) || float.IsInfinity(vector.y) ? 0f : vector.y, float.IsNaN(vector.z) || float.IsInfinity(vector.z) ? 0f : vector.z);
         }
-        
+
         /// <summary>
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -200,15 +223,64 @@ namespace dev.mikeee324.OpenPutt
         public static T GetRandom<T>(this T[] array) => array[Random.Range(0, array.Length)];
 
         /// <summary>
-        /// Strips the Y axis value from the Vector3 so distances can be compared on a flat plane
+        /// Generates a deterministic, vibrant colour for a player based on their name.
+        /// The same player always produces the same colour so they stay recognisable across sessions.
         /// </summary>
-        /// <param name="vv"></param>
-        /// <returns></returns>
-        public static Vector3 RemoveHeight(this Vector3 vv)
+        /// <param name="player">The player to generate a colour for</param>
+        /// <returns>A consistent colour derived from the player's display name</returns>
+        public static Color ToColor(this VRCPlayerApi player)
         {
-            return new Vector3(vv.x, 0, vv.z);
+            if (!Utilities.IsValid(player) || string.IsNullOrEmpty(player.displayName))
+                return Color.white;
+
+            var name = player.displayName;
+
+            // FNV-1a style hash of the name (using int since Udon has no uint maths)
+            var hash = -2128831035; // unchecked (int)2166136261
+            for (var i = 0; i < name.Length; i++)
+                hash = (hash ^ name[i]) * 16777619;
+
+            // Convert hash to a hue and use OKLCH for evenly spread, vibrant colours
+            var hue = (hash & 0xFFFFFF) / 16777216f;
+            return OklchToColor(0.70f, 0.14f, hue);
         }
-        
+
+        /// <summary>
+        /// Converts an OKLCH colour to sRGB. OKLCH is perceptually uniform, so evenly spaced
+        /// hues produce evenly spaced colours (unlike HSV, which is lumpy and skews cool).
+        /// </summary>
+        /// <param name="lightness">Perceived brightness (0-1)</param>
+        /// <param name="chroma">Colourfulness (roughly 0-0.32, higher values clip to gamut)</param>
+        /// <param name="hue">Hue angle in turns (0-1)</param>
+        public static Color OklchToColor(float lightness, float chroma, float hue)
+        {
+            var h = hue * 2f * Mathf.PI;
+            var a = chroma * Mathf.Cos(h);
+            var b = chroma * Mathf.Sin(h);
+
+            // OKLab -> LMS
+            var l_ = lightness + 0.3963377774f * a + 0.2158037573f * b;
+            var m_ = lightness - 0.1055613458f * a - 0.0638541728f * b;
+            var s_ = lightness - 0.0894841775f * a - 1.2914855480f * b;
+            var l = l_ * l_ * l_;
+            var m = m_ * m_ * m_;
+            var s = s_ * s_ * s_;
+
+            // LMS -> linear sRGB
+            var r = 4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s;
+            var g = -1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s;
+            var bl = -0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s;
+
+            // linear -> gamma sRGB (clamped into the displayable range)
+            return new Color(LinearToGamma(r), LinearToGamma(g), LinearToGamma(bl));
+        }
+
+        private static float LinearToGamma(float c)
+        {
+            c = Mathf.Clamp01(c);
+            return c <= 0.0031308f ? 12.92f * c : 1.055f * Mathf.Pow(c, 1f / 2.4f) - 0.055f;
+        }
+
         public static Vector3 FixNaNs(Vector3 vector)
         {
             if (float.IsNaN(vector.x)) vector.x = 0;
@@ -216,68 +288,25 @@ namespace dev.mikeee324.OpenPutt
             if (float.IsNaN(vector.z)) vector.z = 0;
             return vector;
         }
-        
+
         public static float FixNans(float value)
         {
             if (float.IsNaN(value)) value = 0;
             if (float.IsInfinity(value)) value = 0;
             return value;
         }
-        
-        public static Vector3 GetDirectionTowards(this Transform start, Transform end, bool ignoreHeight)
-        {
-            if (ignoreHeight)
-                return (end.position.RemoveHeight() - start.position.RemoveHeight()).normalized;
 
-            return (end.position - start.position).normalized;
+        public static Vector3 GetDirectionTowards(this Transform start, Transform end, Vector3 gravityDirection, bool ignoreHeight)
+        {
+            return GetDirectionTowards(start.position, end.position, gravityDirection, ignoreHeight);
         }
 
-        public static Vector3 GetDirectionTowards(this Vector3 start, Vector3 end, bool ignoreHeight)
+        public static Vector3 GetDirectionTowards(this Vector3 start, Vector3 end, Vector3 gravityDirection, bool ignoreHeight)
         {
             if (ignoreHeight)
-                return (end.RemoveHeight() - start.RemoveHeight()).normalized;
+                return (end - start).FlattenDirection(gravityDirection);
 
             return (end - start).normalized;
-        }
-
-        [RecursiveMethod]
-        public static ScoreboardPositioner[] SortByDistance(this ScoreboardPositioner[] array, Vector3 position, int leftIndex = 0, int rightIndex = -1)
-        {
-            if (array.Length == 0) return array;
-            if (rightIndex == -1)
-                rightIndex = array.Length - 1;
-
-            var i = leftIndex;
-            var j = rightIndex;
-            var pivot = Vector3.Distance(array[leftIndex].transform.position, position);
-            while (i <= j)
-            {
-                while (Vector3.Distance(array[i].transform.position, position) < pivot)
-                {
-                    i++;
-                }
-
-                while (Vector3.Distance(array[j].transform.position, position) > pivot)
-                {
-                    j--;
-                }
-
-                if (i <= j)
-                {
-                    var temp = array[i];
-                    array[i] = array[j];
-                    array[j] = temp;
-                    i++;
-                    j--;
-                }
-            }
-
-            if (leftIndex < j)
-                array.SortByDistance(position, leftIndex, j);
-            if (i < rightIndex)
-                array.SortByDistance(position, i, rightIndex);
-
-            return array;
         }
 
         /// <summary>
@@ -310,13 +339,19 @@ namespace dev.mikeee324.OpenPutt
 
             return newArray;
         }
-        
+
         public static long GetUnixTimestamp(this DateTime dateTime)
         {
             var utcDateTime = dateTime.ToUniversalTime();
             var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             return (utcDateTime.Ticks - unixEpoch.Ticks) / TimeSpan.TicksPerSecond;
         }
+
+        /// <summary>
+        /// Flattens a direction vector at a 90 degree angle to the "up" vector. Used to flatten ball hit directions even when gravity is upside down etc
+        /// </summary>
+        /// <returns></returns>
+        public static Vector3 FlattenDirection(this Vector3 inputDirection, Vector3 up) => (inputDirection - Vector3.Dot(inputDirection, up) * up).normalized;
 
         public static Vector3 BiasedDirection(this Vector3 direction1, Vector3 direction2, float bias)
         {
@@ -342,11 +377,138 @@ namespace dev.mikeee324.OpenPutt
 
             // Ensure the result is a valid direction vector
             if (biasedDirection == Vector3.zero)
-            {
                 return Vector3.zero;
-            }
 
             return biasedDirection.normalized;
+        }
+
+        /// <summary>
+        /// Returns a string name for this club type
+        /// </summary>
+        /// <param name="clubType"></param>
+        /// <returns></returns>
+        public static string GetName(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Putter:
+                    return "Putter";
+                case GolfClubType.Driver:
+                    return "Driver";
+                case GolfClubType.Wood3:
+                    return "Wood 3";
+                case GolfClubType.Wood5:
+                    return "Wood 5";
+                case GolfClubType.Iron4:
+                    return "Iron 4";
+                case GolfClubType.Iron5:
+                    return "Iron 5";
+                case GolfClubType.Iron6:
+                    return "Iron 6";
+                case GolfClubType.Iron7:
+                    return "Iron 7";
+                case GolfClubType.Iron8:
+                    return "Iron 8";
+                case GolfClubType.Iron9:
+                    return "Iron 9";
+                case GolfClubType.PitchingWedge:
+                    return "Pitching Wedge";
+                case GolfClubType.GapWedge:
+                    return "Gap Wedge";
+                case GolfClubType.SandWedge:
+                    return "Sand Wedge";
+                case GolfClubType.LobWedge:
+                    return "Lob Wedge";
+                case GolfClubType.Hybrid:
+                    return "Hybrid";
+                default:
+                    return "";
+            }
+        }
+
+        /// <summary>
+        /// Gets the typical loft angle in degrees for a club type
+        /// </summary>
+        /// <param name="clubType">The golf club type</param>
+        /// <returns>The typical loft angle in degrees</returns>
+        public static float GetTypicalLoft(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 12.0f; // Can range from 8 to 12+
+                case GolfClubType.Wood3: return 15.0f;
+                case GolfClubType.Wood5: return 18.0f;
+                case GolfClubType.Iron4: return 24.0f;
+                case GolfClubType.Iron5: return 27.0f;
+                case GolfClubType.Iron6: return 30.0f;
+                case GolfClubType.Iron7: return 34.0f;
+                case GolfClubType.Iron8: return 38.0f;
+                case GolfClubType.Iron9: return 42.0f;
+
+                case GolfClubType.PitchingWedge: return 46.0f; // PW
+                case GolfClubType.GapWedge: return 50.0f;      // GW/AW
+                case GolfClubType.SandWedge: return 56.0f;     // SW
+                case GolfClubType.LobWedge: return 60.0f;      // LW (can be higher)
+
+                case GolfClubType.Hybrid: return 20.0f; // Varies greatly depending on iron equivalent
+
+                case GolfClubType.Putter: return 3.0f; // Putters have very low loft
+                default: return 0.0f;
+            }
+        }
+
+        /// <summary>
+        /// Gets the typical maximum hit speed (m/s) for a club type.
+        /// These values are gameplay-tuned and can be adjusted later or
+        /// exposed as per-club overrides in `GolfClub`.
+        /// </summary>
+        public static float GetTypicalMaxSpeed(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 80f;
+                case GolfClubType.Wood3: return 75f;
+                case GolfClubType.Wood5: return 69f;
+                case GolfClubType.Iron4: return 64f;
+                case GolfClubType.Iron5: return 59f;
+                case GolfClubType.Iron6: return 53f;
+                case GolfClubType.Iron7: return 48f;
+                case GolfClubType.Iron8: return 43f;
+                case GolfClubType.Iron9: return 37f;
+                case GolfClubType.PitchingWedge: return 32f;
+                case GolfClubType.GapWedge: return 32f;
+                case GolfClubType.SandWedge: return 27f;
+                case GolfClubType.LobWedge: return 27f;
+                case GolfClubType.Hybrid: return 59f;
+                case GolfClubType.Putter: return 15f;
+                default: return 80f;
+            }
+        }
+
+        /// <summary>
+        /// Relative ball-speed efficiency per club ("smash factor"), normalized so Driver = 1.0
+        /// </summary>
+        public static float GetSmashFactor(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 1.0f;
+                case GolfClubType.Wood3:
+                case GolfClubType.Wood5:
+                case GolfClubType.Hybrid: return 0.97f;
+                case GolfClubType.Iron4:
+                case GolfClubType.Iron5:
+                case GolfClubType.Iron6:
+                case GolfClubType.Iron7: return 0.94f;
+                case GolfClubType.Iron8:
+                case GolfClubType.Iron9: return 0.92f;
+                case GolfClubType.PitchingWedge:
+                case GolfClubType.GapWedge:
+                case GolfClubType.SandWedge:
+                case GolfClubType.LobWedge: return 0.88f;
+                case GolfClubType.Putter: return 1.0f; // putter is its own thing
+                default: return 1.0f;
+            }
         }
     }
 }
