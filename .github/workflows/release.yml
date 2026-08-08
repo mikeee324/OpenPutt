@@ -55,6 +55,11 @@ jobs:
           echo "zipFile=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}".zip >> $GITHUB_ENV
           echo "unityPackage=${{ vars.PACKAGE_NAME }}-${{ steps.version.outputs.value }}.unitypackage" >> $GITHUB_ENV
           echo "version=${{ steps.version.outputs.value }}" >> $GITHUB_ENV
+          if [[ "${{ steps.version.outputs.value }}" == *-* ]]; then
+            echo "prerelease=true" >> $GITHUB_ENV
+          else
+            echo "prerelease=false" >> $GITHUB_ENV
+          fi
 
       # Skip the rest of the job if this version has already been released (i.e. version wasn't bumped)
       - name: Check if version already released
@@ -104,3 +109,5 @@ jobs:
             ${{ env.unityPackage }}
             ${{ env.packagePath }}/package.json
           tag_name: ${{ env.version }}
+          prerelease: ${{ env.prerelease }}
+          make_latest: ${{ env.prerelease == 'true' && 'false' || 'true' }}
