@@ -19,8 +19,6 @@ namespace dev.mikeee324.OpenPutt
         public OpenPuttHeadFollower _headFollower;
         [OpenPuttFoldoutGroup("References")]
         public GameObject _calloutBoxPrefab;
-        [OpenPuttFoldoutGroup("References")]
-        public OpenPutt openPutt;
 
         [OpenPuttFoldoutGroup("Notification Settings")]
         [Range(1, 20)] public float _vrSmoothing = 10f;

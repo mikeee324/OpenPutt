@@ -10,9 +10,10 @@ using UnityEngine.SceneManagement;
 
 public class ScoreboardBuildProcessor : IProcessSceneWithReport
 {
+    // Must run before Udon's scene processor (order 0) or rows built here never get a serialized program asset
     public int callbackOrder
     {
-        get { return 0; }
+        get { return -100; }
     }
 
     public void OnProcessScene(Scene scene, BuildReport report)

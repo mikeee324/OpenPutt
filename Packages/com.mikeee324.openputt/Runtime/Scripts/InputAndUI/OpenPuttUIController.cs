@@ -10,10 +10,6 @@ namespace dev.mikeee324.OpenPutt
     {
         [OpenPuttDescription("Controls the on-screen UI (score display, buttons, power bar) shown to the local player, switching between the desktop, mobile, and VR versions and keeping them up to date as the player plays.")]
         [OpenPuttFoldoutGroup("References")]
-        [Tooltip("A reference to OpenPutt. This should get filled in automatically when building, but to be safe always set it!")]
-        public OpenPutt openPutt;
-
-        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the input handler for this UI")]
         public OpenPuttInputHandler inputHandler;
 

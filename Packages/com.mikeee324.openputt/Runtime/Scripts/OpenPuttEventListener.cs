@@ -1,4 +1,5 @@
 ﻿using UdonSharp;
+using UnityEngine;
 using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
@@ -6,6 +7,9 @@ namespace dev.mikeee324.OpenPutt
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class OpenPuttEventListener : UdonSharpBehaviour
     {
+        [Tooltip("A reference to OpenPutt. This should get filled in automatically when building, but to be safe always set it!")]
+        public OpenPutt openPutt;
+
         /// <summary>
         /// Called when OpenPutt has assigned and finished setting up a PlayerManager for a player
         /// <br/>

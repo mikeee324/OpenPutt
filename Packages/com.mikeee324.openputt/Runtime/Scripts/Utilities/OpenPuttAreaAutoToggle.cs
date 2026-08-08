@@ -8,8 +8,6 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPuttAreaAutoToggle : OpenPuttEventListener
     {
         [OpenPuttDescription("Automatically toggles the shoulder pickups and portable menu depending on whether the player is inside this collider")]
-        public OpenPutt openPutt;
-
         public bool enabledAtStart = false;
 
         private GameObject localPlayerObject;

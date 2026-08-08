@@ -1,5 +1,7 @@
 ﻿#if UNITY_EDITOR
 using dev.mikeee324.OpenPutt;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -28,6 +30,8 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
 
         PopulateBallStartLineRendererReferences();
 
+        AssignEventListenerReferences();
+
         CheckReferences();
     }
 
@@ -41,10 +45,6 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         }
 
         OpenPuttUtils.Log(TAG, $"SetupOpenPutt - Setup {openPutt.courses.Length} courses");
-
-        InfoUI[] infoUIs = GameObject.FindObjectsByType<InfoUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (InfoUI infoUI in infoUIs)
-            infoUI.openPutt = openPutt;
     }
 
     private void PopulateBallStartLineRendererReferences()
@@ -69,6 +69,45 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
             ballLineRenderers[i].knownStartPositions = courseStartPositions;
             ballLineRenderers[i].knownStartColliders = courseStartColliders;
         }
+    }
+
+    /// <summary>
+    /// Finds every OpenPuttEventListener in the scene, assigns its "openPutt" field if it was left unset, and makes
+    /// sure it's registered in OpenPutt's eventListeners array
+    /// </summary>
+    private void AssignEventListenerReferences()
+    {
+        OpenPuttEventListener[] listeners = GameObject.FindObjectsByType<OpenPuttEventListener>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        List<OpenPuttEventListener> registeredListeners = openPutt.eventListeners?.ToList() ?? new List<OpenPuttEventListener>();
+
+        int assignedCount = 0;
+        int registeredCount = 0;
+
+        foreach (OpenPuttEventListener listener in listeners)
+        {
+            if (listener.openPutt == null)
+            {
+                listener.openPutt = openPutt;
+                assignedCount++;
+                OpenPuttUtils.Log(TAG, $"AssignEventListenerReferences - Assigned OpenPutt reference on {GetGameObjectPath(listener.gameObject)}");
+            }
+
+            if (!registeredListeners.Contains(listener))
+            {
+                registeredListeners.Add(listener);
+                registeredCount++;
+                OpenPuttUtils.Log(TAG, $"AssignEventListenerReferences - Registered {GetGameObjectPath(listener.gameObject)} in OpenPutt's eventListeners");
+            }
+        }
+
+        openPutt.eventListeners = registeredListeners.ToArray();
+
+        if (assignedCount > 0)
+            OpenPuttUtils.LogWarning(TAG, $"AssignEventListenerReferences - Automatically assigned the OpenPutt reference on {assignedCount} event listener(s) because it was left empty. Please assign this manually where possible!");
+
+        if (registeredCount > 0)
+            OpenPuttUtils.LogWarning(TAG, $"AssignEventListenerReferences - Automatically registered {registeredCount} event listener(s) in OpenPutt's eventListeners array because they were missing. Please assign this manually where possible!");
     }
 
     private void CheckReferences()

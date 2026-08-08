@@ -801,7 +801,7 @@ namespace dev.mikeee324.OpenPutt
             // Lower-loft clubs transfer swing speed more efficiently (smash factor, normalized to Driver = 1.0)
             velocityMagnitude *= golfClub.ClubType.GetSmashFactor();
 
-            var shouldClampSpeed = Utilities.IsValid(currentCourse) && currentCourse.clampClubSpeed;
+            var shouldClampSpeed = !Utilities.IsValid(currentCourse) || currentCourse.clampClubSpeed;
 
             if (shouldClampSpeed)
             {

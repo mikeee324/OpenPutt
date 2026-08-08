@@ -14,9 +14,6 @@ namespace dev.mikeee324.OpenPutt
     {
         [OpenPuttDescription("Shows a small picture-in-picture camera that follows your ball when it's moving off screen, so you can still see where it goes on desktop/mobile.")]
         [OpenPuttFoldoutGroup("References")]
-        [Tooltip("Reference to the OpenPutt instance")]
-        public OpenPutt openPutt;
-        [OpenPuttFoldoutGroup("References")]
         [Tooltip("The dedicated PiP camera (should render to a RenderTexture)")]
         public Camera pipCamera;
         [OpenPuttFoldoutGroup("References")]

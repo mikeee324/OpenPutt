@@ -12,9 +12,6 @@ namespace dev.mikeee324.OpenPutt
     {
         [OpenPuttDescription("Controls the orbiting third-person camera you can use to aim and look at your ball, including zoom/collision handling and the aim line shown while lining up a shot.")]
         [OpenPuttFoldoutGroup("References")]
-        [Tooltip("Reference to the OpenPutt instance")]
-        public OpenPutt openPutt;
-        [OpenPuttFoldoutGroup("References")]
         [Tooltip("Reference to the ball camera")]
         public Camera ballCam;
         [OpenPuttFoldoutGroup("References")]

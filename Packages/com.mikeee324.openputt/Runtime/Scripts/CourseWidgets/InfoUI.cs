@@ -45,12 +45,6 @@ namespace dev.mikeee324.OpenPutt
     {
         [OpenPuttDescription("Displays a piece of live information as text, such as the ball's speed or the player's current score, updating automatically while they play.")]
         /// <summary>
-        /// A referenc eto the OpenPutt instance in this world
-        /// </summary>
-        [Tooltip("A reference to OpenPutt. This should get filled in automatically when building, but to be safe always set it!")]
-        public OpenPutt openPutt;
-
-        /// <summary>
         /// Filter out events that are happening based on which course the player is currently playing on
         /// </summary>
         [Tooltip("Can be used to filter UI updates based on which course the player is currently playing on")]
