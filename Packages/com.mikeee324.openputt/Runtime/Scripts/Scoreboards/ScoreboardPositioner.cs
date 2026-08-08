@@ -21,8 +21,6 @@ namespace dev.mikeee324.OpenPutt
 
         [OpenPuttFoldoutGroup("References")]
         public Canvas backgroundCanvas;
-        [OpenPuttFoldoutGroup("References")]
-        public Transform nearbyCenterTransform;
 
         [Space, OpenPuttFoldoutGroup("Settings")]
         public ScoreboardVisibility scoreboardVisiblility = ScoreboardVisibility.AlwaysVisible;
@@ -125,33 +123,50 @@ namespace dev.mikeee324.OpenPutt
 
         /// <summary>
         /// Closest point on the board's physical rectangle (from backgroundCanvas's RectTransform) to the given position.
-        /// Falls back to the (optional) nearby center transform or the positioner's own transform if no canvas is set.
+        /// Falls back to the positioner's own transform if no canvas is set.
         /// </summary>
         private Vector3 ClosestPointOnBoard(Vector3 viewPosition)
         {
-            RectTransform rectTransform = null;
-            if (Utilities.IsValid(backgroundCanvas))
-                rectTransform = backgroundCanvas.GetComponent<RectTransform>();
-
-            if (!Utilities.IsValid(rectTransform))
-                return Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
-
-            rectTransform.GetWorldCorners(_worldCorners);
-
-            // Corners are ordered bottom-left, top-left, top-right, bottom-right
-            var origin = _worldCorners[0];
-            var uAxis = _worldCorners[3] - origin;
-            var vAxis = _worldCorners[1] - origin;
-            var uLen = uAxis.magnitude;
-            var vLen = vAxis.magnitude;
-            var uDir = uLen > 0f ? uAxis / uLen : transform.right;
-            var vDir = vLen > 0f ? vAxis / vLen : transform.up;
+            if (!TryGetBoardAxes(out var origin, out var uDir, out var vDir, out var uLen, out var vLen))
+                return transform.position;
 
             var toPoint = viewPosition - origin;
             var u = Mathf.Clamp(Vector3.Dot(toPoint, uDir), 0f, uLen);
             var v = Mathf.Clamp(Vector3.Dot(toPoint, vDir), 0f, vLen);
 
             return origin + uDir * u + vDir * v;
+        }
+
+        /// <summary>
+        /// Reads the board's world-space rectangle (from backgroundCanvas's RectTransform) as an origin plus two
+        /// in-plane axis directions/lengths. Returns false if there's no canvas to read a rectangle from.
+        /// </summary>
+        private bool TryGetBoardAxes(out Vector3 origin, out Vector3 uDir, out Vector3 vDir, out float uLen, out float vLen)
+        {
+            origin = Vector3.zero;
+            uDir = Vector3.zero;
+            vDir = Vector3.zero;
+            uLen = 0f;
+            vLen = 0f;
+
+            RectTransform rectTransform = null;
+            if (Utilities.IsValid(backgroundCanvas))
+                rectTransform = backgroundCanvas.GetComponent<RectTransform>();
+
+            if (!Utilities.IsValid(rectTransform))
+                return false;
+
+            rectTransform.GetWorldCorners(_worldCorners);
+
+            // Corners are ordered bottom-left, top-left, top-right, bottom-right
+            origin = _worldCorners[0];
+            var uAxis = _worldCorners[3] - origin;
+            var vAxis = _worldCorners[1] - origin;
+            uLen = uAxis.magnitude;
+            vLen = vAxis.magnitude;
+            uDir = uLen > 0f ? uAxis / uLen : transform.right;
+            vDir = vLen > 0f ? vAxis / vLen : transform.up;
+            return true;
         }
 
         /// <summary>
@@ -171,7 +186,10 @@ namespace dev.mikeee324.OpenPutt
 
         private void OnDrawGizmosSelected()
         {
-            var center = Utilities.IsValid(nearbyCenterTransform) ? nearbyCenterTransform.position : transform.position;
+            var hasBoard = TryGetBoardAxes(out var origin, out var uDir, out var vDir, out var uLen, out var vLen);
+            var boardCenter = hasBoard ? origin + uDir * (uLen * 0.5f) + vDir * (vLen * 0.5f) : transform.position;
+            if (!hasBoard)
+                uLen = vLen = 0f;
 
             switch (scoreboardVisiblility)
             {
@@ -180,19 +198,37 @@ namespace dev.mikeee324.OpenPutt
                     break;
                 case ScoreboardVisibility.NearbyOnly:
                 case ScoreboardVisibility.NearbyAndCourseFinished:
-                    Gizmos.DrawWireSphere(center, nearbyMaxRadius);
-
-                    Gizmos.color = Color.yellow;
-                    Gizmos.DrawWireSphere(center, closeRangeFullVisibilityRadius);
+                    DrawNearbyAreaGizmo(boardCenter, uLen, vLen, nearbyMaxRadius, Color.white);
+                    DrawNearbyAreaGizmo(boardCenter, uLen, vLen, closeRangeFullVisibilityRadius, Color.yellow);
                     break;
             }
 
             // Distance past which the board stays visible but stops accepting clicks
             if (interactionMaxRadius > 0f)
-            {
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawWireSphere(center, interactionMaxRadius);
-            }
+                DrawNearbyAreaGizmo(boardCenter, uLen, vLen, interactionMaxRadius, Color.cyan);
+        }
+
+        /// <summary>
+        /// Draws a filled, semi-transparent box showing where ClosestPointOnBoard's distance check passes: the
+        /// board's rect padded out by radius on every side, extending forward from the board's front face by
+        /// radius. Only the front is shown since boardIsFacingPlayer in ShouldBeVisible rules out the back
+        /// regardless of distance.
+        /// </summary>
+        private void DrawNearbyAreaGizmo(Vector3 boardCenter, float uLen, float vLen, float radius, Color color)
+        {
+            var size = new Vector3(uLen + radius * 2f, vLen + radius * 2f, radius);
+            var center = boardCenter + transform.forward * (radius * 0.5f);
+
+            var previousMatrix = Gizmos.matrix;
+            Gizmos.matrix = Matrix4x4.TRS(center, transform.rotation, Vector3.one);
+
+            Gizmos.color = new Color(color.r, color.g, color.b, 0.15f);
+            Gizmos.DrawCube(Vector3.zero, size);
+
+            Gizmos.color = color;
+            Gizmos.DrawWireCube(Vector3.zero, size);
+
+            Gizmos.matrix = previousMatrix;
         }
     }
 }
