@@ -102,7 +102,7 @@ jobs:
       # Publish the Release to GitHub
       - name: Make Release
         if: steps.check_version.outputs.exists == 'false'
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: |
             ${{ env.zipFile }}
