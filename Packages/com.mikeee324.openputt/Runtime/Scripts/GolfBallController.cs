@@ -269,7 +269,7 @@ namespace dev.mikeee324.OpenPutt
                                     var notifications = NotificationsController;
                                     if (Utilities.IsValid(notifications))
                                     {
-                                        notifications.InstantiateCalloutBox("Off course - ball reset");
+                                        notifications.Callout(Callouts.BallOffCourseReset, Networking.LocalPlayer.playerId);
                                         hasShownOffCourseResetNotification = true;
                                     }
                                 }
@@ -1016,7 +1016,7 @@ namespace dev.mikeee324.OpenPutt
                 var notifications = NotificationsController;
                 if (Utilities.IsValid(notifications))
                 {
-                    notifications.InstantiateCalloutBox("Off course - ball reset");
+                    notifications.Callout(Callouts.BallOffCourseReset, Networking.LocalPlayer.playerId);
                     hasShownOffCourseResetNotification = true;
                 }
             }

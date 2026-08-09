@@ -50,7 +50,7 @@ namespace dev.mikeee324.OpenPutt
                     SendCustomEventDelayedSeconds(nameof(ClearSkipConfirmation), confirmationWindow);
 
                     if (Utilities.IsValid(openPutt.notifications))
-                        openPutt.notifications.InstantiateCalloutBox("Click again to skip your current course and fetch the ball");
+                        openPutt.notifications.Callout(Callouts.SkipCourseConfirm, Networking.LocalPlayer.playerId);
                     return;
                 }
 
@@ -73,6 +73,9 @@ namespace dev.mikeee324.OpenPutt
             playerManager._RequestSync(syncNow: true);
 
             golfBall.openPuttSync._RequestFastSync(forceSync: true);
+
+            if (Networking.LocalPlayer.IsUserInVR() && Utilities.IsValid(openPutt.notifications))
+                openPutt.notifications.Callout(Callouts.FetchBall, Networking.LocalPlayer.playerId);
         }
 
         /// <summary>Called via SendCustomEventDelayedSeconds to expire a pending skip confirmation.</summary>

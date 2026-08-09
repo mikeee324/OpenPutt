@@ -334,6 +334,36 @@ namespace dev.mikeee324.OpenPutt
                 case Callouts.AlreadySkipped:
                     calloutText = "You already skipped this course!";
                     break;
+                case Callouts.FetchClub:
+                {
+                    bool isLeftHanded = Utilities.IsValid(openPutt.LocalPlayerManager) && openPutt.LocalPlayerManager.IsInLeftHandedMode;
+                    calloutText = $"Grab your club from your {(isLeftHanded ? "left" : "right")} shoulder";
+                    break;
+                }
+                case Callouts.FetchBall:
+                {
+                    // Ball sits on the shoulder opposite the club
+                    bool isLeftHanded = Utilities.IsValid(openPutt.LocalPlayerManager) && openPutt.LocalPlayerManager.IsInLeftHandedMode;
+                    calloutText = $"Grab your ball from your {(isLeftHanded ? "right" : "left")} shoulder";
+                    break;
+                }
+                case Callouts.BallCamHint:
+#if UNITY_ANDROID || UNITY_IOS
+                    calloutText = "Tap the Ball Cam button to aim your shot";
+#else
+                {
+                    var controllerDetector = Utilities.IsValid(openPutt.ballCam) && Utilities.IsValid(openPutt.ballCam.inputHandler) ? openPutt.ballCam.inputHandler.controllerDetector : null;
+                    bool usingGamepad = Utilities.IsValid(controllerDetector) && controllerDetector.currentInputMethod == VRCInputMethod.Controller;
+                    calloutText = usingGamepad ? "Press RB to use Ball Cam" : "Press E to use Ball Cam";
+                }
+#endif
+                    break;
+                case Callouts.SkipCourseConfirm:
+                    calloutText = "Click again to skip your current course and fetch the ball";
+                    break;
+                case Callouts.BallOffCourseReset:
+                    calloutText = "Off course - ball reset";
+                    break;
                 default:
                     return;
             }
@@ -416,6 +446,11 @@ namespace dev.mikeee324.OpenPutt
         LeftHandedMode,
         RightHandedMode,
         AlreadyCompleted,
-        AlreadySkipped
+        AlreadySkipped,
+        FetchClub,
+        FetchBall,
+        BallCamHint,
+        SkipCourseConfirm,
+        BallOffCourseReset
     }
 }
