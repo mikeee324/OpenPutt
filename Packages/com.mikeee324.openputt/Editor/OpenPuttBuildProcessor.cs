@@ -1,7 +1,9 @@
 ﻿#if UNITY_EDITOR
 using dev.mikeee324.OpenPutt;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -29,6 +31,8 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         SetupOpenPutt();
 
         PopulateBallStartLineRendererReferences();
+
+        AssignOpenPuttReferences();
 
         AssignEventListenerReferences();
 
@@ -72,8 +76,44 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
     }
 
     /// <summary>
-    /// Finds every OpenPuttEventListener in the scene, assigns its "openPutt" field if it was left unset, and makes
-    /// sure it's registered in OpenPutt's eventListeners array
+    /// Scans every MonoBehaviour in the scene for a field of type OpenPutt (public or private, at any level of
+    /// its class hierarchy) and assigns it if it was left unset. This means any component that wants a reference
+    /// to OpenPutt just needs a field of that type - it doesn't need to be wired up manually or hooked into this
+    /// build processor.
+    /// </summary>
+    private void AssignOpenPuttReferences()
+    {
+        const BindingFlags fieldFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+        MonoBehaviour[] allBehaviours = GameObject.FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        int assignedCount = 0;
+
+        foreach (MonoBehaviour behaviour in allBehaviours)
+        {
+            if (behaviour == null || behaviour == openPutt)
+                continue;
+
+            for (Type type = behaviour.GetType(); type != null && type != typeof(MonoBehaviour); type = type.BaseType)
+            {
+                foreach (FieldInfo field in type.GetFields(fieldFlags))
+                {
+                    if (field.FieldType != typeof(OpenPutt) || field.GetValue(behaviour) != null)
+                        continue;
+
+                    field.SetValue(behaviour, openPutt);
+                    assignedCount++;
+                    OpenPuttUtils.Log(TAG, behaviour.gameObject, $"AssignOpenPuttReferences - Assigned OpenPutt reference on {GetGameObjectPath(behaviour.gameObject)} ({type.Name}.{field.Name})");
+                }
+            }
+        }
+
+        if (assignedCount > 0)
+            OpenPuttUtils.LogWarning(TAG, $"AssignOpenPuttReferences - Automatically assigned the OpenPutt reference on {assignedCount} field(s) because they were left empty. Please assign this manually where possible!");
+    }
+
+    /// <summary>
+    /// Finds every OpenPuttEventListener in the scene and makes sure it's registered in OpenPutt's eventListeners array
     /// </summary>
     private void AssignEventListenerReferences()
     {
@@ -81,18 +121,10 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
 
         List<OpenPuttEventListener> registeredListeners = openPutt.eventListeners?.ToList() ?? new List<OpenPuttEventListener>();
 
-        int assignedCount = 0;
         int registeredCount = 0;
 
         foreach (OpenPuttEventListener listener in listeners)
         {
-            if (listener.openPutt == null)
-            {
-                listener.openPutt = openPutt;
-                assignedCount++;
-                OpenPuttUtils.Log(TAG, $"AssignEventListenerReferences - Assigned OpenPutt reference on {GetGameObjectPath(listener.gameObject)}");
-            }
-
             if (!registeredListeners.Contains(listener))
             {
                 registeredListeners.Add(listener);
@@ -102,9 +134,6 @@ public class OpenPuttBuildProcessor : IProcessSceneWithReport
         }
 
         openPutt.eventListeners = registeredListeners.ToArray();
-
-        if (assignedCount > 0)
-            OpenPuttUtils.LogWarning(TAG, $"AssignEventListenerReferences - Automatically assigned the OpenPutt reference on {assignedCount} event listener(s) because it was left empty. Please assign this manually where possible!");
 
         if (registeredCount > 0)
             OpenPuttUtils.LogWarning(TAG, $"AssignEventListenerReferences - Automatically registered {registeredCount} event listener(s) in OpenPutt's eventListeners array because they were missing. Please assign this manually where possible!");

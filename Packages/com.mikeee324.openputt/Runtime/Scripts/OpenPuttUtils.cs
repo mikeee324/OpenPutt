@@ -39,6 +39,15 @@ namespace dev.mikeee324.OpenPutt
 #endif
         }
 
+        public static void Log(string tag, UnityEngine.Object context, string message, string tagColor = "green")
+        {
+#if UNITY_STANDALONE_WIN
+            Debug.Log($"[<color={tagColor}>{tag}</color>] {message}", context);
+#elif UNITY_EDITOR
+            Debug.Log($"[<color={tagColor}>{tag}</color>] {message}", context);
+#endif
+        }
+
         public static void Log(UdonSharpBehaviour context, string message, string tagColor = "green")
         {
             if (!Utilities.IsValid(context))

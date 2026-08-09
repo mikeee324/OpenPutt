@@ -180534,7 +180534,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6611600649750615831}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0, g: 0.56700003, b: 0.046694085, a: 1}
   meshesToColour:
   - {fileID: 1117227585887160310}
@@ -180765,7 +180765,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 3187577375423980058}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0.78, g: 0.5047059, b: 0, a: 1}
   meshesToColour:
   - {fileID: 855879612018316251}
@@ -182022,6 +182022,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
       propertyPath: ballColour.b
       value: 0.77254903
       objectReference: {fileID: 0}
@@ -182341,7 +182346,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6658231653622146027}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0, g: 0.40720344, b: 0.773, a: 1}
   meshesToColour:
   - {fileID: 4500414984483585527}
@@ -183369,6 +183374,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
       propertyPath: ballColour.b
       value: 0.047058824
       objectReference: {fileID: 0}
@@ -184157,6 +184167,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
       propertyPath: ballColour.g
@@ -185385,7 +185400,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6371183643453157663}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0.688, g: 0.06475295, b: 0, a: 1}
   meshesToColour:
   - {fileID: 4629555649863664654}
@@ -186135,6 +186150,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
       propertyPath: enableInteract
@@ -188652,6 +188672,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1d61a31a14710744ea16df3399131272, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1696751306663278200 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6945536582650298137, guid: e299e558bf21de243949f1524ba74aec,
+    type: 3}
+  m_PrefabInstance: {fileID: 8642287751561070945}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a706f42c2fe98549a928d04decf8644, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &1741723278178289641 stripped
