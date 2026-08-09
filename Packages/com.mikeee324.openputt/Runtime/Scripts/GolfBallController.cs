@@ -72,7 +72,8 @@ namespace dev.mikeee324.OpenPutt
         public Vector3 gravityDirection = Vector3.down;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        public float gravityMagnitude = 9.87f;
+        [Tooltip("Gravity strength applied to the ball. Overwritten from Physics.gravity at Start, so this is only the value used before that or if the project gravity is unset")]
+        public float gravityMagnitude = 9.81f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, 1f), Tooltip("Caps spin (Magnus) force to this fraction of ball weight - stops backspin shots looping. 1 = matches gravity (max float), lower = less float/curve")]
@@ -112,6 +113,10 @@ namespace dev.mikeee324.OpenPutt
         float groundRaycastDistance = 0.02f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
+        [SerializeField, Min(0f), Tooltip("How far below the ball the snapping probe looks for the surface to hold it against (meters). Keep this close to the grounded check above - a longer reach holds the ball against floors it has already left, over edges and steps")]
+        float groundSnappingProbeDistance = 0.02f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("Master toggle for script-driven ground snapping. Off = pure Unity physics. Wired to the dev-menu 'ball snapping' checkbox")]
         public bool enableBallSnap = true;
 
@@ -120,26 +125,26 @@ namespace dev.mikeee324.OpenPutt
         int snapMinGroundedSteps = 3;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [SerializeField, Range(0, 90), Tooltip("Surfaces steeper than this (degrees from flat) are left to Unity physics instead of being snapped to")]
-        float groundSnappingMaxGroundAngle = 45f;
-
-        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
 
         [Space]
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Range(0f, 0.5f), Tooltip("How far a normal may tilt from vertical and still count as a 'wall'. 0.15≈8.6°. Keep below ~0.6 so ramps/floors aren't walls")]
-        public float wallDetectionTolerance = 0.15f;
+        [Tooltip("Master toggle for script-driven wall bounces. Off = pure Unity physics, which won't bounce slow balls off walls at all. Wall hit sounds still play either way")]
+        public bool enableWallReflections = true;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Range(0.1f, 2f), Tooltip("Energy kept after a wall bounce (only used if the collider has no PhysicMaterial)")]
+        [Range(0.1f, 1f), Tooltip("Fraction of speed kept on a dead-on wall hit. Shallow hits keep more, because only the part of the velocity driving into the wall is damped. Capped at 1 so a bounce can never hand the ball energy")]
         public float wallBounceSpeedMultiplier = 0.8f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0, 0.5f)]
-        [Tooltip("Wall reflection: 0 = perfect, 0.5 = half lost, 1 = runs along the wall")]
+        [Tooltip("How much of the bounce back off a wall is bled off. 0 = full bounce, 0.5 = half of it lost so the ball runs along the wall more")]
         public float wallBounceDeflection = .1f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Range(0f, 1f), Tooltip("If a wall contact's normal points this far upwards it's the ball landing on top of the wall, not hitting its side, so no bounce is applied. 0.5≈60° from vertical")]
+        public float wallBounceHeightIgnoreAmount = 0.5f;
 
         [Space]
         [OpenPuttFoldoutGroup("Respawn Settings")]
@@ -388,11 +393,21 @@ namespace dev.mikeee324.OpenPutt
 
         public bool OnGround => stepsOnGround > 1;
 
+        /// The surface the snap probe found last time it ran. Written only by HandleGroundSnapping, so the
+        /// crest test compares against the previous snapping step rather than whatever the ball brushed past.
         private Vector3 lastGroundContactNormal = Vector3.up;
         private float timeFlying = 0;
         int stepsOnGround;
+
+        /// Counts physics steps off the ground. Forced to -1 after a wall bounce or throw, but a grounded
+        /// step resets it to 0 before the snap reads it, so stepsOnGround is what actually holds snapping off.
+        int stepsInAir;
         private bool resetBallTimers = true;
-        private float defaultGravityMagnitude = 9.87f;
+
+        private float defaultGravityMagnitude = 9.81f;
+
+        /// World gravity as it was at Start, restored when the ball leaves the last force zone
+        private Vector3 defaultGravityDirection = Vector3.down;
 
         /// Logs ball speed after a hit for debugging
         private float[] speedDataLogging = new float[0];
@@ -456,6 +471,10 @@ namespace dev.mikeee324.OpenPutt
 
             // Init gravity direction from Physics.gravity (a force zone can override it later)
             gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
+            defaultGravityDirection = gravityDirection;
+
+            // Seed from gravity, not Vector3.up - the slope-stop check reads this before the snap ever writes it
+            lastGroundContactNormal = -gravityDirection;
 
             pickedUpByPlayer = false;
             BallIsMoving = false;
@@ -850,6 +869,9 @@ namespace dev.mikeee324.OpenPutt
             // Switch ball physics on
             BallIsMoving = true;
 
+            // Hold snapping off for a step so a thrown ball can bounce instead of being stuck to the floor
+            stepsInAir = -1;
+
             // Apply velocity of the ball that we saw last frame so players can throw the ball
             if (lastHeldFrameVelocity.magnitude > .001f || ballHeldInHand != VRC_Pickup.PickupHand.None)
             {
@@ -1098,8 +1120,8 @@ namespace dev.mikeee324.OpenPutt
                 _currentSpin *= 0.5f;
 
             // Hit something from the side or above the ball
-            if (Utilities.IsValid(collision) && Utilities.IsValid(collision.collider))
-                ReflectCollision(collision);
+            if (Utilities.IsValid(collision) && IsWallCollider(collision.collider))
+                ReflectCollision(collision, collision.contacts);
         }
 
         void OnCollisionStay(Collision collision)
@@ -1114,6 +1136,22 @@ namespace dev.mikeee324.OpenPutt
                 // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 ResetBallCollisionTimers();
             }
+        }
+
+        /// <summary>
+        /// True if this collider is tagged as a wall. Reference equality first, then a name prefix - courses
+        /// routinely ship their own duplicate of the wall PhysicMaterial, and those are still walls even
+        /// though they aren't the same asset. sharedMaterial throughout: reading .material would instance a
+        /// per-collider copy and break the reference check for everything after it.
+        /// </summary>
+        private bool IsWallCollider(Collider collider)
+        {
+            if (!Utilities.IsValid(collider) || !Utilities.IsValid(wallMaterial)) return false;
+
+            var material = collider.sharedMaterial;
+            if (!Utilities.IsValid(material)) return false;
+
+            return material == wallMaterial || material.name.StartsWith(wallMaterial.name);
         }
 
         private void ResetBallCollisionTimers()
@@ -1155,99 +1193,70 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Calculates the wall bounce. Unity won't bounce slow balls (it just rolls them along), so we do it ourselves.
         /// </summary>
-        private void ReflectCollision(Collision collision)
+        private void ReflectCollision(Collision collision, ContactPoint[] contacts)
         {
-            if (!Utilities.IsValid(ballRigidbody) || !Utilities.IsValid(collision) || collision.contacts.Length == 0 || collision.contactCount == 0)
+            if (!Utilities.IsValid(ballRigidbody) || !Utilities.IsValid(collision) || !Utilities.IsValid(collision.collider))
                 return;
 
-            // Work out which direction we need to bounce off the wall
-            var contact = collision.contacts[0];
-            if (!Utilities.IsValid(contact))
+            if (contacts == null || contacts.Length == 0)
                 return;
 
-            // Average contact.normal across the manifold for a stable outward wall normal
-            var wallNormal = Vector3.zero;
-            for (var i = 0; i < collision.contactCount; i++)
-            {
-                var c = collision.contacts[i];
-                if (Utilities.IsValid(c))
-                    wallNormal += c.normal.Sanitized();
-            }
-            wallNormal = wallNormal.Sanitized();
-            if (wallNormal == Vector3.zero)
-                wallNormal = contact.normal.Sanitized();
+            // First contact wins
+            var collisionNormal = contacts[0].normal.Sanitized();
+            var contactPoint = contacts[0].point;
+            if (collisionNormal == Vector3.zero)
+                return;
 
-            Vector3 collisionNormal;
-            if (gravityMagnitude > .01f)
-            {
-                // Wall test: normal near-perpendicular to gravity = wall; skip floor/ceiling normals
-                var normalVsGravity = Vector3.Dot(wallNormal, gravityDirection);
-                if (!normalVsGravity.IsNearZero(wallDetectionTolerance))
-                    return;
-
-                // Keep only the horizontal part of the wall normal so the bounce stays in-plane.
-                var sideways = Vector3.ProjectOnPlane(wallNormal, gravityDirection);
-                if (sideways.sqrMagnitude < 1e-8f)
-                    return;
-                collisionNormal = sideways.normalized;
-            }
-            else
-            {
-                // No gravity - there's no "floor" to exclude, just bounce off the wall normal directly.
-                if (wallNormal.sqrMagnitude < 1e-6f)
-                    return;
-                collisionNormal = wallNormal;
-            }
-
-            // Don't bounce a ball already travelling away from the wall
-            var ballVelForCheck = lastFrameVelocity == Vector3.zero ? ballRigidbody.velocity : lastFrameVelocity;
-            var velDotNormal = Vector3.Dot(ballVelForCheck, collisionNormal);
-            if (velDotNormal >= 0f)
+            // Checks if the collision was from "below" and ignores it
+            if (Vector3.Dot(collisionNormal, -gravityDirection) > wallBounceHeightIgnoreAmount)
                 return;
 
             // Maybe fix the ball getting stuck on walls
-            if (lastFrameVelocity == Vector3.zero)
+            if (lastFrameVelocity.sqrMagnitude < 1e-8f)
                 lastFrameVelocity = ballRigidbody.velocity;
-
-            // Obstacle surface velocity at the contact; zero for static walls
-            var surfaceVelocity = Vector3.zero;
-            if (Utilities.IsValid(collision.rigidbody))
-                surfaceVelocity = collision.rigidbody.GetPointVelocity(contact.point).Sanitized();
-
-            // Ball velocity relative to the (possibly moving) surface
-            var relativeVelocity = lastFrameVelocity - surfaceVelocity;
-
-            // Reflect the relative velocity off the wall
-            var newDirection = Vector3.Reflect(relativeVelocity.normalized, collisionNormal).Sanitized();
-
-            // If we still don't have a velocity don't do anything else as we might get stuck against the wall
-            if (newDirection == Vector3.zero)
+            if (lastFrameVelocity.sqrMagnitude < 1e-8f)
                 return;
 
-            var v = Vector3.Project(newDirection, collisionNormal).Sanitized();
+            // Obstacle surface velocity at the contact; zero for static walls, so this only shows up on
+            // moving obstacles
+            var surfaceVelocity = Vector3.zero;
+            if (Utilities.IsValid(collision.rigidbody))
+                surfaceVelocity = collision.rigidbody.GetPointVelocity(contactPoint).Sanitized();
 
-            // How bouncy is this wall?
-            var bounceMultiplier = wallBounceSpeedMultiplier;
-            if (Utilities.IsValid(collision.collider) && Utilities.IsValid(collision.collider.material) && collision.collider.material.name.Length > 0)
-                bounceMultiplier = collision.collider.material.bounciness;
-            if (bounceMultiplier < .01f)
-                bounceMultiplier = wallBounceSpeedMultiplier;
-            if (bounceMultiplier < .01f)
-                bounceMultiplier = .8f;
+            // Work in the surface's frame of reference, then convert back at the end
+            var relativeVelocity = lastFrameVelocity - surfaceVelocity;
 
-            var speedAfterBounce = relativeVelocity.magnitude * bounceMultiplier;
+            // How hard the ball is driving into the wall. Negative means it's already heading away
+            var intoWallSpeed = -Vector3.Dot(relativeVelocity, collisionNormal);
+            if (intoWallSpeed <= 0f)
+                return;
 
-            newDirection = (newDirection - v * wallBounceDeflection) * speedAfterBounce;
+            // The part sliding along the wall passes through untouched
+            var alongWall = relativeVelocity + collisionNormal * intoWallSpeed;
 
-            // Back to world space - re-add surface velocity
-            newDirection = (newDirection + surfaceVelocity).Sanitized();
+            // Only the part that drove into the wall is damped, so a graze barely loses anything while a
+            // head-on hit loses the full amount
+            // Clamped so the bounce can only ever return less than the ball brought in, never more
+            var restitution = Mathf.Clamp01(wallBounceSpeedMultiplier * (1f - wallBounceDeflection));
+            var newVelocity = (alongWall + collisionNormal * (intoWallSpeed * restitution) + surfaceVelocity).Sanitized();
 
-            // If the bounce goes upward, suspend ground snapping so PhysX can arc it
-            if (Vector3.Dot(newDirection, -gravityDirection) > .001f)
-                stepsOnGround = 0;
+            if (newVelocity == Vector3.zero)
+                return;
 
-            // Set the ball velocity so it bounces the right way
-            lastFrameVelocity = ballRigidbody.velocity = newDirection.Sanitized();
+            if (enableWallReflections)
+            {
+                // If the bounce goes upward, suspend ground snapping so PhysX can arc it
+                if (Vector3.Dot(newVelocity, -gravityDirection) > .001f)
+                {
+                    stepsOnGround = 0;
+                    stepsInAir = -1;
+                }
+
+                lastFrameVelocity = ballRigidbody.velocity = newVelocity;
+
+                if (ballGroundedDebug)
+                    OpenPuttUtils.Log(this, $"Bounced off '{collision.collider.name}' - normal={collisionNormal} in={relativeVelocity.magnitude:F2} out={newVelocity.magnitude:F2}");
+            }
 
             // Play a hit sound because we bounced off something
             var sfx = SfxController;
@@ -1262,12 +1271,7 @@ namespace dev.mikeee324.OpenPutt
             var ballVelocity = ballRigidbody.velocity;
             var velMagnitude = ballVelocity.magnitude;
 
-            // Spherecast (not a ray) so grounding stays stable across collider seams
             var isGrounded = ProbeGround(CurrentPosition, out var groundingHit);
-
-            // Keep last frame's ground tilt for the snap's flattening-slope (crest) test before we overwrite it
-            var prevGroundUpDot = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
-            lastGroundContactNormal = isGrounded ? groundingHit.normal : -gravityDirection;
 
             // External force-zone pushes handed straight to PhysX
             if (pendingExternalForce != Vector3.zero)
@@ -1284,11 +1288,13 @@ namespace dev.mikeee324.OpenPutt
 
             if (isGrounded)
             {
-                lastKnownGroundFriction = Utilities.IsValid(groundingHit) && Utilities.IsValid(groundingHit.collider) && Utilities.IsValid(groundingHit.collider.material)
-                    ? Mathf.Clamp01(groundingHit.collider.material.dynamicFriction)
+                // sharedMaterial so we don't instantiate a PhysicMaterial copy on every ground collider we touch
+                lastKnownGroundFriction = Utilities.IsValid(groundingHit) && Utilities.IsValid(groundingHit.collider) && Utilities.IsValid(groundingHit.collider.sharedMaterial)
+                    ? Mathf.Clamp01(groundingHit.collider.sharedMaterial.dynamicFriction)
                     : 0;
 
                 stepsOnGround += 1;
+                stepsInAir = 0;
                 timeFlying = 0;
 
                 if (velMagnitude > .01f)
@@ -1298,6 +1304,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 lastKnownGroundFriction = 0;
                 stepsOnGround = 0;
+                stepsInAir += 1;
                 timeFlying += Time.deltaTime;
 
                 if (velMagnitude > 0.01f)
@@ -1342,7 +1349,13 @@ namespace dev.mikeee324.OpenPutt
 
             // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
             if (ballGroundedDebug && isGrounded != lastGrounded)
+            {
                 playerManager.BallColor = isGrounded ? Color.green : Color.red;
+
+                // Catches the launch itself - whatever put upward speed on the ball did it just before this
+                if (!isGrounded)
+                    OpenPuttUtils.Log(this, $"Left the ground at {CurrentPosition} vel={ballVelocity} up={Vector3.Dot(ballVelocity, -gravityDirection):F2}");
+            }
 
             lastGrounded = isGrounded;
 
@@ -1354,7 +1367,7 @@ namespace dev.mikeee324.OpenPutt
                 ballRigidbody.AddForce((-vel.normalized * GetAirResistance(vel.magnitude)).Sanitized());
             }
 
-            HandleGroundSnapping(isGrounded, groundingHit, prevGroundUpDot);
+            HandleGroundSnapping(isGrounded);
 
             if (canPlayHitGroundSound)
             {
@@ -1367,32 +1380,46 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Redirects velocity to follow a downhill slope so the ball doesn't launch off mesh-edge ghosts.
         /// </summary>
-        private void HandleGroundSnapping(bool isGrounded, RaycastHit groundingHit, float prevGroundUpDot)
+        private void HandleGroundSnapping(bool isGrounded)
         {
             if (!enableBallSnap || pickedUpByPlayer || !isGrounded) return;
 
             // Let a fresh landing settle under PhysX first
-            if (stepsOnGround < snapMinGroundedSteps) return;
+            if (stepsOnGround < snapMinGroundedSteps || stepsInAir != 0) return;
+
+            // The snap gets its own probe, cast from the same origin and ignoring triggers just like the
+            // grounded check, so the two can never disagree about what the floor under the ball is
+            var snapDistance = BallWorldRadius + groundSnappingProbeDistance * BallScaleRatio;
+            if (!Physics.Raycast(CurrentPosition, gravityDirection, out var snapHit, snapDistance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                return;
 
             var up = -gravityDirection;
-            var normal = groundingHit.normal;
+            var normal = snapHit.normal;
             var groundUpDot = Vector3.Dot(normal, up);
 
-            // Skip steep surfaces and flattening slopes (crest/ramp exit)
-            var minGroundUpDot = Mathf.Cos(groundSnappingMaxGroundAngle * Mathf.Deg2Rad);
-            if (groundUpDot < minGroundUpDot || groundUpDot >= prevGroundUpDot) return;
+            // Crest test is against the previous snapping step, so this is the only place it's written
+            var lastGroundUpDot = Vector3.Dot(lastGroundContactNormal, up);
+            lastGroundContactNormal = normal;
 
+            // Ground flattening out means it's about to fall away - stop holding and let the ball leave
+            if (groundUpDot >= lastGroundUpDot) return;
+
+            // Redirect last frame's velocity along the slope
+            var alongSlope = Vector3.ProjectOnPlane(lastFrameVelocity, normal);
+            if (alongSlope.sqrMagnitude < 1e-8f) return;
+
+            // Full speed, not the speed along the slope - a ball rolling onto a ramp keeps its momentum, and
+            // projecting first would scale it by cos(ramp angle) and bleed speed off every climb
             var speed = ballRigidbody.velocity.magnitude;
             if (speed < 0.0001f) return;
 
-            // Redirect last frame's velocity along the slope, then bleed downhill gravity pull
-            var newVelocity = Vector3.ProjectOnPlane(lastFrameVelocity, normal).normalized * speed;
-            var rampAngle = Mathf.Acos(Mathf.Clamp(groundUpDot, -1f, 1f));
-            newVelocity += gravityDirection * (Mathf.Sin(rampAngle) * Time.deltaTime * gravityMagnitude * BallScaleRatio);
+            // Direction only - gravity is applied as a real force every step, so a slope pull here doubles it
+            var newVelocity = alongSlope.normalized * speed;
 
             // Only correct when the ball would otherwise lift off; never push up
-            if (Vector3.Dot(newVelocity, up) > .001f)
-                ballRigidbody.velocity = lastFrameVelocity = newVelocity;
+            if (Vector3.Dot(newVelocity, up) <= .001f) return;
+
+            ballRigidbody.velocity = lastFrameVelocity = newVelocity;
         }
 
         #region Physics Helpers
@@ -1412,28 +1439,24 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>World-space diameter of the ball, accounting for its current scale.</summary>
         public float BallWorldDiameter => BallWorldRadius * 2f;
 
+        /// <summary>World-space centre of the ball's collider.</summary>
+        public Vector3 BallCentre => CurrentPosition + BallColliderOffset;
+
+        /// <summary>World-space centre of the ball's collider where this physics step started.</summary>
+        public Vector3 BallCentreLastFrame => lastFramePosition + BallColliderOffset;
+
+        private Vector3 BallColliderOffset => ballRigidbody.rotation * Vector3.Scale(ballCollider.center, transform.lossyScale);
+
         /// <summary>
         /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown).
         /// </summary>
         private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
 
-        /// Spherecast straight down (along gravity) from just above the ball
+        /// Ray straight down (along gravity) from the ball's position. Buffer scales with the ball. Triggers
+        /// are ignored so force zones, teleporters and hole triggers can't read as ground.
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
         {
-            var radius = BallWorldRadius;
-            var castRadius = radius * 0.9f;
-            var castBackup = radius;
-            var origin = position - gravityDirection * castBackup;
-            // Buffer scales with the ball so a shrunk ball doesn't probe onto a nearby wall
-            var distance = castBackup + (radius - castRadius) + groundRaycastDistance * BallScaleRatio;
-            if (!Physics.SphereCast(origin, castRadius, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
-                return false;
-
-            // Reject wall-like hits so ReflectCollision can bounce it instead
-            if (gravityMagnitude > .01f && Vector3.Dot(hit.normal.Sanitized(), -gravityDirection).IsNearZero(wallDetectionTolerance))
-                return false;
-
-            return true;
+            return Physics.Raycast(position, gravityDirection, out hit, BallWorldRadius + groundRaycastDistance * BallScaleRatio, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
         }
 
         /// Rolling drag force magnitude. Ground friction or a script override beats the default; eases off near a stop so the ball settles nicely
@@ -1564,7 +1587,7 @@ namespace dev.mikeee324.OpenPutt
             if (insideGravityZones > 0) return;
 
             insideGravityZones = 0;
-            gravityDirection = Vector3.down;
+            gravityDirection = defaultGravityDirection;
             gravityMagnitude = defaultGravityMagnitude;
         }
 
