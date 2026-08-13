@@ -1427,12 +1427,7 @@ namespace dev.mikeee324.OpenPutt
         public float BallWorldDiameter => BallWorldRadius * 2f;
 
         /// <summary>World-space centre of the ball's collider.</summary>
-        public Vector3 BallCentre => CurrentPosition + BallColliderOffset;
-
-        /// <summary>World-space centre of the ball's collider where this physics step started.</summary>
-        public Vector3 BallCentreLastFrame => lastFramePosition + BallColliderOffset;
-
-        private Vector3 BallColliderOffset => ballRigidbody.rotation * Vector3.Scale(ballCollider.center, transform.lossyScale);
+        public Vector3 BallCentre => CurrentPosition + ballRigidbody.rotation * Vector3.Scale(ballCollider.center, transform.lossyScale);
 
         /// <summary>
         /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown).
