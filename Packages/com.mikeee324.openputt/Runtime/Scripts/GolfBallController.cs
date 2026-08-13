@@ -2,7 +2,6 @@
 using UdonSharp;
 using UnityEngine;
 using UnityEngine.Serialization;
-using Varneon.VUdon.ArrayExtensions;
 using VRC.Dynamics;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -218,12 +217,6 @@ namespace dev.mikeee324.OpenPutt
                     if (Utilities.IsValid(handler))
                         handler.OnPlayerBallStopped(playerManager.Owner);
 
-                    if (DebugMode)
-                    {
-                        // Reset the per-hit speed log
-                        speedDataLogging = new float[0];
-                    }
-
                     // Only auto-complete/respawn when the ball came to rest on its own. If it "stopped"
                     // because the player grabbed it (pickedUpByPlayer), skip this or we'd drop the shoulder
                     // pickup and teleport the ball away the instant they grab a moving ball.
@@ -409,9 +402,6 @@ namespace dev.mikeee324.OpenPutt
         /// World gravity as it was at Start, restored when the ball leaves the last force zone
         private Vector3 defaultGravityDirection = Vector3.down;
 
-        /// Logs ball speed after a hit for debugging
-        private float[] speedDataLogging = new float[0];
-
         /// Furthest the ball got from where it was hit
         private float lastHitMaxDistance = 0;
 
@@ -549,10 +539,6 @@ namespace dev.mikeee324.OpenPutt
 
             if (BallIsMoving)
             {
-                // If in debug mode, log current speed for this frame
-                if (DebugMode)
-                    speedDataLogging = speedDataLogging.Add(ballRigidbody.velocity.magnitude);
-
                 // If the rigidbody fell asleep, reapply last frame's velocity to wake it
                 if (ballRigidbody.IsSleeping() && lastFrameVelocity != Vector3.zero)
                     ballRigidbody.velocity = lastFrameVelocity;
@@ -1254,7 +1240,7 @@ namespace dev.mikeee324.OpenPutt
 
                 lastFrameVelocity = ballRigidbody.velocity = newVelocity;
 
-                if (ballGroundedDebug)
+                if (DebugMode)
                     OpenPuttUtils.Log(this, $"Bounced off '{collision.collider.name}' - normal={collisionNormal} in={relativeVelocity.magnitude:F2} out={newVelocity.magnitude:F2}");
             }
 
@@ -1347,13 +1333,14 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
-            if (ballGroundedDebug && isGrounded != lastGrounded)
+            if (isGrounded != lastGrounded)
             {
-                playerManager.BallColor = isGrounded ? Color.green : Color.red;
+                // Debug thing - Green Ball = Grounded / Red Ball = Not grounded
+                if (ballGroundedDebug)
+                    playerManager.BallColor = isGrounded ? Color.green : Color.red;
 
                 // Catches the launch itself - whatever put upward speed on the ball did it just before this
-                if (!isGrounded)
+                if (!isGrounded && DebugMode)
                     OpenPuttUtils.Log(this, $"Left the ground at {CurrentPosition} vel={ballVelocity} up={Vector3.Dot(ballVelocity, -gravityDirection):F2}");
             }
 
