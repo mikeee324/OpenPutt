@@ -180534,7 +180534,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6611600649750615831}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0, g: 0.56700003, b: 0.046694085, a: 1}
   meshesToColour:
   - {fileID: 1117227585887160310}
@@ -180765,7 +180765,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 3187577375423980058}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0.78, g: 0.5047059, b: 0, a: 1}
   meshesToColour:
   - {fileID: 855879612018316251}
@@ -182022,6 +182022,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
       propertyPath: ballColour.b
       value: 0.77254903
       objectReference: {fileID: 0}
@@ -182341,7 +182346,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6658231653622146027}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0, g: 0.40720344, b: 0.773, a: 1}
   meshesToColour:
   - {fileID: 4500414984483585527}
@@ -183369,6 +183374,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
       propertyPath: ballColour.b
       value: 0.047058824
       objectReference: {fileID: 0}
@@ -184159,6 +184169,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
       propertyPath: ballColour.g
       value: 0.018630922
       objectReference: {fileID: 0}
@@ -184854,10 +184869,20 @@ PrefabInstance:
       propertyPath: m_Materials.Array.data[0]
       value: 
       objectReference: {fileID: 2100000, guid: e29e0d4e58bc4d24aa5177df1eb16e61, type: 2}
+    - target: {fileID: -5124808234267510304, guid: 0198beca4a5f5af4e8cce9e8c5a82646,
+        type: 3}
+      propertyPath: m_Layer
+      value: 17
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 0198beca4a5f5af4e8cce9e8c5a82646,
         type: 3}
       propertyPath: m_Name
       value: OpenPuttWallpaperTable
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 0198beca4a5f5af4e8cce9e8c5a82646,
+        type: 3}
+      propertyPath: m_Layer
+      value: 17
       objectReference: {fileID: 0}
     - target: {fileID: 1646506599668084852, guid: 0198beca4a5f5af4e8cce9e8c5a82646,
         type: 3}
@@ -185385,7 +185410,7 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 6371183643453157663}
-  openPutt: {fileID: 0}
+  openPutt: {fileID: 1696751306663278200}
   ballColour: {r: 0.688, g: 0.06475295, b: 0, a: 1}
   meshesToColour:
   - {fileID: 4629555649863664654}
@@ -186135,6 +186160,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
+        type: 3}
+      propertyPath: openPutt
+      value: 
+      objectReference: {fileID: 1696751306663278200}
     - target: {fileID: 6523964470651910891, guid: a045e99942250b94eb2c62f191ad6173,
         type: 3}
       propertyPath: enableInteract
@@ -187160,6 +187190,11 @@ PrefabInstance:
         type: 3}
     - target: {fileID: 2845923424478572997, guid: e299e558bf21de243949f1524ba74aec,
         type: 3}
+      propertyPath: hideOnStart
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2845923424478572997, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
       propertyPath: serializationData.Prefab
       value: 
       objectReference: {fileID: 2845923424478572997, guid: e299e558bf21de243949f1524ba74aec,
@@ -187930,6 +187965,36 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 7288864795103068831, guid: e299e558bf21de243949f1524ba74aec,
         type: 3}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 7.4734
+      objectReference: {fileID: 0}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.386
+      objectReference: {fileID: 0}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -4.486
+      objectReference: {fileID: 0}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.7071068
+      objectReference: {fileID: 0}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.70710677
+      objectReference: {fileID: 0}
+    - target: {fileID: 7310542445366226814, guid: e299e558bf21de243949f1524ba74aec,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 90
+      objectReference: {fileID: 0}
     - target: {fileID: 7358613181627330048, guid: e299e558bf21de243949f1524ba74aec,
         type: 3}
       propertyPath: serializationData.Prefab
@@ -188652,6 +188717,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1d61a31a14710744ea16df3399131272, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1696751306663278200 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6945536582650298137, guid: e299e558bf21de243949f1524ba74aec,
+    type: 3}
+  m_PrefabInstance: {fileID: 8642287751561070945}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a706f42c2fe98549a928d04decf8644, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &1741723278178289641 stripped

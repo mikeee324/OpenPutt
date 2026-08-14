@@ -4031,7 +4031,7 @@ MonoBehaviour:
   allowBallPickupWhenNotPlaying: 1
   allowBallHitWhileMoving: 0
   gravityDirection: {x: 0, y: -1, z: 0}
-  gravityMagnitude: 9.87
+  gravityMagnitude: 9.81
   maxLiftGravityFraction: 0.4
   defaultBallDrag: 0.055
   ballDragOverride: 0
@@ -4041,15 +4041,16 @@ MonoBehaviour:
   minBallSpeedMaxTime: 1
   maxBallRollingTime: 60
   groundRaycastDistance: 0.02
+  groundSnappingProbeDistance: 0.02
   enableBallSnap: 1
   snapMinGroundedSteps: 3
-  groundSnappingMaxGroundAngle: 60
   groundSnappingProbeMask:
     serializedVersion: 2
     m_Bits: 133121
-  wallDetectionTolerance: 0.15
+  enableWallReflections: 1
   wallBounceSpeedMultiplier: 0.8
   wallBounceDeflection: 0.1
+  wallBounceHeightIgnoreAmount: 0.5
   respawnAutomatically: 1
   respawnWorldPosition: {x: Infinity, y: Infinity, z: Infinity}
   _ballMoving: 0

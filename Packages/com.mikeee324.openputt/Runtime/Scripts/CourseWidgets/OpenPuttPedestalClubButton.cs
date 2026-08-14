@@ -31,7 +31,8 @@ namespace dev.mikeee324.OpenPutt
             // Desktop/mobile players don't physically hold the club - point them at Ball Cam instead
             if (!Networking.LocalPlayer.IsUserInVR())
             {
-                ShowBallCamHint();
+                if (Utilities.IsValid(openPutt.notifications))
+                    openPutt.notifications.Callout(Callouts.BallCamHint, Networking.LocalPlayer.playerId);
                 return;
             }
 
@@ -73,22 +74,9 @@ namespace dev.mikeee324.OpenPutt
             playerManager._RequestSync(syncNow: true);
 
             golfClub.openPuttSync._RequestFastSync(forceSync: true);
-        }
 
-        private void ShowBallCamHint()
-        {
-            if (!Utilities.IsValid(openPutt) || !Utilities.IsValid(openPutt.notifications))
-                return;
-
-            string hintText;
-#if UNITY_ANDROID || UNITY_IOS
-            hintText = "Tap the Ball Cam button to aim your shot";
-#else
-            var controllerDetector = Utilities.IsValid(openPutt.ballCam) && Utilities.IsValid(openPutt.ballCam.inputHandler) ? openPutt.ballCam.inputHandler.controllerDetector : null;
-            bool usingGamepad = Utilities.IsValid(controllerDetector) && controllerDetector.currentInputMethod == VRCInputMethod.Controller;
-            hintText = usingGamepad ? "Press RB to use Ball Cam" : "Press E to use Ball Cam";
-#endif
-            openPutt.notifications.InstantiateCalloutBox(hintText);
+            if (Utilities.IsValid(openPutt.notifications))
+                openPutt.notifications.Callout(Callouts.FetchClub, Networking.LocalPlayer.playerId);
         }
     }
 }
