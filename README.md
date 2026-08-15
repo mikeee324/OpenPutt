@@ -8,13 +8,15 @@ Lets play some golf!
 
 # Quick Notes
 - Recommended Max Players - **32**
-    - The prefab technically supports up to 82 players, but you shouldn't try it with that many players
-        - Large amounts of players cause Very Low FPS and/or Network Timeouts (for some people anyway not all)
-        - This issue might get fixed later, but it's not a priority of mine as it works for the kind of player counts you see in normal lobbies
+    - Going over 32 players could potentially cause Very Low FPS and/or Network Timeouts (for some people anyway, not all)
+    - The prefab technically supports up to the max player cap of 80~ players.. I just haven't tested it since 2022/2023.
+    - If you do happen to try a very large player count let me know how it went!
+    - It's not a huge priority for me to fix as 32 players is already on the high side for regular golf lobbies
    
 # Getting Started
 You can look at the [getting started guide here](https://github.com/mikeee324/OpenPutt/wiki/Getting-Started).  
-Not everything is covered yet, but hopefully I can get around to covering things in more detail later :)
+Not everything is covered yet, but hopefully I can get around to covering things in more detail later :)  
+Note that for the beta versions these instructions are a bit out of date. It's not massively different but I need to go through and update the docs.
   
 # Worlds
 A list of some worlds where you can see OpenPutt in action. If you make something yourself with this prefab. Let me know, or share with the #OpenPutt tag on social media. It's great seeing what people make!

@@ -14,7 +14,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "1.0.0-beta.3";
+        public readonly string CurrentVersion = "1.0.0-beta.4";
 
         #region References
         [OpenPuttDescription("The central OpenPutt controller for this world - it links all the player prefabs, courses and scoreboards together.")]

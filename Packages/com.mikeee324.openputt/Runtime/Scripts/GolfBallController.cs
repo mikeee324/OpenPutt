@@ -8,7 +8,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync), RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
     public class GolfBallController : UdonSharpBehaviour
     {
         #region Public Settings
@@ -116,16 +116,22 @@ namespace dev.mikeee324.OpenPutt
         float groundSnappingProbeDistance = 0.02f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Tooltip("Master toggle for script-driven ground snapping. Off = pure Unity physics. Wired to the dev-menu 'ball snapping' checkbox")]
-        public bool enableBallSnap = true;
+        [Range(-1, 10), Tooltip("Consecutive grounded frames before script-driven ground snapping engages, so a just-landed ball's bounce plays out first. -1 turns snapping off entirely (pure Unity physics), 0 = snap immediately, higher = longer grace. Wired to the dev-menu 'ball snapping' slider")]
+        public int snapMinGroundedSteps = 3;
 
-        [OpenPuttFoldoutGroup("Ball Physics")]
-        [SerializeField, Min(0), Tooltip("Consecutive grounded frames before snapping engages, so a just-landed ball's bounce plays out first. 0 = snap immediately, higher = longer grace")]
-        int snapMinGroundedSteps = 3;
+        public int DefaultSnapMinGroundedSteps { get; private set; }
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField]
         LayerMask groundSnappingProbeMask = -1;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Tooltip("Probe along the surface the ball last touched instead of straight down, so banked tracks, walls and loops still read as ground. On a flat course the two directions are the same and nothing changes")]
+        public bool enableSurfaceRelativeGround = true;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Range(0, 10), Tooltip("Physics steps the probe can miss before the ball forgets the surface it was on and goes back to probing straight down. Too high and a ball that left a banked track keeps probing sideways")]
+        public int surfaceNormalResetSteps = 3;
 
         [Space]
         [OpenPuttFoldoutGroup("Ball Physics")]
@@ -290,7 +296,6 @@ namespace dev.mikeee324.OpenPutt
             get => _ballMoving;
         }
 
-        [SerializeField]
         private bool _ballMoving = false;
 
         public bool pickedUpByPlayer { get; private set; }
@@ -322,7 +327,23 @@ namespace dev.mikeee324.OpenPutt
             set => ballDragOverride = value;
         }
 
-        public float BallAngularDrag { get; set; }
+        public float BallAngularDrag
+        {
+            get => _ballAngularDrag;
+            set
+            {
+                _ballAngularDrag = value;
+                _ApplyRotationMode();
+            }
+        }
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [SerializeField, Tooltip("0 = rotation is frozen and faked from how far the ball moved. Above 0 hands rotation to PhysX and uses this as the rigidbody's angular drag - needs ball friction above 0 or the ball won't spin up")]
+        private float _ballAngularDrag = 0f;
+
+        /// True when PhysX drives the ball's rotation instead of the faked roll
+        private bool UseRealRotation => _ballAngularDrag > 0f;
+
         public float DefaultBallWeight { get; private set; }
         public float DefaultBallFriction { get; private set; }
         public float DefaultBallDrag { get; private set; }
@@ -336,7 +357,12 @@ namespace dev.mikeee324.OpenPutt
             set => ballRigidbody.collisionDetectionMode = value;
         }
 
+        [OpenPuttFoldoutGroup("Debug")]
         public bool ballGroundedDebug = false;
+
+        [OpenPuttFoldoutGroup("Debug")]
+        [Tooltip("Colours the ball by whether ground snapping is currently armed - green while it's holding the ball down, red while it isn't - and draws the ground probes in the scene view. Green/red ray = the surface-relative cast hit/missed, yellow = the normal it picked up (points back up the green ray on flat ground), magenta = where the straight-down fallback would go, cyan/grey = that fallback actually cast and hit/missed. Only the green and yellow rays show on a flat course, because that's the only cast that happens there")]
+        public bool ballSnapDebug = false;
 
         [Space]
         [OpenPuttFoldoutGroup("Rolling Sound")]
@@ -382,13 +408,38 @@ namespace dev.mikeee324.OpenPutt
         private int insideGravityZones = 0;
 
         /// Club velocity to apply next FixedUpdate
-        public Vector3 requestedBallVelocity = Vector3.zero;
+        private Vector3 requestedBallVelocity = Vector3.zero;
 
         public bool OnGround => stepsOnGround > 1;
 
         /// The surface the snap probe found last time it ran. Written only by HandleGroundSnapping, so the
         /// crest test compares against the previous snapping step rather than whatever the ball brushed past.
         private Vector3 lastGroundContactNormal = Vector3.up;
+
+        /// Ground normal from the last grounded probe. Kept apart from the snap's crest normal above so the
+        /// stuck-on-slope check still reads a live normal when snapping is switched off. Doubles as the
+        /// ball's local "up" - see <see cref="SurfaceUp"/>.
+        private Vector3 lastProbedGroundNormal = Vector3.up;
+
+        /// Physics steps since a ground probe last hit anything. Times out a stale surface normal so a ball
+        /// that left a banked track doesn't keep probing sideways forever.
+        private int stepsSinceGroundProbeHit;
+
+        /// The ball's local "up": the surface it last touched, or gravity's up once that's gone stale. The
+        /// floor-vs-wall checks read this instead of -gravityDirection so they keep working past vertical.
+        private Vector3 SurfaceUp => enableSurfaceRelativeGround ? lastProbedGroundNormal : -gravityDirection;
+
+#if UNITY_EDITOR
+        /// What the last ground probe did, replayed in the scene view by LateUpdate: 0 nothing yet, 1 the
+        /// surface cast hit, 2 it missed and the fallback wasn't worth casting, 3 the gravity fallback hit,
+        /// 4 the fallback missed too.
+        private int debugProbeResult;
+
+        /// Direction and hit distance as they were at cast time, so the replay can't drift from the real cast
+        private Vector3 debugProbeDirection;
+        private float debugProbeHitDistance;
+#endif
+
         private float timeFlying = 0;
         int stepsOnGround;
 
@@ -463,8 +514,11 @@ namespace dev.mikeee324.OpenPutt
             gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
             defaultGravityDirection = gravityDirection;
 
-            // Seed from gravity, not Vector3.up - the slope-stop check reads this before the snap ever writes it
+            // Seed from gravity, not Vector3.up - the slope-stop check reads these before anything writes them
             lastGroundContactNormal = -gravityDirection;
+            lastProbedGroundNormal = -gravityDirection;
+
+            DefaultSnapMinGroundedSteps = snapMinGroundedSteps;
 
             pickedUpByPlayer = false;
             BallIsMoving = false;
@@ -494,6 +548,7 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallDrag = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
+                _ApplyRotationMode();
             }
 
             lastFramePosition = ballRigidbody.position;
@@ -519,6 +574,41 @@ namespace dev.mikeee324.OpenPutt
 
             this.enabled = enabled;
         }
+
+#if UNITY_EDITOR
+        /// Replays the last ground probe in the scene view. The whole method sits inside the guard, not just
+        /// its body - UdonSharp strips UNITY_EDITOR* defines for a real build, so this stops existing as an
+        /// Udon event there rather than shipping as one that dispatches every frame to do nothing.
+        private void LateUpdate()
+        {
+            if (!ballSnapDebug || debugProbeResult == 0) return;
+
+            // Drawn from the rendered transform rather than the physics position the casts actually fired
+            // from - interpolation puts those up to a whole fixed step apart, several ball widths at speed
+            var origin = transform.position;
+            var distance = BallWorldRadius + groundRaycastDistance * BallScaleRatio;
+            var surfaceHit = debugProbeResult == 1;
+
+            Debug.DrawRay(origin, debugProbeDirection * distance, surfaceHit ? Color.green : Color.red);
+
+            // The gravity ray only says anything once the ball's frame has tilted off gravity - before that
+            // it's the same line as the surface cast. Magenta = never cast, cyan/grey = cast and hit/missed
+            if (Vector3.Dot(SurfaceUp, -gravityDirection) <= .999f)
+            {
+                var fallbackColor = Color.magenta;
+                if (debugProbeResult == 3) fallbackColor = Color.cyan;
+                else if (debugProbeResult == 4) fallbackColor = Color.grey;
+
+                Debug.DrawRay(origin, gravityDirection * distance, fallbackColor);
+            }
+
+            if (surfaceHit || debugProbeResult == 3)
+            {
+                var hitDirection = surfaceHit ? debugProbeDirection : gravityDirection;
+                Debug.DrawRay(origin + hitDirection * debugProbeHitDistance, lastProbedGroundNormal * BallWorldRadius, Color.yellow);
+            }
+        }
+#endif
 
         private void FixedUpdate()
         {
@@ -579,7 +669,7 @@ namespace dev.mikeee324.OpenPutt
                     if (OnGround)
                     {
                         // If the ball is currently rolling down a slope
-                        var floorDotRelativeToGravity = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
+                        var floorDotRelativeToGravity = Vector3.Dot(lastProbedGroundNormal, -gravityDirection);
                         if (floorDotRelativeToGravity < .99f)
                         {
                             // If we have been stuck on this slope for too long force ball stop so player can hit it
@@ -611,12 +701,12 @@ namespace dev.mikeee324.OpenPutt
                         BallIsMoving = false;
                     }
                 }
-                else if (!pickedUpByPlayer)
+                else if (!pickedUpByPlayer && !UseRealRotation)
                 {
                     // Fake ball roll based on speed
                     var directionOfTravel = ballRigidbody.position - lastFramePosition;
                     var angle = directionOfTravel.magnitude * Mathf.Rad2Deg / BallWorldRadius;
-                    var rotationAxis = Vector3.Cross(-gravityDirection, directionOfTravel).normalized;
+                    var rotationAxis = Vector3.Cross(SurfaceUp, directionOfTravel).normalized;
                     transform.localRotation = Quaternion.Euler(rotationAxis * angle) * transform.localRotation;
                     var worldRotation = transform.parent.rotation * transform.localRotation;
                     ballRigidbody.rotation = worldRotation.normalized;
@@ -1193,8 +1283,10 @@ namespace dev.mikeee324.OpenPutt
             if (collisionNormal == Vector3.zero)
                 return;
 
-            // Checks if the collision was from "below" and ignores it
-            if (Vector3.Dot(collisionNormal, -gravityDirection) > wallBounceHeightIgnoreAmount)
+            // Checks if the collision was from "below" and ignores it. Against the surface the ball is rolling
+            // on rather than gravity, so a banked track doesn't start classifying itself as a wall and charge
+            // the ball a bounce for every contact on the way round
+            if (Vector3.Dot(collisionNormal, SurfaceUp) > wallBounceHeightIgnoreAmount)
                 return;
 
             // Maybe fix the ball getting stuck on walls
@@ -1251,6 +1343,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         private bool lastGrounded = false;
+        private bool lastSnapArmed = false;
 
         void UpdatePhysicsState()
         {
@@ -1279,8 +1372,11 @@ namespace dev.mikeee324.OpenPutt
                     ? Mathf.Clamp01(groundingHit.collider.sharedMaterial.dynamicFriction)
                     : 0;
 
+                lastProbedGroundNormal = groundingHit.normal.Sanitized();
+
                 stepsOnGround += 1;
                 stepsInAir = 0;
+                stepsSinceGroundProbeHit = 0;
                 timeFlying = 0;
 
                 if (velMagnitude > .01f)
@@ -1291,7 +1387,16 @@ namespace dev.mikeee324.OpenPutt
                 lastKnownGroundFriction = 0;
                 stepsOnGround = 0;
                 stepsInAir += 1;
+                stepsSinceGroundProbeHit += 1;
                 timeFlying += Time.deltaTime;
+
+                // Genuinely in the air rather than a probe blinking out mid-roll, so drop back to gravity.
+                // Without this a ball that leaves a banked track keeps probing along the bank it left
+                if (stepsSinceGroundProbeHit > surfaceNormalResetSteps)
+                {
+                    lastProbedGroundNormal = -gravityDirection;
+                    lastGroundContactNormal = -gravityDirection;
+                }
 
                 if (velMagnitude > 0.01f)
                 {
@@ -1365,35 +1470,49 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
-        /// Redirects velocity to follow a downhill slope so the ball doesn't launch off mesh-edge ghosts.
+        /// Holds the ball to ground that is curving up into it, keeping the momentum a climb would otherwise
+        /// lose to the corner, and letting go the moment the ground starts falling away instead.
         /// </summary>
         private void HandleGroundSnapping(bool isGrounded)
         {
-            if (!enableBallSnap || pickedUpByPlayer || !isGrounded) return;
+            // Snapping is off, or the ball hasn't been grounded long enough for it to re-arm after a landing
+            var snapArmed = snapMinGroundedSteps >= 0 && !pickedUpByPlayer && isGrounded &&
+                            stepsOnGround >= snapMinGroundedSteps && stepsInAir == 0;
 
-            // Let a fresh landing settle under PhysX first
-            if (stepsOnGround < snapMinGroundedSteps || stepsInAir != 0) return;
+            if (snapArmed != lastSnapArmed)
+            {
+                // Debug thing - Green Ball = snapping is holding the ball down / Red Ball = it isn't
+                if (ballSnapDebug)
+                    playerManager.BallColor = snapArmed ? Color.green : Color.red;
 
-            // The snap gets its own probe, cast from the same origin and ignoring triggers just like the
-            // grounded check, so the two can never disagree about what the floor under the ball is
+                lastSnapArmed = snapArmed;
+            }
+
+            if (!snapArmed) return;
+
+            // The snap gets its own probe, cast the same way and ignoring triggers just like the grounded
+            // check, so the two can never disagree about what the floor under the ball is
             var snapDistance = BallWorldRadius + groundSnappingProbeDistance * BallScaleRatio;
-            if (!Physics.Raycast(CurrentPosition, gravityDirection, out var snapHit, snapDistance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+            if (!ProbeSurface(CurrentPosition, snapDistance, out var snapHit))
                 return;
 
-            var up = -gravityDirection;
             var normal = snapHit.normal;
-            var groundUpDot = Vector3.Dot(normal, up);
 
             // Crest test is against the previous snapping step, so this is the only place it's written
-            var lastGroundUpDot = Vector3.Dot(lastGroundContactNormal, up);
+            var normalChange = normal - lastGroundContactNormal;
             lastGroundContactNormal = normal;
-
-            // Ground flattening out means it's about to fall away - stop holding and let the ball leave
-            if (groundUpDot >= lastGroundUpDot) return;
 
             // Redirect last frame's velocity along the slope
             var alongSlope = Vector3.ProjectOnPlane(lastFrameVelocity, normal);
             if (alongSlope.sqrMagnitude < 1e-8f) return;
+
+            var travelDirection = alongSlope.normalized;
+
+            // Which way the surface is bending, measured against the direction of travel rather than against
+            // gravity - the normal sweeps a full circle round a loop, so a fixed up vector can't read it.
+            // Tilting forwards means the ground is falling away under the ball, so let it leave; tilting back
+            // means it's curving up into the ball, which is the case worth holding
+            if (Vector3.Dot(normalChange, travelDirection) >= 0f) return;
 
             // Full speed, not the speed along the slope - a ball rolling onto a ramp keeps its momentum, and
             // projecting first would scale it by cos(ramp angle) and bleed speed off every climb
@@ -1401,10 +1520,12 @@ namespace dev.mikeee324.OpenPutt
             if (speed < 0.0001f) return;
 
             // Direction only - gravity is applied as a real force every step, so a slope pull here doubles it
-            var newVelocity = alongSlope.normalized * speed;
+            var newVelocity = travelDirection * speed;
 
-            // Only correct when the ball would otherwise lift off; never push up
-            if (Vector3.Dot(newVelocity, up) <= .001f) return;
+            // Only correct when the ball would otherwise lift off; never push up. Deliberately still measured
+            // against gravity: this compensates the momentum a climb loses to the corner, and "climb" only
+            // means anything relative to gravity, loop or not
+            if (Vector3.Dot(newVelocity, -gravityDirection) <= .001f) return;
 
             ballRigidbody.velocity = lastFrameVelocity = newVelocity;
         }
@@ -1434,11 +1555,52 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
 
-        /// Ray straight down (along gravity) from the ball's position. Buffer scales with the ball. Triggers
+        /// Ray from the ball's position into the surface it last touched. Buffer scales with the ball. Triggers
         /// are ignored so force zones, teleporters and hole triggers can't read as ground.
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
         {
-            return Physics.Raycast(position, gravityDirection, out hit, BallWorldRadius + groundRaycastDistance * BallScaleRatio, groundSnappingProbeMask, QueryTriggerInteraction.Ignore);
+            return ProbeSurface(position, BallWorldRadius + groundRaycastDistance * BallScaleRatio, out hit);
+        }
+
+        /// Casts along <see cref="SurfaceUp"/>, then straight down as a fallback so a ball that lost its
+        /// surface can find a new frame of reference. The fallback is only as long as the primary cast, so it
+        /// can never reach anything but a surface the ball is genuinely resting on - which is why it stays
+        /// quiet on a loop wall, where straight down is nothing but empty air.
+        private bool ProbeSurface(Vector3 position, float distance, out RaycastHit hit)
+        {
+            var surfaceDirection = -SurfaceUp;
+
+#if UNITY_EDITOR
+            debugProbeDirection = surfaceDirection;
+            debugProbeResult = 2;
+#endif
+
+            if (Physics.Raycast(position, surfaceDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+            {
+#if UNITY_EDITOR
+                debugProbeResult = 1;
+                debugProbeHitDistance = hit.distance;
+#endif
+                return true;
+            }
+
+            // Already pointing down, so the fallback would be the same cast twice
+            if (Vector3.Dot(SurfaceUp, -gravityDirection) > .999f)
+                return false;
+
+            if (Physics.Raycast(position, gravityDirection, out hit, distance, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+            {
+#if UNITY_EDITOR
+                debugProbeResult = 3;
+                debugProbeHitDistance = hit.distance;
+#endif
+                return true;
+            }
+
+#if UNITY_EDITOR
+            debugProbeResult = 4;
+#endif
+            return false;
         }
 
         /// Rolling drag force magnitude. Ground friction or a script override beats the default; eases off near a stop so the ball settles nicely
@@ -1466,6 +1628,26 @@ namespace dev.mikeee324.OpenPutt
         {
             StopBallVelocity();
             ballRigidbody.WakeUp();
+        }
+
+        /// Frozen rotation + faked roll while angular drag is 0, real PhysX rotation above that
+        private void _ApplyRotationMode()
+        {
+            if (!Utilities.IsValid(ballRigidbody)) return;
+
+            if (UseRealRotation)
+            {
+                ballRigidbody.freezeRotation = false;
+                ballRigidbody.angularDrag = _ballAngularDrag;
+                return;
+            }
+
+            ballRigidbody.angularDrag = 0f;
+            ballRigidbody.freezeRotation = true;
+
+            // Drop any spin PhysX built up so the faked roll starts clean
+            if (!ballRigidbody.isKinematic)
+                ballRigidbody.angularVelocity = Vector3.zero;
         }
 
         /// Zero the ball's linear/angular velocity if it's currently dynamic (no-op while kinematic)
@@ -1612,7 +1794,8 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.isKinematic = !BallIsMoving;
                     ballRigidbody.detectCollisions = true;
                     ballRigidbody.drag = 0.05f;
-                    ballRigidbody.angularDrag = 0;
+
+                    _ApplyRotationMode();
 
                     // Speculative detects club hits better at rest; dynamic works better while moving
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;

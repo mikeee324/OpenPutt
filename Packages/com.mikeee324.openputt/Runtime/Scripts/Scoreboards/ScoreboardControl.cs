@@ -44,6 +44,7 @@ namespace dev.mikeee324.OpenPutt
         DevTrackingSmoothingMs = 115,
         DevHitAimDelayMs = 116,
         DevMinTimeBetweenHitsMs = 117,
+        DevBallSnapSteps = 118,
 
         // bool (Toggle) - explicit values: id is serialized as an int, so never renumber an existing entry
         LeftHandMode = 200,
@@ -55,9 +56,10 @@ namespace dev.mikeee324.OpenPutt
         FootCollider = 206,
         ClubRenderer = 207,
         BallGrounded = 208,
-        BallSnapping = 209,
+        // 209 was the ball snapping checkbox, replaced by the DevBallSnapSteps slider (-1 = off)
         SpectatorMode = 210,
         ShoulderPickupRenderer = 211,
+        BallSnapDebug = 212,
 
         // int (Dropdown)
         // VelocityTracking = 300,
@@ -106,6 +108,10 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("string.Format pattern for the value label, e.g. \"{0:F2}x\" or \"{0:P0}\"")]
         [OpenPuttFoldoutGroup("Display")]
         public string labelFormat = "{0:F2}";
+
+        [Tooltip("Shown instead of the formatted value when a slider sits at its minimum, e.g. \"Off\" for a -1 = disabled slider. Leave empty to always show the value")]
+        [OpenPuttFoldoutGroup("Display")]
+        public string minValueLabel = "";
 
         [Tooltip("Which game value this control reads/writes")]
         [OpenPuttFoldoutGroup("Binding")]
@@ -227,8 +233,17 @@ namespace dev.mikeee324.OpenPutt
 
         private void UpdateLabel(float value)
         {
-            if (Utilities.IsValid(valueLabel))
-                valueLabel.text = string.Format(labelFormat, value);
+            if (!Utilities.IsValid(valueLabel))
+                return;
+
+            // Sliders that use their lowest notch as an "off" switch show a word there instead of the number
+            if (!string.IsNullOrEmpty(minValueLabel) && Utilities.IsValid(slider) && value <= slider.minValue)
+            {
+                valueLabel.text = minValueLabel;
+                return;
+            }
+
+            valueLabel.text = string.Format(labelFormat, value);
         }
 
         #endregion
@@ -254,6 +269,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevTrackingSmoothingMs: return OpenPutt.controllerTracker.trackingSmoothingSeconds * 1000f;
                 case SettingId.DevHitAimDelayMs: return Player.golfClubHead.hitAimDelaySeconds * 1000f;
                 case SettingId.DevMinTimeBetweenHitsMs: return Player.golfClubHead.minSecondsBetweenHits * 1000f;
+                case SettingId.DevBallSnapSteps: return Player.golfBall.snapMinGroundedSteps;
             }
             return 0f;
         }
@@ -277,6 +293,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevTrackingSmoothingMs: OpenPutt.controllerTracker.trackingSmoothingSeconds = v / 1000f; break;
                 case SettingId.DevHitAimDelayMs: Player.golfClubHead.hitAimDelaySeconds = v / 1000f; break;
                 case SettingId.DevMinTimeBetweenHitsMs: Player.golfClubHead.minSecondsBetweenHits = v / 1000f; break;
+                case SettingId.DevBallSnapSteps: Player.golfBall.snapMinGroundedSteps = Mathf.RoundToInt(v); break;
             }
         }
 
@@ -305,6 +322,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.DevTrackingSmoothingMs: OpenPutt.controllerTracker.trackingSmoothingSeconds = 0.022f; break;
                 case SettingId.DevHitAimDelayMs: Player.golfClubHead.hitAimDelaySeconds = 0f; break;
                 case SettingId.DevMinTimeBetweenHitsMs: Player.golfClubHead.minSecondsBetweenHits = 0.1f; break;
+                case SettingId.DevBallSnapSteps: Player.golfBall.snapMinGroundedSteps = Player.golfBall.DefaultSnapMinGroundedSteps; break;
             }
         }
 
@@ -321,7 +339,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.FootCollider: return OpenPutt.footCollider.gameObject.activeSelf;
                 case SettingId.ClubRenderer: return Player.golfClubVisualiser.gameObject.activeSelf;
                 case SettingId.BallGrounded: return Player.golfBall.ballGroundedDebug;
-                case SettingId.BallSnapping: return Player.golfBall.enableBallSnap;
+                case SettingId.BallSnapDebug: return Player.golfBall.ballSnapDebug;
                 case SettingId.SpectatorMode: return !Player.IsPlaying;
                 case SettingId.ShoulderPickupRenderer: return Utilities.IsValid(OpenPutt.leftShoulderPickup) && OpenPutt.leftShoulderPickup.MeshRendererEnabled;
             }
@@ -345,8 +363,15 @@ namespace dev.mikeee324.OpenPutt
 #endif
                     break;
                 }
-                case SettingId.BallGrounded: Player.golfBall.ballGroundedDebug = v; break;
-                case SettingId.BallSnapping: Player.golfBall.enableBallSnap = v; break;
+                // Both ball debugs drive the ball colour, so switching one on switches the other off
+                case SettingId.BallGrounded:
+                    Player.golfBall.ballGroundedDebug = v;
+                    if (v) Player.golfBall.ballSnapDebug = false;
+                    break;
+                case SettingId.BallSnapDebug:
+                    Player.golfBall.ballSnapDebug = v;
+                    if (v) Player.golfBall.ballGroundedDebug = false;
+                    break;
                 case SettingId.SpectatorMode: Player.IsPlaying = !v; break;
                 case SettingId.ShoulderPickupRenderer:
                     if (Utilities.IsValid(OpenPutt.leftShoulderPickup)) OpenPutt.leftShoulderPickup.MeshRendererEnabled = v;

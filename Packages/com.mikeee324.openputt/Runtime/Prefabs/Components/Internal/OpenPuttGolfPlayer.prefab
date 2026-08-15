@@ -943,7 +943,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 0
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: eb2d6483babe0ed4880f5f5bd65e45da,
     type: 2}
   programSource: {fileID: 11400000, guid: 71b493d0f15e4e8428e2c97ddf7124ed, type: 2}
@@ -1022,7 +1022,6 @@ MonoBehaviour:
   ballRenderer: {fileID: 8846236574695715682}
   ballGhostRenderer: {fileID: 7361039064218724000}
   trailRenderer: {fileID: 4220367773285647635}
-  isPlaying: 1
   courseScores: 
   courseTimes: 
   courseStates: 
@@ -1271,7 +1270,7 @@ MonoBehaviour:
   SynchronizePosition: 0
   AllowCollisionOwnershipTransfer: 0
   Reliable: 0
-  _syncMethod: 2
+  _syncMethod: 1
   serializedProgramAsset: {fileID: 11400000, guid: b16fc28d5701b7641b6e8d79864b6d38,
     type: 2}
   programSource: {fileID: 11400000, guid: e6e908292d929dc4a98b7ce9e7061049, type: 2}
@@ -4042,8 +4041,7 @@ MonoBehaviour:
   maxBallRollingTime: 60
   groundRaycastDistance: 0.02
   groundSnappingProbeDistance: 0.02
-  enableBallSnap: 1
-  snapMinGroundedSteps: 3
+  snapMinGroundedSteps: 2
   groundSnappingProbeMask:
     serializedVersion: 2
     m_Bits: 133121
@@ -4056,7 +4054,9 @@ MonoBehaviour:
   _ballMoving: 0
   trackingMovingBall: 0
   currentOwnerHideOverride: 0
+  _ballAngularDrag: 0
   ballGroundedDebug: 0
+  ballSnapDebug: 0
   rollingAudioSource: {fileID: 4534004577276690478}
   rollingSoundMaxSpeed: 6
   rollingSoundMaxVolume: 0.1
