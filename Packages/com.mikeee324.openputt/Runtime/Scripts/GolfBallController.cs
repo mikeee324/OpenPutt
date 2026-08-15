@@ -116,12 +116,10 @@ namespace dev.mikeee324.OpenPutt
         float groundSnappingProbeDistance = 0.02f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Tooltip("Master toggle for script-driven ground snapping. Off = pure Unity physics. Wired to the dev-menu 'ball snapping' checkbox")]
-        public bool enableBallSnap = true;
+        [Range(-1, 10), Tooltip("Consecutive grounded frames before script-driven ground snapping engages, so a just-landed ball's bounce plays out first. -1 turns snapping off entirely (pure Unity physics), 0 = snap immediately, higher = longer grace. Wired to the dev-menu 'ball snapping' slider")]
+        public int snapMinGroundedSteps = 3;
 
-        [OpenPuttFoldoutGroup("Ball Physics")]
-        [SerializeField, Min(0), Tooltip("Consecutive grounded frames before snapping engages, so a just-landed ball's bounce plays out first. 0 = snap immediately, higher = longer grace")]
-        int snapMinGroundedSteps = 3;
+        public int DefaultSnapMinGroundedSteps { get; private set; }
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField]
@@ -322,7 +320,22 @@ namespace dev.mikeee324.OpenPutt
             set => ballDragOverride = value;
         }
 
-        public float BallAngularDrag { get; set; }
+        public float BallAngularDrag
+        {
+            get => _ballAngularDrag;
+            set
+            {
+                _ballAngularDrag = value;
+                _ApplyRotationMode();
+            }
+        }
+
+        [SerializeField, Tooltip("0 = rotation is frozen and faked from how far the ball moved. Above 0 hands rotation to PhysX and uses this as the rigidbody's angular drag - needs ball friction above 0 or the ball won't spin up")]
+        private float _ballAngularDrag = 0f;
+
+        /// True when PhysX drives the ball's rotation instead of the faked roll
+        private bool UseRealRotation => _ballAngularDrag > 0f;
+
         public float DefaultBallWeight { get; private set; }
         public float DefaultBallFriction { get; private set; }
         public float DefaultBallDrag { get; private set; }
@@ -337,6 +350,9 @@ namespace dev.mikeee324.OpenPutt
         }
 
         public bool ballGroundedDebug = false;
+
+        [Tooltip("Colours the ball by whether ground snapping is currently armed - green while it's holding the ball down, red while it isn't")]
+        public bool ballSnapDebug = false;
 
         [Space]
         [OpenPuttFoldoutGroup("Rolling Sound")]
@@ -389,6 +405,11 @@ namespace dev.mikeee324.OpenPutt
         /// The surface the snap probe found last time it ran. Written only by HandleGroundSnapping, so the
         /// crest test compares against the previous snapping step rather than whatever the ball brushed past.
         private Vector3 lastGroundContactNormal = Vector3.up;
+
+        /// Ground normal from the last grounded probe. Kept apart from the snap's crest normal above so the
+        /// stuck-on-slope check still reads a live normal when snapping is switched off.
+        private Vector3 lastProbedGroundNormal = Vector3.up;
+
         private float timeFlying = 0;
         int stepsOnGround;
 
@@ -463,8 +484,11 @@ namespace dev.mikeee324.OpenPutt
             gravityDirection = Physics.gravity.sqrMagnitude > 0f ? Physics.gravity.normalized : Vector3.down;
             defaultGravityDirection = gravityDirection;
 
-            // Seed from gravity, not Vector3.up - the slope-stop check reads this before the snap ever writes it
+            // Seed from gravity, not Vector3.up - the slope-stop check reads these before anything writes them
             lastGroundContactNormal = -gravityDirection;
+            lastProbedGroundNormal = -gravityDirection;
+
+            DefaultSnapMinGroundedSteps = snapMinGroundedSteps;
 
             pickedUpByPlayer = false;
             BallIsMoving = false;
@@ -494,6 +518,7 @@ namespace dev.mikeee324.OpenPutt
                 DefaultBallDrag = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
+                _ApplyRotationMode();
             }
 
             lastFramePosition = ballRigidbody.position;
@@ -579,7 +604,7 @@ namespace dev.mikeee324.OpenPutt
                     if (OnGround)
                     {
                         // If the ball is currently rolling down a slope
-                        var floorDotRelativeToGravity = Vector3.Dot(lastGroundContactNormal, -gravityDirection);
+                        var floorDotRelativeToGravity = Vector3.Dot(lastProbedGroundNormal, -gravityDirection);
                         if (floorDotRelativeToGravity < .99f)
                         {
                             // If we have been stuck on this slope for too long force ball stop so player can hit it
@@ -611,7 +636,7 @@ namespace dev.mikeee324.OpenPutt
                         BallIsMoving = false;
                     }
                 }
-                else if (!pickedUpByPlayer)
+                else if (!pickedUpByPlayer && !UseRealRotation)
                 {
                     // Fake ball roll based on speed
                     var directionOfTravel = ballRigidbody.position - lastFramePosition;
@@ -1251,6 +1276,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
         private bool lastGrounded = false;
+        private bool lastSnapArmed = false;
 
         void UpdatePhysicsState()
         {
@@ -1278,6 +1304,8 @@ namespace dev.mikeee324.OpenPutt
                 lastKnownGroundFriction = Utilities.IsValid(groundingHit) && Utilities.IsValid(groundingHit.collider) && Utilities.IsValid(groundingHit.collider.sharedMaterial)
                     ? Mathf.Clamp01(groundingHit.collider.sharedMaterial.dynamicFriction)
                     : 0;
+
+                lastProbedGroundNormal = groundingHit.normal.Sanitized();
 
                 stepsOnGround += 1;
                 stepsInAir = 0;
@@ -1369,10 +1397,20 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private void HandleGroundSnapping(bool isGrounded)
         {
-            if (!enableBallSnap || pickedUpByPlayer || !isGrounded) return;
+            // Snapping is off, or the ball hasn't been grounded long enough for it to re-arm after a landing
+            var snapArmed = snapMinGroundedSteps >= 0 && !pickedUpByPlayer && isGrounded &&
+                            stepsOnGround >= snapMinGroundedSteps && stepsInAir == 0;
 
-            // Let a fresh landing settle under PhysX first
-            if (stepsOnGround < snapMinGroundedSteps || stepsInAir != 0) return;
+            if (snapArmed != lastSnapArmed)
+            {
+                // Debug thing - Green Ball = snapping is holding the ball down / Red Ball = it isn't
+                if (ballSnapDebug)
+                    playerManager.BallColor = snapArmed ? Color.green : Color.red;
+
+                lastSnapArmed = snapArmed;
+            }
+
+            if (!snapArmed) return;
 
             // The snap gets its own probe, cast from the same origin and ignoring triggers just like the
             // grounded check, so the two can never disagree about what the floor under the ball is
@@ -1466,6 +1504,26 @@ namespace dev.mikeee324.OpenPutt
         {
             StopBallVelocity();
             ballRigidbody.WakeUp();
+        }
+
+        /// Frozen rotation + faked roll while angular drag is 0, real PhysX rotation above that
+        private void _ApplyRotationMode()
+        {
+            if (!Utilities.IsValid(ballRigidbody)) return;
+
+            if (UseRealRotation)
+            {
+                ballRigidbody.freezeRotation = false;
+                ballRigidbody.angularDrag = _ballAngularDrag;
+                return;
+            }
+
+            ballRigidbody.angularDrag = 0f;
+            ballRigidbody.freezeRotation = true;
+
+            // Drop any spin PhysX built up so the faked roll starts clean
+            if (!ballRigidbody.isKinematic)
+                ballRigidbody.angularVelocity = Vector3.zero;
         }
 
         /// Zero the ball's linear/angular velocity if it's currently dynamic (no-op while kinematic)
@@ -1612,7 +1670,8 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.isKinematic = !BallIsMoving;
                     ballRigidbody.detectCollisions = true;
                     ballRigidbody.drag = 0.05f;
-                    ballRigidbody.angularDrag = 0;
+
+                    _ApplyRotationMode();
 
                     // Speculative detects club hits better at rest; dynamic works better while moving
                     ballRigidbody.collisionDetectionMode = ballRigidbody.isKinematic ? CollisionDetectionMode.ContinuousSpeculative : CollisionDetectionMode.ContinuousDynamic;
