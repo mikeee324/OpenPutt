@@ -288,7 +288,6 @@ namespace dev.mikeee324.OpenPutt
             get => _ballMoving;
         }
 
-        [SerializeField]
         private bool _ballMoving = false;
 
         public bool pickedUpByPlayer { get; private set; }
@@ -330,6 +329,7 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
         [SerializeField, Tooltip("0 = rotation is frozen and faked from how far the ball moved. Above 0 hands rotation to PhysX and uses this as the rigidbody's angular drag - needs ball friction above 0 or the ball won't spin up")]
         private float _ballAngularDrag = 0f;
 
@@ -349,8 +349,10 @@ namespace dev.mikeee324.OpenPutt
             set => ballRigidbody.collisionDetectionMode = value;
         }
 
+        [OpenPuttFoldoutGroup("Debug")]
         public bool ballGroundedDebug = false;
 
+        [OpenPuttFoldoutGroup("Debug")]
         [Tooltip("Colours the ball by whether ground snapping is currently armed - green while it's holding the ball down, red while it isn't")]
         public bool ballSnapDebug = false;
 
@@ -398,7 +400,7 @@ namespace dev.mikeee324.OpenPutt
         private int insideGravityZones = 0;
 
         /// Club velocity to apply next FixedUpdate
-        public Vector3 requestedBallVelocity = Vector3.zero;
+        private Vector3 requestedBallVelocity = Vector3.zero;
 
         public bool OnGround => stepsOnGround > 1;
 

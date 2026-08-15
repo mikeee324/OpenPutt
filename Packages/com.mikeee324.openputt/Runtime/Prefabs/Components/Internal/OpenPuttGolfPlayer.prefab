@@ -1022,7 +1022,6 @@ MonoBehaviour:
   ballRenderer: {fileID: 8846236574695715682}
   ballGhostRenderer: {fileID: 7361039064218724000}
   trailRenderer: {fileID: 4220367773285647635}
-  isPlaying: 1
   courseScores: 
   courseTimes: 
   courseStates: 
@@ -4042,8 +4041,7 @@ MonoBehaviour:
   maxBallRollingTime: 60
   groundRaycastDistance: 0.02
   groundSnappingProbeDistance: 0.02
-  enableBallSnap: 1
-  snapMinGroundedSteps: 3
+  snapMinGroundedSteps: 2
   groundSnappingProbeMask:
     serializedVersion: 2
     m_Bits: 133121
@@ -4056,7 +4054,9 @@ MonoBehaviour:
   _ballMoving: 0
   trackingMovingBall: 0
   currentOwnerHideOverride: 0
+  _ballAngularDrag: 0
   ballGroundedDebug: 0
+  ballSnapDebug: 0
   rollingAudioSource: {fileID: 4534004577276690478}
   rollingSoundMaxSpeed: 6
   rollingSoundMaxVolume: 0.1
