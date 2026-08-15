@@ -8,7 +8,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.NoVariableSync), RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual), RequireComponent(typeof(VRCPickup)), RequireComponent(typeof(Rigidbody)), RequireComponent(typeof(SphereCollider)), DefaultExecutionOrder(100)]
     public class GolfBallController : UdonSharpBehaviour
     {
         #region Public Settings
