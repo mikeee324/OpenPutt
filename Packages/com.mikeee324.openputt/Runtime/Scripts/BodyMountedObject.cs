@@ -60,15 +60,24 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("The renderer showing this object's mesh while it's mounted/held - can be toggled off separately from the pickup itself")]
         public MeshRenderer meshRenderer;
 
+        private bool meshRendererWanted = true;
+
         /// <summary>Shows/hides <see cref="meshRenderer"/> without disabling the pickup functionality</summary>
         public bool MeshRendererEnabled
         {
-            get => Utilities.IsValid(meshRenderer) && meshRenderer.enabled;
+            get => meshRendererWanted;
             set
             {
-                if (Utilities.IsValid(meshRenderer))
-                    meshRenderer.enabled = value;
+                meshRendererWanted = value;
+                RefreshMeshRenderer();
             }
+        }
+
+        // The mesh is only there to show where the pickup is - hide it while the player is holding it
+        private void RefreshMeshRenderer()
+        {
+            if (Utilities.IsValid(meshRenderer))
+                meshRenderer.enabled = meshRendererWanted && _heldInHand == VRC_Pickup.PickupHand.None;
         }
 
         [OpenPuttFoldoutGroup("Mounting Settings")]
@@ -161,6 +170,8 @@ namespace dev.mikeee324.OpenPutt
                 }
 
                 _heldInHand = value;
+
+                RefreshMeshRenderer();
             }
         }
 
@@ -177,6 +188,8 @@ namespace dev.mikeee324.OpenPutt
 
             if (!Utilities.IsValid(meshRenderer))
                 meshRenderer = GetComponent<MeshRenderer>();
+
+            meshRendererWanted = Utilities.IsValid(meshRenderer) && meshRenderer.enabled;
 
             if (!Utilities.IsValid(mountingOffsetHeightScale) || mountingOffsetHeightScale.length == 0)
             {
