@@ -29,9 +29,15 @@ namespace dev.mikeee324.OpenPutt
         CenterPush,
         
         /// <summary>
-        /// Adjusts ball gravity to always go towards a particular capsule collider 
+        /// Adjusts ball gravity to always go towards a particular capsule collider
         /// </summary>
-        CapsuleGravity
+        CapsuleGravity,
+
+        /// <summary>
+        /// Sets gravity once as the ball passes through and leaves it that way until something else changes it.
+        /// Unlike Gravity it doesn't need to enclose the area - a thin plane across an entrance works.
+        /// </summary>
+        SetGravity
     }
 
     [UdonBehaviourSyncMode(BehaviourSyncMode.None), DefaultExecutionOrder(-500)]
@@ -109,6 +115,11 @@ namespace dev.mikeee324.OpenPutt
 
                     golfBall._OnBallEnterGravityZone();
                     break;
+                case GolfBalLForceZoneType.SetGravity:
+                    // Not counted as a zone the ball is inside - it never needs a matching exit
+                    golfBall.gravityDirection = transform.forward;
+                    golfBall.gravityMagnitude = forceMagnitude;
+                    break;
                 case GolfBalLForceZoneType.CenterPull:
                     golfBall.gravityDirection = transform.position - golfBall.transform.position;
                     golfBall.gravityMagnitude = forceMagnitude;
@@ -125,6 +136,22 @@ namespace dev.mikeee324.OpenPutt
                     golfBall._OnBallEnterGravityZone();
                     break;
             }
+        }
+
+        /// <summary>
+        /// Called by the ball when its path sweep finds it crossed this zone in one physics step, so PhysX
+        /// never reported an overlap and no trigger callback ran.
+        /// </summary>
+        public void _OnBallSweptThrough(GolfBallController ball)
+        {
+            if (!Utilities.IsValid(ball)) return;
+            if (!Utilities.IsValid(ball.playerManager) || ball.playerManager.Owner != Networking.LocalPlayer) return;
+
+            // SetGravity only - the other types hold gravity while inside, and this ball never was
+            if (forceType != GolfBalLForceZoneType.SetGravity) return;
+
+            ball.gravityDirection = transform.forward;
+            ball.gravityMagnitude = forceMagnitude;
         }
 
         private void OnTriggerExit(Collider other)
@@ -154,8 +181,22 @@ namespace dev.mikeee324.OpenPutt
         /// <param name="other">The other Collider.</param>
         private void OnTriggerStay(Collider other)
         {
+            if (!Utilities.IsValid(golfBall)) return;
+
+            // Re-asserted every step so a stray exit can't strand the ball on world gravity. Ahead of the guards
+            // below because it sets state, not force - a 0-magnitude zone still has to hold its direction
+            if (forceType == GolfBalLForceZoneType.Gravity)
+            {
+                // Players stood in the zone fire Stay too, and must not write gravity onto a ball that left
+                if (!Utilities.IsValid(golfBall.gameObject) || other.gameObject != golfBall.gameObject) return;
+
+                golfBall.gravityDirection = transform.forward;
+                golfBall.gravityMagnitude = forceMagnitude;
+                return;
+            }
+
             if (forceMagnitude <= 0) return;
-            if (!Utilities.IsValid(golfBall) || !golfBall.BallIsMoving) return;
+            if (!golfBall.BallIsMoving) return;
 
             switch (forceType)
             {
