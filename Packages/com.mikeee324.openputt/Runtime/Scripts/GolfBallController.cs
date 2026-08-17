@@ -133,6 +133,14 @@ namespace dev.mikeee324.OpenPutt
         [Range(0, 10), Tooltip("Physics steps the probe can miss before the ball forgets the surface it was on and goes back to probing straight down. Too high and a ball that left a banked track keeps probing sideways")]
         public int surfaceNormalResetSteps = 3;
 
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Tooltip("Sweep the ball's path each step to catch SetGravity zones it moved clean past. Unity only samples trigger overlap once per physics step, so a hard shot can cross a thin plane without ever registering inside it and no trigger fires at all. Only runs on steps where the ball moved further than its own width")]
+        public bool enableForceZoneSweep = true;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [SerializeField, Tooltip("Layers the force-zone sweep looks on. Leave as Everything unless force zones live on a known layer")]
+        LayerMask forceZoneSweepMask = -1;
+
         [Space]
         [OpenPuttFoldoutGroup("Ball Physics")]
         [Tooltip("Master toggle for script-driven wall bounces. Off = pure Unity physics, which won't bounce slow balls off walls at all. Wall hit sounds still play either way")]
@@ -159,6 +167,10 @@ namespace dev.mikeee324.OpenPutt
         [OpenPuttFoldoutGroup("Respawn Settings")]
         [Tooltip("World-space respawn position if the ball stops off-course")]
         public Vector3 respawnWorldPosition = Vector3.positiveInfinity;
+
+        /// Gravity as it was when the respawn position was recorded, so a respawn restores that spot's gravity.
+        private Vector3 respawnGravityDirection = Vector3.down;
+        private float respawnGravityMagnitude = 9.81f;
 
         private bool HasRespawnPosition => !float.IsPositiveInfinity(respawnWorldPosition.x);
 
@@ -258,7 +270,8 @@ namespace dev.mikeee324.OpenPutt
                             var alreadyAtRespawnPosition = Vector3.Distance(ballRigidbody.position, respawnWorldPosition) < 0.01f;
 
                             // It is not on top of a course floor so move it to the previous position
-                            ballRigidbody.position = respawnWorldPosition;
+                            _SetPosition(respawnWorldPosition);
+                            _RestoreRespawnGravity();
 
                             if (!alreadyAtRespawnPosition)
                             {
@@ -425,6 +438,15 @@ namespace dev.mikeee324.OpenPutt
         /// that left a banked track doesn't keep probing sideways forever.
         private int stepsSinceGroundProbeHit;
 
+        /// False until the snap has two consecutive armed steps to compare the crest test against.
+        private bool snapCrestNormalValid;
+
+        /// Gravity as it was last step, for spotting a force zone swapping it out from under the ball.
+        private Vector3 lastStepGravityDirection = Vector3.down;
+
+        /// Reused by the force-zone sweep so a fast shot doesn't allocate every physics step
+        private RaycastHit[] forceZoneSweepHits;
+
         /// The ball's local "up": the surface it last touched, or gravity's up once that's gone stale. The
         /// floor-vs-wall checks read this instead of -gravityDirection so they keep working past vertical.
         private Vector3 SurfaceUp => enableSurfaceRelativeGround ? lastProbedGroundNormal : -gravityDirection;
@@ -517,6 +539,9 @@ namespace dev.mikeee324.OpenPutt
             // Seed from gravity, not Vector3.up - the slope-stop check reads these before anything writes them
             lastGroundContactNormal = -gravityDirection;
             lastProbedGroundNormal = -gravityDirection;
+            lastStepGravityDirection = gravityDirection;
+
+            forceZoneSweepHits = new RaycastHit[8];
 
             DefaultSnapMinGroundedSteps = snapMinGroundedSteps;
 
@@ -614,6 +639,16 @@ namespace dev.mikeee324.OpenPutt
         {
             // Re-normalize each step in case a force zone or runtime change set a non-unit vector
             gravityDirection = gravityDirection.sqrMagnitude > 0f ? gravityDirection.normalized : Vector3.down;
+
+            // Before the swap check, so a zone found this step isn't noticed a step late
+            if (enableForceZoneSweep && BallIsMoving && !pickedUpByPlayer)
+                SweepForMissedForceZones();
+
+            // Surface frame is left alone through a swap - the ball is still on the same ramp, only gravity moved
+            if (DebugMode && Vector3.Dot(lastStepGravityDirection, gravityDirection) < .985f)
+                OpenPuttUtils.Log(this, $"Gravity swapped to {gravityDirection} mag={gravityMagnitude:F1} zones={insideGravityZones} at {CurrentPosition} vel={ballRigidbody.velocity} grounded={stepsOnGround} normal={lastProbedGroundNormal}");
+
+            lastStepGravityDirection = gravityDirection;
 
             if (pickedUpByPlayer)
                 return;
@@ -764,6 +799,9 @@ namespace dev.mikeee324.OpenPutt
 
             StopBallVelocity();
 
+            // New course starts the ball on world gravity, whatever the last hole left it on
+            _ResetGravity();
+
             _SetRespawnPosition(position.transform.position);
 
             lastStartPadCourse = courseThatIsBeingStarted;
@@ -792,6 +830,9 @@ namespace dev.mikeee324.OpenPutt
 
             lastFramePosition = CurrentPosition;
             lastFrameVelocity = Vector3.zero;
+
+            // In hand the ball can be carried anywhere, so nothing a zone set still applies
+            _ResetGravity();
 
             pickedUpByPlayer = true;
 
@@ -883,8 +924,8 @@ namespace dev.mikeee324.OpenPutt
                     BallIsMoving = false;
 
                     // Put the ball back where it last stopped on the course so the player can continue
-                    ballRigidbody.position = respawnWorldPosition;
-                    lastFramePosition = respawnWorldPosition;
+                    _SetPosition(respawnWorldPosition);
+                    _RestoreRespawnGravity();
 
                     // Play the reset noise
                     var sfx = SfxController;
@@ -1050,6 +1091,8 @@ namespace dev.mikeee324.OpenPutt
 
             BallIsMoving = false;
 
+            _RestoreRespawnGravity();
+
             _SetPosition(respawnPos);
 
             _SetRespawnPosition(respawnPos);
@@ -1086,8 +1129,13 @@ namespace dev.mikeee324.OpenPutt
         public void _SetRespawnPosition(Vector3 pos)
         {
             respawnWorldPosition = pos;
+
+            // Recorded with the position - a respawn point on a ceiling has to come back upside-down
+            respawnGravityDirection = gravityDirection;
+            respawnGravityMagnitude = gravityMagnitude;
+
             if (DebugMode)
-                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnWorldPosition}");
+                OpenPuttUtils.Log(this, $"Ball respawn position is now {respawnWorldPosition} gravity={respawnGravityDirection} mag={respawnGravityMagnitude:F1}");
         }
 
         public void _RespawnBallWithErrorNoise()
@@ -1488,19 +1536,31 @@ namespace dev.mikeee324.OpenPutt
                 lastSnapArmed = snapArmed;
             }
 
-            if (!snapArmed) return;
+            if (!snapArmed)
+            {
+                snapCrestNormalValid = false;
+                return;
+            }
 
             // The snap gets its own probe, cast the same way and ignoring triggers just like the grounded
             // check, so the two can never disagree about what the floor under the ball is
             var snapDistance = BallWorldRadius + groundSnappingProbeDistance * BallScaleRatio;
             if (!ProbeSurface(CurrentPosition, snapDistance, out var snapHit))
+            {
+                snapCrestNormalValid = false;
                 return;
+            }
 
             var normal = snapHit.normal;
 
             // Crest test is against the previous snapping step, so this is the only place it's written
             var normalChange = normal - lastGroundContactNormal;
+            var hadPreviousStep = snapCrestNormalValid;
             lastGroundContactNormal = normal;
+            snapCrestNormalValid = true;
+
+            // Nothing to measure a bend against yet - comparing to a normal from elsewhere reads as a bend
+            if (!hadPreviousStep) return;
 
             // Redirect last frame's velocity along the slope
             var alongSlope = Vector3.ProjectOnPlane(lastFrameVelocity, normal);
@@ -1554,6 +1614,35 @@ namespace dev.mikeee324.OpenPutt
         /// Ball size relative to full scale (1 = design size, &lt;1 shrunk, &gt;1 grown).
         /// </summary>
         private float BallScaleRatio => ballCollider.radius > 0.0001f ? BallWorldRadius / ballCollider.radius : 1f;
+
+        /// <summary>
+        /// Catches force zones the ball crossed within one physics step. Unity samples trigger overlap once per
+        /// step, so a ball moving further than a zone is thick never registers inside it and no trigger fires.
+        /// </summary>
+        private void SweepForMissedForceZones()
+        {
+            var travel = ballRigidbody.position - lastFramePosition;
+            var distance = travel.magnitude;
+
+            // Shorter than the ball's own width was sampled properly by PhysX already
+            if (distance < BallWorldRadius * 2f) return;
+
+            // A teleport isn't travel - don't collect zones off a line the ball never rolled along
+            if (distance > ballRigidbody.velocity.magnitude * Time.deltaTime * 2f + BallWorldRadius * 2f) return;
+
+            var hitCount = Physics.SphereCastNonAlloc(lastFramePosition, BallWorldRadius, travel / distance, forceZoneSweepHits, distance, forceZoneSweepMask, QueryTriggerInteraction.Collide);
+
+            for (var i = 0; i < hitCount; i++)
+            {
+                var sweptCollider = forceZoneSweepHits[i].collider;
+                if (!Utilities.IsValid(sweptCollider)) continue;
+
+                var zone = sweptCollider.GetComponent<GolfBallForceZone>();
+                if (!Utilities.IsValid(zone)) continue;
+
+                zone._OnBallSweptThrough(this);
+            }
+        }
 
         /// Ray from the ball's position into the surface it last touched. Buffer scales with the ball. Triggers
         /// are ignored so force zones, teleporters and hole triggers can't read as ground.
@@ -1750,9 +1839,29 @@ namespace dev.mikeee324.OpenPutt
             insideGravityZones -= 1;
             if (insideGravityZones > 0) return;
 
+            _ResetGravity();
+        }
+
+        /// <summary>
+        /// Back to world gravity, forgetting any zones the ball was inside. Teleporting out of a trigger doesn't
+        /// reliably fire OnTriggerExit, so the count has to be cleared rather than decremented.
+        /// </summary>
+        public void _ResetGravity()
+        {
             insideGravityZones = 0;
             gravityDirection = defaultGravityDirection;
             gravityMagnitude = defaultGravityMagnitude;
+        }
+
+        /// <summary>
+        /// Back to the gravity recorded with the respawn position, for every path that puts the ball back there.
+        /// Zone count clears for the same reason as <see cref="_ResetGravity"/>.
+        /// </summary>
+        public void _RestoreRespawnGravity()
+        {
+            insideGravityZones = 0;
+            gravityDirection = respawnGravityDirection;
+            gravityMagnitude = respawnGravityMagnitude;
         }
 
         /// <summary>
