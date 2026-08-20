@@ -14,7 +14,7 @@ namespace dev.mikeee324.OpenPutt
     public class OpenPutt : UdonSharpBehaviour
     {
         [NonSerialized]
-        public readonly string CurrentVersion = "1.0.0-beta.5";
+        public readonly string CurrentVersion = "1.0.0-beta.6";
 
         #region References
         [OpenPuttDescription("The central OpenPutt controller for this world - it links all the player prefabs, courses and scoreboards together.")]
@@ -350,8 +350,10 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(LocalPlayerManager)) return;
 
-            // Save players ball colour
-            PlayerData.SetColor("OpenPutt-BallColourHSV", LocalPlayerManager.BallColor);
+            // Save players ball colour - skipped while a debug mode is recolouring the ball
+            var ball = LocalPlayerManager.golfBall;
+            if (!Utilities.IsValid(ball) || (!ball.ballGroundedDebug && !ball.ballSnapDebug))
+                PlayerData.SetColor("OpenPutt-BallColourHSV", LocalPlayerManager.BallColor);
             PlayerData.SetBool("OpenPutt-LeftHanded", LocalPlayerManager.IsInLeftHandedMode);
             PlayerData.SetBool("OpenPutt-ThrowEnabled", LocalPlayerManager.golfClub.throwEnabled);
             PlayerData.SetBool("OpenPutt-ClubAutoHold", LocalPlayerManager.golfClub.pickup.AutoHold == VRC_Pickup.AutoHoldMode.Yes);
