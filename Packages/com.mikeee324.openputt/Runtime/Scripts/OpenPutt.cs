@@ -350,8 +350,10 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(LocalPlayerManager)) return;
 
-            // Save players ball colour
-            PlayerData.SetColor("OpenPutt-BallColourHSV", LocalPlayerManager.BallColor);
+            // Save players ball colour - skipped while a debug mode is recolouring the ball
+            var ball = LocalPlayerManager.golfBall;
+            if (!Utilities.IsValid(ball) || (!ball.ballGroundedDebug && !ball.ballSnapDebug))
+                PlayerData.SetColor("OpenPutt-BallColourHSV", LocalPlayerManager.BallColor);
             PlayerData.SetBool("OpenPutt-LeftHanded", LocalPlayerManager.IsInLeftHandedMode);
             PlayerData.SetBool("OpenPutt-ThrowEnabled", LocalPlayerManager.golfClub.throwEnabled);
             PlayerData.SetBool("OpenPutt-ClubAutoHold", LocalPlayerManager.golfClub.pickup.AutoHold == VRC_Pickup.AutoHoldMode.Yes);

@@ -1,6 +1,6 @@
 // Upgrade NOTE: upgraded instancing buffer 'OpenPuttGolfCourseLines3DNoise' to new syntax.
 
-// Made with Amplify Shader Editor v1.9.9.9
+// Made with Amplify Shader Editor v1.9.9.12
 // Available at the Unity Asset Store - http://u3d.as/y3X 
 Shader "OpenPutt/GolfCourse/Lines3DNoise"
 {
@@ -16,6 +16,7 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 		_HeightOffset( "HeightOffset", Range( -0.3, 0.3 ) ) = 0
 		_LineBlend( "LineBlend", Range( 0, 1 ) ) = 0.2
 		_LineHeightCM( "_LineHeightCM", Range( 0.5, 30 ) ) = 3
+		[Toggle( _LOCKLINESTOPIVOT_ON )] _LockLinesToPivot( "LockLinesToPivot", Float ) = 0
 		_Color0( "Color 0", Color ) = ( 0.2, 0.6509804, 0.1019608, 1 )
 		_LinesDarkenAmount( "LinesDarkenAmount", Range( 0, 1 ) ) = 0.17
 		_Metallic( "Metallic", Range( 0, 1 ) ) = 0
@@ -32,8 +33,9 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 		#include "Lighting.cginc"
 		#pragma target 4.6
 		#pragma multi_compile_instancing
+		#pragma shader_feature_local _LOCKLINESTOPIVOT_ON
 		#pragma shader_feature_local _LOCKNOISETOOBJECT_ON
-		#define ASE_VERSION 19909
+		#define ASE_VERSION 19912
 		struct Input
 		{
 			float3 worldNormal;
@@ -124,7 +126,13 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 			float3 ase_normalWS = i.worldNormal;
 			float temp_output_18_0_g7 = ( ( _LineBlend * 0.5 ) * max( sqrt( max( ( 1.0 - ( ase_normalWS.y * ase_normalWS.y ) ), 1E-05 ) ), 0.001 ) );
 			float3 ase_positionWS = i.worldPos;
-			float temp_output_10_0_g6 = ( ( ase_positionWS.y + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
+			float4 transform41_g6 = mul(unity_ObjectToWorld,float4( 0,0,0,1 ));
+			#ifdef _LOCKLINESTOPIVOT_ON
+				float staticSwitch40_g6 = ( ase_positionWS.y - transform41_g6.y );
+			#else
+				float staticSwitch40_g6 = ase_positionWS.y;
+			#endif
+			float temp_output_10_0_g6 = ( ( staticSwitch40_g6 + _HeightOffset ) * ( 50.0 / _LineHeightCM ) );
 			float temp_output_16_0_g6 = fwidth( temp_output_10_0_g6 );
 			float smoothstepResult21_g6 = smoothstep( ( ( 0.5 - temp_output_18_0_g7 ) - temp_output_16_0_g6 ) , ( ( 0.5 + temp_output_18_0_g7 ) + temp_output_16_0_g6 ) , abs( (frac( temp_output_10_0_g6 )*2.0 + -1.0) ));
 			float lerpResult37_g6 = lerp( smoothstepResult21_g6 , 0.5 , saturate( ( temp_output_16_0_g6 * 2.0 ) ));
@@ -232,65 +240,65 @@ Shader "OpenPutt/GolfCourse/Lines3DNoise"
 	CustomEditor "GolfCourseLinesMasterGUI"
 }
 /*ASEBEGIN
-Version=19909
-Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;243;-544,-768;Inherit;False;OpenPuttLines;8;;6;5b7dadceb1064e74c9a5f3f739983153;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.CommentaryNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;78;-1008,-1680;Inherit;False;1268;795;Comment;11;56;7;52;54;61;59;60;8;53;62;238;Albedomixer;1,1,1,1;0;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;48;-256,-768;Inherit;True;_LinesAlpha;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;244;-544,-512;Inherit;False;OpenPuttNoise;0;;8;68bb02bd3a8237d478884f6d11659113;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;50;-256,-512;Inherit;True;Noisemap;-1;True;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;56;-960,-1440;Inherit;False;InstancedProperty;_LinesDarkenAmount;LinesDarkenAmount;14;0;Create;True;0;0;0;False;0;False;0.17;0.153;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;54;-896,-1632;Inherit;True;48;_LinesAlpha;1;0;OBJECT;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.ColorNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;7;-864,-1120;Inherit;False;Property;_Color0;Color 0;13;0;Create;True;0;0;0;False;0;False;0.2,0.6509804,0.1019608,1;0,1,0.03738308,1;True;True;0;6;COLOR;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4;FLOAT3;5
-Node;AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;52;-832,-1248;Inherit;False;50;Noisemap;1;0;OBJECT;;False;1;FLOAT;0
-Node;AmplifyShaderEditor.OneMinusNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;61;-656,-1440;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;59;-656,-1360;Inherit;False;Constant;_Float1;Float 0;11;0;Create;True;0;0;0;False;0;False;1;0;0;0;0;1;FLOAT;0
-Node;AmplifyShaderEditor.OneMinusNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;238;-656,-1568;Inherit;False;1;0;FLOAT;0;False;1;FLOAT;0
-Node;AmplifyShaderEditor.ClampOpNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;60;-480,-1472;Inherit;False;3;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;1;False;1;FLOAT;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;8;-592,-1248;Inherit;True;2;2;0;FLOAT;0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;53;-256,-1440;Inherit;False;2;2;0;FLOAT;0;False;1;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;62;16,-1440;Inherit;True;FinalMix;-1;True;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;63;256,-752;Inherit;True;62;FinalMix;1;0;OBJECT;;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;112;672,-656;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;101;688,-672;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;110;848,-848;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;102;880,-1040;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;107;752,-1072;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;105;688,-976;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;104;688,-976;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;108;624,-1072;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;103;496,-1040;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;109;528,-848;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;106;688,-672;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;66;192,-480;Inherit;False;Property;_Smoothness;Smoothness;16;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;65;192,-560;Inherit;False;Property;_Metallic;Metallic;15;0;Create;True;0;0;0;False;0;False;0;0;0;1;0;1;FLOAT;0
-Node;AmplifyShaderEditor.WireNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;111;704,-656;Inherit;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0
-Node;AmplifyShaderEditor.StandardSurfaceOutputNode, AmplifyShaderEditor, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null;0;896,-624;Float;False;True;-1;6;GolfCourseLinesMasterGUI;0;0;Standard;OpenPutt/GolfCourse/Lines3DNoise;False;False;False;False;False;False;False;False;False;False;False;False;False;True;False;False;False;False;False;False;False;Back;0;False;;0;False;;False;0;False;;0;False;;False;0;0;False;;0;Opaque;0.5;True;True;0;False;Opaque;;Geometry;All;12;all;True;True;True;True;0;False;;False;0;False;;255;False;;255;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;0;False;;False;2;15;10;25;False;0.5;True;0;0;False;;0;False;;0;0;False;;0;False;;0;False;;0;False;;0;False;0;0,0,0,0;VertexOffset;True;False;Cylindrical;False;True;Relative;0;;-1;-1;-1;-1;0;False;0;0;False;;-1;0;False;;0;0;0;False;0.1;False;;0;False;;False;17;0;FLOAT3;0,0,0;False;1;FLOAT3;0,0,0;False;2;FLOAT3;0,0,0;False;3;FLOAT;0;False;4;FLOAT;0;False;5;FLOAT;0;False;6;FLOAT3;0,0,0;False;7;FLOAT3;0,0,0;False;8;FLOAT;0;False;9;FLOAT;0;False;10;FLOAT;0;False;13;FLOAT3;0,0,0;False;11;FLOAT3;0,0,0;False;12;FLOAT3;0,0,0;False;16;FLOAT4;0,0,0,0;False;14;FLOAT4;0,0,0,0;False;15;FLOAT3;0,0,0;False;0
-WireConnection;48;0;243;0
-WireConnection;50;0;244;0
-WireConnection;61;0;56;0
-WireConnection;238;0;54;0
-WireConnection;60;0;238;0
-WireConnection;60;1;61;0
-WireConnection;60;2;59;0
-WireConnection;8;0;52;0
-WireConnection;8;1;7;5
-WireConnection;53;0;60;0
-WireConnection;53;1;8;0
-WireConnection;62;0;53;0
-WireConnection;112;0;63;0
-WireConnection;101;0;112;0
-WireConnection;110;0;101;0
-WireConnection;102;0;110;0
-WireConnection;107;0;102;0
-WireConnection;105;0;107;0
-WireConnection;104;0;105;0
-WireConnection;108;0;104;0
-WireConnection;103;0;108;0
-WireConnection;109;0;103;0
-WireConnection;106;0;109;0
-WireConnection;111;0;106;0
-WireConnection;0;0;111;0
-WireConnection;0;3;65;0
-WireConnection;0;4;66;0
+Version=19912
+{"type":"AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor","id":243,"pos":[-4544,184],"params":["Inherit","False","OpenPuttLines","8","","6","5b7dadceb1064e74c9a5f3f739983153","0","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.CommentaryNode, AmplifyShaderEditor","id":78,"pos":[-3888,112],"params":["Inherit","False","1504","688","Comment","11","56","7","52","54","61","59","60","8","53","62","238","Albedomixer","1,1,1,1","0","0"]}
+{"type":"AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor","id":48,"pos":[-4192,184],"params":["Inherit","True","_LinesAlpha","-1","True","1","0","FLOAT","0","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.FunctionNode, AmplifyShaderEditor","id":244,"pos":[-4192,320],"params":["Inherit","False","OpenPuttNoise","0","","8","68bb02bd3a8237d478884f6d11659113","0","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor","id":50,"pos":[-3840,472],"params":["Inherit","True","Noisemap","-1","True","1","0","FLOAT","0","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor","id":56,"pos":[-3840,280],"params":["Inherit","False","InstancedProperty","_LinesDarkenAmount","LinesDarkenAmount","15","0","Create","True","0","0","0","False","0","False","Object","-1","","0.17","0.153","0","1","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor","id":54,"pos":[-3840,184],"params":["Inherit","True","48","_LinesAlpha","1","0","OBJECT","","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.ColorNode, AmplifyShaderEditor","id":7,"pos":[-3520,568],"params":["Inherit","False","Property","_Color0","Color 0","14","0","Create","True","0","0","0","False","0","False","Object","-1","","0.2,0.6509804,0.1019608,1","0,1,0.03738308,1","True","True","0","6","COLOR","0","FLOAT","1","FLOAT","2","FLOAT","3","FLOAT","4","FLOAT3","5"]}
+{"type":"AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor","id":52,"pos":[-3520,472],"params":["Inherit","False","50","Noisemap","1","0","OBJECT","","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.OneMinusNode, AmplifyShaderEditor","id":61,"pos":[-3520,280],"params":["Inherit","False","1","0","FLOAT","0","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor","id":59,"pos":[-3520,376],"params":["Inherit","False","Constant","_Float1","Float 0","11","0","Create","True","0","0","0","False","0","False","Object","-1","","1","0","0","0","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.OneMinusNode, AmplifyShaderEditor","id":238,"pos":[-3520,184],"params":["Inherit","False","1","0","FLOAT","0","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.ClampOpNode, AmplifyShaderEditor","id":60,"pos":[-3200,160],"params":["Inherit","False","3","0","FLOAT","0","False","1","FLOAT","0","False","2","FLOAT","1","False","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor","id":8,"pos":[-3200,304],"params":["Inherit","True","2","2","0","FLOAT","0","False","1","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.SimpleMultiplyOpNode, AmplifyShaderEditor","id":53,"pos":[-2928,176],"params":["Inherit","False","2","2","0","FLOAT","0","False","1","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.RegisterLocalVarNode, AmplifyShaderEditor","id":62,"pos":[-2656,192],"params":["Inherit","True","FinalMix","-1","True","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.GetLocalVarNode, AmplifyShaderEditor","id":63,"pos":[-2336,192],"params":["Inherit","True","62","FinalMix","1","0","OBJECT","","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":112,"pos":[-2048,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":101,"pos":[-1920,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":110,"pos":[-1792,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":102,"pos":[-1664,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":107,"pos":[-1536,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":105,"pos":[-1408,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":104,"pos":[-1280,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":108,"pos":[-1152,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":103,"pos":[-1024,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":109,"pos":[-896,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":106,"pos":[-768,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor","id":66,"pos":[-640,384],"params":["Inherit","False","Property","_Smoothness","Smoothness","17","0","Create","True","0","0","0","False","0","False","Object","-1","","0","0","0","1","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.RangedFloatNode, AmplifyShaderEditor","id":65,"pos":[-640,288],"params":["Inherit","False","Property","_Metallic","Metallic","16","0","Create","True","0","0","0","False","0","False","Object","-1","","0","0","0","1","0","1","FLOAT","0"]}
+{"type":"AmplifyShaderEditor.WireNode, AmplifyShaderEditor","id":111,"pos":[-640,192],"params":["Inherit","False","1","0","FLOAT3","0,0,0","False","1","FLOAT3","0"]}
+{"type":"AmplifyShaderEditor.StandardSurfaceOutputNode, AmplifyShaderEditor","id":0,"pos":[-320,0],"params":["Float","False","True","-1","6","GolfCourseLinesMasterGUI","0","0","Standard","OpenPutt/GolfCourse/Lines3DNoise","False","False","False","False","False","False","False","False","False","False","False","False","False","True","False","False","False","False","False","False","False","Back","0","False","","0","False","","False","0","False","","0","False","","False","0","0","False","","0","Opaque","0.5","True","True","0","False","Opaque","","Geometry","All","12","all","True","True","True","True","0","False","","False","0","False","","255","False","","255","False","","0","False","","0","False","","0","False","","0","False","","0","False","","0","False","","0","False","","0","False","","False","2","15","10","25","False","0.5","True","0","0","False","","0","False","","0","0","False","","0","False","","0","False","","0","False","","0","False","0","0,0,0,0","VertexOffset","True","False","Cylindrical","False","True","Relative","0","","-1","-1","-1","-1","0","False","0","0","False","","-1","0","False","","0","0","0","False","0.1","False","","0","False","","False","17","0","FLOAT3","0,0,0","False","1","FLOAT3","0,0,0","False","2","FLOAT3","0,0,0","False","3","FLOAT","0","False","4","FLOAT","0","False","5","FLOAT","0","False","6","FLOAT3","0,0,0","False","7","FLOAT3","0,0,0","False","8","FLOAT","0","False","9","FLOAT","0","False","10","FLOAT","0","False","13","FLOAT3","0,0,0","False","11","FLOAT3","0,0,0","False","12","FLOAT3","0,0,0","False","16","FLOAT4","0,0,0,0","False","14","FLOAT4","0,0,0,0","False","15","FLOAT3","0,0,0","False","0"]}
+{"wire":[48,0,243,0]}
+{"wire":[50,0,244,0]}
+{"wire":[61,0,56,0]}
+{"wire":[238,0,54,0]}
+{"wire":[60,0,238,0]}
+{"wire":[60,1,61,0]}
+{"wire":[60,2,59,0]}
+{"wire":[8,0,52,0]}
+{"wire":[8,1,7,5]}
+{"wire":[53,0,60,0]}
+{"wire":[53,1,8,0]}
+{"wire":[62,0,53,0]}
+{"wire":[112,0,63,0]}
+{"wire":[101,0,112,0]}
+{"wire":[110,0,101,0]}
+{"wire":[102,0,110,0]}
+{"wire":[107,0,102,0]}
+{"wire":[105,0,107,0]}
+{"wire":[104,0,105,0]}
+{"wire":[108,0,104,0]}
+{"wire":[103,0,108,0]}
+{"wire":[109,0,103,0]}
+{"wire":[106,0,109,0]}
+{"wire":[111,0,106,0]}
+{"wire":[0,0,111,0]}
+{"wire":[0,3,65,0]}
+{"wire":[0,4,66,0]}
 ASEEND*/
-//CHKSM=A5E492CF4A4CFBB13818487FB96C749FDDC1BC34
+//CHKSM=0783029A9EBBC13F4C2979916CBE8C25DDBDEE2E

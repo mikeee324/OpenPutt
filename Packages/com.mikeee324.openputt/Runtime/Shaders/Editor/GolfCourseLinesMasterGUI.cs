@@ -106,6 +106,7 @@ public class GolfCourseLinesMasterGUI : ShaderGUI
         if (lineHeight == null) return; 
 
         MaterialProperty heightOffset = FindProperty("_HeightOffset", properties, false);
+        MaterialProperty lockLines = FindProperty("_LockLinesToPivot", properties, false);
         
         // Handle new single slider for blur/blend (checks for either naming convention)
         MaterialProperty edgeBlur = FindProperty("_EdgeBlur", properties, false) ?? FindProperty("_LineBlend", properties, false);
@@ -125,6 +126,7 @@ public class GolfCourseLinesMasterGUI : ShaderGUI
             materialEditor.ShaderProperty(lineHeight, new GUIContent("Line Height (cm)", "Physical height distance between each line."));
             if (heightOffset != null) materialEditor.ShaderProperty(heightOffset, new GUIContent("Height Offset"));
             if (darkenAmount != null) materialEditor.ShaderProperty(darkenAmount, new GUIContent("Darken Amount"));
+            if (lockLines != null) materialEditor.ShaderProperty(lockLines, new GUIContent("Lock Lines to Pivot"));
 
             if (edgeBlur != null)
             {

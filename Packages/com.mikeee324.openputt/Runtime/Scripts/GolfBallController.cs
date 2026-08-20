@@ -147,8 +147,12 @@ namespace dev.mikeee324.OpenPutt
         public bool enableWallReflections = true;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Range(0.1f, 1f), Tooltip("Fraction of speed kept on a dead-on wall hit. Shallow hits keep more, because only the part of the velocity driving into the wall is damped. Capped at 1 so a bounce can never hand the ball energy")]
+        [Range(0.1f, 1f), Tooltip("Fraction of speed kept on a dead-on wall hit, for walls that don't set their own. Shallow hits keep more, because only the part of the velocity driving into the wall is damped. Capped at 1 so a bounce can never hand the ball energy")]
         public float wallBounceSpeedMultiplier = 0.8f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Tooltip("Let a wall with a physic material on it set its own bounce from that material's Bounciness, instead of every wall in the world sharing the value above. Note that a material with Bounciness left at 0 then means a dead wall - if your walls already carry materials for friction, they'll stop bouncing until you set a bounciness on them. Turn this off to go back to one value for everything")]
+        public bool useSurfaceBounciness = true;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0, 0.5f)]
@@ -158,6 +162,18 @@ namespace dev.mikeee324.OpenPutt
         [OpenPuttFoldoutGroup("Ball Physics")]
         [Range(0f, 1f), Tooltip("If a wall contact's normal points this far upwards it's the ball landing on top of the wall, not hitting its side, so no bounce is applied. 0.5≈60° from vertical")]
         public float wallBounceHeightIgnoreAmount = 0.5f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Range(0f, 5f), Tooltip("How fast a moving collider has to be driving into the ball before it counts as an obstacle hitting it rather than a surface carrying it (m/s, measured in the mover's own frame). Covers the step where the ball first lands on a moving platform, before the ground probe has recognised it. Too high and slow blades stop bouncing the ball")]
+        public float movingObstacleHitSpeed = 0.5f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Range(0f, 1f), Tooltip("How much of the lift a moving obstacle puts into a grounded ball is cancelled, so spinning blades and bumpers shove it along the floor instead of off it. 0 = raw bounce, 1 = the bounce is flattened onto the surface the ball is rolling on. Only applies to obstacles that are actually moving")]
+        public float movingObstacleGroundHold = 0.8f;
+
+        [OpenPuttFoldoutGroup("Ball Physics")]
+        [Range(0f, 1f), Tooltip("How steeply a bounce has to climb before ground snapping is suspended to let PhysX arc it. Fraction of the bounce speed that has to point against gravity - 0 suspends on any upward bounce at all, 0.3≈17° above level. Too low and every graze off a moving obstacle drops the ball out of snapping")]
+        public float snapSuspendUpwardFraction = 0.3f;
 
         [Space]
         [OpenPuttFoldoutGroup("Respawn Settings")]
@@ -433,6 +449,9 @@ namespace dev.mikeee324.OpenPutt
         /// stuck-on-slope check still reads a live normal when snapping is switched off. Doubles as the
         /// ball's local "up" - see <see cref="SurfaceUp"/>.
         private Vector3 lastProbedGroundNormal = Vector3.up;
+
+        /// Collider the last grounded probe landed on - tells a platform the ball rides from an obstacle hitting it.
+        private Collider lastGroundCollider;
 
         /// Physics steps since a ground probe last hit anything. Times out a stale surface normal so a ball
         /// that left a banked track doesn't keep probing sideways forever.
@@ -1331,23 +1350,19 @@ namespace dev.mikeee324.OpenPutt
             if (collisionNormal == Vector3.zero)
                 return;
 
-            // Checks if the collision was from "below" and ignores it. Against the surface the ball is rolling
-            // on rather than gravity, so a banked track doesn't start classifying itself as a wall and charge
-            // the ball a bounce for every contact on the way round
-            if (Vector3.Dot(collisionNormal, SurfaceUp) > wallBounceHeightIgnoreAmount)
-                return;
+            // Obstacle surface velocity at the contact; zero for static walls, so this only shows up on
+            // moving obstacles
+            var surfaceVelocity = Vector3.zero;
+            if (Utilities.IsValid(collision.rigidbody))
+                surfaceVelocity = collision.rigidbody.GetPointVelocity(contactPoint).Sanitized();
+
+            var obstacleIsMoving = surfaceVelocity.sqrMagnitude > .0001f;
 
             // Maybe fix the ball getting stuck on walls
             if (lastFrameVelocity.sqrMagnitude < 1e-8f)
                 lastFrameVelocity = ballRigidbody.velocity;
             if (lastFrameVelocity.sqrMagnitude < 1e-8f)
                 return;
-
-            // Obstacle surface velocity at the contact; zero for static walls, so this only shows up on
-            // moving obstacles
-            var surfaceVelocity = Vector3.zero;
-            if (Utilities.IsValid(collision.rigidbody))
-                surfaceVelocity = collision.rigidbody.GetPointVelocity(contactPoint).Sanitized();
 
             // Work in the surface's frame of reference, then convert back at the end
             var relativeVelocity = lastFrameVelocity - surfaceVelocity;
@@ -1357,22 +1372,54 @@ namespace dev.mikeee324.OpenPutt
             if (intoWallSpeed <= 0f)
                 return;
 
+            // On banked geometry a blade's face points much the same way as the floor, so direction alone can't
+            // tell them apart for anything moving - the probe knows what's under the ball, and being carried by
+            // something isn't the same as being struck by it
+            var ridingThisSurface = !obstacleIsMoving ||
+                                    (Utilities.IsValid(lastGroundCollider) && collision.collider == lastGroundCollider) ||
+                                    intoWallSpeed < movingObstacleHitSpeed;
+
+            // Collision from "below" the surface the ball is rolling on, so a banked track doesn't classify
+            // itself as a wall and charge the ball a bounce for every contact on the way round
+            if (ridingThisSurface && Vector3.Dot(collisionNormal, SurfaceUp) > wallBounceHeightIgnoreAmount)
+                return;
+
             // The part sliding along the wall passes through untouched
             var alongWall = relativeVelocity + collisionNormal * intoWallSpeed;
+
+            // This reflection overwrites whatever the solver produced, so bounciness has to be applied by hand
+            // or it does nothing. sharedMaterial to avoid instancing a copy per wall
+            var surfaceBounce = wallBounceSpeedMultiplier;
+            if (useSurfaceBounciness && Utilities.IsValid(collision.collider.sharedMaterial))
+                surfaceBounce = collision.collider.sharedMaterial.bounciness;
 
             // Only the part that drove into the wall is damped, so a graze barely loses anything while a
             // head-on hit loses the full amount
             // Clamped so the bounce can only ever return less than the ball brought in, never more
-            var restitution = Mathf.Clamp01(wallBounceSpeedMultiplier * (1f - wallBounceDeflection));
+            var restitution = Mathf.Clamp01(surfaceBounce * (1f - wallBounceDeflection));
             var newVelocity = (alongWall + collisionNormal * (intoWallSpeed * restitution) + surfaceVelocity).Sanitized();
 
             if (newVelocity == Vector3.zero)
                 return;
 
+            // A moving obstacle should shove a grounded ball along the floor, not off it. Only lift is taken, so
+            // a hit driving the ball down is left alone.
+            // The lift is dropped, not redirected - steep hits come out slower. To keep the punch instead,
+            // renormalise newVelocity to its old magnitude after this
+            if (movingObstacleGroundHold > 0f && OnGround && obstacleIsMoving)
+            {
+                var groundNormal = SurfaceUp;
+                var liftSpeed = Vector3.Dot(newVelocity, groundNormal);
+                if (liftSpeed > 0f)
+                    newVelocity = (newVelocity - groundNormal * (liftSpeed * movingObstacleGroundHold)).Sanitized();
+            }
+
             if (enableWallReflections)
             {
-                // If the bounce goes upward, suspend ground snapping so PhysX can arc it
-                if (Vector3.Dot(newVelocity, -gravityDirection) > .001f)
+                // Steep enough climb suspends ground snapping so PhysX can arc it. A share of the bounce speed,
+                // so a fast graze off a blade reads as the sideways knock it is instead of a launch
+                var bounceSpeed = newVelocity.magnitude;
+                if (bounceSpeed > .0001f && Vector3.Dot(newVelocity, -gravityDirection) > bounceSpeed * snapSuspendUpwardFraction)
                 {
                     stepsOnGround = 0;
                     stepsInAir = -1;
@@ -1381,7 +1428,7 @@ namespace dev.mikeee324.OpenPutt
                 lastFrameVelocity = ballRigidbody.velocity = newVelocity;
 
                 if (DebugMode)
-                    OpenPuttUtils.Log(this, $"Bounced off '{collision.collider.name}' - normal={collisionNormal} in={relativeVelocity.magnitude:F2} out={newVelocity.magnitude:F2}");
+                    OpenPuttUtils.Log(this, $"Bounced off '{collision.collider.name}' - normal={collisionNormal} in={relativeVelocity.magnitude:F2} out={newVelocity.magnitude:F2} surfaceVel={surfaceVelocity.magnitude:F2} bounce={surfaceBounce:F2} riding={ridingThisSurface}");
             }
 
             // Play a hit sound because we bounced off something
@@ -1421,6 +1468,7 @@ namespace dev.mikeee324.OpenPutt
                     : 0;
 
                 lastProbedGroundNormal = groundingHit.normal.Sanitized();
+                lastGroundCollider = groundingHit.collider;
 
                 stepsOnGround += 1;
                 stepsInAir = 0;
@@ -1444,6 +1492,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     lastProbedGroundNormal = -gravityDirection;
                     lastGroundContactNormal = -gravityDirection;
+                    lastGroundCollider = null;
                 }
 
                 if (velMagnitude > 0.01f)
