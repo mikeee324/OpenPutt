@@ -184,6 +184,7 @@ namespace dev.mikeee324.OpenPutt
             return Mathf.Lerp(baseThreshold, -1f, proximity);
         }
 
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             var hasBoard = TryGetBoardAxes(out var origin, out var uDir, out var vDir, out var uLen, out var vLen);
@@ -230,5 +231,6 @@ namespace dev.mikeee324.OpenPutt
 
             Gizmos.matrix = previousMatrix;
         }
+#endif
     }
 }

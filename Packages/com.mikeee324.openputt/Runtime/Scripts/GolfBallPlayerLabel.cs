@@ -17,10 +17,8 @@ namespace dev.mikeee324.OpenPutt
         [Tooltip("What GameObject this label should look towards. If empty it will look towards the local player.")]
         public GameObject lookAtTarget;
 
-        public TextMeshProUGUI localPlayerLabel;
-        public TextMeshProUGUI remotePlayerLabel;
+        public TextMeshProUGUI playerLabel;
         public Canvas canvas;
-        public TextMeshProUGUI CurrentLabel { get; private set; }
 
         [Space]
         [OpenPuttFoldoutGroup("Visibility Settings")]
@@ -50,6 +48,12 @@ namespace dev.mikeee324.OpenPutt
         private GolfClub localPlayerClub;
 
         #endregion
+
+        void OnEnable()
+        {
+            // Label just became visible - make sure the name is up to date
+            RefreshPlayerName();
+        }
 
         void Start()
         {
@@ -94,8 +98,7 @@ namespace dev.mikeee324.OpenPutt
 
             UpdatePosition();
 
-            var currentLabel = CurrentLabel;
-            if (Utilities.IsValid(attachToObject) && Utilities.IsValid(currentLabel))
+            if (Utilities.IsValid(attachToObject) && Utilities.IsValid(playerLabel))
             {
                 // Lerp label properties based on player distance to ball
                 var distance = Vector3.Distance(transform.position, lookAtTarget);
@@ -126,8 +129,8 @@ namespace dev.mikeee324.OpenPutt
 
                 if (lastKnownColor != newColor)
                 {
-                    currentLabel.color = newColor;
-                    currentLabel.ForceMeshUpdate();
+                    playerLabel.color = newColor;
+                    playerLabel.ForceMeshUpdate();
                     lastKnownColor = newColor;
                 }
             }
@@ -137,23 +140,19 @@ namespace dev.mikeee324.OpenPutt
         {
             if (!Utilities.IsValid(attachToObject))
                 return;
-                
+
             transform.position = attachToObject.transform.position + new Vector3(0, 0.1f, 0);
         }
 
         public void RefreshPlayerName()
         {
-            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.Owner) || !Utilities.IsValid(playerManager.Owner.displayName))
+            if (!Utilities.IsValid(Networking.LocalPlayer) || !Networking.LocalPlayer.IsValid() || !Utilities.IsValid(playerManager) || !Utilities.IsValid(playerManager.Owner) || !Utilities.IsValid(playerManager.Owner.displayName) || !Utilities.IsValid(playerLabel))
                 return;
 
             IsMyLabel = playerManager.Owner == Networking.LocalPlayer;
 
-            CurrentLabel = IsMyLabel ? localPlayerLabel : remotePlayerLabel;
-
-            CurrentLabel.text = playerManager.Owner.displayName;
-
-            localPlayerLabel.enabled = IsMyLabel;
-            remotePlayerLabel.enabled = !localPlayerLabel.enabled;
+            if (playerLabel.text != playerManager.Owner.displayName)
+                playerLabel.text = playerManager.Owner.displayName;
         }
 
         public void CheckVisibility()

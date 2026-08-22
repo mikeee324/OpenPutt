@@ -1,46 +1,10 @@
 ﻿using UnityEngine;
 
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
 namespace dev.mikeee324.OpenPutt
 {
     public static class OpenPuttGizmoUtils
     {
-#if COMPILER_UDONSHARP
-        public static void DrawWireCollider(Collider collider)
-        {
-        }
-
-        public static void DrawWireCollider(GameObject gameObject)
-        {
-        }
-
-        public static void DrawWireBoxCollider(BoxCollider boxCollider)
-        {
-        }
-
-        public static void DrawWireSphereCollider(SphereCollider sphereCollider)
-        {
-        }
-
-        public static void DrawWireCapsuleCollider(CapsuleCollider capsuleCollider)
-        {
-        }
-
-        public static void DrawWireMeshCollider(MeshCollider meshCollider)
-        {
-        }
-
-        public static void DrawSolidAndWireBoxCollider(BoxCollider boxCollider, Color solidColor, Color wireColor)
-        {
-        }
-
-        public static void DrawSphereMarker(Vector3 position, float radius, Color color)
-        {
-        }
-
-        public static void DrawCubeArrow(Vector3 directionStart, Vector3 directionEnd, Color color, float thickness)
-        {
-        }
-#else
         public static void DrawWireCollider(Collider collider)
         {
             if (collider == null) return;
@@ -211,6 +175,6 @@ namespace dev.mikeee324.OpenPutt
             Gizmos.DrawCube(Vector3.zero, Vector3.one);
             Gizmos.matrix = previousMatrix;
         }
-#endif
     }
 }
+#endif
