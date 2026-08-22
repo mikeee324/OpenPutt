@@ -257,6 +257,22 @@ namespace dev.mikeee324.OpenPutt
                 vrUIRoot.gameObject.SetActive(false);
         }
 
+        /// <summary>
+        /// Snaps the palm UI back to hidden while this is switched off, otherwise it pops up at the hand
+        /// position it was left at for a frame when everything gets toggled back on
+        /// </summary>
+        void OnDisable()
+        {
+            if (!Utilities.IsValid(vrUIRoot)) return;
+
+            vrUIVisibilityLerp = 0f;
+            vrUIVisibilityTarget = false;
+            vrUIVisibilityDirection = 0f;
+
+            vrUIRoot.localScale = Vector3.zero;
+            vrUIRoot.gameObject.SetActive(false);
+        }
+
         public override void OnAvatarEyeHeightChanged(VRCPlayerApi player, float prevEyeHeightAsMeters)
         {
             if (!Utilities.IsValid(player) || !player.isLocal || !isInVR || !Utilities.IsValid(vrUIRoot))
