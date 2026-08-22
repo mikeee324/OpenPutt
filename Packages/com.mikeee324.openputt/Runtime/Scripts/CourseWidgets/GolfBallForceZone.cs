@@ -220,7 +220,7 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-#if UNITY_EDITOR
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (forceAreaCollider == null) return;

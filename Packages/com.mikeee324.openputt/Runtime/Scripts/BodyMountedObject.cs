@@ -394,10 +394,12 @@ namespace dev.mikeee324.OpenPutt
             pickup.Drop();
         }
 
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
         private void OnDrawGizmos()
         {
             Gizmos.color = Color.white;
             Gizmos.DrawWireSphere(transform.position, pickup.proximity);
         }
+#endif
     }
 }

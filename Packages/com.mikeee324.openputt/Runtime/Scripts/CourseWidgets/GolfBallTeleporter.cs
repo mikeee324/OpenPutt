@@ -132,6 +132,7 @@ namespace dev.mikeee324.OpenPutt
         }
 
 
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
         private void OnDrawGizmos()
         {
             if (targetPosition == null || launchPosition == null || localCollider == null) return; // Added null check for localCollider
@@ -151,5 +152,6 @@ namespace dev.mikeee324.OpenPutt
             OpenPuttGizmoUtils.DrawSphereMarker(targetPosition.position, 0.0225f, Color.yellow);
             OpenPuttGizmoUtils.DrawSphereMarker(launchPosition.position, 0.0225f, Color.gray);
         }
+#endif
     }
 }

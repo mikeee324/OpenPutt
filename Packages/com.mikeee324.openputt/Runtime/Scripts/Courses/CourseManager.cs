@@ -230,6 +230,7 @@ namespace dev.mikeee324.OpenPutt
                 openPutt.eventHandler.OnPlayerStartCourse(NetworkCalling.CallingPlayer, this);
         }
 
+#if !COMPILER_UDONSHARP && UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             if (!alwaysDisplayGizmos)
@@ -262,10 +263,15 @@ namespace dev.mikeee324.OpenPutt
                 {
                     if (!Utilities.IsValid(hole)) continue;
 
-                    if (hole.GetComponent<Collider>() != null && !hole.GetComponent<Collider>().enabled)
+                    var holeCollider = hole.GetComponent<Collider>();
+                    if (holeCollider != null && !holeCollider.enabled)
                         continue;
 
-                    OpenPuttGizmoUtils.DrawWireCollider(hole);
+                    var holeBox = holeCollider as BoxCollider;
+                    if (holeBox != null)
+                        OpenPuttGizmoUtils.DrawSolidAndWireBoxCollider(holeBox, new Color(1f, 0f, 0f, 0.3f), Color.red);
+                    else
+                        OpenPuttGizmoUtils.DrawWireCollider(holeCollider);
                 }
             }
 
@@ -282,7 +288,6 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-#if !COMPILER_UDONSHARP && UNITY_EDITOR
         // Migrates the old GameObject[] floorObjects list to the new Collider[] floorColliders list
         private void OnValidate()
         {
