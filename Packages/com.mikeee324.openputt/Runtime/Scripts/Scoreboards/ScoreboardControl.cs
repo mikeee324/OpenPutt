@@ -60,6 +60,7 @@ namespace dev.mikeee324.OpenPutt
         SpectatorMode = 210,
         ShoulderPickupRenderer = 211,
         BallSnapDebug = 212,
+        DebugLogging = 213,
 
         // int (Dropdown)
         // VelocityTracking = 300,
@@ -340,6 +341,7 @@ namespace dev.mikeee324.OpenPutt
                 case SettingId.ClubRenderer: return Player.golfClubVisualiser.gameObject.activeSelf;
                 case SettingId.BallGrounded: return Player.golfBall.ballGroundedDebug;
                 case SettingId.BallSnapDebug: return Player.golfBall.ballSnapDebug;
+                case SettingId.DebugLogging: return OpenPutt.debugMode;
                 case SettingId.SpectatorMode: return !Player.IsPlaying;
                 case SettingId.ShoulderPickupRenderer: return Utilities.IsValid(OpenPutt.leftShoulderPickup) && OpenPutt.leftShoulderPickup.MeshRendererEnabled;
             }
@@ -372,6 +374,8 @@ namespace dev.mikeee324.OpenPutt
                     Player.golfBall.ballSnapDebug = v;
                     if (v) Player.golfBall.ballGroundedDebug = false;
                     break;
+                // Local only - each player decides how much log spam they want
+                case SettingId.DebugLogging: OpenPutt.debugMode = v; break;
                 case SettingId.SpectatorMode: Player.IsPlaying = !v; break;
                 case SettingId.ShoulderPickupRenderer:
                     if (Utilities.IsValid(OpenPutt.leftShoulderPickup)) OpenPutt.leftShoulderPickup.MeshRendererEnabled = v;
