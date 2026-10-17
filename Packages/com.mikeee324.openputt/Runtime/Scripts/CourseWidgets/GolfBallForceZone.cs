@@ -29,9 +29,9 @@ namespace dev.mikeee324.OpenPutt
         CenterPush,
         
         /// <summary>
-        /// Adjusts ball gravity to always go towards a particular capsule collider
+        /// Pulls the ball towards the nearest point on floorCollider (box, sphere, capsule or convex mesh)
         /// </summary>
-        CapsuleGravity,
+        ColliderGravity = 4,
 
         /// <summary>
         /// Sets gravity once as the ball passes through and leaves it that way until something else changes it.
@@ -81,7 +81,7 @@ namespace dev.mikeee324.OpenPutt
         [FormerlySerializedAs("mainCollider"), Tooltip("Collider that defines the area this effect happens")]
         public Collider forceAreaCollider;
         
-        [Tooltip("Certain force types need a reference to the floor collider to work properly. This is only required for CapsuleGravity force types.")]
+        [Tooltip("ColliderGravity pulls the ball towards the nearest point on this collider (box, sphere, capsule or convex mesh). Unused by other types.")]
         public Collider floorCollider;
 
         private GolfBallController golfBall;
@@ -126,10 +126,10 @@ namespace dev.mikeee324.OpenPutt
 
                     golfBall._OnBallEnterGravityZone();
                     break;
-                case GolfBalLForceZoneType.CapsuleGravity:
-                    if (forceAreaCollider.GetType() == typeof(CapsuleCollider))
+                case GolfBalLForceZoneType.ColliderGravity:
+                    if (Utilities.IsValid(floorCollider))
                     {
-                        golfBall.gravityDirection = ((CapsuleCollider)floorCollider).ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
+                        golfBall.gravityDirection = floorCollider.ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
                         golfBall.gravityMagnitude = forceMagnitude;
                     }
 
@@ -167,7 +167,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 case GolfBalLForceZoneType.Gravity:
                 case GolfBalLForceZoneType.CenterPull:
-                case GolfBalLForceZoneType.CapsuleGravity:
+                case GolfBalLForceZoneType.ColliderGravity:
                     golfBall._OnBallExitGravityZone();
                     break;
             }
@@ -210,10 +210,10 @@ namespace dev.mikeee324.OpenPutt
                 case GolfBalLForceZoneType.CenterPush:
                     golfBall._AddExternalForce((golfBall.transform.position - transform.position).normalized * forceMagnitude, ForceMode.Acceleration);
                     break;
-                case GolfBalLForceZoneType.CapsuleGravity:
-                    if (forceAreaCollider.GetType() == typeof(CapsuleCollider))
+                case GolfBalLForceZoneType.ColliderGravity:
+                    if (Utilities.IsValid(floorCollider))
                     {
-                        golfBall.gravityDirection = ((CapsuleCollider)floorCollider).ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
+                        golfBall.gravityDirection = floorCollider.ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
                         golfBall.gravityMagnitude = forceMagnitude;
                     }
                     break;
@@ -364,8 +364,10 @@ namespace dev.mikeee324.OpenPutt
                         var arrowDirectionLocal = Vector3.forward;
                         if (forceType == GolfBalLForceZoneType.CenterPull)
                             arrowDirectionLocal = (localCenter - arrowBaseLocal).normalized;
-                        else if (forceType == GolfBalLForceZoneType.CapsuleGravity)
-                            arrowDirectionLocal = (localCenter - arrowBaseLocal).normalized;
+                        else if (forceType == GolfBalLForceZoneType.ColliderGravity)
+                            arrowDirectionLocal = Utilities.IsValid(floorCollider)
+                                ? (transform.InverseTransformPoint(floorCollider.ClosestPoint(transform.TransformPoint(arrowBaseLocal))) - arrowBaseLocal).normalized
+                                : (localCenter - arrowBaseLocal).normalized;
                         else if (forceType == GolfBalLForceZoneType.CenterPush)
                             arrowDirectionLocal = (arrowBaseLocal - localCenter).normalized;
 
