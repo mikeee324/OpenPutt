@@ -798,10 +798,10 @@ namespace dev.mikeee324.OpenPutt
             _UpdateRollingSound();
             _UpdateTrailRendererWidth();
 
-            // Tell PuttSync to sync position if it's attached
+            // Keep PuttSync watching while the ball is live - it only sends when remotes would drift
             var sendFastPositionSync = currentOwnerHideOverride > 0 || BallIsMoving || (Utilities.IsValid(startLine) && startLine.gameObject.activeSelf);
             if (Utilities.IsValid(openPuttSync) && sendFastPositionSync)
-                openPuttSync._RequestFastSync(forceSync: true);
+                openPuttSync._RequestFastSync();
         }
 
         public void _OnBallDroppedOnPad(CourseManager courseThatIsBeingStarted, CourseStartPosition position)
@@ -1139,10 +1139,17 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        public void _SetPosition(Vector3 worldPos)
+        /// <param name="teleport">Tells remotes to snap instead of smoothing across the jump - pass false for per-frame animated moves</param>
+        public void _SetPosition(Vector3 worldPos, bool teleport = true)
         {
             ballRigidbody.position = worldPos;
             lastFramePosition = worldPos;
+
+            if (!teleport || !Utilities.IsValid(openPuttSync)) return;
+
+            // Transform too, so the flagged packet can't go out before physics has moved it
+            transform.position = worldPos;
+            openPuttSync._FlagDiscontinuity();
         }
 
         public void _SetRespawnPosition(Vector3 pos)
@@ -1952,6 +1959,7 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.isKinematic = !BallIsMoving;
                     ballRigidbody.detectCollisions = true;
                     ballRigidbody.drag = 0.05f;
+                    ballRigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
                     _ApplyRotationMode();
 
@@ -2001,6 +2009,8 @@ namespace dev.mikeee324.OpenPutt
                     ballRigidbody.useGravity = false;
                     ballRigidbody.isKinematic = true;
                     ballRigidbody.detectCollisions = false;
+                    // OpenPuttSync moves remote copies directly, so interpolation would only lag reads of the transform
+                    ballRigidbody.interpolation = RigidbodyInterpolation.None;
                     ballRigidbody.Sleep();
                 }
 
