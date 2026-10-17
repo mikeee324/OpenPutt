@@ -104,10 +104,6 @@ namespace dev.mikeee324.OpenPutt
         public float backspinMultiplier = 1.0f;
 
         [OpenPuttFoldoutGroup("Settings")]
-        [Range(0f, 1f), Tooltip("Fraction of the club's loft used as the ball's launch angle (lower flattens lofted trajectories)")]
-        public float loftLaunchAngleMultiplier = 0.5f;
-
-        [OpenPuttFoldoutGroup("Settings")]
         [Tooltip("Scales the effective launch loft (and backspin) down as clubhead speed rises. Leave empty to use the built-in default curve.")]
         public AnimationCurve loftSpeedFalloff;
 
@@ -129,7 +125,7 @@ namespace dev.mikeee324.OpenPutt
         private Vector3[] lastPositions = new Vector3[16];
 
         /// <summary>
-        /// Tracks the rotation of the club head alongside lastPositions.<br/>
+        /// Tracks the rotation of the club head alongside lastPositions (with referenceClubHeadColliderRotationOffset applied).<br/>
         /// MUST be the same length as lastPositions
         /// </summary>
         private Quaternion[] lastPositionRotations = new Quaternion[16];
@@ -237,6 +233,16 @@ namespace dev.mikeee324.OpenPutt
 
         void Start()
         {
+            Initialize();
+
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Fills in missing references and default curves. Safe to call before Start has run.
+        /// </summary>
+        private void Initialize()
+        {
             LastKnownHitType = string.Empty;
 
             if (!Utilities.IsValid(golfClubHeadCollider))
@@ -251,8 +257,6 @@ namespace dev.mikeee324.OpenPutt
             InitCurves();
 
             _initialized = true;
-
-            gameObject.SetActive(false);
         }
 
         /// <summary>
@@ -435,10 +439,10 @@ namespace dev.mikeee324.OpenPutt
                 // Perform a sweep test to see if we'll be hitting the ball in the next frame.
                 // Gated on the smoothed velocity so a single noisy tracking frame during a slow putt
                 // can't drop us under the threshold and skip the tunneling check.
-                if (FrameVelocitySmoothed.sqrMagnitude > MIN_SWEEP_SPEED * MIN_SWEEP_SPEED && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.deltaTime))
+                if (FrameVelocitySmoothed.sqrMagnitude > MIN_SWEEP_SPEED * MIN_SWEEP_SPEED && myRigidbody.SweepTest(sweepDir.normalized, out var hit, sweepDir.magnitude * Time.fixedDeltaTime))
                 {
-                    // We only care if this collided with the local players ball
-                    if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject)
+                    // We only care if this collided with the local players ball, and only if it's ahead of the swing (stops backswings hitting it)
+                    if (Utilities.IsValid(hit.collider) && hit.collider.gameObject == golfBall.gameObject && Vector3.Dot(golfBall.transform.position - myRigidbody.position, newVel) > 0f)
                     {
                         LastKnownHitType = "(B-Sweep)";
                         lastHitWorldPos = playerManager.golfClubHead.transform.position;
@@ -477,7 +481,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Store current position in the buffer at the current index
             lastPositions[bufferIndex] = currentPos;
-            lastPositionRotations[bufferIndex] = currentRot;
+            lastPositionRotations[bufferIndex] = currentRot * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
 
             // Move to next position in circular buffer
             bufferIndex = (bufferIndex + 1) % lastPositions.Length;
@@ -629,7 +633,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             if (!_initialized)
-                Start();
+                Initialize();
 
             var hasGravity = golfBall.gravityMagnitude > .01f;
             var currentCourse = playerManager.CurrentCourse;
@@ -657,17 +661,11 @@ namespace dev.mikeee324.OpenPutt
             var hand = usingLatchedHit ? hitHand : (golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? VRCPlayerApi.TrackingDataType.LeftHand : VRCPlayerApi.TrackingDataType.RightHand);
             var clubHeadOffset = usingLatchedHit ? hitClubHeadOffset : playerManager.openPutt.controllerTracker.CalculateLocalOffsetFromWorldPosition(hand, golfClubHeadCollider.transform.TransformPoint(golfClubHeadCollider.center));
             var clubHeadVelocity = playerManager.openPutt.controllerTracker.GetVelocityAtOffset(hand, clubHeadOffset);
-            var directionOfTravel = clubHeadVelocity;
+            var directionOfTravel = usingLatchedHit ? clubHeadVelocity : overrideHitVelocity;
 
             // Direction comes from the current window (post-wait, which is what makes tiny hits aim
             // properly) but the speed comes from the swing's peak, so waiting never costs power
-            var velocityMagnitude = usingLatchedHit ? Mathf.Max(clubHeadVelocity.magnitude, peakSwingSpeed) : clubHeadVelocity.magnitude;
-
-            if (overrideHitVelocity.sqrMagnitude > 0f)
-            {
-                directionOfTravel = overrideHitVelocity.normalized;
-                velocityMagnitude = overrideHitVelocity.magnitude;
-            }
+            var velocityMagnitude = usingLatchedHit ? Mathf.Max(clubHeadVelocity.magnitude, peakSwingSpeed) : overrideHitVelocity.magnitude;
 
             var sideSpin = Vector3.zero;
 
@@ -688,27 +686,17 @@ namespace dev.mikeee324.OpenPutt
 
             // Capture the horizontal travel direction, used for face angle/spin calculations below.
             // Computed independently of the flatten skip above - faceDirection is always horizontal, so this must be too or the dot products below go wrong for midair hits.
-            var flatDirectionOfTravel = (hasGravity ? directionOfTravel.FlattenDirection(gravityUp) : directionOfTravel).normalized.Sanitized();
+            var flatDirectionOfTravel = (hasGravity ? directionOfTravel.FlattenDirection(gravityUp) : directionOfTravel.normalized).Sanitized();
 
             // Dynamic loft: flattens launch loft/backspin as clubhead speed rises (driving range only)
             var loftFalloff = currentCourseIsDrivingRange ? loftSpeedFalloff.Evaluate(velocityMagnitude) : 1f;
 
-            if (hasGravity && !isMidairHit)
-            {
-                // Apply loft
-                var rotationAxis = Vector3.Cross(directionOfTravel, gravityUp);
-                if (rotationAxis.sqrMagnitude == 0)
-                    rotationAxis = Vector3.Cross(gravityUp, Vector3.Cross(Vector3.forward, gravityUp).normalized).normalized;
+            var shouldApplyLoft = hasGravity && !isMidairHit;
+            var launchLoft = golfClub.ClubType.GetTypicalLaunchAngle() * loftFalloff;
 
-                // Launch below the club's actual loft, so lofted clubs don't fire almost straight up
-                var loftRotation = Quaternion.AngleAxis(golfClub.ClubType.GetTypicalLoft() * loftLaunchAngleMultiplier * loftFalloff, rotationAxis);
-                directionOfTravel = loftRotation * directionOfTravel;
-            }
-
-            // Normalize the direction vector now it's had loft applied and was initially flattened
             directionOfTravel = directionOfTravel.normalized.Sanitized();
 
-            var rawDirectionOfTravel = directionOfTravel;
+            var rawDirectionOfTravel = shouldApplyLoft ? ApplyLoft(directionOfTravel, gravityUp, launchLoft) : directionOfTravel;
             var faceAngleDiffToDirection = 1f;
             LastKnownHitDirBias = 0;
 
@@ -716,26 +704,11 @@ namespace dev.mikeee324.OpenPutt
             {
                 // Work out which way the club head is facing (And correct if player is holding it backwards)
                 var faceDirection = Vector3.zero;
-                switch (golfClub.CurrentHand)
+                if (golfClub.CurrentHand != VRC_Pickup.PickupHand.None)
                 {
-                    case VRC_Pickup.PickupHand.Left:
-                        {
-                            // Flatten the club's right vector relative to gravity
-                            if (hasGravity)
-                                faceDirection = putterTarget.transform.right.FlattenDirection(gravityUp).normalized;
-                            else
-                                faceDirection = putterTarget.transform.right.normalized;
-                            break;
-                        }
-                    case VRC_Pickup.PickupHand.Right:
-                        {
-                            // Flatten the club's *negative* right vector relative to gravity
-                            if (hasGravity)
-                                faceDirection = (-putterTarget.transform.right).FlattenDirection(gravityUp).normalized;
-                            else
-                                faceDirection = (-putterTarget.transform.right).normalized;
-                            break;
-                        }
+                    // The face points along the club's right vector in the left hand, and its negative in the right hand
+                    faceDirection = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? putterTarget.transform.right : -putterTarget.transform.right;
+                    faceDirection = hasGravity ? faceDirection.FlattenDirection(gravityUp) : faceDirection.normalized;
                 }
 
                 if (overrideClubDirection.sqrMagnitude > 0f)
@@ -771,7 +744,7 @@ namespace dev.mikeee324.OpenPutt
                     if (hasGravity && golfClub.ClubType != GolfClubType.Putter)
                     {
                         // Determine the 'horizontal' swing path direction relative to gravity
-                        var swingPathHorizontalDirection = golfBall.gravityMagnitude < .01f ? clubHeadVelocity : clubHeadVelocity.FlattenDirection(gravityUp).normalized.Sanitized();
+                        var swingPathHorizontalDirection = clubHeadVelocity.FlattenDirection(gravityUp).Sanitized();
 
                         // More angle difference => Faster side spin
                         var rawSpinMagnitude = sideSpinMagnitudeCurve.Evaluate(faceAngleDiffToDirection);
@@ -791,6 +764,10 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
             }
+
+            // Loft goes on after the face bias - the face direction is flat, so biasing a lofted direction towards it flattens the launch
+            if (shouldApplyLoft)
+                directionOfTravel = ApplyLoft(directionOfTravel, gravityUp, launchLoft);
 
             // Scale the velocity back up a bit
             velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);
@@ -842,6 +819,18 @@ namespace dev.mikeee324.OpenPutt
             golfBall._OnBallHit(velocity, sideSpin);
         }
 
+        /// <summary>
+        /// Tilts a direction upwards (away from gravity) by the given loft angle in degrees.
+        /// </summary>
+        private Vector3 ApplyLoft(Vector3 direction, Vector3 gravityUp, float loftDegrees)
+        {
+            var rotationAxis = Vector3.Cross(direction, gravityUp);
+            if (rotationAxis.sqrMagnitude == 0)
+                rotationAxis = Vector3.Cross(gravityUp, Vector3.Cross(Vector3.forward, gravityUp).normalized).normalized;
+
+            return (Quaternion.AngleAxis(loftDegrees, rotationAxis) * direction).normalized.Sanitized();
+        }
+
         private void MoveToClubWithoutVelocity()
         {
             if (!Utilities.IsValid(myRigidbody))
@@ -849,8 +838,10 @@ namespace dev.mikeee324.OpenPutt
 
             var target = CurrentTarget;
 
+            var targetRotation = target.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
+
             myRigidbody.position = target.position;
-            myRigidbody.rotation = target.rotation * Quaternion.Euler(referenceClubHeadColliderRotationOffset);
+            myRigidbody.rotation = targetRotation;
 
             if (!myRigidbody.isKinematic)
             {
@@ -863,7 +854,7 @@ namespace dev.mikeee324.OpenPutt
             for (var i = 0; i < lastPositions.Length; i++)
             {
                 lastPositions[i] = target.position;
-                lastPositionRotations[i] = target.rotation;
+                lastPositionRotations[i] = targetRotation;
             }
 
             // Reset stored velocities
