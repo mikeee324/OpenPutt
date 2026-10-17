@@ -467,6 +467,37 @@ namespace dev.mikeee324.OpenPutt
         }
 
         /// <summary>
+        /// Gets the typical launch angle in degrees for a club type (lower than loft for irons, around loft for the driver)
+        /// </summary>
+        /// <param name="clubType">The golf club type</param>
+        /// <returns>The typical launch angle in degrees</returns>
+        public static float GetTypicalLaunchAngle(this GolfClubType clubType)
+        {
+            switch (clubType)
+            {
+                case GolfClubType.Driver: return 12.0f; // Hit on the upswing, so launches around its loft
+                case GolfClubType.Wood3: return 11.0f;
+                case GolfClubType.Wood5: return 12.5f;
+                case GolfClubType.Iron4: return 13.0f;
+                case GolfClubType.Iron5: return 15.0f;
+                case GolfClubType.Iron6: return 16.5f;
+                case GolfClubType.Iron7: return 18.5f;
+                case GolfClubType.Iron8: return 20.5f;
+                case GolfClubType.Iron9: return 23.0f;
+
+                case GolfClubType.PitchingWedge: return 25.0f;
+                case GolfClubType.GapWedge: return 27.5f;
+                case GolfClubType.SandWedge: return 31.0f;
+                case GolfClubType.LobWedge: return 33.0f;
+
+                case GolfClubType.Hybrid: return 13.0f;
+
+                case GolfClubType.Putter: return 1.0f; // Just enough to get the ball rolling without hopping
+                default: return 0.0f;
+            }
+        }
+
+        /// <summary>
         /// Gets the typical maximum hit speed (m/s) for a club type.
         /// These values are gameplay-tuned and can be adjusted later or
         /// exposed as per-club overrides in `GolfClub`.
