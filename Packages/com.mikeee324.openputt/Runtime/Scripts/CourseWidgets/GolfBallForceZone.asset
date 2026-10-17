@@ -766,8 +766,8 @@ MonoBehaviour:
       Data: 46|UnityEngine.TooltipAttribute, UnityEngine.CoreModule
     - Name: tooltip
       Entry: 1
-      Data: Certain force types need a reference to the floor collider to work properly.
-        This is only required for CapsuleGravity force types.
+      Data: ColliderGravity pulls the ball towards the nearest point on this collider
+        (box, sphere, capsule or convex mesh). Unused by other types.
     - Name: 
       Entry: 8
       Data: 
