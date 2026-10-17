@@ -93899,19 +93899,18 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 8547244689527738197}
-  rotationTorque: {x: 0, y: 0, z: 5}
-  rigidBodymass: 5
-  maxRotationSpeed: 5
-  rigidbodyTargetCollisionMode: 2
-  layersToIgnore:
-    serializedVersion: 2
-    m_Bits: 4186111
-  myColliders:
-  - {fileID: 6772469591066669352}
+  spinAxis: 2
+  reverseDirection: 0
+  spinSpeedRpm: 47.746483
+  startAngle: 0
+  syncToServerTime: 1
   collidersToIgnore:
   - {fileID: 2793395816683661708}
   - {fileID: 8283635887721995822}
-  lockRotationUsing: 1
+  rigidBodymass: 5
+  rigidbodyTargetCollisionMode: 2
+  rotationTorque: {x: 0, y: 0, z: 0}
+  maxRotationSpeed: 0
 --- !u!114 &8547244689527738197
 MonoBehaviour:
   m_ObjectHideFlags: 0
