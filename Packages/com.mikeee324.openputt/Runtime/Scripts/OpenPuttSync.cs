@@ -4,6 +4,7 @@ using VRC.SDK3.Components;
 using VRC.SDK3.UdonNetworkCalling;
 using VRC.SDKBase;
 using VRC.Udon.Common;
+using VRC.Udon.Common.Interfaces;
 
 namespace dev.mikeee324.OpenPutt
 {
@@ -103,6 +104,11 @@ namespace dev.mikeee324.OpenPutt
         private const float DelayMargin = 0.02f;
         private const float HeldOffsetSharpness = 15f;
         private const int BufferSize = 8;
+        private const int TeleportMask = 31;
+        private const int AirborneBit = 128;
+        private const float GravityTolerance = 0.25f;
+        private const float GravitySendInterval = 0.25f;
+        private const float MaxGravity = 1000f;
 
         #endregion
 
@@ -133,7 +139,7 @@ namespace dev.mikeee324.OpenPutt
         private uint syncAngularVelocity;
 
         /// <summary>
-        /// Bits 0-1 hold hand, bits 2-7 teleport counter
+        /// Bits 0-1 hold hand, bits 2-6 teleport counter, bit 7 airborne
         /// </summary>
         [UdonSynced]
         private byte syncFlags;
@@ -154,6 +160,10 @@ namespace dev.mikeee324.OpenPutt
         // Shared by owner and remotes
         private int holdHand = NoHand;
         private int teleportCounter;
+
+        // Custom gravity as remotes know it, sent by event only when it changes
+        private bool customGravityActive;
+        private Vector3 customGravity;
 
         // Owner state
         private bool ownerLoopRunning;
@@ -176,6 +186,14 @@ namespace dev.mikeee324.OpenPutt
         private bool spinTracking;
         private Quaternion lastSpinRotation = Quaternion.identity;
         private Vector3 measuredSpin;
+        private bool lastSentAirborne;
+        private float lastContactTime = -1f;
+        private bool scriptGrounding;
+        private bool scriptGrounded;
+        private bool wantCustomGravity;
+        private Vector3 wantedGravity;
+        private bool gravitySendQueued;
+        private float lastGravitySendTime = -1f;
 
         // Remote state
         private bool hasReceived;
@@ -193,6 +211,7 @@ namespace dev.mikeee324.OpenPutt
         private Quaternion[] bufferRotation = new Quaternion[BufferSize];
         private Vector3[] bufferVelocity = new Vector3[BufferSize];
         private Vector3[] bufferAngularVelocity = new Vector3[BufferSize];
+        private bool[] bufferAirborne = new bool[BufferSize];
 
         private Vector3 heldOffsetPosition;
         private Quaternion heldOffsetRotation = Quaternion.identity;
@@ -270,8 +289,15 @@ namespace dev.mikeee324.OpenPutt
         private void OnCollisionEnter(Collision collision)
         {
             // Wakes the owner loop when something knocks a resting object
+            lastContactTime = Time.fixedTime;
+
             if (RigidbodyIsDynamic() && this.LocalPlayerOwnsThisObject())
                 _RequestFastSync();
+        }
+
+        private void OnCollisionStay(Collision collision)
+        {
+            lastContactTime = Time.fixedTime;
         }
 
         public override void PostLateUpdate()
@@ -355,7 +381,8 @@ namespace dev.mikeee324.OpenPutt
 
             var flags = (int)syncFlags;
             var newHand = flags & 3;
-            var newTeleport = flags >> 2;
+            var newTeleport = (flags >> 2) & TeleportMask;
+            var airborne = (flags & AirborneBit) != 0;
             var snap = !hasReceived || newTeleport != teleportCounter;
             var handChanged = newHand != holdHand;
             var released = handChanged && newHand == NoHand && hasReceived;
@@ -418,11 +445,11 @@ namespace dev.mikeee324.OpenPutt
                 }
             }
 
-            // Ease out of the hand instead of popping to the drop point
+            // Leave the hand already at throw speed instead of popping to the drop point
             if (released)
-                AddSnapshot(now - interpolationDelay, transform.localPosition, transform.localRotation, Vector3.zero, Vector3.zero);
+                AddSnapshot(now - interpolationDelay, transform.localPosition, transform.localRotation, velocity, angularVelocity, false);
 
-            AddSnapshot(sendTime, targetPosition, targetRotation, velocity, angularVelocity);
+            AddSnapshot(sendTime, targetPosition, targetRotation, velocity, angularVelocity, airborne);
         }
 
         public override void OnOwnershipTransferred(VRCPlayerApi player)
@@ -445,8 +472,13 @@ namespace dev.mikeee324.OpenPutt
                     }
                 }
 
+                // Reset together or UpdateHoldHand never notices the hand is empty
                 holdHand = NoHand;
+                ownerHolding = false;
                 bufferCount = 0;
+                wantCustomGravity = customGravityActive;
+                wantedGravity = customGravity;
+                lastSentAirborne = false;
                 lastSentPosition = transform.localPosition;
                 lastSentRotation = transform.localRotation;
                 lastSentVelocity = Vector3.zero;
@@ -468,6 +500,10 @@ namespace dev.mikeee324.OpenPutt
         public override void OnPlayerJoined(VRCPlayerApi player)
         {
             UpdateFastSyncInterval();
+
+            // Late joiners missed the gravity event
+            if (customGravityActive && this.LocalPlayerOwnsThisObject())
+                SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(SetRemoteGravity), true, customGravity);
         }
 
         public override void OnPlayerLeft(VRCPlayerApi player)
@@ -548,7 +584,7 @@ namespace dev.mikeee324.OpenPutt
             if (!this.LocalPlayerOwnsThisObject())
                 return;
 
-            teleportCounter = (teleportCounter + 1) & 63;
+            teleportCounter = (teleportCounter + 1) & TeleportMask;
             pendingTeleport = true;
             _RequestFastSync(forceSync: true);
         }
@@ -600,6 +636,46 @@ namespace dev.mikeee324.OpenPutt
             if (this.LocalPlayerOwnsThisObject()) return;
             if (Utilities.IsValid(pickup))
                 pickup.Drop();
+        }
+
+        /// <summary>
+        /// World-space gravity for scripts that apply their own instead of Rigidbody.useGravity (owner only)
+        /// </summary>
+        public void _SetGravity(Vector3 gravity)
+        {
+            wantCustomGravity = true;
+            wantedGravity = gravity;
+            QueueGravitySend();
+        }
+
+        /// <summary>
+        /// Goes back to Physics.gravity when Rigidbody.useGravity is on, otherwise none (owner only)
+        /// </summary>
+        public void _ClearGravity()
+        {
+            wantCustomGravity = false;
+            QueueGravitySend();
+        }
+
+        /// <summary>
+        /// Lets a script that knows when it's on the ground replace the collision contact check
+        /// </summary>
+        public void _SetGrounded(bool grounded)
+        {
+            scriptGrounding = true;
+            scriptGrounded = grounded;
+        }
+
+        [NetworkCallable(maxEventsPerSecond: 10)]
+        public void SetRemoteGravity(bool active, Vector3 gravity)
+        {
+            if (this.LocalPlayerOwnsThisObject()) return;
+
+            // NaN fails this too
+            if (!(gravity.sqrMagnitude <= MaxGravity * MaxGravity)) return;
+
+            customGravityActive = active;
+            customGravity = active ? gravity : Vector3.zero;
         }
 
         #endregion
@@ -696,7 +772,8 @@ namespace dev.mikeee324.OpenPutt
             syncRotation = PackRotation(rotation);
             syncVelocity = PackVelocity(velocity);
             syncAngularVelocity = PackAngularVelocity(angularVelocity);
-            syncFlags = (byte)(holdHand | (teleportCounter << 2));
+            var airborne = !ownerHolding && moving && !pendingTeleport && RigidbodyIsDynamic() && IsAirborne();
+            syncFlags = (byte)(holdHand | (teleportCounter << 2) | (airborne ? AirborneBit : 0));
 
             // Track what remotes will actually see after quantising
             lastSentPosition = syncPosition;
@@ -705,6 +782,7 @@ namespace dev.mikeee324.OpenPutt
             lastSentAngularVelocity = UnpackAngularVelocity(syncAngularVelocity);
             lastSentTime = now;
             lastSentHeld = ownerHolding;
+            lastSentAirborne = airborne;
             lastSentMoving = lastSentVelocity != Vector3.zero || lastSentAngularVelocity != Vector3.zero;
             pendingTeleport = false;
         }
@@ -714,6 +792,9 @@ namespace dev.mikeee324.OpenPutt
             var elapsed = Mathf.Min(now - lastSentTime, GetMaxExtrapolation());
 
             var predictedPosition = lastSentPosition + lastSentVelocity * elapsed;
+            if (lastSentAirborne)
+                predictedPosition += GetLocalGravity() * (0.5f * elapsed * elapsed);
+
             if ((transform.localPosition - predictedPosition).sqrMagnitude > positionTolerance * positionTolerance)
                 return true;
 
@@ -802,6 +883,46 @@ namespace dev.mikeee324.OpenPutt
             measuredOffsetRotation = inverseHand * transform.rotation;
         }
 
+        private void QueueGravitySend()
+        {
+            if (!this.LocalPlayerOwnsThisObject() || gravitySendQueued || !GravityChanged())
+                return;
+
+            var wait = lastGravitySendTime + GravitySendInterval - Time.time;
+            if (wait > 0f)
+            {
+                gravitySendQueued = true;
+                SendCustomEventDelayedSeconds(nameof(_SendGravity), wait);
+                return;
+            }
+
+            _SendGravity();
+        }
+
+        public void _SendGravity()
+        {
+            gravitySendQueued = false;
+
+            if (!this.LocalPlayerOwnsThisObject() || !GravityChanged())
+                return;
+
+            // Owner predicts with what remotes have, so continuously changing gravity just falls back to more packets
+            customGravityActive = wantCustomGravity;
+            customGravity = wantCustomGravity ? wantedGravity : Vector3.zero;
+            lastGravitySendTime = Time.time;
+
+            SendCustomNetworkEvent(NetworkEventTarget.Others, nameof(SetRemoteGravity), customGravityActive, customGravity);
+            _RequestFastSync(forceSync: true);
+        }
+
+        private bool GravityChanged()
+        {
+            if (wantCustomGravity != customGravityActive)
+                return true;
+
+            return wantCustomGravity && (wantedGravity - customGravity).sqrMagnitude > GravityTolerance * GravityTolerance;
+        }
+
         private void StartReturnTimer()
         {
             returnTime = Time.time + returnAfterDropTime;
@@ -874,6 +995,8 @@ namespace dev.mikeee324.OpenPutt
                 var maxExtrapolation = GetMaxExtrapolation();
                 var elapsed = bufferCount > 1 ? 0f : Mathf.Clamp(renderTime - bufferTime[0], 0f, maxExtrapolation);
                 position = bufferPosition[0] + bufferVelocity[0] * elapsed;
+                if (bufferAirborne[0])
+                    position += GetLocalGravity() * (0.5f * elapsed * elapsed);
                 rotation = ExtrapolateRotation(bufferRotation[0], bufferAngularVelocity[0], elapsed);
 
                 var stationary = bufferVelocity[0] == Vector3.zero && bufferAngularVelocity[0] == Vector3.zero;
@@ -892,7 +1015,7 @@ namespace dev.mikeee324.OpenPutt
             }
         }
 
-        private void AddSnapshot(float time, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angularVelocity)
+        private void AddSnapshot(float time, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 angularVelocity, bool airborne)
         {
             if (bufferCount == BufferSize)
                 RemoveOldestSnapshot();
@@ -902,6 +1025,7 @@ namespace dev.mikeee324.OpenPutt
             bufferRotation[bufferCount] = rotation;
             bufferVelocity[bufferCount] = velocity;
             bufferAngularVelocity[bufferCount] = angularVelocity;
+            bufferAirborne[bufferCount] = airborne;
             bufferCount++;
         }
 
@@ -920,6 +1044,7 @@ namespace dev.mikeee324.OpenPutt
             bufferRotation[to] = bufferRotation[from];
             bufferVelocity[to] = bufferVelocity[from];
             bufferAngularVelocity[to] = bufferAngularVelocity[from];
+            bufferAirborne[to] = bufferAirborne[from];
         }
 
         private Vector3 Hermite(Vector3 p0, Vector3 m0, Vector3 p1, Vector3 m1, float u)
@@ -1006,6 +1131,26 @@ namespace dev.mikeee324.OpenPutt
         private bool RigidbodyIsDynamic()
         {
             return Utilities.IsValid(objectRB) && !objectRB.isKinematic;
+        }
+
+        /// <summary>
+        /// Gravity in the parent's space, the same on the owner and remotes
+        /// </summary>
+        private Vector3 GetLocalGravity()
+        {
+            if (customGravityActive)
+                return ToLocalVector(customGravity);
+
+            return Utilities.IsValid(objectRB) && objectRB.useGravity ? ToLocalVector(Physics.gravity) : Vector3.zero;
+        }
+
+        private bool IsAirborne()
+        {
+            if (scriptGrounding)
+                return !scriptGrounded;
+
+            // Contacts report every physics step, so two missed steps means nothing is touching
+            return Time.fixedTime - lastContactTime > Time.fixedDeltaTime * 2f;
         }
 
         private bool RigidbodyIsAwake()

@@ -1467,6 +1467,13 @@ namespace dev.mikeee324.OpenPutt
             if (gravityMagnitude > 0f)
                 ballRigidbody.AddForce(gravityDirection.normalized * scaledGravity, ForceMode.Acceleration);
 
+            // Lets remotes arc the ball between packets
+            if (Utilities.IsValid(openPuttSync))
+            {
+                openPuttSync._SetGravity(gravityMagnitude > 0f ? gravityDirection.normalized * scaledGravity : Vector3.zero);
+                openPuttSync._SetGrounded(isGrounded);
+            }
+
             if (isGrounded)
             {
                 // sharedMaterial so we don't instantiate a PhysicMaterial copy on every ground collider we touch
