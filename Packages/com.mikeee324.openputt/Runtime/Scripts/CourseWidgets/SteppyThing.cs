@@ -5,7 +5,7 @@ using VRC.SDKBase;
 
 namespace dev.mikeee324.OpenPutt
 {
-    [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
+    [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
     public class SteppyThing : UdonSharpBehaviour
     {
         [OpenPuttDescription("A set of moving stairs that continuously cycle up and down, like an escalator, carrying the ball along with them.")]
@@ -29,19 +29,32 @@ namespace dev.mikeee324.OpenPutt
         [OpenPuttFoldoutGroup("Cycle Settings")]
         public AnimationCurve stepCycleCurve;
 
-        public Collider[] collidersToIgnore;
-        private float stepCyclerTimer;
-        private float stepStopTimer;
-        public Vector3[] stepRestLocations;
-        private bool globalUpCycle = true;
+        [OpenPuttFoldoutGroup("Cycle Settings")]
+        [Range(0f, 1f), Tooltip("Where in its up/down cycle it is at the start. Give steps next to each other different values so they don't all line up")]
+        public float cycleOffset;
 
-        [UdonSynced]
-        private bool _masterUpCycleState;
+        [OpenPuttFoldoutGroup("Cycle Settings")]
+        [Tooltip("Keeps every player's steps in the same position. Off = each player's copy starts cycling when it loads")]
+        public bool syncToServerTime = true;
+
+        public Collider[] collidersToIgnore;
+        public Vector3[] stepRestLocations;
+
+        /// Clock errors bigger than this (in seconds) snap instead of being steered out
+        private const double SnapSeconds = 0.25;
+
+        /// Fraction of the clock error steered out per physics step
+        private const double ClockCorrectionRate = 0.05;
 
         private Rigidbody[] stepRBs;
+        private double cycleClock;
+        private bool clockStarted;
+        private float localStartTime;
 
         void Start()
         {
+            localStartTime = Time.time;
+
             stepRBs = new Rigidbody[steps.Length];
             stepRestLocations = new Vector3[steps.Length];
             for (var i = 0; i < steps.Length; i++)
@@ -72,20 +85,22 @@ namespace dev.mikeee324.OpenPutt
                 stepCycleCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
         }
 
-        public override void OnDeserialization()
-        {
-            globalUpCycle = _masterUpCycleState;
-            stepCyclerTimer = 0f;
-            stepStopTimer = 0f;
-        }
-
         private void FixedUpdate()
         {
-            stepCyclerTimer += Time.deltaTime;
+            UpdateCycleClock();
 
-            var cycleProgress = stepCycleCurve.Evaluate(stepCyclerTimer / stepCycleTime);
+            // One full period is an up move + pause, then a down move + pause
+            var halfPeriod = (double)stepCycleTime + stepStopTime;
+            var period = halfPeriod * 2.0;
+            var phase = (cycleClock + cycleOffset * period) % period;
+            if (phase < 0)
+                phase += period;
 
-            var localStepCycle = globalUpCycle;
+            var upCycle = phase < halfPeriod;
+            var timeInHalf = upCycle ? phase : phase - halfPeriod;
+            var cycleProgress = stepCycleCurve.Evaluate(Mathf.Clamp01((float)(timeInHalf / stepCycleTime)));
+
+            var localStepCycle = upCycle;
 
             for (var i = 0; i < steps.Length; i++)
             {
@@ -119,25 +134,30 @@ namespace dev.mikeee324.OpenPutt
 
                 localStepCycle = !localStepCycle;
             }
+        }
 
-            if (stepCyclerTimer > stepCycleTime)
+        /// <summary>
+        /// Advances the cycle clock by the physics step and steers it towards server time, so the steps move smoothly but stay in time with every player
+        /// </summary>
+        private void UpdateCycleClock()
+        {
+            var target = syncToServerTime ? Networking.GetServerTimeInMilliseconds() / 1000.0 : (double)(Time.time - localStartTime);
+
+            if (!clockStarted)
             {
-                stepStopTimer += Time.deltaTime;
-                if (stepStopTimer > stepStopTime)
-                {
-                    stepCyclerTimer = 0;
-                    stepStopTimer = 0;
-                    globalUpCycle = !globalUpCycle;
-
-                    if (OpenPuttUtils.LocalPlayerIsValid() && Networking.LocalPlayer.IsOwner(gameObject))
-                    {
-                        _masterUpCycleState = globalUpCycle;
-#if !OPENPUTT_DEMO_MODE
-                        RequestSerialization();
-#endif
-                    }
-                }
+                cycleClock = target;
+                clockStarted = true;
+                return;
             }
+
+            cycleClock += Time.fixedDeltaTime;
+
+            // Server time only ticks per frame, so it is eased in rather than followed directly
+            var error = target - cycleClock;
+            if (error > SnapSeconds || error < -SnapSeconds)
+                cycleClock = target;
+            else
+                cycleClock += error * ClockCorrectionRate;
         }
     }
 }
