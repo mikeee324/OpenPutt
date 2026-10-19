@@ -1348,9 +1348,9 @@ namespace dev.mikeee324.OpenPutt
         /// </summary>
         private ulong PackVelocity(Vector3 v)
         {
-            return (ulong)Quantize(v.x, MaxVelocity, VelocitySteps)
-                   | ((ulong)Quantize(v.y, MaxVelocity, VelocitySteps) << 21)
-                   | ((ulong)Quantize(v.z, MaxVelocity, VelocitySteps) << 42);
+            return (ulong)(uint)Quantize(v.x, MaxVelocity, VelocitySteps)
+                   | ((ulong)(uint)Quantize(v.y, MaxVelocity, VelocitySteps) << 21)
+                   | ((ulong)(uint)Quantize(v.z, MaxVelocity, VelocitySteps) << 42);
         }
 
         private Vector3 UnpackVelocity(ulong packed)

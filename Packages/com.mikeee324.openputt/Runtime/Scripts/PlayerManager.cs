@@ -228,6 +228,11 @@ namespace dev.mikeee324.OpenPutt
         [HideInInspector]
         public int hitsOnCurrentCourse = 0;
 
+        /// <summary>
+        /// Course the player hit the max score on, waiting for the ball to stop before it ends (see OpenPutt.waitForBallToStopOnMaxScore)
+        /// </summary>
+        private CourseManager _maxScorePendingCourse;
+
         public bool IsInLeftHandedMode
         {
             get => _isInLeftHandedMode;
@@ -459,6 +464,13 @@ namespace dev.mikeee324.OpenPutt
                             // Clamp score to the max
                             courseScores[CurrentCourse.holeNumber] = CurrentCourse.maxScore;
 
+                            // Let the last shot play out - _OnBallStopped finishes the course
+                            if (Utilities.IsValid(openPutt) && openPutt.waitForBallToStopOnMaxScore)
+                            {
+                                _maxScorePendingCourse = CurrentCourse;
+                                break;
+                            }
+
                             _NotifyMaxScoreReached(CurrentCourse);
 
                             // Close the course off like a skip does so the player isn't left on it
@@ -657,6 +669,25 @@ namespace dev.mikeee324.OpenPutt
             _OnCourseFinished(course, null, CourseState.PlayedAndSkipped);
         }
 
+        /// <summary>
+        /// Called by the golf ball when it stops. Ends a course the player hit the max score on, if it was waiting for this.
+        /// </summary>
+        public void _OnBallStopped()
+        {
+            var course = _maxScorePendingCourse;
+            if (!Utilities.IsValid(course))
+                return;
+
+            _maxScorePendingCourse = null;
+
+            // Ball went in a hole, or the course was skipped, while it was rolling
+            if (CurrentCourse != course)
+                return;
+
+            _NotifyMaxScoreReached(course);
+            _OnCourseFinished(course, null, CourseState.Completed);
+        }
+
         public void _OnCourseFinished(CourseManager course, CourseHole hole, CourseState newCourseState)
         {
             // Player either isn't playing a course already or they put the ball in the wrong hole - ignore event
@@ -669,6 +700,9 @@ namespace dev.mikeee324.OpenPutt
 
             CurrentCourse = null;
 
+            var wasMaxScorePending = _maxScorePendingCourse == course;
+            _maxScorePendingCourse = null;
+
             // Club choice availability (e.g. cycle club buttons) depends on the current course, so refresh it
             if (Utilities.IsValid(openPutt.uiController))
                 openPutt.uiController.UpdateButtonStates();
@@ -676,6 +710,10 @@ namespace dev.mikeee324.OpenPutt
             // Add on any extra points to the players score that this particular hole has
             if (Utilities.IsValid(hole))
                 courseScores[course.holeNumber] += hole.holeScoreAddition;
+
+            // The max score shot went in - keep it clamped to the max
+            if (wasMaxScorePending && courseScores[course.holeNumber] > course.maxScore)
+                courseScores[course.holeNumber] = course.maxScore;
 
             if (course.courseType == CourseType.DrivingRangeDistance)
             {
@@ -864,8 +902,6 @@ namespace dev.mikeee324.OpenPutt
                     maxTimeOffCourse *= 2;
                 }
 
-                // TODO: We should probably be able to do this without a raycast by monitoring collisions on the ball instead
-                // Could count if there has been more than 10 frames of constant collision with a non course floor
                 if (ballIsOnCurrentCourse)
                 {
                     ballNotOnCourseCounter = 0;

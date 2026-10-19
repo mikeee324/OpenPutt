@@ -251,6 +251,10 @@ namespace dev.mikeee324.OpenPutt
                     if (Utilities.IsValid(handler))
                         handler.OnPlayerBallStopped(playerManager.Owner);
 
+                    // Finish a max score course before the respawn checks below, same as if it had ended on the hit
+                    if (Utilities.IsValid(playerManager))
+                        playerManager._OnBallStopped();
+
                     // Only auto-complete/respawn when the ball came to rest on its own. If it "stopped"
                     // because the player grabbed it (pickedUpByPlayer), skip this or we'd drop the shoulder
                     // pickup and teleport the ball away the instant they grab a moving ball.
@@ -1282,8 +1286,6 @@ namespace dev.mikeee324.OpenPutt
                 // If the golf club hit the ball... let the golf club handle that hit properly
                 if (collision.rigidbody.gameObject == playerManager.golfClubHead.gameObject) return;
 
-                // TODO: a static rigidbody might help ball collisions but confuses the steppy thing
-                // if (!collision.rigidbody.isKinematic && !collision.collider.isTrigger && (collision.rigidbody.velocity.magnitude > 0f || collision.rigidbody.angularVelocity.magnitude > 0f))
                 ResetBallCollisionTimers();
             }
         }

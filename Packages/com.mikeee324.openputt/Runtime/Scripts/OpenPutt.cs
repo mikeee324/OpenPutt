@@ -84,6 +84,10 @@ namespace dev.mikeee324.OpenPutt
         public bool allowAnyClubOffCourse;
 
         [OpenPuttFoldoutGroup("Game Settings")]
+        [Tooltip("When a player hits the max score on a course, wait for their ball to stop before ending the course, so they can see where the last shot went (and it still counts if it goes in). Off ends the course straight away.")]
+        public bool waitForBallToStopOnMaxScore = true;
+
+        [OpenPuttFoldoutGroup("Game Settings")]
         [Tooltip("Maximum amount of time in seconds that a players game state will be remembered for when using persistence. This only applies to incomplete games. Completed games will not be loaded back in and treated as a fresh start. (-1 = forever)")]
         public int scoreMaxPersistantTimeInSeconds = 900;
 

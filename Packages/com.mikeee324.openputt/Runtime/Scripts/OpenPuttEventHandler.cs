@@ -101,8 +101,6 @@ namespace dev.mikeee324.OpenPutt
             if (!Utilities.IsValid(player))
                 return;
 
-            // TODO: Possibly check here if the player hit max score instead, so we can wait until the ball stops and let the player see where the ball went after the last first
-
             foreach (var listener in openPutt.eventListeners)
                 if (Utilities.IsValid(listener))
                     listener.OnPlayerBallStopped(player);
