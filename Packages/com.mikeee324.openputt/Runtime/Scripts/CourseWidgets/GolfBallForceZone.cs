@@ -110,8 +110,11 @@ namespace dev.mikeee324.OpenPutt
             switch (forceType)
             {
                 case GolfBalLForceZoneType.Gravity:
-                    golfBall.gravityDirection = transform.forward;
-                    golfBall.gravityMagnitude = forceMagnitude;
+                    if (ClaimGravity())
+                    {
+                        golfBall.gravityDirection = transform.forward;
+                        golfBall.gravityMagnitude = forceMagnitude;
+                    }
 
                     golfBall._OnBallEnterGravityZone();
                     break;
@@ -121,13 +124,16 @@ namespace dev.mikeee324.OpenPutt
                     golfBall.gravityMagnitude = forceMagnitude;
                     break;
                 case GolfBalLForceZoneType.CenterPull:
-                    golfBall.gravityDirection = transform.position - golfBall.transform.position;
-                    golfBall.gravityMagnitude = forceMagnitude;
+                    if (ClaimGravity())
+                    {
+                        golfBall.gravityDirection = transform.position - golfBall.transform.position;
+                        golfBall.gravityMagnitude = forceMagnitude;
+                    }
 
                     golfBall._OnBallEnterGravityZone();
                     break;
                 case GolfBalLForceZoneType.ColliderGravity:
-                    if (Utilities.IsValid(floorCollider))
+                    if (Utilities.IsValid(floorCollider) && ClaimGravity())
                     {
                         golfBall.gravityDirection = floorCollider.ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
                         golfBall.gravityMagnitude = forceMagnitude;
@@ -168,11 +174,27 @@ namespace dev.mikeee324.OpenPutt
                 case GolfBalLForceZoneType.Gravity:
                 case GolfBalLForceZoneType.CenterPull:
                 case GolfBalLForceZoneType.ColliderGravity:
+                    // Hand gravity over to whichever zone the ball is still in, which claims it on its next Stay
+                    if (golfBall.activeGravityZone == this)
+                        golfBall.activeGravityZone = null;
+
                     golfBall._OnBallExitGravityZone();
                     break;
             }
 
             golfBall = null;
+        }
+
+        /// <summary>
+        /// The first zone the ball entered keeps gravity until it leaves, so an overlapping zone can't flip it
+        /// while the ball is still going round the bend between them.
+        /// </summary>
+        private bool ClaimGravity()
+        {
+            if (Utilities.IsValid(golfBall.activeGravityZone) && golfBall.activeGravityZone != this) return false;
+
+            golfBall.activeGravityZone = this;
+            return true;
         }
 
         /// <summary>
@@ -190,6 +212,8 @@ namespace dev.mikeee324.OpenPutt
                 // Players stood in the zone fire Stay too, and must not write gravity onto a ball that left
                 if (!Utilities.IsValid(golfBall.gameObject) || other.gameObject != golfBall.gameObject) return;
 
+                if (!ClaimGravity()) return;
+
                 golfBall.gravityDirection = transform.forward;
                 golfBall.gravityMagnitude = forceMagnitude;
                 return;
@@ -204,6 +228,8 @@ namespace dev.mikeee324.OpenPutt
                     golfBall._AddExternalForce(transform.forward * forceMagnitude, ForceMode.Force);
                     break;
                 case GolfBalLForceZoneType.CenterPull:
+                    if (!ClaimGravity()) break;
+
                     golfBall.gravityDirection = transform.position - golfBall.transform.position;
                     golfBall.gravityMagnitude = forceMagnitude;
                     break;
@@ -211,7 +237,7 @@ namespace dev.mikeee324.OpenPutt
                     golfBall._AddExternalForce((golfBall.transform.position - transform.position).normalized * forceMagnitude, ForceMode.Acceleration);
                     break;
                 case GolfBalLForceZoneType.ColliderGravity:
-                    if (Utilities.IsValid(floorCollider))
+                    if (Utilities.IsValid(floorCollider) && ClaimGravity())
                     {
                         golfBall.gravityDirection = floorCollider.ClosestPoint(golfBall.transform.position) - golfBall.transform.position;
                         golfBall.gravityMagnitude = forceMagnitude;

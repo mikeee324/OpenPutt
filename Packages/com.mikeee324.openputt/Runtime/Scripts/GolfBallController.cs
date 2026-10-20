@@ -440,6 +440,10 @@ namespace dev.mikeee324.OpenPutt
 
         private int insideGravityZones = 0;
 
+        /// Zone that controls gravity while the ball is inside several, so an overlapping zone can't flip it mid-bend
+        [HideInInspector]
+        public GolfBallForceZone activeGravityZone;
+
         /// Club velocity to apply next FixedUpdate
         private Vector3 requestedBallVelocity = Vector3.zero;
 
@@ -679,7 +683,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Surface frame is left alone through a swap - the ball is still on the same ramp, only gravity moved
             if (DebugMode && Vector3.Dot(lastStepGravityDirection, gravityDirection) < .985f)
-                OpenPuttUtils.Log(this, $"Gravity swapped to {gravityDirection} mag={gravityMagnitude:F1} zones={insideGravityZones} at {CurrentPosition} vel={ballRigidbody.velocity} grounded={stepsOnGround} normal={lastProbedGroundNormal}");
+                OpenPuttUtils.Log(this, $"Gravity swapped to {gravityDirection} mag={gravityMagnitude:F1} zones={insideGravityZones} active={(Utilities.IsValid(activeGravityZone) ? activeGravityZone.name : "none")} at {CurrentPosition} vel={ballRigidbody.velocity} grounded={stepsOnGround} normal={lastProbedGroundNormal}");
 
             lastStepGravityDirection = gravityDirection;
 
@@ -1164,6 +1168,9 @@ namespace dev.mikeee324.OpenPutt
             if (!teleport) return;
 
             ForgetSurfaceFrame();
+
+            // A teleport out of a zone may never fire its exit, which would leave it holding gravity
+            activeGravityZone = null;
 
             if (!Utilities.IsValid(openPuttSync)) return;
 
@@ -1985,6 +1992,7 @@ namespace dev.mikeee324.OpenPutt
         public void _ResetGravity()
         {
             insideGravityZones = 0;
+            activeGravityZone = null;
             gravityDirection = defaultGravityDirection;
             gravityMagnitude = defaultGravityMagnitude;
         }
@@ -1996,6 +2004,7 @@ namespace dev.mikeee324.OpenPutt
         public void _RestoreRespawnGravity()
         {
             insideGravityZones = 0;
+            activeGravityZone = null;
             gravityDirection = respawnGravityDirection;
             gravityMagnitude = respawnGravityMagnitude;
         }
