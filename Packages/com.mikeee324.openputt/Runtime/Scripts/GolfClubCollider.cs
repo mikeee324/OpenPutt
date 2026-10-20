@@ -671,11 +671,14 @@ namespace dev.mikeee324.OpenPutt
 
             var gravityUp = -golfBall.gravityDirection;
 
+            // Ground the ball is resting on, so putts on slopes and banked track run along the surface
+            var surfaceUp = hasGravity && !isMidairHit ? golfBall._GetGroundNormalForHit() : gravityUp;
+
             var isAttachedToClub = !Utilities.IsValid(targetOverride);
 
             // Midair hits keep their real (unflattened) swing direction instead of being flattened+relofted
             if (golfBall.gravityMagnitude > 0f && !isMidairHit)
-                directionOfTravel = directionOfTravel.FlattenDirection(gravityUp);
+                directionOfTravel = directionOfTravel.FlattenDirection(surfaceUp);
 
             // Collider is following something other than the club - use its rigidbody velocity instead, no side spin
             if (!isAttachedToClub)
@@ -686,7 +689,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Capture the horizontal travel direction, used for face angle/spin calculations below.
             // Computed independently of the flatten skip above - faceDirection is always horizontal, so this must be too or the dot products below go wrong for midair hits.
-            var flatDirectionOfTravel = (hasGravity ? directionOfTravel.FlattenDirection(gravityUp) : directionOfTravel.normalized).Sanitized();
+            var flatDirectionOfTravel = (hasGravity ? directionOfTravel.FlattenDirection(surfaceUp) : directionOfTravel.normalized).Sanitized();
 
             // Dynamic loft: flattens launch loft/backspin as clubhead speed rises (driving range only)
             var loftFalloff = currentCourseIsDrivingRange ? loftSpeedFalloff.Evaluate(velocityMagnitude) : 1f;
@@ -696,7 +699,7 @@ namespace dev.mikeee324.OpenPutt
 
             directionOfTravel = directionOfTravel.normalized.Sanitized();
 
-            var rawDirectionOfTravel = shouldApplyLoft ? ApplyLoft(directionOfTravel, gravityUp, launchLoft) : directionOfTravel;
+            var rawDirectionOfTravel = shouldApplyLoft ? ApplyLoft(directionOfTravel, surfaceUp, launchLoft) : directionOfTravel;
             var faceAngleDiffToDirection = 1f;
             LastKnownHitDirBias = 0;
 
@@ -708,7 +711,7 @@ namespace dev.mikeee324.OpenPutt
                 {
                     // The face points along the club's right vector in the left hand, and its negative in the right hand
                     faceDirection = golfClub.CurrentHand == VRC_Pickup.PickupHand.Left ? putterTarget.transform.right : -putterTarget.transform.right;
-                    faceDirection = hasGravity ? faceDirection.FlattenDirection(gravityUp) : faceDirection.normalized;
+                    faceDirection = hasGravity ? faceDirection.FlattenDirection(surfaceUp) : faceDirection.normalized;
                 }
 
                 if (overrideClubDirection.sqrMagnitude > 0f)
@@ -767,7 +770,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Loft goes on after the face bias - the face direction is flat, so biasing a lofted direction towards it flattens the launch
             if (shouldApplyLoft)
-                directionOfTravel = ApplyLoft(directionOfTravel, gravityUp, launchLoft);
+                directionOfTravel = ApplyLoft(directionOfTravel, surfaceUp, launchLoft);
 
             // Scale the velocity back up a bit
             velocityMagnitude *= hitForceMultiplier.Evaluate(velocityMagnitude);

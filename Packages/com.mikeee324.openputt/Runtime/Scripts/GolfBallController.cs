@@ -79,7 +79,7 @@ namespace dev.mikeee324.OpenPutt
         public float maxLiftGravityFraction = 0.85f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
-        [Range(0, .5f), Tooltip("Default RigidBody drag (scripts can override for sand pits etc)")]
+        [Range(0, .5f), Tooltip("Rolling drag force on floors with no friction set on their physic material (drag areas and the dev menu override it)")]
         public float defaultBallDrag = .055f;
 
         [OpenPuttFoldoutGroup("Ball Physics")]
@@ -379,7 +379,7 @@ namespace dev.mikeee324.OpenPutt
 
         public float DefaultBallWeight { get; private set; }
         public float DefaultBallFriction { get; private set; }
-        public float DefaultBallDrag { get; private set; }
+        public float DefaultBallDragOverride { get; private set; }
         public float DefaultBallAngularDrag { get; private set; }
         public float BallCurrentSpeed => Utilities.IsValid(ballRigidbody) && !ballRigidbody.isKinematic ? ballRigidbody.velocity.magnitude : 0;
 
@@ -472,7 +472,7 @@ namespace dev.mikeee324.OpenPutt
 
         /// The ball's local "up": the surface it last touched, or gravity's up once that's gone stale. The
         /// floor-vs-wall checks read this instead of -gravityDirection so they keep working past vertical.
-        private Vector3 SurfaceUp => enableSurfaceRelativeGround ? lastProbedGroundNormal : -gravityDirection;
+        private Vector3 SurfaceUp => enableSurfaceRelativeGround && !surfaceFrameStale ? lastProbedGroundNormal : -gravityDirection;
 
 #if UNITY_EDITOR
         /// What the last ground probe did, replayed in the scene view by LateUpdate: 0 nothing yet, 1 the
@@ -484,6 +484,13 @@ namespace dev.mikeee324.OpenPutt
         private Vector3 debugProbeDirection;
         private float debugProbeHitDistance;
 #endif
+
+        /// World radius and scale ratio, read once per physics step since lossyScale is an extern call
+        private float stepBallRadius;
+        private float stepBallScaleRatio = 1f;
+
+        /// Set by a teleport so the surface frame falls back to gravity until the ball touches ground again
+        private bool surfaceFrameStale;
 
         private float timeFlying = 0;
         int stepsOnGround;
@@ -593,7 +600,7 @@ namespace dev.mikeee324.OpenPutt
             {
                 DefaultBallWeight = BallWeight;
                 DefaultBallFriction = BallFriction;
-                DefaultBallDrag = BallDrag;
+                DefaultBallDragOverride = BallDrag;
                 DefaultBallAngularDrag = BallAngularDrag;
                 ballRigidbody.maxAngularVelocity = 300f;
                 _ApplyRotationMode();
@@ -660,6 +667,9 @@ namespace dev.mikeee324.OpenPutt
 
         private void FixedUpdate()
         {
+            stepBallRadius = BallWorldRadius;
+            stepBallScaleRatio = ballCollider.radius > 0.0001f ? stepBallRadius / ballCollider.radius : 1f;
+
             // Re-normalize each step in case a force zone or runtime change set a non-unit vector
             gravityDirection = gravityDirection.sqrMagnitude > 0f ? gravityDirection.normalized : Vector3.down;
 
@@ -759,15 +769,16 @@ namespace dev.mikeee324.OpenPutt
                         BallIsMoving = false;
                     }
                 }
-                else if (!pickedUpByPlayer && !UseRealRotation)
+                else if (!pickedUpByPlayer && !UseRealRotation && OnGround)
                 {
-                    // Fake ball roll based on speed
+                    // Fake ball roll based on distance travelled. MoveRotation so it keeps the interpolation
                     var directionOfTravel = ballRigidbody.position - lastFramePosition;
-                    var angle = directionOfTravel.magnitude * Mathf.Rad2Deg / BallWorldRadius;
-                    var rotationAxis = Vector3.Cross(SurfaceUp, directionOfTravel).normalized;
-                    transform.localRotation = Quaternion.Euler(rotationAxis * angle) * transform.localRotation;
-                    var worldRotation = transform.parent.rotation * transform.localRotation;
-                    ballRigidbody.rotation = worldRotation.normalized;
+                    var rotationAxis = Vector3.Cross(SurfaceUp, directionOfTravel);
+                    if (rotationAxis.sqrMagnitude > 1e-12f)
+                    {
+                        var angle = directionOfTravel.magnitude * Mathf.Rad2Deg / stepBallRadius;
+                        ballRigidbody.MoveRotation((Quaternion.AngleAxis(angle, rotationAxis.normalized) * ballRigidbody.rotation).normalized);
+                    }
                 }
             }
             else
@@ -856,6 +867,7 @@ namespace dev.mikeee324.OpenPutt
 
             // In hand the ball can be carried anywhere, so nothing a zone set still applies
             _ResetGravity();
+            ForgetSurfaceFrame();
 
             pickedUpByPlayer = true;
 
@@ -1149,7 +1161,11 @@ namespace dev.mikeee324.OpenPutt
             ballRigidbody.position = worldPos;
             lastFramePosition = worldPos;
 
-            if (!teleport || !Utilities.IsValid(openPuttSync)) return;
+            if (!teleport) return;
+
+            ForgetSurfaceFrame();
+
+            if (!Utilities.IsValid(openPuttSync)) return;
 
             // Transform too, so the flagged packet can't go out before physics has moved it
             transform.position = worldPos;
@@ -1275,7 +1291,7 @@ namespace dev.mikeee324.OpenPutt
 
             // Hit something from the side or above the ball
             if (Utilities.IsValid(collision) && IsWallCollider(collision.collider))
-                ReflectCollision(collision, collision.contacts);
+                ReflectCollision(collision);
         }
 
         void OnCollisionStay(Collision collision)
@@ -1345,19 +1361,22 @@ namespace dev.mikeee324.OpenPutt
         /// <summary>
         /// Calculates the wall bounce. Unity won't bounce slow balls (it just rolls them along), so we do it ourselves.
         /// </summary>
-        private void ReflectCollision(Collision collision, ContactPoint[] contacts)
+        private void ReflectCollision(Collision collision)
         {
             if (!Utilities.IsValid(ballRigidbody) || !Utilities.IsValid(collision) || !Utilities.IsValid(collision.collider))
                 return;
 
-            if (contacts == null || contacts.Length == 0)
+            if (collision.contactCount == 0)
                 return;
 
             // First contact wins
-            var collisionNormal = contacts[0].normal.Sanitized();
-            var contactPoint = contacts[0].point;
+            var contact = collision.GetContact(0);
+            var collisionNormal = contact.normal.Sanitized();
+            var contactPoint = contact.point;
             if (collisionNormal == Vector3.zero)
                 return;
+
+            collisionNormal = GetWallFaceNormal(contactPoint, collisionNormal);
 
             // Obstacle surface velocity at the contact; zero for static walls, so this only shows up on
             // moving obstacles
@@ -1464,7 +1483,7 @@ namespace dev.mikeee324.OpenPutt
             }
 
             // Gravity scales with the ball size so a shrunk ball doesn't fall too fast
-            var scaledGravity = gravityMagnitude * BallScaleRatio;
+            var scaledGravity = gravityMagnitude * stepBallScaleRatio;
 
             if (gravityMagnitude > 0f)
                 ballRigidbody.AddForce(gravityDirection.normalized * scaledGravity, ForceMode.Acceleration);
@@ -1485,6 +1504,7 @@ namespace dev.mikeee324.OpenPutt
 
                 lastProbedGroundNormal = groundingHit.normal.Sanitized();
                 lastGroundCollider = groundingHit.collider;
+                surfaceFrameStale = false;
 
                 stepsOnGround += 1;
                 stepsInAir = 0;
@@ -1609,7 +1629,7 @@ namespace dev.mikeee324.OpenPutt
 
             // The snap gets its own probe, cast the same way and ignoring triggers just like the grounded
             // check, so the two can never disagree about what the floor under the ball is
-            var snapDistance = BallWorldRadius + groundSnappingProbeDistance * BallScaleRatio;
+            var snapDistance = stepBallRadius + groundSnappingProbeDistance * stepBallScaleRatio;
             if (!ProbeSurface(CurrentPosition, snapDistance, out var snapHit))
             {
                 snapCrestNormalValid = false;
@@ -1690,12 +1710,12 @@ namespace dev.mikeee324.OpenPutt
             var distance = travel.magnitude;
 
             // Shorter than the ball's own width was sampled properly by PhysX already
-            if (distance < BallWorldRadius * 2f) return;
+            if (distance < stepBallRadius * 2f) return;
 
             // A teleport isn't travel - don't collect zones off a line the ball never rolled along
-            if (distance > ballRigidbody.velocity.magnitude * Time.deltaTime * 2f + BallWorldRadius * 2f) return;
+            if (distance > ballRigidbody.velocity.magnitude * Time.deltaTime * 2f + stepBallRadius * 2f) return;
 
-            var hitCount = Physics.SphereCastNonAlloc(lastFramePosition, BallWorldRadius, travel / distance, forceZoneSweepHits, distance, forceZoneSweepMask, QueryTriggerInteraction.Collide);
+            var hitCount = Physics.SphereCastNonAlloc(lastFramePosition, stepBallRadius, travel / distance, forceZoneSweepHits, distance, forceZoneSweepMask, QueryTriggerInteraction.Collide);
 
             for (var i = 0; i < hitCount; i++)
             {
@@ -1713,7 +1733,7 @@ namespace dev.mikeee324.OpenPutt
         /// are ignored so force zones, teleporters and hole triggers can't read as ground.
         private bool ProbeGround(Vector3 position, out RaycastHit hit)
         {
-            return ProbeSurface(position, BallWorldRadius + groundRaycastDistance * BallScaleRatio, out hit);
+            return ProbeSurface(position, stepBallRadius + groundRaycastDistance * stepBallScaleRatio, out hit);
         }
 
         /// Casts along <see cref="SurfaceUp"/>, then straight down as a fallback so a ball that lost its
@@ -1757,6 +1777,57 @@ namespace dev.mikeee324.OpenPutt
             return false;
         }
 
+        /// <summary>
+        /// Contacts on a seam between wall pieces or a mesh edge can report a normal pointing along the wall.
+        /// Swaps it for the face normal, but only if the ball is squarely in front of that face, so real corner hits keep theirs.
+        /// </summary>
+        private Vector3 GetWallFaceNormal(Vector3 contactPoint, Vector3 contactNormal)
+        {
+            var origin = ballRigidbody.position;
+            var toContact = contactPoint - origin;
+            var distance = toContact.magnitude;
+            if (distance < 1e-5f) return contactNormal;
+
+            if (!Physics.Raycast(origin, toContact / distance, out var faceHit, distance + stepBallRadius, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                return contactNormal;
+
+            var faceNormal = faceHit.normal.Sanitized();
+            if (faceNormal == Vector3.zero || Vector3.Dot(faceNormal, contactNormal) > .999f)
+                return contactNormal;
+
+            // A real corner has no face directly behind the ball, so this misses and the contact normal stands
+            if (!Physics.Raycast(origin, -faceNormal, out var squareHit, stepBallRadius * 1.5f, groundSnappingProbeMask, QueryTriggerInteraction.Ignore))
+                return contactNormal;
+
+            if (Vector3.Dot(squareHit.normal, faceNormal) < .999f)
+                return contactNormal;
+
+            if (DebugMode)
+                OpenPuttUtils.Log(this, $"Wall contact normal {contactNormal} replaced with face normal {faceNormal}");
+
+            return faceNormal;
+        }
+
+        /// <summary>
+        /// Live ground normal for aiming a hit. Gravity's up if the ball isn't resting on anything.
+        /// </summary>
+        public Vector3 _GetGroundNormalForHit()
+        {
+            if (!ProbeSurface(CurrentPosition, BallWorldRadius + groundRaycastDistance * BallScaleRatio, out var hit))
+                return -gravityDirection;
+
+            var normal = hit.normal.Sanitized();
+            return normal == Vector3.zero ? -gravityDirection : normal;
+        }
+
+        /// Teleports leave the old surface frame behind, so probe along gravity until the ball touches ground again
+        private void ForgetSurfaceFrame()
+        {
+            surfaceFrameStale = true;
+            lastGroundCollider = null;
+            snapCrestNormalValid = false;
+        }
+
         /// Rolling drag force magnitude. Ground friction or a script override beats the default; eases off near a stop so the ball settles nicely
         private float GetSurfaceDrag(float speed)
         {
@@ -1772,7 +1843,7 @@ namespace dev.mikeee324.OpenPutt
         {
             const float airDensity = 1.225f;
             const float dragCoeff = .35f;
-            var radius = BallWorldRadius;
+            var radius = stepBallRadius;
             var crossSection = Mathf.PI * radius * radius;
             return 0.5f * airDensity * crossSection * dragCoeff * speed * speed;
         }
@@ -1816,7 +1887,7 @@ namespace dev.mikeee324.OpenPutt
         {
             if (Utilities.IsValid(trail) && Utilities.IsValid(ballCollider))
             {
-                trail.startWidth = BallWorldDiameter * 0.8f;
+                trail.startWidth = stepBallRadius * 1.6f;
                 trail.endWidth = 0f;
             }
         }

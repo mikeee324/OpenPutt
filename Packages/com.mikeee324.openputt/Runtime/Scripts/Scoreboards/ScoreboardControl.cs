@@ -317,7 +317,7 @@ namespace dev.mikeee324.OpenPutt
                     break;
                 case SettingId.DevBallWeight: Player.golfBall.BallWeight = Player.golfBall.DefaultBallWeight; break;
                 case SettingId.DevBallFriction: Player.golfBall.BallFriction = Player.golfBall.DefaultBallFriction; break;
-                case SettingId.DevBallDrag: Player.golfBall.BallDrag = Player.golfBall.DefaultBallDrag; break;
+                case SettingId.DevBallDrag: Player.golfBall.BallDrag = Player.golfBall.DefaultBallDragOverride; break;
                 case SettingId.DevBallADrag: Player.golfBall.BallAngularDrag = Player.golfBall.DefaultBallAngularDrag; break;
                 case SettingId.DevTrackingRewindMs: OpenPutt.controllerTracker.trackingRewindSeconds = 0f; break;
                 case SettingId.DevTrackingSmoothingMs: OpenPutt.controllerTracker.trackingSmoothingSeconds = 0.022f; break;
